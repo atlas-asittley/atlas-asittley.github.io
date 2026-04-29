@@ -1,6 +1,6 @@
 // AUTO-GENERATED — do not edit
 const GAME_VERSION = {
-  commit: '4bbb889',
-  date: '2026-04-29 19:40 UTC',
-  message: 'Add visible Pharaoh Tycoon build version label'
+  commit: '5aa84dd',
+  date: '2026-04-29 23:33 UTC',
+  message: 'Update Mucklo Boy's Day link to standalone repo'
 };
