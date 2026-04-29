@@ -3,6 +3,9 @@ export const TILE_SIZE = 32;
 export const MAP_W = 60;
 export const MAP_H = 40;
 
+// Visible on-screen build tag so deployed versions are easy to verify.
+export const BUILD_VERSION = 'gfx-pass 7a467b7 / site-sync 6fe9b5f';
+
 export const SIM_INTERVAL_MS = 2000; // base tick interval at 1x speed
 
 // ── Walker constants ───────────────────────────────────────

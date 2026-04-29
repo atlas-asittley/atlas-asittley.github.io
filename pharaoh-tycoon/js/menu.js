@@ -1,3 +1,4 @@
+import { BUILD_VERSION } from './config.js';
 import { SCENARIOS } from './scenario.js';
 import { hasSave } from './save.js';
 
@@ -165,6 +166,13 @@ export function renderMenuScreen(ctx, canvas, state) {
 
     state._menuButtons.push({ x: lbx, y: loadY, w: btnW, h: 50, key: '_load' });
   }
+
+  // Build/version tag for deploy verification
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'bottom';
+  ctx.font = '11px "Segoe UI", system-ui, sans-serif';
+  ctx.fillStyle = 'rgba(189,165,122,0.82)';
+  ctx.fillText(`Build: ${BUILD_VERSION}`, cw - 16, ch - 14);
 
   ctx.textAlign = 'left';
 }

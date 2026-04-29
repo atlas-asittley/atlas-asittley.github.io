@@ -1,4 +1,4 @@
-import { BUILDINGS, HOUSING_LEVELS } from './config.js';
+import { BUILDINGS, HOUSING_LEVELS, BUILD_VERSION } from './config.js';
 import { removeBuilding } from './buildings.js';
 import { saveGame, loadGame, hasSave } from './save.js';
 import { addMessage } from './messages.js';
@@ -117,6 +117,10 @@ export function updateHUD(state) {
     const el = document.getElementById(id);
     el.classList.toggle('active', i === state.speed);
   });
+
+  // Visible build/version label for quick deploy verification
+  const versionEl = document.getElementById('build-version');
+  if (versionEl) versionEl.textContent = `Build: ${BUILD_VERSION}`;
 
   // Overlay indicator
   const overlayEl = document.getElementById('overlay-indicator');
