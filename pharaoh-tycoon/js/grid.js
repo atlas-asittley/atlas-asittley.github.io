@@ -10,6 +10,12 @@ function makeTile(terrain) {
     foodAccess: false,
     religionAccess: false,
     taxed: false,
+    waterCoverage: 0,
+    foodCoverage: 0,
+    religionCoverage: 0,
+    taxCoverage: 0,
+    architectCoverage: 0,
+    fireCoverage: 0,
     desirability: 0,
   };
 }

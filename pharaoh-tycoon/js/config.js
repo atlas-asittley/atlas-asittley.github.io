@@ -5,6 +5,23 @@ export const MAP_H = 40;
 
 export const SIM_INTERVAL_MS = 2000; // base tick interval at 1x speed
 
+// ── Walker constants ───────────────────────────────────────
+export const WALKER_STEP_MS = 400;        // ms between walker steps at 1x
+export const WALKER_MAX_STEPS = 40;       // tiles a walker travels before despawning
+export const WALKER_SPAWN_INTERVAL = 8;   // sim ticks between walker spawns per building
+export const COVERAGE_DURATION = 25;      // sim ticks that walker coverage persists
+
+// ── Civilian / ambient walker constants ───────────────────
+export const CIVILIAN_MAX = 30;           // max civilians on map at once
+export const CIVILIAN_STEPS_MIN = 12;     // min steps before despawn
+export const CIVILIAN_STEPS_MAX = 25;     // max steps before despawn
+export const CIVILIAN_SPAWN_PER_TICK = 3; // civilians to try spawning per sim tick
+
+// ── Hazard constants ──────────────────────────────────────
+export const FIRE_THRESHOLD = 60;         // ticks without fire coverage before fire event
+export const COLLAPSE_THRESHOLD = 60;     // ticks without architect coverage before collapse
+export const HAZARD_SPREAD_CHANCE = 0.3;  // chance fire spreads to adjacent building
+
 // ── Terrain types ───────────────────────────────────────────
 export const TERRAIN = {
   DESERT:     'desert',
@@ -41,6 +58,19 @@ export const COLORS = {
   textDim:     '#8a7a6a',
   highlight:   'rgba(255,255,100,0.3)',
   invalid:     'rgba(255,50,50,0.4)',
+  // new buildings
+  architect:   '#7f8c8d',
+  firehouse:   '#e74c3c',
+  garden:      '#27ae60',
+  // walkers
+  walkerFood:      '#9b59b6',
+  walkerWater:     '#3498db',
+  walkerReligion:  '#dcc8a0',
+  walkerTax:       '#f1c40f',
+  walkerArchitect: '#7f8c8d',
+  walkerFire:      '#e74c3c',
+  // civilian walker palette (randomized per walker)
+  civilians: ['#c4a67a','#a88b5e','#8b7355','#b39670','#d4b896','#9a8060'],
 };
 
 // ── Building Definitions ────────────────────────────────────
@@ -104,7 +134,7 @@ export const BUILDINGS = {
     size: [2, 2],
     workers: 6,
     range: 8,
-    description: 'Distributes food to nearby housing.',
+    description: 'Sends food walkers along roads to deliver food to housing.',
     terrain: [TERRAIN.DESERT],
     symbol: 'B',
   },
@@ -115,9 +145,9 @@ export const BUILDINGS = {
     cost: 30,
     maintenance: 1,
     size: [1, 1],
-    workers: 0,
+    workers: 1,
     range: 4,
-    description: 'Provides water access to nearby housing.',
+    description: 'Sends water carriers along roads to provide water access.',
     terrain: [TERRAIN.DESERT, TERRAIN.FLOODPLAIN],
     symbol: 'W',
   },
@@ -130,7 +160,7 @@ export const BUILDINGS = {
     size: [1, 1],
     workers: 2,
     range: 6,
-    description: 'Collects taxes from nearby housing.',
+    description: 'Sends tax collectors along roads to collect taxes from housing.',
     terrain: [TERRAIN.DESERT],
     symbol: 'T',
   },
@@ -143,19 +173,74 @@ export const BUILDINGS = {
     size: [2, 2],
     workers: 4,
     range: 8,
-    description: 'Provides religion to nearby housing. Enables higher evolution.',
+    description: 'Sends priests along roads to provide religion access.',
     terrain: [TERRAIN.DESERT],
     symbol: 'R',
   },
+  architect: {
+    name: "Architect's Post",
+    key: 'architect',
+    category: 'safety',
+    cost: 60,
+    maintenance: 2,
+    size: [1, 1],
+    workers: 2,
+    range: 6,
+    description: 'Sends architects along roads to prevent building collapse.',
+    terrain: [TERRAIN.DESERT],
+    symbol: 'A',
+  },
+  firehouse: {
+    name: 'Firehouse',
+    key: 'firehouse',
+    category: 'safety',
+    cost: 60,
+    maintenance: 2,
+    size: [1, 1],
+    workers: 2,
+    range: 6,
+    description: 'Sends firefighters along roads to prevent fires.',
+    terrain: [TERRAIN.DESERT],
+    symbol: '!',
+  },
+  garden: {
+    name: 'Garden',
+    key: 'garden',
+    category: 'beautification',
+    cost: 20,
+    maintenance: 1,
+    size: [1, 1],
+    workers: 0,
+    description: 'Increases desirability of nearby housing. Place near homes for better evolution.',
+    terrain: [TERRAIN.DESERT],
+    symbol: '*',
+  },
+};
+
+// ── Desirability Emitters ───────────────────────────────────
+// Each building type: [value emitted per tile, range in Manhattan distance]
+// Positive = attractive, negative = repulsive
+export const DESIRABILITY = {
+  garden:      { value: 4,  range: 4,  stepDecay: 1 },  // +4 at center, -1 per tile distance
+  temple:      { value: 3,  range: 3,  stepDecay: 1 },
+  well:        { value: 1,  range: 2,  stepDecay: 0.5 },
+  farm:        { value: -3, range: 4,  stepDecay: 0.75 },
+  granary:     { value: -2, range: 3,  stepDecay: 0.66 },
+  bazaar:      { value: -1, range: 2,  stepDecay: 0.5 },
+  firehouse:   { value: -1, range: 2,  stepDecay: 0.5 },
+  architect:   { value: -1, range: 2,  stepDecay: 0.5 },
+  taxCollector:{ value: -1, range: 2,  stepDecay: 0.5 },
+  water:       { value: 3,  range: 3,  stepDecay: 1 },  // water terrain bonus
 };
 
 // ── Housing Evolution ───────────────────────────────────────
 // Each level: [name, maxResidents, requirements]
+// desirability is a minimum tile desirability score (checked separately)
 export const HOUSING_LEVELS = [
-  { name: 'Empty Plot',         residents: 0,  requires: {} },
-  { name: 'Crude Hut',          residents: 3,  requires: { roadAccess: true } },
-  { name: 'Sturdy Hut',         residents: 5,  requires: { roadAccess: true, waterAccess: true } },
-  { name: 'Modest Dwelling',    residents: 8,  requires: { roadAccess: true, waterAccess: true, foodAccess: true } },
-  { name: 'Spacious Dwelling',  residents: 12, requires: { roadAccess: true, waterAccess: true, foodAccess: true, religionAccess: true } },
-  { name: 'Elegant Residence',  residents: 18, requires: { roadAccess: true, waterAccess: true, foodAccess: true, religionAccess: true, taxed: true } },
+  { name: 'Empty Plot',         residents: 0,  requires: {},                                                                                     desirability: 0 },
+  { name: 'Crude Hut',          residents: 3,  requires: { roadAccess: true },                                                                   desirability: 0 },
+  { name: 'Sturdy Hut',         residents: 5,  requires: { roadAccess: true, waterAccess: true },                                                desirability: 0 },
+  { name: 'Modest Dwelling',    residents: 8,  requires: { roadAccess: true, waterAccess: true, foodAccess: true },                              desirability: 0 },
+  { name: 'Spacious Dwelling',  residents: 12, requires: { roadAccess: true, waterAccess: true, foodAccess: true, religionAccess: true },        desirability: 4 },
+  { name: 'Elegant Residence',  residents: 18, requires: { roadAccess: true, waterAccess: true, foodAccess: true, religionAccess: true, taxed: true }, desirability: 8 },
 ];

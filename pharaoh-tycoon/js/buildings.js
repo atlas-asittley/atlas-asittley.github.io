@@ -41,6 +41,10 @@ export function placeBuilding(state, typeKey, gx, gy) {
     storage: 0,        // granary stored grain
     active: true,
     id: state.nextBuildingId++,
+    fireRisk: 0,       // accumulates without fire walker coverage
+    collapseRisk: 0,   // accumulates without architect walker coverage
+    onFire: false,     // true when building has caught fire
+    fireTicks: 0,      // ticks remaining while on fire before destruction
   };
 
   // Mark tiles
@@ -56,7 +60,7 @@ export function placeBuilding(state, typeKey, gx, gy) {
 }
 
 // ── Remove a building ───────────────────────────────────────
-export function removeBuilding(state, building) {
+export function removeBuilding(state, building, { refund = true } = {}) {
   const [w, h] = BUILDINGS[building.type].size;
   for (let dy = 0; dy < h; dy++) {
     for (let dx = 0; dx < w; dx++) {
@@ -66,8 +70,16 @@ export function removeBuilding(state, building) {
   }
   const idx = state.buildings.indexOf(building);
   if (idx >= 0) state.buildings.splice(idx, 1);
-  // Refund half
-  state.treasury.gold += Math.floor(BUILDINGS[building.type].cost / 2);
+  // Remove any walkers spawned by this building
+  if (state.walkers) {
+    state.walkers = state.walkers.filter(w => w.buildingId !== building.id);
+  }
+  // Refund half (unless destroyed by hazard)
+  if (refund) {
+    state.treasury.gold += Math.floor(BUILDINGS[building.type].cost / 2);
+  }
+  // Deselect if selected
+  if (state.selectedBuilding === building) state.selectedBuilding = null;
 }
 
 // ── Get building at grid pos ────────────────────────────────
@@ -79,4 +91,10 @@ export function getBuildingAt(state, gx, gy) {
 // ── All buildings of a type ─────────────────────────────────
 export function buildingsOfType(state, typeKey) {
   return state.buildings.filter(b => b.type === typeKey);
+}
+
+// ── Staffing check (shared by simulation + walkers) ────────
+export function isStaffed(building) {
+  if (building.workersNeeded === 0) return true;
+  return building.currentWorkers >= Math.ceil(building.workersNeeded * 0.5);
 }

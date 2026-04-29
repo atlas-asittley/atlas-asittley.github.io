@@ -1,5 +1,8 @@
 import { TILE_SIZE, MAP_W, MAP_H, BUILDINGS } from './config.js';
 import { canPlace, placeBuilding, getBuildingAt, removeBuilding } from './buildings.js';
+import { saveGame, loadGame, hasSave } from './save.js';
+import { addMessage } from './messages.js';
+import { initScenario } from './scenario.js';
 
 const EDGE_SCROLL_ZONE = 30;
 const SCROLL_SPEED = 8;
@@ -16,6 +19,20 @@ export function initInput(state, canvas) {
     const rect = canvas.getBoundingClientRect();
     state.mouse.x = e.clientX - rect.left;
     state.mouse.y = e.clientY - rect.top;
+
+    // Menu hover detection
+    if (state.screen === 'menu' && state._menuButtons) {
+      state._menuHover = -1;
+      for (let i = 0; i < state._menuButtons.length; i++) {
+        const b = state._menuButtons[i];
+        if (state.mouse.x >= b.x && state.mouse.x <= b.x + b.w &&
+            state.mouse.y >= b.y && state.mouse.y <= b.y + b.h) {
+          state._menuHover = i;
+          break;
+        }
+      }
+      return;
+    }
 
     // Update grid position
     state.mouseGrid.x = Math.floor((state.mouse.x + state.camera.x) / TILE_SIZE);
@@ -45,6 +62,31 @@ export function initInput(state, canvas) {
     const rect = canvas.getBoundingClientRect();
     const mx = e.clientX - rect.left;
     const my = e.clientY - rect.top;
+
+    // Menu click handling
+    if (state.screen === 'menu' && state._menuButtons && e.button === 0) {
+      for (const btn of state._menuButtons) {
+        if (mx >= btn.x && mx <= btn.x + btn.w && my >= btn.y && my <= btn.y + btn.h) {
+          if (btn.key === '_load') {
+            if (loadGame(state)) {
+              state.screen = state.scenario && state.scenario.won ? 'won' : 'playing';
+              state._resetTiming();
+              addMessage(state, 'Game loaded', 'info');
+            }
+          } else {
+            state._resetState();
+            initScenario(state, btn.key);
+            state.screen = 'playing';
+            state._resetTiming();
+            if (btn.key !== 'sandbox') {
+              addMessage(state, `Scenario: ${state.scenario.name}`, 'info');
+            }
+          }
+          return;
+        }
+      }
+      return;
+    }
 
     // Check minimap click
     const mmW = 150, mmH = 100;
@@ -96,6 +138,9 @@ export function initInput(state, canvas) {
 
   // Keyboard
   document.addEventListener('keydown', (e) => {
+    // Don't process game keys on menu
+    if (state.screen === 'menu') return;
+
     switch (e.key) {
       case 'Escape':
         state.selectedBuildType = null;
@@ -112,6 +157,13 @@ export function initInput(state, canvas) {
       case 'g':
         state.showGrid = !state.showGrid;
         break;
+      case 'v': case 'V': {
+        // Cycle overlays: none → desirability → fire → collapse → none
+        const cycle = [null, 'desirability', 'fire', 'collapse'];
+        const idx = cycle.indexOf(state.overlay);
+        state.overlay = cycle[(idx + 1) % cycle.length];
+        break;
+      }
       case '1': state.speed = 1; break;
       case '2': state.speed = 2; break;
       case '3': state.speed = 3; break;
@@ -121,7 +173,19 @@ export function initInput(state, canvas) {
         break;
       // WASD camera
       case 'w': case 'W': state.keys.up = true; break;
-      case 's': case 'S': state.keys.down = true; break;
+      case 's': case 'S':
+        // Ctrl+S = save, S alone = scroll
+        if (e.ctrlKey || e.metaKey) {
+          e.preventDefault();
+          if (saveGame(state)) {
+            addMessage(state, 'Game saved', 'success');
+          } else {
+            addMessage(state, 'Save failed!', 'danger');
+          }
+        } else {
+          state.keys.down = true;
+        }
+        break;
       case 'a': case 'A': state.keys.left = true; break;
       case 'd': case 'D': state.keys.right = true; break;
     }

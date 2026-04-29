@@ -1,6 +1,8 @@
-import { BUILDINGS, HOUSING_LEVELS } from './config.js';
-import { getTile, tilesInRange, neighbors4 } from './grid.js';
-import { buildingsOfType } from './buildings.js';
+import { BUILDINGS, HOUSING_LEVELS, DESIRABILITY, MAP_W, MAP_H, TERRAIN } from './config.js';
+import { getTile, neighbors4, tilesInRange } from './grid.js';
+import { buildingsOfType, isStaffed } from './buildings.js';
+import { spawnWalkers, decayCoverage, spawnCivilians } from './walkers.js';
+import { updateHazards } from './hazards.js';
 
 // ── Main simulation tick ────────────────────────────────────
 export function tick(state) {
@@ -11,7 +13,12 @@ export function tick(state) {
     state.time.year++;
   }
 
-  updateServiceCoverage(state);
+  updateRoadAccess(state);
+  decayCoverage(state);
+  spawnWalkers(state);
+  spawnCivilians(state);
+  updateDesirability(state);
+  updateHazards(state);
   updateEmployment(state);
   updateFarmProduction(state);
   updateGranaries(state);
@@ -22,70 +29,22 @@ export function tick(state) {
   updatePopulationStats(state);
 }
 
-// ── Service coverage (road, water, food, religion, tax) ─────
-function updateServiceCoverage(state) {
+// ── Road access (adjacency check — walkers handle other services) ──
+function updateRoadAccess(state) {
   const { grid } = state;
-  // Reset all coverage flags
-  for (const row of grid) {
-    for (const tile of row) {
-      tile.roadAccess = false;
-      tile.waterAccess = false;
-      tile.foodAccess = false;
-      tile.religionAccess = false;
-      tile.taxed = false;
-    }
-  }
-
-  // Road access: housing adjacent to a road (or within 2 tiles via roads)
   const roads = buildingsOfType(state, 'road');
   const roadSet = new Set();
   for (const r of roads) roadSet.add(`${r.x},${r.y}`);
 
   for (const b of state.buildings) {
     if (b.type !== 'housing') continue;
-    // Check if any neighbor tile has a road
+    const tile = getTile(grid, b.x, b.y);
+    tile.roadAccess = false;
     for (const [nx, ny] of neighbors4(b.x, b.y)) {
       if (roadSet.has(`${nx},${ny}`)) {
-        getTile(grid, b.x, b.y).roadAccess = true;
+        tile.roadAccess = true;
         break;
       }
-    }
-  }
-
-  // Well → water access
-  for (const b of buildingsOfType(state, 'well')) {
-    if (!isStaffed(b)) continue;
-    const range = BUILDINGS.well.range;
-    for (const [tx, ty] of tilesInRange(b.x, b.y, range)) {
-      getTile(grid, tx, ty).waterAccess = true;
-    }
-  }
-
-  // Bazaar → food access (handled separately, but mark tiles)
-  for (const b of buildingsOfType(state, 'bazaar')) {
-    if (!isStaffed(b)) continue;
-    if (b.storage <= 0) continue; // needs food to distribute
-    const range = BUILDINGS.bazaar.range;
-    for (const [tx, ty] of tilesInRange(b.x, b.y, range)) {
-      getTile(grid, tx, ty).foodAccess = true;
-    }
-  }
-
-  // Temple → religion access
-  for (const b of buildingsOfType(state, 'temple')) {
-    if (!isStaffed(b)) continue;
-    const range = BUILDINGS.temple.range;
-    for (const [tx, ty] of tilesInRange(b.x, b.y, range)) {
-      getTile(grid, tx, ty).religionAccess = true;
-    }
-  }
-
-  // Tax collector → taxed
-  for (const b of buildingsOfType(state, 'taxCollector')) {
-    if (!isStaffed(b)) continue;
-    const range = BUILDINGS.taxCollector.range;
-    for (const [tx, ty] of tilesInRange(b.x, b.y, range)) {
-      getTile(grid, tx, ty).taxed = true;
     }
   }
 }
@@ -173,18 +132,24 @@ function updateBazaars(state) {
         baz.storage += take;
       }
     }
+  }
 
-    // Consume food for nearby housing
-    const range = BUILDINGS.bazaar.range;
-    const nearby = tilesInRange(baz.x, baz.y, range);
-    for (const [tx, ty] of nearby) {
-      const tile = getTile(state.grid, tx, ty);
-      if (tile && tile.building && tile.building.type === 'housing' && tile.building.currentResidents > 0) {
-        const consumed = Math.ceil(tile.building.currentResidents * 0.2);
-        if (baz.storage >= consumed) {
-          baz.storage -= consumed;
-        }
-      }
+  // Consume food across all housing with walker-delivered food coverage
+  // Split consumption evenly across active bazaars that have stock
+  let totalConsumption = 0;
+  for (const b of state.buildings) {
+    if (b.type !== 'housing' || b.currentResidents === 0) continue;
+    const tile = getTile(state.grid, b.x, b.y);
+    if (tile && tile.foodAccess) {
+      totalConsumption += Math.ceil(b.currentResidents * 0.2);
+    }
+  }
+
+  const activeBazaars = bazaars.filter(b => isStaffed(b) && b.storage > 0);
+  if (activeBazaars.length > 0 && totalConsumption > 0) {
+    const perBazaar = Math.ceil(totalConsumption / activeBazaars.length);
+    for (const baz of activeBazaars) {
+      baz.storage = Math.max(0, baz.storage - perBazaar);
     }
   }
 }
@@ -199,22 +164,31 @@ function updateHousingEvolution(state) {
     // Check if can evolve up
     const nextLevel = b.level + 1;
     if (nextLevel < HOUSING_LEVELS.length) {
-      const req = HOUSING_LEVELS[nextLevel].requires;
+      const nextDef = HOUSING_LEVELS[nextLevel];
+      const req = nextDef.requires;
       let canEvolve = true;
       for (const [key, val] of Object.entries(req)) {
         if (tile[key] !== val) { canEvolve = false; break; }
+      }
+      // Check desirability requirement
+      if (canEvolve && nextDef.desirability > 0 && tile.desirability < nextDef.desirability) {
+        canEvolve = false;
       }
       if (canEvolve) {
         b.level = nextLevel;
       }
     }
 
-    // Check if should devolve (lost a service)
+    // Check if should devolve (lost a service or desirability dropped)
     if (b.level > 0) {
-      const req = HOUSING_LEVELS[b.level].requires;
+      const curDef = HOUSING_LEVELS[b.level];
+      const req = curDef.requires;
       let meetsReqs = true;
       for (const [key, val] of Object.entries(req)) {
         if (tile[key] !== val) { meetsReqs = false; break; }
+      }
+      if (meetsReqs && curDef.desirability > 0 && tile.desirability < curDef.desirability) {
+        meetsReqs = false;
       }
       if (!meetsReqs) {
         b.level = Math.max(0, b.level - 1);
@@ -291,8 +265,52 @@ function updatePopulationStats(state) {
   state.population.capacity = capacity;
 }
 
-// ── Helper ──────────────────────────────────────────────────
-function isStaffed(building) {
-  if (building.workersNeeded === 0) return true;
-  return building.currentWorkers >= Math.ceil(building.workersNeeded * 0.5);
+// ── Desirability ────────────────────────────────────────────
+function updateDesirability(state) {
+  const { grid } = state;
+
+  // Clear all desirability
+  for (let y = 0; y < MAP_H; y++) {
+    for (let x = 0; x < MAP_W; x++) {
+      grid[y][x].desirability = 0;
+    }
+  }
+
+  // Apply water terrain bonus
+  for (let y = 0; y < MAP_H; y++) {
+    for (let x = 0; x < MAP_W; x++) {
+      if (grid[y][x].terrain === TERRAIN.WATER) {
+        const wd = DESIRABILITY.water;
+        for (const [nx, ny] of tilesInRange(x, y, wd.range)) {
+          const dist = Math.abs(nx - x) + Math.abs(ny - y);
+          if (dist === 0) continue; // skip water tile itself
+          const bonus = Math.max(0, wd.value - dist * wd.stepDecay);
+          grid[ny][nx].desirability += bonus;
+        }
+      }
+    }
+  }
+
+  // Apply building desirability emissions
+  for (const b of state.buildings) {
+    const d = DESIRABILITY[b.type];
+    if (!d) continue;
+
+    // Use building center for emission
+    const cx = b.x + Math.floor(b.width / 2);
+    const cy = b.y + Math.floor(b.height / 2);
+
+    for (const [nx, ny] of tilesInRange(cx, cy, d.range)) {
+      // Don't apply to own tiles
+      const tile = grid[ny][nx];
+      if (tile.building === b) continue;
+      const dist = Math.abs(nx - cx) + Math.abs(ny - cy);
+      const effect = d.value > 0
+        ? Math.max(0, d.value - dist * d.stepDecay)
+        : Math.min(0, d.value + dist * d.stepDecay);
+      tile.desirability += effect;
+    }
+  }
 }
+
+
