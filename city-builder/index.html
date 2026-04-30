@@ -875,6 +875,60 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
+/* Production status bar */
+.production-bar {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  background: rgba(94, 196, 158, 0.08);
+  border-bottom: 1px solid #1d3a2a;
+  flex-shrink: 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  white-space: nowrap;
+}
+.production-bar.active { display: flex; }
+.production-bar-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #5ec49e;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+}
+.production-bar-item {
+  font-size: 0.75rem;
+  color: #a0d8c0;
+  background: rgba(94, 196, 158, 0.1);
+  padding: 2px 8px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+.production-bar-idle {
+  font-size: 0.75rem;
+  color: #4a5568;
+  font-style: italic;
+}
+
+/* Building production pulse animation */
+.grid-cell.producing .building-icon {
+  animation: produce-pulse 2s ease-in-out infinite;
+}
+@keyframes produce-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; filter: brightness(1.4); }
+}
+
+/* Next tick countdown in topbar */
+.game-stat.tick {
+  color: #5ec49e;
+  font-size: 0.7rem;
+}
+.game-stat.tick .tick-countdown {
+  font-variant-numeric: tabular-nums;
+}
+
 /* ── Responsive tweaks ────────────────────────────────── */
 @media (min-width: 600px) {
   .status-grid { grid-template-columns: repeat(4, 1fr); }
@@ -1067,6 +1121,7 @@ body {
       <div class="game-stat gold"><span class="stat-icon">&#9733;</span><span id="game-gold">500</span></div>
       <div class="game-stat pop"><span class="stat-icon">&#9786;</span><span id="game-pop">0</span></div>
       <div class="game-stat tier"><span class="stat-icon">&#9650;</span>T<span id="game-tier">1</span></div>
+      <div class="game-stat tick"><span class="tick-countdown" id="game-tick-countdown"></span></div>
     </div>
     <div class="game-topbar-right">
       <button class="btn-logout" id="game-btn-logout">Out</button>
@@ -1076,6 +1131,11 @@ body {
   <div class="placement-bar" id="placement-bar">
     <span class="placement-bar-text" id="placement-bar-text">Tap a tile to place Road</span>
     <button class="placement-bar-cancel" id="placement-bar-cancel">Cancel</button>
+  </div>
+
+  <div class="production-bar" id="production-bar">
+    <span class="production-bar-label">Producing:</span>
+    <span id="production-bar-content" class="production-bar-idle">No active production</span>
   </div>
 
   <div class="grid-container" id="grid-container">
@@ -1727,6 +1787,11 @@ body {
     var _districtTier = 1;
     var _selectedBuilding = null; // building_type_key
     var _initialized = false;
+    var _tickTimer = null;         // setInterval handle
+    var _tickCountdown = null;     // countdown interval
+    var _lastTickTime = null;      // last successful tick timestamp
+    var _lastProduction = [];      // last tick's production summary
+    var TICK_INTERVAL_SEC = 60;    // must match server
 
     // Building icons for the grid
     var BUILDING_ICONS = {
@@ -1781,6 +1846,8 @@ body {
       loadGameData().then(function () {
         renderGrid();
         _initialized = true;
+        // Start production tick loop
+        startTickLoop();
       }).catch(function (err) {
         console.error('Failed to load game data:', err);
         showToast('Failed to load game data', 'error');
@@ -2144,6 +2211,8 @@ body {
         // Cancel placement mode and re-render
         cancelPlacement();
         renderGrid();
+        // Refresh production bar (new building may be a producer)
+        updateProductionBar(_lastProduction);
       }).catch(function (err) {
         showToast(err.message || 'Placement failed', 'error');
       });
@@ -2181,7 +2250,20 @@ body {
           });
           if (building) {
             var bt = CatalogHelper.get(building.building_type_key);
-            showToast((bt ? bt.name : building.building_type_key), '');
+            var info = bt ? bt.name : building.building_type_key;
+            if (bt && bt.output_resource_key) {
+              var outName = formatResourceName(bt.output_resource_key);
+              var consumes = (bt.build_rules || {}).consumes;
+              if (consumes && Object.keys(consumes).length > 0) {
+                var inNames = Object.keys(consumes).map(function (k) {
+                  return consumes[k] + ' ' + formatResourceName(k);
+                }).join(', ');
+                info += ' (' + inNames + ' \u2192 ' + outName + ')';
+              } else {
+                info += ' (\u2192 ' + outName + ')';
+              }
+            }
+            showToast(info, '');
           } else if (tile && tile.resource_key) {
             var rt = CatalogHelper.getResource(tile.resource_key);
             showToast((rt ? rt.name : tile.resource_key) + ' deposit', '');
@@ -2251,6 +2333,7 @@ body {
 
       // Logout from game screen
       document.getElementById('game-btn-logout').addEventListener('click', function () {
+        stopTickLoop();
         sb.auth.signOut().then(function () {
           showScreen('screen-welcome');
         });
@@ -2264,8 +2347,167 @@ body {
       });
     }
 
+    // ── Production tick system ─────────────────────────
+    function runProductionTick(isInitial) {
+      sb.rpc('run_production_tick').then(function (result) {
+        if (result.error) {
+          console.warn('Production tick failed:', result.error.message);
+          if (isInitial) {
+            // RPC might not exist yet — show idle state
+            updateProductionBar([]);
+          }
+          return;
+        }
+        var data = result.data;
+        _lastTickTime = new Date();
+
+        // Sync inventory from server
+        if (data.inventory) {
+          _inventory = {};
+          Object.keys(data.inventory).forEach(function (key) {
+            _inventory[key] = data.inventory[key];
+          });
+        }
+
+        // Sync gold from server
+        if (data.gold !== undefined && data.gold !== null) {
+          _gold = data.gold;
+          document.getElementById('game-gold').textContent = _gold;
+        }
+
+        // Store and display production summary
+        _lastProduction = data.production || [];
+        updateProductionBar(_lastProduction);
+
+        // Show toast on meaningful production (skip initial catch-up noise)
+        if (!isInitial && data.total_produced > 0) {
+          var summary = _lastProduction.map(function (p) {
+            return '+' + p.amount + ' ' + formatResourceName(p.output);
+          }).join(', ');
+          showToast(summary, 'success');
+        } else if (isInitial && data.total_produced > 0) {
+          showToast('Caught up: +' + data.total_produced + ' goods produced while away', 'success');
+        }
+
+        // Mark producing buildings on the grid
+        updateProducingBuildings(data.production || []);
+
+        // Re-render inventory if panel is open
+        if (document.getElementById('inventory-panel').classList.contains('active')) {
+          renderInventoryPanel();
+        }
+
+        startTickCountdown();
+      }).catch(function (err) {
+        console.warn('Production tick error:', err);
+      });
+    }
+
+    function startTickLoop() {
+      // Run initial tick immediately (catches up offline production)
+      runProductionTick(true);
+
+      // Set up recurring tick
+      if (_tickTimer) clearInterval(_tickTimer);
+      _tickTimer = setInterval(function () {
+        runProductionTick(false);
+      }, TICK_INTERVAL_SEC * 1000);
+    }
+
+    function stopTickLoop() {
+      if (_tickTimer) {
+        clearInterval(_tickTimer);
+        _tickTimer = null;
+      }
+      if (_tickCountdown) {
+        clearInterval(_tickCountdown);
+        _tickCountdown = null;
+      }
+    }
+
+    function startTickCountdown() {
+      var el = document.getElementById('game-tick-countdown');
+      if (_tickCountdown) clearInterval(_tickCountdown);
+
+      function updateCountdown() {
+        if (!_lastTickTime) { el.textContent = ''; return; }
+        var elapsed = Math.floor((Date.now() - _lastTickTime.getTime()) / 1000);
+        var remaining = Math.max(0, TICK_INTERVAL_SEC - elapsed);
+        if (remaining > 0) {
+          el.textContent = remaining + 's';
+        } else {
+          el.textContent = '...';
+        }
+      }
+
+      updateCountdown();
+      _tickCountdown = setInterval(updateCountdown, 1000);
+    }
+
+    function updateProductionBar(production) {
+      var bar = document.getElementById('production-bar');
+      var content = document.getElementById('production-bar-content');
+
+      // Count producing buildings
+      var producingBuildings = _buildings.filter(function (b) {
+        var bt = CatalogHelper.get(b.building_type_key);
+        return bt && bt.output_resource_key;
+      });
+
+      if (producingBuildings.length === 0) {
+        bar.classList.remove('active');
+        return;
+      }
+
+      bar.classList.add('active');
+
+      if (production.length > 0) {
+        var items = production.map(function (p) {
+          return '<span class="production-bar-item">+' + p.amount + ' ' + formatResourceName(p.output) + '</span>';
+        });
+        content.innerHTML = items.join('');
+        content.className = '';
+      } else {
+        // Buildings exist but didn't produce (starved or waiting)
+        var starvedCount = producingBuildings.length;
+        content.innerHTML = '<span class="production-bar-idle">' + starvedCount + ' building' + (starvedCount > 1 ? 's' : '') + ' waiting for inputs</span>';
+        content.className = '';
+      }
+    }
+
+    function updateProducingBuildings(production) {
+      // Build set of building IDs that produced
+      var producedIds = {};
+      production.forEach(function (p) {
+        producedIds[p.building_id] = true;
+      });
+
+      // Update grid cells
+      var cells = document.querySelectorAll('.grid-cell');
+      cells.forEach(function (cell) {
+        cell.classList.remove('producing');
+        var x = parseInt(cell.getAttribute('data-x'));
+        var y = parseInt(cell.getAttribute('data-y'));
+
+        // Find building at this anchor position
+        var building = _buildings.find(function (b) {
+          return b.anchor_x === x && b.anchor_y === y;
+        });
+        if (building && producedIds[building.id]) {
+          cell.classList.add('producing');
+        }
+      });
+    }
+
+    function formatResourceName(key) {
+      var rt = CatalogHelper.getResource(key);
+      if (rt) return rt.name;
+      return capitalize(key.replace(/_/g, ' '));
+    }
+
     return {
-      init: init
+      init: init,
+      stopTickLoop: stopTickLoop
     };
   })();
 
