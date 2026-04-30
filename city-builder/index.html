@@ -713,6 +713,83 @@ body {
 }
 .build-option-cost .cant-afford { color: #e05050; }
 
+/* Inventory panel */
+.inventory-panel {
+  display: none;
+  background: #131a24;
+  border-top: 1px solid #1e2a3a;
+  flex-shrink: 0;
+  max-height: 45vh;
+  flex-direction: column;
+}
+.inventory-panel.active { display: flex; }
+.inventory-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid #1e2a3a;
+}
+.inventory-panel-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #e0e6ed;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.inventory-panel-close {
+  background: none;
+  border: none;
+  color: #7a8a9e;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 4px;
+  -webkit-tap-highlight-color: transparent;
+}
+.inventory-panel-body {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 8px 12px;
+}
+.inv-category-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #4a5568;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 8px 0 4px;
+}
+.inv-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  background: #0b0f14;
+  border: 1px solid #1e2a3a;
+  border-radius: 8px;
+  margin-bottom: 4px;
+}
+.inv-row-name {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #e0e6ed;
+}
+.inv-row-amount {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #7a8a9e;
+  min-width: 32px;
+  text-align: right;
+}
+.inv-row-amount.has-stock { color: #5ec49e; }
+.inv-row-amount.zero { color: #4a5568; }
+.inv-empty {
+  text-align: center;
+  color: #4a5568;
+  font-size: 0.85rem;
+  padding: 20px 0;
+}
+
 /* Game bottom nav */
 .game-bottombar {
   display: flex;
@@ -1015,6 +1092,16 @@ body {
     </div>
     <div class="build-panel-body" id="build-panel-body">
       <!-- Building options rendered by JS -->
+    </div>
+  </div>
+
+  <div class="inventory-panel" id="inventory-panel">
+    <div class="inventory-panel-header">
+      <span class="inventory-panel-title">Stockpile</span>
+      <button class="inventory-panel-close" id="inventory-panel-close">&#10005;</button>
+    </div>
+    <div class="inventory-panel-body" id="inventory-panel-body">
+      <!-- Inventory rows rendered by JS -->
     </div>
   </div>
 
@@ -1879,6 +1966,38 @@ body {
       });
     }
 
+    // Resource display names and category grouping
+    var INV_CATEGORIES = [
+      { label: 'Raw Materials', keys: ['timber', 'stone', 'grain', 'clay', 'iron_ore'] },
+      { label: 'Construction', keys: ['wood_planks', 'cut_stone', 'bricks', 'iron_bars'] },
+      { label: 'Food', keys: ['flour', 'bread'] },
+      { label: 'Industrial & Utility', keys: ['tools', 'pottery'] },
+      { label: 'Prestige', keys: ['furniture', 'fine_goods'] }
+    ];
+
+    function renderInventoryPanel() {
+      var body = document.getElementById('inventory-panel-body');
+      var html = '';
+      var hasAny = false;
+
+      INV_CATEGORIES.forEach(function (cat) {
+        html += '<div class="inv-category-label">' + cat.label + '</div>';
+        cat.keys.forEach(function (key) {
+          var amt = _inventory[key] || 0;
+          if (amt > 0) hasAny = true;
+          var rt = CatalogHelper.getResource(key);
+          var name = rt ? rt.name : capitalize(key.replace(/_/g, ' '));
+          var amtClass = amt > 0 ? 'has-stock' : 'zero';
+          html += '<div class="inv-row">';
+          html += '<span class="inv-row-name">' + name + '</span>';
+          html += '<span class="inv-row-amount ' + amtClass + '">' + amt + '</span>';
+          html += '</div>';
+        });
+      });
+
+      body.innerHTML = html;
+    }
+
     function selectBuilding(key) {
       _selectedBuilding = key;
       var bt = CatalogHelper.get(key);
@@ -1992,16 +2111,25 @@ body {
         p_anchor_y: y
       }).then(function (result) {
         if (result.error) {
-          showToast(result.error.message || 'Placement failed', 'error');
+          // Parse server error for clearer material feedback
+          var errMsg = result.error.message || 'Placement failed';
+          showToast(errMsg, 'error');
           return;
         }
         var data = result.data;
         showToast(CatalogHelper.get(buildingKey).name + ' placed!', 'success');
 
-        // Update local state
+        // Update gold from server
         if (data.gold_remaining !== undefined) {
           _gold = data.gold_remaining;
           document.getElementById('game-gold').textContent = _gold;
+        }
+
+        // Sync full inventory from server response
+        if (data.inventory) {
+          Object.keys(data.inventory).forEach(function (key) {
+            _inventory[key] = data.inventory[key];
+          });
         }
 
         // Add building to local list
@@ -2064,6 +2192,7 @@ body {
       // Build nav button
       document.getElementById('nav-build').addEventListener('click', function () {
         var panel = document.getElementById('build-panel');
+        document.getElementById('inventory-panel').classList.remove('active');
         if (panel.style.display === 'none' || !panel.style.display) {
           renderBuildPanel();
           panel.style.display = 'flex';
@@ -2077,19 +2206,31 @@ body {
       // City nav button
       document.getElementById('nav-city').addEventListener('click', function () {
         document.getElementById('build-panel').style.display = 'none';
+        document.getElementById('inventory-panel').classList.remove('active');
         cancelPlacement();
         setActiveNav('nav-city');
       });
 
-      // Inventory nav button (show toast for now)
+      // Inventory nav button — toggle inventory panel
       document.getElementById('nav-inventory').addEventListener('click', function () {
-        var invLines = [];
-        Object.keys(_inventory).forEach(function (key) {
-          if (_inventory[key] > 0) {
-            invLines.push(capitalize(key.replace(/_/g, ' ')) + ': ' + _inventory[key]);
-          }
-        });
-        showToast(invLines.length > 0 ? invLines.join(', ') : 'Inventory empty', '');
+        var panel = document.getElementById('inventory-panel');
+        var buildPanel = document.getElementById('build-panel');
+        if (panel.classList.contains('active')) {
+          panel.classList.remove('active');
+          setActiveNav('nav-city');
+        } else {
+          buildPanel.style.display = 'none';
+          cancelPlacement();
+          renderInventoryPanel();
+          panel.classList.add('active');
+          setActiveNav('nav-inventory');
+        }
+      });
+
+      // Close inventory panel
+      document.getElementById('inventory-panel-close').addEventListener('click', function () {
+        document.getElementById('inventory-panel').classList.remove('active');
+        setActiveNav('nav-city');
       });
 
       // More nav button
