@@ -353,6 +353,148 @@ body {
   font-size: 1.1rem;
 }
 
+/* ── Onboarding screen ───────────────────────────────── */
+#screen-onboarding {
+  justify-content: center;
+  align-items: center;
+  padding: 24px;
+}
+.onboarding-card {
+  width: 100%;
+  max-width: 400px;
+  background: #131a24;
+  border: 1px solid #1e2a3a;
+  border-radius: 12px;
+  padding: 32px 24px;
+}
+.onboarding-card h1 {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #e0e6ed;
+  margin-bottom: 4px;
+}
+.onboarding-card .subtitle {
+  color: #7a8a9e;
+  font-size: 0.9rem;
+  margin-bottom: 24px;
+}
+.onboarding-step { display: none; }
+.onboarding-step.active { display: block; }
+.step-indicator {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+.step-dot {
+  height: 4px;
+  flex: 1;
+  border-radius: 2px;
+  background: #1e2a3a;
+  transition: background 0.3s;
+}
+.step-dot.active { background: #4fa3e0; }
+.step-dot.done { background: #5ec49e; }
+
+/* Resource picker */
+.resource-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.resource-option {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  background: #0b0f14;
+  border: 2px solid #1e2a3a;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+.resource-option:hover { border-color: #2a3d55; }
+.resource-option.selected {
+  border-color: #4fa3e0;
+  background: rgba(79, 163, 224, 0.06);
+}
+.resource-icon {
+  width: 40px; height: 40px;
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.3rem;
+  flex-shrink: 0;
+}
+.resource-icon.timber { background: rgba(76, 175, 80, 0.15); color: #66bb6a; }
+.resource-icon.stone { background: rgba(158, 158, 158, 0.15); color: #bdbdbd; }
+.resource-icon.grain { background: rgba(255, 193, 7, 0.15); color: #ffc107; }
+.resource-info { flex: 1; }
+.resource-name {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #e0e6ed;
+  margin-bottom: 2px;
+}
+.resource-desc {
+  font-size: 0.8rem;
+  color: #7a8a9e;
+}
+.resource-check {
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  border: 2px solid #2a3545;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  transition: border-color 0.2s, background 0.2s;
+}
+.resource-option.selected .resource-check {
+  border-color: #4fa3e0;
+  background: #4fa3e0;
+}
+.resource-option.selected .resource-check::after {
+  content: '';
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: #0b0f14;
+}
+
+/* Onboarding confirmation */
+.confirm-summary {
+  background: #0b0f14;
+  border: 1px solid #1e2a3a;
+  border-radius: 10px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+.confirm-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+}
+.confirm-row:not(:last-child) { border-bottom: 1px solid #1e2a3a; }
+.confirm-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #7a8a9e;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.confirm-value {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #e0e6ed;
+}
+.btn-back {
+  background: transparent;
+  color: #7a8a9e;
+  border: 1px solid #1e2a3a;
+  width: 100%;
+  margin-bottom: 10px;
+}
+
 /* ── Responsive tweaks ────────────────────────────────── */
 @media (min-width: 600px) {
   .status-grid { grid-template-columns: repeat(4, 1fr); }
@@ -434,6 +576,91 @@ body {
   </div>
 </div>
 
+<!-- ── Onboarding screen ──────────────────────────────── -->
+<div id="screen-onboarding" class="screen">
+  <div class="onboarding-card">
+    <div class="step-indicator">
+      <div class="step-dot active" id="step-dot-1"></div>
+      <div class="step-dot" id="step-dot-2"></div>
+      <div class="step-dot" id="step-dot-3"></div>
+    </div>
+
+    <!-- Step 1: Display Name -->
+    <div class="onboarding-step active" id="onboard-step-1">
+      <h1>Who are you?</h1>
+      <div class="subtitle">Choose a name for your city and its ruler.</div>
+      <div class="error-banner" id="onboard-name-error"></div>
+      <div class="form-group">
+        <label for="onboard-display-name">Display Name</label>
+        <input type="text" id="onboard-display-name" placeholder="2–24 characters" minlength="2" maxlength="24" autocomplete="off" />
+      </div>
+      <button class="btn btn-primary" id="onboard-name-next">Continue</button>
+    </div>
+
+    <!-- Step 2: Specialization -->
+    <div class="onboarding-step" id="onboard-step-2">
+      <h1>Choose your craft</h1>
+      <div class="subtitle">Pick a resource to specialize in. This shapes your economy.</div>
+      <div class="error-banner" id="onboard-spec-error"></div>
+      <div class="resource-options">
+        <div class="resource-option" data-resource="timber">
+          <div class="resource-icon timber">&#9652;</div>
+          <div class="resource-info">
+            <div class="resource-name">Timber</div>
+            <div class="resource-desc">Harvest forests for lumber and wood planks</div>
+          </div>
+          <div class="resource-check"></div>
+        </div>
+        <div class="resource-option" data-resource="stone">
+          <div class="resource-icon stone">&#9670;</div>
+          <div class="resource-info">
+            <div class="resource-name">Stone</div>
+            <div class="resource-desc">Quarry rock for stone blocks and masonry</div>
+          </div>
+          <div class="resource-check"></div>
+        </div>
+        <div class="resource-option" data-resource="grain">
+          <div class="resource-icon grain">&#9702;</div>
+          <div class="resource-info">
+            <div class="resource-name">Grain</div>
+            <div class="resource-desc">Farm fields for grain and flour production</div>
+          </div>
+          <div class="resource-check"></div>
+        </div>
+      </div>
+      <button class="btn btn-primary" id="onboard-spec-next" disabled>Continue</button>
+      <button class="btn btn-back" id="onboard-spec-back">Back</button>
+    </div>
+
+    <!-- Step 3: Confirm -->
+    <div class="onboarding-step" id="onboard-step-3">
+      <h1>Ready to build?</h1>
+      <div class="subtitle">Review your choices and enter the world.</div>
+      <div class="error-banner" id="onboard-confirm-error"></div>
+      <div class="confirm-summary">
+        <div class="confirm-row">
+          <span class="confirm-label">Name</span>
+          <span class="confirm-value" id="confirm-name">--</span>
+        </div>
+        <div class="confirm-row">
+          <span class="confirm-label">Specialization</span>
+          <span class="confirm-value" id="confirm-spec">--</span>
+        </div>
+        <div class="confirm-row">
+          <span class="confirm-label">Starting Gold</span>
+          <span class="confirm-value" style="color:#e6c65a;">500</span>
+        </div>
+        <div class="confirm-row">
+          <span class="confirm-label">World</span>
+          <span class="confirm-value" style="color:#c084e8;">Alpha World</span>
+        </div>
+      </div>
+      <button class="btn btn-primary" id="onboard-confirm">Enter the World</button>
+      <button class="btn btn-back" id="onboard-confirm-back">Back</button>
+    </div>
+  </div>
+</div>
+
 <!-- ── Dashboard (authenticated shell) ────────────────── -->
 <div id="screen-dashboard" class="screen">
   <div class="topbar">
@@ -456,50 +683,50 @@ body {
     <div class="status-grid">
       <div class="status-card">
         <div class="label">Treasury</div>
-        <div class="value gold">$500</div>
+        <div class="value gold" id="dash-treasury">$500</div>
       </div>
       <div class="status-card">
         <div class="label">Population</div>
-        <div class="value pop">0</div>
+        <div class="value pop" id="dash-population">0</div>
       </div>
       <div class="status-card">
         <div class="label">Industry</div>
-        <div class="value industry">--</div>
+        <div class="value industry" id="dash-industry">--</div>
       </div>
       <div class="status-card">
         <div class="label">District</div>
-        <div class="value district">--</div>
+        <div class="value district" id="dash-district">--</div>
       </div>
     </div>
 
     <div class="phases-list">
       <h3>Progress</h3>
-      <div class="phase-item">
+      <div class="phase-item" id="phase-account">
         <div class="phase-dot done"></div>
         <div class="phase-label">Account created</div>
         <div class="phase-status">Done</div>
       </div>
-      <div class="phase-item">
+      <div class="phase-item" id="phase-specialization">
         <div class="phase-dot current"></div>
         <div class="phase-label">Choose specialization</div>
         <div class="phase-status">Next</div>
       </div>
-      <div class="phase-item">
+      <div class="phase-item" id="phase-district">
         <div class="phase-dot upcoming"></div>
         <div class="phase-label muted">Claim district</div>
         <div class="phase-status">Soon</div>
       </div>
-      <div class="phase-item">
+      <div class="phase-item" id="phase-build">
         <div class="phase-dot upcoming"></div>
         <div class="phase-label muted">Build first structure</div>
         <div class="phase-status">Soon</div>
       </div>
-      <div class="phase-item">
+      <div class="phase-item" id="phase-production">
         <div class="phase-dot upcoming"></div>
         <div class="phase-label muted">Start production</div>
         <div class="phase-status">Soon</div>
       </div>
-      <div class="phase-item">
+      <div class="phase-item" id="phase-trade">
         <div class="phase-dot upcoming"></div>
         <div class="phase-label muted">Trade with others</div>
         <div class="phase-status">Soon</div>
@@ -532,8 +759,8 @@ body {
   'use strict';
 
   // ── Config ──────────────────────────────────────────
-  const SUPABASE_URL = 'https://igaulapupbtdcqqjobhs.supabase.co';
-  const SUPABASE_ANON_KEY = 'sb_publishable_7yi3BNg-J-K5nralw5JSww_c71Pge6e';
+  var SUPABASE_URL = 'https://igaulapupbtdcqqjobhs.supabase.co';
+  var SUPABASE_ANON_KEY = 'sb_publishable_7yi3BNg-J-K5nralw5JSww_c71Pge6e';
 
   // ── Supabase client ─────────────────────────────────
   if (!window.supabase || typeof window.supabase.createClient !== 'function') {
@@ -541,22 +768,26 @@ body {
       '<div style="color:#f0a0a0;padding:24px;text-align:center;">Failed to load Supabase library.<br>Check your network connection and reload.</div>';
     return;
   }
-  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  // ── Current user + player state ─────────────────────
+  var currentUser = null;
+  var playerProfile = null;
 
   // ── Screen management ───────────────────────────────
-  const screens = document.querySelectorAll('.screen');
+  var screens = document.querySelectorAll('.screen');
   function showScreen(id) {
     screens.forEach(function (s) { s.classList.remove('active'); });
     document.getElementById(id).classList.add('active');
   }
 
   // ── DOM refs ────────────────────────────────────────
-  const loginForm = document.getElementById('login-form');
-  const registerForm = document.getElementById('register-form');
-  const loginError = document.getElementById('login-error');
-  const registerError = document.getElementById('register-error');
-  const dashEmail = document.getElementById('dash-email');
-  const dashGreeting = document.getElementById('dash-greeting');
+  var loginForm = document.getElementById('login-form');
+  var registerForm = document.getElementById('register-form');
+  var loginError = document.getElementById('login-error');
+  var registerError = document.getElementById('register-error');
+  var dashEmail = document.getElementById('dash-email');
+  var dashGreeting = document.getElementById('dash-greeting');
 
   // ── Error helpers ───────────────────────────────────
   function showFormError(el, msg) {
@@ -575,20 +806,328 @@ body {
     btn.textContent = loading ? 'Please wait...' : btn.dataset.originalText;
   }
 
+  // ── Capitalize helper ──────────────────────────────
+  function capitalize(s) {
+    return s ? s.charAt(0).toUpperCase() + s.slice(1) : '';
+  }
+
+  // ── Check player profile and route accordingly ─────
+  function checkProfileAndRoute(user) {
+    currentUser = user;
+    sb.from('player_profiles')
+      .select('id, display_name, specialization_key, home_world_id')
+      .eq('id', user.id)
+      .maybeSingle()
+      .then(function (result) {
+        if (result.error) {
+          // Table might not exist yet or RLS blocks — go to onboarding
+          console.warn('Profile check error:', result.error.message);
+          enterOnboarding(user);
+          return;
+        }
+        if (result.data && result.data.specialization_key) {
+          // Onboarding complete — go to dashboard
+          playerProfile = result.data;
+          enterDashboard(user);
+        } else {
+          // No profile or incomplete — go to onboarding
+          enterOnboarding(user);
+        }
+      })
+      .catch(function () {
+        enterOnboarding(user);
+      });
+  }
+
+  // ── Enter onboarding ───────────────────────────────
+  function enterOnboarding(user) {
+    currentUser = user;
+    // Reset onboarding state
+    onboardStep = 1;
+    selectedResource = null;
+    document.getElementById('onboard-display-name').value = '';
+    showOnboardStep(1);
+    showScreen('screen-onboarding');
+  }
+
   // ── Enter dashboard ─────────────────────────────────
   function enterDashboard(user) {
+    var displayName = (playerProfile && playerProfile.display_name) || '';
     var email = user.email || '';
     dashEmail.textContent = email;
-    var name = email.split('@')[0] || 'Builder';
-    dashGreeting.textContent = 'Welcome, ' + name.charAt(0).toUpperCase() + name.slice(1);
+
+    if (displayName) {
+      dashGreeting.textContent = 'Welcome, ' + displayName;
+    } else {
+      var name = email.split('@')[0] || 'Builder';
+      dashGreeting.textContent = 'Welcome, ' + capitalize(name);
+    }
+
+    // Update status cards with real data
+    updateDashboardData(user);
     showScreen('screen-dashboard');
+  }
+
+  // ── Fetch and display player data on dashboard ─────
+  function updateDashboardData(user) {
+    var specLabel = '--';
+    if (playerProfile && playerProfile.specialization_key) {
+      specLabel = capitalize(playerProfile.specialization_key);
+    }
+    document.getElementById('dash-industry').textContent = specLabel;
+
+    // Fetch treasury
+    sb.from('player_treasuries')
+      .select('gold')
+      .eq('player_id', user.id)
+      .maybeSingle()
+      .then(function (result) {
+        if (result.data) {
+          document.getElementById('dash-treasury').textContent = '$' + result.data.gold;
+        }
+      });
+
+    // Fetch population
+    sb.from('population_state')
+      .select('total_population')
+      .eq('player_id', user.id)
+      .maybeSingle()
+      .then(function (result) {
+        if (result.data) {
+          document.getElementById('dash-population').textContent = result.data.total_population;
+        }
+      });
+
+    // Update progress checklist
+    updateProgressChecklist();
+  }
+
+  // ── Update progress checklist based on state ───────
+  function updateProgressChecklist() {
+    var hasProfile = playerProfile && playerProfile.specialization_key;
+    var hasDistrict = playerProfile && playerProfile.home_district_id;
+
+    // Account created — always done if we're here
+    setPhaseState('phase-account', 'done');
+    // Specialization
+    setPhaseState('phase-specialization', hasProfile ? 'done' : 'current');
+    // District
+    setPhaseState('phase-district', hasDistrict ? 'done' : (hasProfile ? 'current' : 'upcoming'));
+    // Build / Production / Trade — upcoming
+    setPhaseState('phase-build', 'upcoming');
+    setPhaseState('phase-production', 'upcoming');
+    setPhaseState('phase-trade', 'upcoming');
+  }
+
+  function setPhaseState(id, state) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    var dot = el.querySelector('.phase-dot');
+    var label = el.querySelector('.phase-label');
+    var status = el.querySelector('.phase-status');
+    dot.className = 'phase-dot ' + state;
+    label.classList.toggle('muted', state === 'upcoming');
+    var statusMap = { done: 'Done', current: 'Next', upcoming: 'Soon' };
+    status.textContent = statusMap[state] || '';
+  }
+
+  // ── Onboarding step management ─────────────────────
+  var onboardStep = 1;
+  var selectedResource = null;
+
+  function showOnboardStep(step) {
+    onboardStep = step;
+    for (var i = 1; i <= 3; i++) {
+      var stepEl = document.getElementById('onboard-step-' + i);
+      var dotEl = document.getElementById('step-dot-' + i);
+      stepEl.classList.toggle('active', i === step);
+      dotEl.classList.remove('active', 'done');
+      if (i < step) dotEl.classList.add('done');
+      else if (i === step) dotEl.classList.add('active');
+    }
+    // Clear errors on step change
+    clearFormError(document.getElementById('onboard-name-error'));
+    clearFormError(document.getElementById('onboard-spec-error'));
+    clearFormError(document.getElementById('onboard-confirm-error'));
+  }
+
+  // Step 1: Display name → next
+  document.getElementById('onboard-name-next').addEventListener('click', function () {
+    var nameInput = document.getElementById('onboard-display-name');
+    var nameVal = nameInput.value.trim();
+    var errEl = document.getElementById('onboard-name-error');
+    clearFormError(errEl);
+    if (nameVal.length < 2) {
+      showFormError(errEl, 'Name must be at least 2 characters.');
+      return;
+    }
+    if (nameVal.length > 24) {
+      showFormError(errEl, 'Name must be 24 characters or fewer.');
+      return;
+    }
+    showOnboardStep(2);
+  });
+
+  // Allow enter key on name input
+  document.getElementById('onboard-display-name').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      document.getElementById('onboard-name-next').click();
+    }
+  });
+
+  // Step 2: Resource selection
+  var resourceOptions = document.querySelectorAll('.resource-option');
+  resourceOptions.forEach(function (opt) {
+    opt.addEventListener('click', function () {
+      resourceOptions.forEach(function (o) { o.classList.remove('selected'); });
+      opt.classList.add('selected');
+      selectedResource = opt.getAttribute('data-resource');
+      document.getElementById('onboard-spec-next').disabled = false;
+    });
+  });
+
+  document.getElementById('onboard-spec-next').addEventListener('click', function () {
+    if (!selectedResource) {
+      showFormError(document.getElementById('onboard-spec-error'), 'Please choose a specialization.');
+      return;
+    }
+    // Populate confirmation
+    document.getElementById('confirm-name').textContent = document.getElementById('onboard-display-name').value.trim();
+    document.getElementById('confirm-spec').textContent = capitalize(selectedResource);
+    showOnboardStep(3);
+  });
+
+  document.getElementById('onboard-spec-back').addEventListener('click', function () {
+    showOnboardStep(1);
+  });
+
+  document.getElementById('onboard-confirm-back').addEventListener('click', function () {
+    showOnboardStep(2);
+  });
+
+  // Step 3: Confirm and bootstrap
+  document.getElementById('onboard-confirm').addEventListener('click', function () {
+    var btn = document.getElementById('onboard-confirm');
+    var errEl = document.getElementById('onboard-confirm-error');
+    var displayName = document.getElementById('onboard-display-name').value.trim();
+    clearFormError(errEl);
+    setSubmitting(btn, true);
+
+    completeOnboarding(displayName, selectedResource)
+      .then(function (profile) {
+        setSubmitting(btn, false);
+        playerProfile = profile;
+        enterDashboard(currentUser);
+      })
+      .catch(function (err) {
+        setSubmitting(btn, false);
+        showFormError(errEl, err.message || 'Failed to complete setup. Please try again.');
+      });
+  });
+
+  // ── Onboarding bootstrap logic ─────────────────────
+  // Attempts RPC first (server-side atomic bootstrap).
+  // Falls back to client-side inserts if RPC is not deployed.
+  //
+  // LIMITATION: Client-side fallback relies on RLS INSERT
+  // policies existing on player_profiles, player_treasuries,
+  // player_inventories, and population_state tables. If those
+  // policies are not in place, the fallback will also fail.
+  // Deploy 0002_onboarding_rpc.sql to enable the RPC path.
+  function completeOnboarding(displayName, specialization) {
+    return sb.rpc('complete_onboarding', {
+      p_display_name: displayName,
+      p_specialization_key: specialization
+    }).then(function (result) {
+      if (result.error) {
+        // RPC doesn't exist or failed — try client-side fallback
+        console.warn('RPC onboarding failed, trying client fallback:', result.error.message);
+        return clientSideFallback(displayName, specialization);
+      }
+      // RPC succeeded — return profile-like object
+      var data = result.data;
+      return {
+        id: currentUser.id,
+        display_name: data.display_name || displayName,
+        specialization_key: data.specialization || specialization,
+        home_world_id: data.world_id || null
+      };
+    }).catch(function () {
+      return clientSideFallback(displayName, specialization);
+    });
+  }
+
+  function clientSideFallback(displayName, specialization) {
+    var userId = currentUser.id;
+    var email = currentUser.email || '';
+
+    // Step 1: Get alpha-world id
+    return sb.from('worlds')
+      .select('id')
+      .eq('slug', 'alpha-world')
+      .eq('status', 'active')
+      .maybeSingle()
+      .then(function (worldResult) {
+        var worldId = (worldResult.data && worldResult.data.id) || null;
+
+        // Step 2: Upsert player profile
+        return sb.from('player_profiles')
+          .upsert({
+            id: userId,
+            email: email,
+            display_name: displayName,
+            specialization_key: specialization,
+            home_world_id: worldId
+          }, { onConflict: 'id' })
+          .then(function (profileResult) {
+            if (profileResult.error) throw profileResult.error;
+
+            // Step 3: Create treasury + inventory + population (parallel)
+            return Promise.all([
+              sb.from('player_treasuries').upsert({
+                player_id: userId,
+                gold: 500,
+                income_per_tick: 0,
+                expenses_per_tick: 0
+              }, { onConflict: 'player_id' }),
+              sb.from('player_inventories').upsert([
+                { player_id: userId, resource_key: 'timber', amount: 0 },
+                { player_id: userId, resource_key: 'stone', amount: 0 },
+                { player_id: userId, resource_key: 'grain', amount: 0 }
+              ], { onConflict: 'player_id,resource_key' }),
+              sb.from('population_state').upsert({
+                player_id: userId,
+                total_population: 0,
+                housed_population: 0,
+                employed_population: 0,
+                unhoused_population: 0,
+                happiness: 50
+              }, { onConflict: 'player_id' })
+            ]);
+          })
+          .then(function (results) {
+            // Check for errors in parallel results
+            for (var i = 0; i < results.length; i++) {
+              if (results[i].error) {
+                console.warn('Bootstrap sub-insert error:', results[i].error.message);
+              }
+            }
+            return {
+              id: userId,
+              display_name: displayName,
+              specialization_key: specialization,
+              home_world_id: worldId
+            };
+          });
+      });
   }
 
   // ── Init: restore session ──────────────────────────
   sb.auth.getSession().then(function (result) {
     var session = result.data && result.data.session;
     if (session && session.user) {
-      enterDashboard(session.user);
+      checkProfileAndRoute(session.user);
     } else {
       showScreen('screen-welcome');
     }
@@ -599,8 +1138,10 @@ body {
   // ── Listen for auth state changes ──────────────────
   sb.auth.onAuthStateChange(function (event, session) {
     if (event === 'SIGNED_IN' && session && session.user) {
-      enterDashboard(session.user);
+      checkProfileAndRoute(session.user);
     } else if (event === 'SIGNED_OUT') {
+      currentUser = null;
+      playerProfile = null;
       showScreen('screen-welcome');
     }
   });
@@ -639,7 +1180,6 @@ body {
         showFormError(loginError, result.error.message);
         return;
       }
-      // onAuthStateChange handles the redirect
     }).catch(function (err) {
       setSubmitting(btn, false);
       showFormError(loginError, err.message || 'Login failed. Try again.');
@@ -673,22 +1213,16 @@ body {
         showFormError(registerError, result.error.message);
         return;
       }
-      // If email confirmation is required, Supabase won't return a session.
-      // Auto-sign in to handle projects with confirmation disabled.
       if (result.data && result.data.session) {
         setSubmitting(btn, false);
-        // onAuthStateChange handles the redirect
         return;
       }
-      // Try auto-login (works when email confirmation is off)
       sb.auth.signInWithPassword({ email: email, password: password }).then(function (loginResult) {
         setSubmitting(btn, false);
         if (loginResult.error) {
-          // Registration succeeded but can't auto-login — likely needs email confirm
           showFormError(registerError, 'Account created. Check your email to confirm, then sign in.');
           return;
         }
-        // onAuthStateChange handles the redirect
       }).catch(function () {
         setSubmitting(btn, false);
         showFormError(registerError, 'Account created. Please sign in.');
