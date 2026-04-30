@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>City Builder</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+/* ── Reset & Base ─────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: #0b0f14;
+  color: #e0e6ed;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+
+/* ── Screen container system ──────────────────────────── */
+.screen {
+  display: none;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  position: absolute;
+  top: 0; left: 0;
+}
+.screen.active { display: flex; }
+
+/* ── Loading screen ───────────────────────────────────── */
+#screen-loading {
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+}
+.spinner {
+  width: 40px; height: 40px;
+  border: 3px solid #1e2a3a;
+  border-top-color: #4fa3e0;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-text { color: #7a8a9e; font-size: 0.9rem; }
+
+/* ── Welcome / Auth screens ───────────────────────────── */
+#screen-welcome, #screen-login, #screen-register {
+  justify-content: center;
+  align-items: center;
+  padding: 24px;
+}
+.auth-card {
+  width: 100%;
+  max-width: 380px;
+  background: #131a24;
+  border: 1px solid #1e2a3a;
+  border-radius: 12px;
+  padding: 32px 24px;
+}
+.auth-card h1 {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #e0e6ed;
+  margin-bottom: 4px;
+}
+.auth-card .subtitle {
+  color: #7a8a9e;
+  font-size: 0.9rem;
+  margin-bottom: 24px;
+}
+.auth-card .tagline {
+  color: #4fa3e0;
+  font-size: 0.85rem;
+  font-weight: 500;
+  margin-bottom: 24px;
+  letter-spacing: 0.02em;
+}
+.form-group { margin-bottom: 16px; }
+.form-group label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #7a8a9e;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 6px;
+}
+.form-group input {
+  display: block;
+  width: 100%;
+  padding: 12px 14px;
+  background: #0b0f14;
+  border: 1px solid #1e2a3a;
+  border-radius: 8px;
+  color: #e0e6ed;
+  font-size: 1rem;
+  transition: border-color 0.2s;
+}
+.form-group input:focus {
+  outline: none;
+  border-color: #4fa3e0;
+}
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  min-height: 48px;
+  touch-action: manipulation;
+  transition: opacity 0.2s, transform 0.1s;
+  -webkit-tap-highlight-color: transparent;
+}
+.btn:active { transform: scale(0.97); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+.btn-primary {
+  background: #4fa3e0;
+  color: #0b0f14;
+  width: 100%;
+}
+.btn-secondary {
+  background: transparent;
+  color: #4fa3e0;
+  border: 1px solid #1e2a3a;
+  width: 100%;
+}
+.btn-ghost {
+  background: none;
+  border: none;
+  color: #4fa3e0;
+  padding: 8px;
+  font-size: 0.9rem;
+}
+.form-footer {
+  margin-top: 16px;
+  text-align: center;
+}
+.form-footer span { color: #7a8a9e; font-size: 0.85rem; }
+.error-banner {
+  background: #3b1219;
+  border: 1px solid #5c1d2a;
+  color: #f0a0a0;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  margin-bottom: 16px;
+  display: none;
+}
+.error-banner.visible { display: block; }
+.btn-row {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+}
+.btn-row .btn { flex: 1; }
+
+/* ── Dashboard (authenticated shell) ──────────────────── */
+#screen-dashboard {
+  background: #0b0f14;
+}
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: #131a24;
+  border-bottom: 1px solid #1e2a3a;
+  flex-shrink: 0;
+}
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.topbar-logo {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #e0e6ed;
+}
+.topbar-badge {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #4fa3e0;
+  background: rgba(79, 163, 224, 0.12);
+  padding: 2px 8px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.topbar-email {
+  font-size: 0.8rem;
+  color: #7a8a9e;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.btn-logout {
+  background: none;
+  border: 1px solid #1e2a3a;
+  color: #7a8a9e;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.dashboard-content {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 20px 16px;
+}
+
+/* Status cards */
+.status-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+.status-card {
+  background: #131a24;
+  border: 1px solid #1e2a3a;
+  border-radius: 10px;
+  padding: 16px;
+}
+.status-card .label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #7a8a9e;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 6px;
+}
+.status-card .value {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #e0e6ed;
+}
+.status-card .value.gold { color: #e6c65a; }
+.status-card .value.pop { color: #5ec49e; }
+.status-card .value.industry { color: #4fa3e0; }
+.status-card .value.district { color: #c084e8; }
+
+/* Welcome hero */
+.welcome-hero {
+  background: linear-gradient(135deg, #131a24 0%, #162030 100%);
+  border: 1px solid #1e2a3a;
+  border-radius: 12px;
+  padding: 24px 20px;
+  margin-bottom: 24px;
+  text-align: center;
+}
+.welcome-hero h2 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+.welcome-hero p {
+  color: #7a8a9e;
+  font-size: 0.9rem;
+  max-width: 320px;
+  margin: 0 auto 16px;
+}
+
+/* Phases checklist */
+.phases-list {
+  margin-bottom: 24px;
+}
+.phases-list h3 {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #7a8a9e;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 12px;
+}
+.phase-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: #131a24;
+  border: 1px solid #1e2a3a;
+  border-radius: 10px;
+  margin-bottom: 8px;
+}
+.phase-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.phase-dot.done { background: #5ec49e; }
+.phase-dot.current { background: #4fa3e0; animation: pulse 2s ease-in-out infinite; }
+.phase-dot.upcoming { background: #2a3545; }
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+.phase-item .phase-label {
+  font-size: 0.9rem;
+  color: #e0e6ed;
+}
+.phase-item .phase-label.muted { color: #4a5568; }
+.phase-item .phase-status {
+  margin-left: auto;
+  font-size: 0.75rem;
+  color: #7a8a9e;
+}
+
+/* Bottom nav placeholder */
+.bottombar {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  padding: 10px 0;
+  padding-bottom: max(10px, env(safe-area-inset-bottom));
+  background: #131a24;
+  border-top: 1px solid #1e2a3a;
+  flex-shrink: 0;
+}
+.nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  color: #4a5568;
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 4px 12px;
+  -webkit-tap-highlight-color: transparent;
+}
+.nav-item.active { color: #4fa3e0; }
+.nav-icon {
+  width: 24px; height: 24px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.1rem;
+}
+
+/* ── Responsive tweaks ────────────────────────────────── */
+@media (min-width: 600px) {
+  .status-grid { grid-template-columns: repeat(4, 1fr); }
+  .dashboard-content { padding: 24px 32px; max-width: 680px; margin: 0 auto; }
+  .topbar { padding: 12px 32px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ── Loading screen ─────────────────────────────────── -->
+<div id="screen-loading" class="screen active">
+  <div class="spinner"></div>
+  <div class="loading-text">Restoring session...</div>
+</div>
+
+<!-- ── Welcome screen ─────────────────────────────────── -->
+<div id="screen-welcome" class="screen">
+  <div class="auth-card" style="text-align:center;">
+    <h1>City Builder</h1>
+    <div class="tagline">Build. Trade. Grow. Together.</div>
+    <p class="subtitle">A multiplayer city-building game with persistent progression, shared economies, and real-time trade.</p>
+    <div class="btn-row" style="flex-direction:column; gap:12px;">
+      <button class="btn btn-primary" id="btn-goto-login">Sign In</button>
+      <button class="btn btn-secondary" id="btn-goto-register">Create Account</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Login screen ───────────────────────────────────── -->
+<div id="screen-login" class="screen">
+  <div class="auth-card">
+    <h1>Welcome back</h1>
+    <div class="subtitle">Sign in to your city.</div>
+    <div class="error-banner" id="login-error"></div>
+    <form id="login-form" autocomplete="on">
+      <div class="form-group">
+        <label for="login-email">Email</label>
+        <input type="email" id="login-email" name="email" autocomplete="email" required />
+      </div>
+      <div class="form-group">
+        <label for="login-password">Password</label>
+        <input type="password" id="login-password" name="password" autocomplete="current-password" required />
+      </div>
+      <button type="submit" class="btn btn-primary" id="login-submit">Sign In</button>
+    </form>
+    <div class="form-footer">
+      <span>No account? </span>
+      <button class="btn-ghost" id="login-goto-register">Create one</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Register screen ────────────────────────────────── -->
+<div id="screen-register" class="screen">
+  <div class="auth-card">
+    <h1>Create account</h1>
+    <div class="subtitle">Join the world and start building.</div>
+    <div class="error-banner" id="register-error"></div>
+    <form id="register-form" autocomplete="on">
+      <div class="form-group">
+        <label for="register-email">Email</label>
+        <input type="email" id="register-email" name="email" autocomplete="email" required />
+      </div>
+      <div class="form-group">
+        <label for="register-password">Password</label>
+        <input type="password" id="register-password" name="password" autocomplete="new-password" minlength="6" required />
+      </div>
+      <div class="form-group">
+        <label for="register-confirm">Confirm Password</label>
+        <input type="password" id="register-confirm" name="confirm" autocomplete="new-password" minlength="6" required />
+      </div>
+      <button type="submit" class="btn btn-primary" id="register-submit">Create Account</button>
+    </form>
+    <div class="form-footer">
+      <span>Already have an account? </span>
+      <button class="btn-ghost" id="register-goto-login">Sign in</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Dashboard (authenticated shell) ────────────────── -->
+<div id="screen-dashboard" class="screen">
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="topbar-logo">City Builder</div>
+      <div class="topbar-badge">Alpha</div>
+    </div>
+    <div class="topbar-right">
+      <span class="topbar-email" id="dash-email"></span>
+      <button class="btn-logout" id="btn-logout">Sign Out</button>
+    </div>
+  </div>
+
+  <div class="dashboard-content">
+    <div class="welcome-hero">
+      <h2 id="dash-greeting">Welcome, Builder</h2>
+      <p>Your city awaits. The next phase will let you choose a specialization and claim your district in the shared world.</p>
+    </div>
+
+    <div class="status-grid">
+      <div class="status-card">
+        <div class="label">Treasury</div>
+        <div class="value gold">$500</div>
+      </div>
+      <div class="status-card">
+        <div class="label">Population</div>
+        <div class="value pop">0</div>
+      </div>
+      <div class="status-card">
+        <div class="label">Industry</div>
+        <div class="value industry">--</div>
+      </div>
+      <div class="status-card">
+        <div class="label">District</div>
+        <div class="value district">--</div>
+      </div>
+    </div>
+
+    <div class="phases-list">
+      <h3>Progress</h3>
+      <div class="phase-item">
+        <div class="phase-dot done"></div>
+        <div class="phase-label">Account created</div>
+        <div class="phase-status">Done</div>
+      </div>
+      <div class="phase-item">
+        <div class="phase-dot current"></div>
+        <div class="phase-label">Choose specialization</div>
+        <div class="phase-status">Next</div>
+      </div>
+      <div class="phase-item">
+        <div class="phase-dot upcoming"></div>
+        <div class="phase-label muted">Claim district</div>
+        <div class="phase-status">Soon</div>
+      </div>
+      <div class="phase-item">
+        <div class="phase-dot upcoming"></div>
+        <div class="phase-label muted">Build first structure</div>
+        <div class="phase-status">Soon</div>
+      </div>
+      <div class="phase-item">
+        <div class="phase-dot upcoming"></div>
+        <div class="phase-label muted">Start production</div>
+        <div class="phase-status">Soon</div>
+      </div>
+      <div class="phase-item">
+        <div class="phase-dot upcoming"></div>
+        <div class="phase-label muted">Trade with others</div>
+        <div class="phase-status">Soon</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="bottombar">
+    <div class="nav-item active">
+      <div class="nav-icon">&#9750;</div>
+      <span>City</span>
+    </div>
+    <div class="nav-item">
+      <div class="nav-icon">&#9881;</div>
+      <span>Build</span>
+    </div>
+    <div class="nav-item">
+      <div class="nav-icon">&#8644;</div>
+      <span>Trade</span>
+    </div>
+    <div class="nav-item">
+      <div class="nav-icon">&#9776;</div>
+      <span>More</span>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ── Config ──────────────────────────────────────────
+  const SUPABASE_URL = 'https://igaulapupbtdcqqjobhs.supabase.co';
+  const SUPABASE_ANON_KEY = 'sb_publishable_7yi3BNg-J-K5nralw5JSww_c71Pge6e';
+
+  // ── Supabase client ─────────────────────────────────
+  if (!window.supabase || typeof window.supabase.createClient !== 'function') {
+    document.getElementById('screen-loading').innerHTML =
+      '<div style="color:#f0a0a0;padding:24px;text-align:center;">Failed to load Supabase library.<br>Check your network connection and reload.</div>';
+    return;
+  }
+  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  // ── Screen management ───────────────────────────────
+  const screens = document.querySelectorAll('.screen');
+  function showScreen(id) {
+    screens.forEach(function (s) { s.classList.remove('active'); });
+    document.getElementById(id).classList.add('active');
+  }
+
+  // ── DOM refs ────────────────────────────────────────
+  const loginForm = document.getElementById('login-form');
+  const registerForm = document.getElementById('register-form');
+  const loginError = document.getElementById('login-error');
+  const registerError = document.getElementById('register-error');
+  const dashEmail = document.getElementById('dash-email');
+  const dashGreeting = document.getElementById('dash-greeting');
+
+  // ── Error helpers ───────────────────────────────────
+  function showFormError(el, msg) {
+    el.textContent = msg;
+    el.classList.add('visible');
+  }
+  function clearFormError(el) {
+    el.textContent = '';
+    el.classList.remove('visible');
+  }
+
+  // ── Set loading state on submit buttons ─────────────
+  function setSubmitting(btn, loading) {
+    btn.disabled = loading;
+    btn.dataset.originalText = btn.dataset.originalText || btn.textContent;
+    btn.textContent = loading ? 'Please wait...' : btn.dataset.originalText;
+  }
+
+  // ── Enter dashboard ─────────────────────────────────
+  function enterDashboard(user) {
+    var email = user.email || '';
+    dashEmail.textContent = email;
+    var name = email.split('@')[0] || 'Builder';
+    dashGreeting.textContent = 'Welcome, ' + name.charAt(0).toUpperCase() + name.slice(1);
+    showScreen('screen-dashboard');
+  }
+
+  // ── Init: restore session ──────────────────────────
+  sb.auth.getSession().then(function (result) {
+    var session = result.data && result.data.session;
+    if (session && session.user) {
+      enterDashboard(session.user);
+    } else {
+      showScreen('screen-welcome');
+    }
+  }).catch(function () {
+    showScreen('screen-welcome');
+  });
+
+  // ── Listen for auth state changes ──────────────────
+  sb.auth.onAuthStateChange(function (event, session) {
+    if (event === 'SIGNED_IN' && session && session.user) {
+      enterDashboard(session.user);
+    } else if (event === 'SIGNED_OUT') {
+      showScreen('screen-welcome');
+    }
+  });
+
+  // ── Navigation between auth screens ────────────────
+  document.getElementById('btn-goto-login').addEventListener('click', function () {
+    showScreen('screen-login');
+  });
+  document.getElementById('btn-goto-register').addEventListener('click', function () {
+    showScreen('screen-register');
+  });
+  document.getElementById('login-goto-register').addEventListener('click', function () {
+    clearFormError(loginError);
+    showScreen('screen-register');
+  });
+  document.getElementById('register-goto-login').addEventListener('click', function () {
+    clearFormError(registerError);
+    showScreen('screen-login');
+  });
+
+  // ── Login ──────────────────────────────────────────
+  loginForm.addEventListener('submit', function (e) {
+    e.preventDefault();
+    clearFormError(loginError);
+    var email = document.getElementById('login-email').value.trim();
+    var password = document.getElementById('login-password').value;
+    if (!email || !password) {
+      showFormError(loginError, 'Email and password are required.');
+      return;
+    }
+    var btn = document.getElementById('login-submit');
+    setSubmitting(btn, true);
+    sb.auth.signInWithPassword({ email: email, password: password }).then(function (result) {
+      setSubmitting(btn, false);
+      if (result.error) {
+        showFormError(loginError, result.error.message);
+        return;
+      }
+      // onAuthStateChange handles the redirect
+    }).catch(function (err) {
+      setSubmitting(btn, false);
+      showFormError(loginError, err.message || 'Login failed. Try again.');
+    });
+  });
+
+  // ── Register ───────────────────────────────────────
+  registerForm.addEventListener('submit', function (e) {
+    e.preventDefault();
+    clearFormError(registerError);
+    var email = document.getElementById('register-email').value.trim();
+    var password = document.getElementById('register-password').value;
+    var confirm = document.getElementById('register-confirm').value;
+    if (!email || !password) {
+      showFormError(registerError, 'Email and password are required.');
+      return;
+    }
+    if (password.length < 6) {
+      showFormError(registerError, 'Password must be at least 6 characters.');
+      return;
+    }
+    if (password !== confirm) {
+      showFormError(registerError, 'Passwords do not match.');
+      return;
+    }
+    var btn = document.getElementById('register-submit');
+    setSubmitting(btn, true);
+    sb.auth.signUp({ email: email, password: password }).then(function (result) {
+      if (result.error) {
+        setSubmitting(btn, false);
+        showFormError(registerError, result.error.message);
+        return;
+      }
+      // If email confirmation is required, Supabase won't return a session.
+      // Auto-sign in to handle projects with confirmation disabled.
+      if (result.data && result.data.session) {
+        setSubmitting(btn, false);
+        // onAuthStateChange handles the redirect
+        return;
+      }
+      // Try auto-login (works when email confirmation is off)
+      sb.auth.signInWithPassword({ email: email, password: password }).then(function (loginResult) {
+        setSubmitting(btn, false);
+        if (loginResult.error) {
+          // Registration succeeded but can't auto-login — likely needs email confirm
+          showFormError(registerError, 'Account created. Check your email to confirm, then sign in.');
+          return;
+        }
+        // onAuthStateChange handles the redirect
+      }).catch(function () {
+        setSubmitting(btn, false);
+        showFormError(registerError, 'Account created. Please sign in.');
+      });
+    }).catch(function (err) {
+      setSubmitting(btn, false);
+      showFormError(registerError, err.message || 'Registration failed. Try again.');
+    });
+  });
+
+  // ── Logout ─────────────────────────────────────────
+  document.getElementById('btn-logout').addEventListener('click', function () {
+    sb.auth.signOut().then(function () {
+      showScreen('screen-welcome');
+    });
+  });
+
+})();
+</script>
+</body>
+</html>
