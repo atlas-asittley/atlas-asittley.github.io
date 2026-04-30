@@ -920,6 +920,197 @@ body {
   50% { opacity: 0.5; filter: brightness(1.4); }
 }
 
+/* Housing tier visual styles */
+.grid-cell.housing-1 { background: #1a2020 !important; }
+.grid-cell.housing-2 { background: #1e2830 !important; }
+.grid-cell.housing-3 { background: #28223a !important; }
+.grid-cell.housing-1 .building-icon { color: #8aaa8a; }
+.grid-cell.housing-2 .building-icon { color: #6ab0d8; font-size: 1.2rem; }
+.grid-cell.housing-3 .building-icon { color: #c89aef; font-size: 1.3rem; }
+
+/* Building detail overlay */
+.building-detail-overlay {
+  display: none;
+  position: absolute;
+  bottom: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #131a24;
+  border: 1px solid #1e2a3a;
+  border-radius: 12px;
+  padding: 14px 18px;
+  z-index: 110;
+  min-width: 240px;
+  max-width: 320px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+}
+.building-detail-overlay.visible { display: block; }
+.building-detail-name {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #e0e6ed;
+  margin-bottom: 4px;
+}
+.building-detail-type {
+  font-size: 0.75rem;
+  color: #7a8a9e;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 10px;
+}
+.building-detail-info {
+  font-size: 0.8rem;
+  color: #a0b0c0;
+  margin-bottom: 10px;
+  line-height: 1.4;
+}
+.building-detail-upgrade {
+  display: none;
+  flex-direction: column;
+  gap: 6px;
+  border-top: 1px solid #1e2a3a;
+  padding-top: 10px;
+  margin-top: 6px;
+}
+.building-detail-upgrade.available { display: flex; }
+.upgrade-cost-row {
+  font-size: 0.78rem;
+  color: #7a8a9e;
+}
+.upgrade-cost-row .has { color: #5ec49e; }
+.upgrade-cost-row .missing { color: #e05050; }
+.btn-upgrade {
+  background: #2a6a3a;
+  color: #c0f0c0;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  min-height: 42px;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: opacity 0.2s;
+}
+.btn-upgrade:active { opacity: 0.8; }
+.btn-upgrade:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn-upgrade.tier-locked {
+  background: #2a2a3a;
+  color: #7a7a9e;
+}
+.btn-close-detail {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  background: none;
+  border: none;
+  color: #7a8a9e;
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 4px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* District progress panel */
+.district-progress-panel {
+  display: none;
+  position: absolute;
+  top: 50px;
+  right: 8px;
+  background: #131a24;
+  border: 1px solid #1e2a3a;
+  border-radius: 12px;
+  padding: 16px 18px;
+  z-index: 120;
+  min-width: 260px;
+  max-width: 320px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+}
+.district-progress-panel.visible { display: block; }
+.dp-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #e0e6ed;
+  margin-bottom: 4px;
+}
+.dp-subtitle {
+  font-size: 0.75rem;
+  color: #7a8a9e;
+  margin-bottom: 12px;
+}
+.dp-tier-badge {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #c084e8;
+  background: rgba(192, 132, 232, 0.12);
+  padding: 2px 10px;
+  border-radius: 4px;
+  margin-bottom: 12px;
+}
+.dp-req-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.dp-req-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  background: #0b0f14;
+  border: 1px solid #1e2a3a;
+  border-radius: 8px;
+  font-size: 0.82rem;
+}
+.dp-req-label { color: #e0e6ed; }
+.dp-req-status { font-weight: 600; min-width: 40px; text-align: right; }
+.dp-req-status.met { color: #5ec49e; }
+.dp-req-status.unmet { color: #e05050; }
+.dp-housing-summary {
+  font-size: 0.78rem;
+  color: #7a8a9e;
+  margin-bottom: 12px;
+  line-height: 1.5;
+}
+.btn-tier-up {
+  background: #4a2a8a;
+  color: #d0b0f0;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  width: 100%;
+  min-height: 42px;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.btn-tier-up:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn-tier-up:active { opacity: 0.8; }
+.dp-max-tier {
+  text-align: center;
+  color: #5ec49e;
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 8px 0;
+}
+.dp-close {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  background: none;
+  border: none;
+  color: #7a8a9e;
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 4px;
+  -webkit-tap-highlight-color: transparent;
+}
+
 /* Next tick countdown in topbar */
 .game-stat.tick {
   color: #5ec49e;
@@ -927,6 +1118,12 @@ body {
 }
 .game-stat.tick .tick-countdown {
   font-variant-numeric: tabular-nums;
+}
+
+/* Tier badge clickable */
+.game-stat.tier {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* ── Responsive tweaks ────────────────────────────────── */
@@ -1143,6 +1340,25 @@ body {
       <!-- 8x8 grid cells rendered by JS -->
     </div>
     <div class="game-toast" id="game-toast"></div>
+    <div class="building-detail-overlay" id="building-detail">
+      <button class="btn-close-detail" id="building-detail-close">&#10005;</button>
+      <div class="building-detail-name" id="detail-name">Building</div>
+      <div class="building-detail-type" id="detail-type">Category</div>
+      <div class="building-detail-info" id="detail-info"></div>
+      <div class="building-detail-upgrade" id="detail-upgrade">
+        <div id="detail-upgrade-costs"></div>
+        <button class="btn-upgrade" id="detail-upgrade-btn">Upgrade</button>
+      </div>
+    </div>
+    <div class="district-progress-panel" id="district-progress">
+      <button class="dp-close" id="dp-close">&#10005;</button>
+      <div class="dp-title" id="dp-title">District Progress</div>
+      <div class="dp-tier-badge" id="dp-tier-badge">Tier 1</div>
+      <div class="dp-subtitle" id="dp-subtitle">Requirements for next tier</div>
+      <div class="dp-req-list" id="dp-req-list"></div>
+      <div class="dp-housing-summary" id="dp-housing-summary"></div>
+      <button class="btn-tier-up" id="dp-tier-up-btn" disabled>Upgrade District</button>
+    </div>
   </div>
 
   <div class="build-panel" id="build-panel" style="display:none;">
@@ -1793,12 +2009,12 @@ body {
     var _lastProduction = [];      // last tick's production summary
     var TICK_INTERVAL_SEC = 60;    // must match server
 
-    // Building icons for the grid
+    // Building icons for the grid — housing tiers get distinct glyphs
     var BUILDING_ICONS = {
       road: '\u2550',
       housing_1: '\u2302',
-      housing_2: '\u2302',
-      housing_3: '\u2302',
+      housing_2: '\u2616',
+      housing_3: '\u2656',
       lumber_camp: '\u2666',
       quarry: '\u25C6',
       grain_farm: '\u2637',
@@ -1954,7 +2170,15 @@ body {
           var resource = tile ? tile.resource_key : null;
           var building = buildingAt[ax + ',' + ay];
 
-          html += '<div class="grid-cell terrain-' + terrain + '" data-x="' + ax + '" data-y="' + ay + '">';
+          var cellClasses = 'grid-cell terrain-' + terrain;
+          // Add housing tier class for visual distinction
+          if (building && building.anchor_x === ax && building.anchor_y === ay) {
+            var btk = building.building_type_key;
+            if (btk === 'housing_1') cellClasses += ' housing-1';
+            else if (btk === 'housing_2') cellClasses += ' housing-2';
+            else if (btk === 'housing_3') cellClasses += ' housing-3';
+          }
+          html += '<div class="' + cellClasses + '" data-x="' + ax + '" data-y="' + ay + '">';
 
           if (resource && !building) {
             html += '<div class="resource-dot ' + resource + '"></div>';
@@ -2239,7 +2463,10 @@ body {
         if (_selectedBuilding) {
           attemptPlacement(x, y);
         } else {
-          // Show tile info (minimal for now)
+          // Close any open panels first
+          closeBuildingDetail();
+          closeDistrictProgress();
+
           var tile = _tiles[x + ',' + y];
           var building = _buildings.find(function (b) {
             var bt = CatalogHelper.get(b.building_type_key);
@@ -2249,21 +2476,7 @@ body {
                 && y >= b.anchor_y && y < b.anchor_y + fh;
           });
           if (building) {
-            var bt = CatalogHelper.get(building.building_type_key);
-            var info = bt ? bt.name : building.building_type_key;
-            if (bt && bt.output_resource_key) {
-              var outName = formatResourceName(bt.output_resource_key);
-              var consumes = (bt.build_rules || {}).consumes;
-              if (consumes && Object.keys(consumes).length > 0) {
-                var inNames = Object.keys(consumes).map(function (k) {
-                  return consumes[k] + ' ' + formatResourceName(k);
-                }).join(', ');
-                info += ' (' + inNames + ' \u2192 ' + outName + ')';
-              } else {
-                info += ' (\u2192 ' + outName + ')';
-              }
-            }
-            showToast(info, '');
+            showBuildingDetail(building);
           } else if (tile && tile.resource_key) {
             var rt = CatalogHelper.getResource(tile.resource_key);
             showToast((rt ? rt.name : tile.resource_key) + ' deposit', '');
@@ -2329,6 +2542,37 @@ body {
       // Cancel placement
       document.getElementById('placement-bar-cancel').addEventListener('click', function () {
         cancelPlacement();
+      });
+
+      // Building detail close
+      document.getElementById('building-detail-close').addEventListener('click', function () {
+        closeBuildingDetail();
+      });
+
+      // Housing upgrade button
+      document.getElementById('detail-upgrade-btn').addEventListener('click', function () {
+        doHousingUpgrade();
+      });
+
+      // Tier badge → show district progress
+      document.querySelector('.game-stat.tier').addEventListener('click', function () {
+        closeBuildingDetail();
+        var panel = document.getElementById('district-progress');
+        if (panel.classList.contains('visible')) {
+          closeDistrictProgress();
+        } else {
+          showDistrictProgress();
+        }
+      });
+
+      // District progress close
+      document.getElementById('dp-close').addEventListener('click', function () {
+        closeDistrictProgress();
+      });
+
+      // District tier-up button
+      document.getElementById('dp-tier-up-btn').addEventListener('click', function () {
+        doDistrictUpgrade();
       });
 
       // Logout from game screen
@@ -2503,6 +2747,250 @@ body {
       var rt = CatalogHelper.getResource(key);
       if (rt) return rt.name;
       return capitalize(key.replace(/_/g, ' '));
+    }
+
+    // ── Building detail overlay ─────────────────────────
+    var _detailBuildingId = null;
+
+    // Housing upgrade costs (must match server migration 0007)
+    var HOUSING_UPGRADE_COSTS = {
+      housing_1: { gold: 50, wood_planks: 3, bricks: 2 },
+      housing_2: { gold: 80, furniture: 2, pottery: 2, bread: 2 }
+    };
+    var HOUSING_UPGRADE_TARGET = {
+      housing_1: 'housing_2',
+      housing_2: 'housing_3'
+    };
+
+    function showBuildingDetail(building) {
+      var overlay = document.getElementById('building-detail');
+      var bt = CatalogHelper.get(building.building_type_key);
+      var name = bt ? bt.name : building.building_type_key;
+      var category = bt ? bt.category : '';
+
+      document.getElementById('detail-name').textContent = name;
+      document.getElementById('detail-type').textContent = category;
+
+      // Build info text
+      var info = '';
+      if (bt && bt.output_resource_key) {
+        var outName = formatResourceName(bt.output_resource_key);
+        var consumes = (bt.build_rules || {}).consumes;
+        if (consumes && Object.keys(consumes).length > 0) {
+          var inNames = Object.keys(consumes).map(function (k) {
+            return consumes[k] + ' ' + formatResourceName(k);
+          }).join(', ');
+          info = 'Produces: ' + outName + '\nConsumes: ' + inNames;
+        } else {
+          info = 'Produces: ' + outName;
+        }
+      }
+      if (bt && (bt.build_rules || {}).populationCap) {
+        info += (info ? '\n' : '') + 'Houses up to ' + bt.build_rules.populationCap + ' citizens';
+      }
+      document.getElementById('detail-info').textContent = info;
+
+      // Housing upgrade section
+      var upgradeSection = document.getElementById('detail-upgrade');
+      var upgradeCosts = HOUSING_UPGRADE_COSTS[building.building_type_key];
+      var upgradeTarget = HOUSING_UPGRADE_TARGET[building.building_type_key];
+
+      if (upgradeCosts && upgradeTarget) {
+        upgradeSection.classList.add('available');
+        _detailBuildingId = building.id;
+
+        var targetBt = CatalogHelper.get(upgradeTarget);
+        var targetName = targetBt ? targetBt.name : upgradeTarget;
+
+        // Check district tier requirement
+        var targetRules = targetBt ? (targetBt.build_rules || {}) : {};
+        var reqTier = targetRules.districtTierRequired || 1;
+        var tierLocked = _districtTier < reqTier;
+
+        // Build cost display
+        var costHtml = '<div style="font-size:0.78rem;font-weight:600;color:#e0e6ed;margin-bottom:6px;">Upgrade to ' + targetName + '</div>';
+        var canAfford = true;
+
+        if (tierLocked) {
+          costHtml += '<div class="upgrade-cost-row"><span class="missing">Requires District Tier ' + reqTier + '</span></div>';
+          canAfford = false;
+        } else {
+          Object.keys(upgradeCosts).forEach(function (k) {
+            var need = upgradeCosts[k];
+            if (k === 'gold') {
+              var cls = _gold >= need ? 'has' : 'missing';
+              if (_gold < need) canAfford = false;
+              costHtml += '<div class="upgrade-cost-row"><span class="' + cls + '">' + need + ' gold (have ' + _gold + ')</span></div>';
+            } else {
+              var have = _inventory[k] || 0;
+              var cls2 = have >= need ? 'has' : 'missing';
+              if (have < need) canAfford = false;
+              costHtml += '<div class="upgrade-cost-row"><span class="' + cls2 + '">' + need + ' ' + formatResourceName(k) + ' (have ' + have + ')</span></div>';
+            }
+          });
+        }
+
+        document.getElementById('detail-upgrade-costs').innerHTML = costHtml;
+        var btn = document.getElementById('detail-upgrade-btn');
+        btn.disabled = !canAfford || tierLocked;
+        btn.textContent = tierLocked ? 'Tier ' + reqTier + ' Required' : 'Upgrade';
+        btn.className = 'btn-upgrade' + (tierLocked ? ' tier-locked' : '');
+      } else {
+        upgradeSection.classList.remove('available');
+        _detailBuildingId = null;
+      }
+
+      overlay.classList.add('visible');
+    }
+
+    function closeBuildingDetail() {
+      document.getElementById('building-detail').classList.remove('visible');
+      _detailBuildingId = null;
+    }
+
+    function doHousingUpgrade() {
+      if (!_detailBuildingId) return;
+      var btn = document.getElementById('detail-upgrade-btn');
+      btn.disabled = true;
+      btn.textContent = 'Upgrading...';
+
+      sb.rpc('upgrade_housing', { p_building_id: _detailBuildingId })
+        .then(function (result) {
+          if (result.error) {
+            showToast(result.error.message || 'Upgrade failed', 'error');
+            btn.disabled = false;
+            btn.textContent = 'Upgrade';
+            return;
+          }
+          var data = result.data;
+          showToast('Housing upgraded to ' + formatResourceName(data.new_type).replace(/_/g, ' ') + '!', 'success');
+
+          // Update gold
+          if (data.gold_remaining !== undefined) {
+            _gold = data.gold_remaining;
+            document.getElementById('game-gold').textContent = _gold;
+          }
+
+          // Sync inventory
+          if (data.inventory) {
+            _inventory = {};
+            Object.keys(data.inventory).forEach(function (k) {
+              _inventory[k] = data.inventory[k];
+            });
+          }
+
+          // Update the local building record
+          var b = _buildings.find(function (b) { return b.id === _detailBuildingId; });
+          if (b) {
+            b.building_type_key = data.new_type;
+          }
+
+          closeBuildingDetail();
+          renderGrid();
+
+          // Re-render inventory if open
+          if (document.getElementById('inventory-panel').classList.contains('active')) {
+            renderInventoryPanel();
+          }
+        })
+        .catch(function (err) {
+          showToast(err.message || 'Upgrade failed', 'error');
+          btn.disabled = false;
+          btn.textContent = 'Upgrade';
+        });
+    }
+
+    // ── District progress panel ─────────────────────────
+    function showDistrictProgress() {
+      var panel = document.getElementById('district-progress');
+      document.getElementById('dp-title').textContent = (_district ? _district.name : 'District') + ' Progress';
+      document.getElementById('dp-tier-badge').textContent = 'Tier ' + _districtTier;
+
+      // Load progress from server
+      sb.rpc('get_district_progress').then(function (result) {
+        if (result.error) {
+          console.warn('District progress error:', result.error.message);
+          return;
+        }
+        var data = result.data;
+        var reqs = data.requirements || [];
+        var counts = data.building_counts || {};
+        var canUpgrade = data.can_upgrade;
+        var nextTier = data.next_tier;
+
+        if (!nextTier) {
+          // Max tier
+          document.getElementById('dp-subtitle').textContent = 'Maximum tier reached';
+          document.getElementById('dp-req-list').innerHTML = '';
+          document.getElementById('dp-tier-up-btn').style.display = 'none';
+          document.getElementById('dp-housing-summary').innerHTML = '<div class="dp-max-tier">Your district has reached its full potential!</div>';
+        } else {
+          document.getElementById('dp-subtitle').textContent = 'Requirements for Tier ' + nextTier;
+
+          var reqHtml = '';
+          reqs.forEach(function (req) {
+            var statusCls = req.met ? 'met' : 'unmet';
+            var statusText = req.have + '/' + req.need;
+            reqHtml += '<div class="dp-req-item">';
+            reqHtml += '<span class="dp-req-label">' + req.label + '</span>';
+            reqHtml += '<span class="dp-req-status ' + statusCls + '">' + statusText + '</span>';
+            reqHtml += '</div>';
+          });
+          document.getElementById('dp-req-list').innerHTML = reqHtml;
+
+          // Housing summary
+          var sumHtml = 'Housing: ' + (counts.housing_1 || 0) + ' basic, ' +
+            (counts.housing_2 || 0) + ' improved, ' +
+            (counts.housing_3 || 0) + ' upper | ' +
+            (counts.total || 0) + ' buildings total';
+          document.getElementById('dp-housing-summary').textContent = sumHtml;
+
+          var tierBtn = document.getElementById('dp-tier-up-btn');
+          tierBtn.style.display = '';
+          tierBtn.disabled = !canUpgrade;
+          tierBtn.textContent = canUpgrade ? 'Upgrade to Tier ' + nextTier : 'Requirements not met';
+        }
+
+        panel.classList.add('visible');
+      }).catch(function (err) {
+        console.warn('District progress fetch failed:', err);
+        showToast('Could not load district progress', 'error');
+      });
+    }
+
+    function closeDistrictProgress() {
+      document.getElementById('district-progress').classList.remove('visible');
+    }
+
+    function doDistrictUpgrade() {
+      var btn = document.getElementById('dp-tier-up-btn');
+      btn.disabled = true;
+      btn.textContent = 'Upgrading...';
+
+      sb.rpc('upgrade_district').then(function (result) {
+        if (result.error) {
+          showToast(result.error.message || 'District upgrade failed', 'error');
+          btn.disabled = false;
+          btn.textContent = 'Upgrade District';
+          return;
+        }
+        var data = result.data;
+        _districtTier = data.new_tier;
+        if (_district) _district.tier = data.new_tier;
+        document.getElementById('game-tier').textContent = _districtTier;
+
+        showToast('District upgraded to Tier ' + _districtTier + '!', 'success');
+        closeDistrictProgress();
+
+        // Re-render build panel if open (new buildings may be unlocked)
+        if (document.getElementById('build-panel').style.display === 'flex') {
+          renderBuildPanel();
+        }
+      }).catch(function (err) {
+        showToast(err.message || 'District upgrade failed', 'error');
+        btn.disabled = false;
+        btn.textContent = 'Upgrade District';
+      });
     }
 
     return {
