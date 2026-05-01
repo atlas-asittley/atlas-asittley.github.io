@@ -1126,6 +1126,195 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
+/* ── Trade panel ──────────────────────────────────────── */
+.trade-panel {
+  display: none;
+  background: #131a24;
+  border-top: 1px solid #1e2a3a;
+  flex-shrink: 0;
+  max-height: 55vh;
+  flex-direction: column;
+  position: relative;
+}
+.trade-panel.active { display: flex; }
+.trade-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid #1e2a3a;
+  flex-shrink: 0;
+}
+.trade-panel-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #e0e6ed;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.trade-panel-close {
+  background: none;
+  border: none;
+  color: #7a8a9e;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 4px;
+  -webkit-tap-highlight-color: transparent;
+}
+.trade-panel-body {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 8px 12px;
+  flex: 1;
+}
+.trade-no-depot {
+  text-align: center;
+  color: #7a8a9e;
+  padding: 24px 16px;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+.trade-no-depot strong {
+  display: block;
+  color: #e0e6ed;
+  font-size: 0.95rem;
+  margin-bottom: 8px;
+}
+.trade-partner-card {
+  background: #0b0f14;
+  border: 1px solid #1e2a3a;
+  border-radius: 10px;
+  margin-bottom: 10px;
+  overflow: hidden;
+}
+.trade-partner-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+.trade-partner-header:active { background: #162030; }
+.trade-partner-name {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #e0e6ed;
+}
+.trade-partner-arrow {
+  color: #4a5568;
+  font-size: 0.9rem;
+  transition: transform 0.2s;
+}
+.trade-partner-card.expanded .trade-partner-arrow {
+  transform: rotate(90deg);
+}
+.trade-partner-desc {
+  font-size: 0.75rem;
+  color: #7a8a9e;
+  padding: 0 14px 8px;
+  line-height: 1.4;
+  display: none;
+}
+.trade-partner-card.expanded .trade-partner-desc { display: block; }
+.trade-partner-body {
+  display: none;
+  border-top: 1px solid #1e2a3a;
+  padding: 8px 10px;
+}
+.trade-partner-card.expanded .trade-partner-body { display: block; }
+.trade-section-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #5ec49e;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 6px 4px 4px;
+}
+.trade-section-label.buy-label { color: #e6c65a; }
+.trade-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 6px;
+  border-bottom: 1px solid #1a2030;
+}
+.trade-item:last-child { border-bottom: none; }
+.trade-item-info {
+  flex: 1;
+  min-width: 0;
+}
+.trade-item-name {
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: #e0e6ed;
+}
+.trade-item-price {
+  font-size: 0.72rem;
+  color: #7a8a9e;
+}
+.trade-item-stock {
+  font-size: 0.72rem;
+  color: #5ec49e;
+  min-width: 50px;
+  text-align: right;
+}
+.trade-item-stock.none { color: #4a5568; }
+.trade-amount-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.trade-amount-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid #1e2a3a;
+  background: #131a24;
+  color: #e0e6ed;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+.trade-amount-btn:active { background: #1e2a3a; }
+.trade-amount-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.trade-amount-display {
+  min-width: 24px;
+  text-align: center;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #e0e6ed;
+  font-variant-numeric: tabular-nums;
+}
+.trade-exec-btn {
+  background: #2a5a3a;
+  color: #c0f0c0;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  min-height: 28px;
+  min-width: 48px;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  flex-shrink: 0;
+}
+.trade-exec-btn.buy-btn {
+  background: #3a4a2a;
+  color: #d0e0a0;
+}
+.trade-exec-btn:active { opacity: 0.8; }
+.trade-exec-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
 /* ── Responsive tweaks ────────────────────────────────── */
 @media (min-width: 600px) {
   .status-grid { grid-template-columns: repeat(4, 1fr); }
@@ -1381,6 +1570,16 @@ body {
     </div>
   </div>
 
+  <div class="trade-panel" id="trade-panel">
+    <div class="trade-panel-header">
+      <span class="trade-panel-title">Trade</span>
+      <button class="trade-panel-close" id="trade-panel-close">&#10005;</button>
+    </div>
+    <div class="trade-panel-body" id="trade-panel-body">
+      <!-- Trade partners rendered by JS -->
+    </div>
+  </div>
+
   <div class="game-bottombar">
     <button class="game-nav-item active" id="nav-city">
       <div class="game-nav-icon">&#9750;</div>
@@ -1394,9 +1593,9 @@ body {
       <div class="game-nav-icon">&#9782;</div>
       <span>Stock</span>
     </button>
-    <button class="game-nav-item" id="nav-more">
-      <div class="game-nav-icon">&#9776;</div>
-      <span>More</span>
+    <button class="game-nav-item" id="nav-trade">
+      <div class="game-nav-icon">&#8644;</div>
+      <span>Trade</span>
     </button>
   </div>
 </div>
@@ -2488,6 +2687,7 @@ body {
       document.getElementById('nav-build').addEventListener('click', function () {
         var panel = document.getElementById('build-panel');
         document.getElementById('inventory-panel').classList.remove('active');
+        document.getElementById('trade-panel').classList.remove('active');
         if (panel.style.display === 'none' || !panel.style.display) {
           renderBuildPanel();
           panel.style.display = 'flex';
@@ -2502,6 +2702,7 @@ body {
       document.getElementById('nav-city').addEventListener('click', function () {
         document.getElementById('build-panel').style.display = 'none';
         document.getElementById('inventory-panel').classList.remove('active');
+        document.getElementById('trade-panel').classList.remove('active');
         cancelPlacement();
         setActiveNav('nav-city');
       });
@@ -2510,6 +2711,7 @@ body {
       document.getElementById('nav-inventory').addEventListener('click', function () {
         var panel = document.getElementById('inventory-panel');
         var buildPanel = document.getElementById('build-panel');
+        document.getElementById('trade-panel').classList.remove('active');
         if (panel.classList.contains('active')) {
           panel.classList.remove('active');
           setActiveNav('nav-city');
@@ -2528,9 +2730,26 @@ body {
         setActiveNav('nav-city');
       });
 
-      // More nav button
-      document.getElementById('nav-more').addEventListener('click', function () {
-        showToast('More options coming soon', '');
+      // Trade nav button
+      document.getElementById('nav-trade').addEventListener('click', function () {
+        var panel = document.getElementById('trade-panel');
+        document.getElementById('build-panel').style.display = 'none';
+        document.getElementById('inventory-panel').classList.remove('active');
+        cancelPlacement();
+        if (panel.classList.contains('active')) {
+          panel.classList.remove('active');
+          setActiveNav('nav-city');
+        } else {
+          loadAndRenderTradePanel();
+          panel.classList.add('active');
+          setActiveNav('nav-trade');
+        }
+      });
+
+      // Close trade panel
+      document.getElementById('trade-panel-close').addEventListener('click', function () {
+        document.getElementById('trade-panel').classList.remove('active');
+        setActiveNav('nav-city');
       });
 
       // Close build panel
@@ -2990,6 +3209,228 @@ body {
         showToast(err.message || 'District upgrade failed', 'error');
         btn.disabled = false;
         btn.textContent = 'Upgrade District';
+      });
+    }
+
+    // ── Trade system ──────────────────────────────────────
+    var _tradePartners = [];
+    var _hasTradeDepot = false;
+    var _tradeAmounts = {}; // "partnerId:resource:direction" → amount
+
+    function loadAndRenderTradePanel() {
+      var body = document.getElementById('trade-panel-body');
+      body.innerHTML = '<div class="trade-no-depot">Loading trade partners...</div>';
+
+      sb.rpc('get_trade_partners').then(function (result) {
+        if (result.error) {
+          body.innerHTML = '<div class="trade-no-depot">Failed to load trade data.<br>' + result.error.message + '</div>';
+          return;
+        }
+        var data = result.data;
+        _hasTradeDepot = data.has_trade_depot;
+        _tradePartners = data.partners || [];
+
+        if (!_hasTradeDepot) {
+          body.innerHTML = '<div class="trade-no-depot"><strong>Trade Depot Required</strong>Build a Trade Depot in your district to unlock trade with external partners.</div>';
+          return;
+        }
+
+        if (_tradePartners.length === 0) {
+          body.innerHTML = '<div class="trade-no-depot">No trade partners available in this world.</div>';
+          return;
+        }
+
+        renderTradePartners();
+      }).catch(function (err) {
+        body.innerHTML = '<div class="trade-no-depot">Failed to load trade data.</div>';
+        console.error('Trade load error:', err);
+      });
+    }
+
+    function renderTradePartners() {
+      var body = document.getElementById('trade-panel-body');
+      var html = '';
+
+      _tradePartners.forEach(function (partner) {
+        var buyCatalog = partner.buy_catalog || {};
+        var sellCatalog = partner.sell_catalog || {};
+        var buyKeys = Object.keys(buyCatalog);
+        var sellKeys = Object.keys(sellCatalog);
+
+        html += '<div class="trade-partner-card" data-partner-id="' + partner.id + '">';
+        html += '<div class="trade-partner-header">';
+        html += '<span class="trade-partner-name">' + partner.name + '</span>';
+        html += '<span class="trade-partner-arrow">&#9654;</span>';
+        html += '</div>';
+        html += '<div class="trade-partner-desc">' + (partner.description || '') + '</div>';
+        html += '<div class="trade-partner-body">';
+
+        // Sell section — player sells TO this NPC
+        if (buyKeys.length > 0) {
+          html += '<div class="trade-section-label">Sell to ' + partner.name + '</div>';
+          buyKeys.forEach(function (rk) {
+            var entry = buyCatalog[rk];
+            var price = entry.price;
+            var maxPer = entry.max_per_trade || 50;
+            var stock = _inventory[rk] || 0;
+            var tradeKey = partner.id + ':' + rk + ':sell';
+            var amt = _tradeAmounts[tradeKey] || 0;
+
+            html += '<div class="trade-item">';
+            html += '<div class="trade-item-info">';
+            html += '<div class="trade-item-name">' + formatResourceName(rk) + '</div>';
+            html += '<div class="trade-item-price">' + price + 'g each &middot; max ' + maxPer + '</div>';
+            html += '</div>';
+            html += '<div class="trade-item-stock ' + (stock > 0 ? '' : 'none') + '">Have: ' + stock + '</div>';
+            html += '<div class="trade-amount-controls">';
+            html += '<button class="trade-amount-btn" data-action="dec" data-key="' + tradeKey + '">-</button>';
+            html += '<span class="trade-amount-display" id="ta-' + tradeKey.replace(/:/g, '-') + '">' + amt + '</span>';
+            html += '<button class="trade-amount-btn" data-action="inc" data-key="' + tradeKey + '" data-max="' + Math.min(maxPer, stock) + '">+</button>';
+            html += '</div>';
+            html += '<button class="trade-exec-btn" data-partner="' + partner.id + '" data-resource="' + rk + '" data-direction="sell"' + (amt < 1 ? ' disabled' : '') + '>Sell</button>';
+            html += '</div>';
+          });
+        }
+
+        // Buy section — player buys FROM this NPC
+        if (sellKeys.length > 0) {
+          html += '<div class="trade-section-label buy-label">Buy from ' + partner.name + '</div>';
+          sellKeys.forEach(function (rk) {
+            var entry = sellCatalog[rk];
+            var price = entry.price;
+            var maxPer = entry.max_per_trade || 50;
+            var maxAfford = Math.min(maxPer, Math.floor(_gold / price));
+            var stock = _inventory[rk] || 0;
+            var tradeKey = partner.id + ':' + rk + ':buy';
+            var amt = _tradeAmounts[tradeKey] || 0;
+
+            html += '<div class="trade-item">';
+            html += '<div class="trade-item-info">';
+            html += '<div class="trade-item-name">' + formatResourceName(rk) + '</div>';
+            html += '<div class="trade-item-price">' + price + 'g each &middot; max ' + maxPer + '</div>';
+            html += '</div>';
+            html += '<div class="trade-item-stock ' + (stock > 0 ? '' : 'none') + '">Have: ' + stock + '</div>';
+            html += '<div class="trade-amount-controls">';
+            html += '<button class="trade-amount-btn" data-action="dec" data-key="' + tradeKey + '">-</button>';
+            html += '<span class="trade-amount-display" id="ta-' + tradeKey.replace(/:/g, '-') + '">' + amt + '</span>';
+            html += '<button class="trade-amount-btn" data-action="inc" data-key="' + tradeKey + '" data-max="' + maxAfford + '">+</button>';
+            html += '</div>';
+            html += '<button class="trade-exec-btn buy-btn" data-partner="' + partner.id + '" data-resource="' + rk + '" data-direction="buy"' + (amt < 1 ? ' disabled' : '') + '>Buy</button>';
+            html += '</div>';
+          });
+        }
+
+        html += '</div>'; // body
+        html += '</div>'; // card
+      });
+
+      body.innerHTML = html;
+
+      // Wire partner header clicks (expand/collapse)
+      body.querySelectorAll('.trade-partner-header').forEach(function (hdr) {
+        hdr.addEventListener('click', function () {
+          var card = hdr.closest('.trade-partner-card');
+          card.classList.toggle('expanded');
+        });
+      });
+
+      // Wire amount buttons
+      body.querySelectorAll('.trade-amount-btn').forEach(function (btn) {
+        btn.addEventListener('click', function (e) {
+          e.stopPropagation();
+          var key = btn.getAttribute('data-key');
+          var action = btn.getAttribute('data-action');
+          var max = parseInt(btn.getAttribute('data-max') || '50');
+          var current = _tradeAmounts[key] || 0;
+
+          if (action === 'inc' && current < max) {
+            current++;
+          } else if (action === 'dec' && current > 0) {
+            current--;
+          }
+          _tradeAmounts[key] = current;
+
+          // Update display
+          var displayId = 'ta-' + key.replace(/:/g, '-');
+          var el = document.getElementById(displayId);
+          if (el) el.textContent = current;
+
+          // Enable/disable the trade exec button in same trade-item
+          var item = btn.closest('.trade-item');
+          var execBtn = item.querySelector('.trade-exec-btn');
+          if (execBtn) execBtn.disabled = current < 1;
+        });
+      });
+
+      // Wire trade execute buttons
+      body.querySelectorAll('.trade-exec-btn').forEach(function (btn) {
+        btn.addEventListener('click', function (e) {
+          e.stopPropagation();
+          var partnerId = btn.getAttribute('data-partner');
+          var resource = btn.getAttribute('data-resource');
+          var direction = btn.getAttribute('data-direction');
+          var tradeKey = partnerId + ':' + resource + ':' + direction;
+          var amount = _tradeAmounts[tradeKey] || 0;
+          if (amount < 1) return;
+
+          executeTrade(partnerId, resource, direction, amount, btn);
+        });
+      });
+
+      // Auto-expand first partner
+      var first = body.querySelector('.trade-partner-card');
+      if (first) first.classList.add('expanded');
+    }
+
+    function executeTrade(partnerId, resource, direction, amount, btn) {
+      var origText = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = '...';
+
+      sb.rpc('execute_npc_trade', {
+        p_partner_id: partnerId,
+        p_resource_key: resource,
+        p_direction: direction,
+        p_amount: amount
+      }).then(function (result) {
+        if (result.error) {
+          showToast(result.error.message || 'Trade failed', 'error');
+          btn.disabled = false;
+          btn.textContent = origText;
+          return;
+        }
+
+        var data = result.data;
+        var verb = direction === 'sell' ? 'Sold' : 'Bought';
+        showToast(verb + ' ' + amount + ' ' + formatResourceName(resource) + ' for ' + data.total_gold + 'g', 'success');
+
+        // Sync gold and inventory
+        if (data.gold !== undefined) {
+          _gold = data.gold;
+          document.getElementById('game-gold').textContent = _gold;
+        }
+        if (data.inventory) {
+          _inventory = {};
+          Object.keys(data.inventory).forEach(function (k) {
+            _inventory[k] = data.inventory[k];
+          });
+        }
+
+        // Reset the trade amount for this item
+        var tradeKey = partnerId + ':' + resource + ':' + direction;
+        _tradeAmounts[tradeKey] = 0;
+
+        // Re-render the trade panel to reflect updated inventory/gold
+        renderTradePartners();
+
+        // Re-render inventory if open
+        if (document.getElementById('inventory-panel').classList.contains('active')) {
+          renderInventoryPanel();
+        }
+      }).catch(function (err) {
+        showToast(err.message || 'Trade failed', 'error');
+        btn.disabled = false;
+        btn.textContent = origText;
       });
     }
 
