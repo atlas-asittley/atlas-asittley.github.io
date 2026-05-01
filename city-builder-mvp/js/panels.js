@@ -208,24 +208,43 @@ export function renderTradePanel() {
   html += '<div class="trade-policy-note">Policies apply to all partners. Each partner only trades goods they support.</div>';
   var tradeResources = ['timber', 'lumber', 'stone', 'brick'];
   tradeResources.forEach(function (rk) {
-    var prices = state.traderPrices[rk];
     var stock = Math.floor(state.inventory[rk] || 0);
     var policy = state.tradePolicies[rk] || { mode: 'keep', reserve_target: 0 };
-    var notTraded = !prices;
+    var supportingPartners = [];
+    var bestBuyPrice = null;   // what a partner pays player
+    var bestSellPrice = null;  // what a partner charges player
 
-    html += '<div class="policy-row' + (notTraded ? ' not-traded' : '') + '" data-resource="' + rk + '">';
+    traderKeys.forEach(function (tk) {
+      var partnerPrices = state.allTraderPrices[tk] || {};
+      var partnerPrice = partnerPrices[rk];
+      if (!partnerPrice) return;
+
+      supportingPartners.push(state.traders[tk] ? state.traders[tk].name : tk);
+
+      if (partnerPrice.buy_price && (bestBuyPrice === null || partnerPrice.buy_price > bestBuyPrice)) {
+        bestBuyPrice = partnerPrice.buy_price;
+      }
+      if (partnerPrice.sell_price && (bestSellPrice === null || partnerPrice.sell_price < bestSellPrice)) {
+        bestSellPrice = partnerPrice.sell_price;
+      }
+    });
+
+    html += '<div class="policy-row" data-resource="' + rk + '">';
     html += '<div class="policy-header">';
     html += '<span class="policy-res">' + resourceName(rk) + '</span>';
     html += '<span class="policy-stock">Stock: ' + stock + '</span>';
     html += '</div>';
 
-    if (prices) {
-      html += '<div class="policy-prices">';
-      if (prices.buy_price) html += '<span class="policy-price sell-price">Buys at ' + prices.buy_price + 'g</span>';
-      if (prices.sell_price) html += '<span class="policy-price buy-price">Sells at ' + prices.sell_price + 'g</span>';
-      html += '</div>';
-    } else {
-      html += '<div class="policy-prices"><span class="policy-price not-traded-label">Not traded by ' + trader.name + '</span></div>';
+    html += '<div class="policy-prices">';
+    if (bestBuyPrice !== null) html += '<span class="policy-price sell-price">Best partner buy: ' + bestBuyPrice + 'g</span>';
+    if (bestSellPrice !== null) html += '<span class="policy-price buy-price">Best partner sell: ' + bestSellPrice + 'g</span>';
+    if (supportingPartners.length === 0) {
+      html += '<span class="policy-price not-traded-label">No active partner currently trades this</span>';
+    }
+    html += '</div>';
+
+    if (supportingPartners.length > 0) {
+      html += '<div class="policy-prices"><span class="policy-price not-traded-label">Handled by: ' + supportingPartners.join(', ') + '</span></div>';
     }
 
     html += '<div class="policy-controls">';
