@@ -110,7 +110,7 @@ body {
 
 /* ── Trade panel ───────────────────────────────────── */
 .trader-header { font-weight: 700; font-size: 0.95rem; margin-bottom: 2px; }
-.trader-desc { font-size: 0.78rem; color: #7a8a9e; margin-bottom: 12px; }
+.trader-desc { font-size: 0.78rem; color: #7a8a9e; margin-bottom: 8px; line-height: 1.4; }
 .trade-row { display: flex; align-items: center; gap: 8px; padding: 10px; background: #1a2332; border-radius: 8px; margin-bottom: 8px; flex-wrap: wrap; }
 .trade-info { flex: 1; min-width: 90px; }
 .trade-res { font-weight: 600; font-size: 0.85rem; }
@@ -123,21 +123,45 @@ body {
 .btn-sell { padding: 6px 12px; border-radius: 6px; border: none; background: #e6c65a; color: #0b0f14; font-weight: 600; font-size: 0.78rem; cursor: pointer; }
 .btn-sell:disabled { opacity: 0.3; cursor: default; }
 
-/* ── Trade policy (Phase 2A) ──────────────────────── */
+/* ── Partner tabs (Phase 2B) ──────────────────────── */
+.partner-tabs { display: flex; gap: 6px; margin-bottom: 8px; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 2px; }
+.partner-tab { flex: 1; min-width: 0; padding: 8px 6px; background: #1a2332; border: 1px solid #1e2a3a; border-radius: 8px; cursor: pointer; text-align: center; transition: border-color 0.2s, background 0.2s; color: #e0e6ed; }
+.partner-tab:hover { border-color: #4fa3e0; }
+.partner-tab.selected { border-color: #4fa3e0; background: #1a2a3a; }
+.partner-tab-name { font-weight: 600; font-size: 0.78rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.partner-tab-meta { font-size: 0.65rem; color: #5a6a7e; margin-top: 2px; }
+.partner-tab-visit { font-size: 0.65rem; margin-top: 2px; }
+.partner-tab-due { color: #5ec49e; font-weight: 600; }
+.partner-tab-timer { color: #7a8a9e; }
+
+/* ── Partner detail (Phase 2B) ────────────────────── */
+.partner-detail { background: #111820; border: 1px solid #1e2a3a; border-radius: 8px; padding: 10px; margin-bottom: 10px; }
+.partner-visit-info { margin-bottom: 6px; }
+.partner-goods { margin-top: 6px; }
+.partner-goods-title { font-size: 0.7rem; font-weight: 600; color: #7a8a9e; text-transform: uppercase; margin-bottom: 4px; }
+.partner-goods-item { display: flex; justify-content: space-between; align-items: center; padding: 3px 0; font-size: 0.78rem; }
+.partner-goods-name { font-weight: 600; }
+.partner-goods-prices { font-size: 0.72rem; }
+.pg-sell { color: #5ec49e; }
+.pg-buy { color: #4fa3e0; }
+
+/* ── Trade policy (Phase 2B) ──────────────────────── */
 .trade-section-label { font-size: 0.7rem; font-weight: 600; color: #7a8a9e; text-transform: uppercase; letter-spacing: 0.04em; padding: 10px 0 6px; }
+.trade-policy-note { font-size: 0.68rem; color: #5a6a7e; margin-bottom: 8px; font-style: italic; }
 .visit-status { display: flex; align-items: center; gap: 8px; padding: 8px 10px; background: #1a2332; border-radius: 8px; margin-bottom: 8px; flex-wrap: wrap; }
 .visit-due { color: #5ec49e; font-weight: 600; font-size: 0.82rem; }
 .visit-timer { color: #7a8a9e; font-size: 0.82rem; }
-.btn-check-visit { padding: 4px 10px; border-radius: 6px; border: 1px solid #1e2a3a; background: #0b0f14; color: #4fa3e0; font-weight: 600; font-size: 0.72rem; cursor: pointer; }
+.btn-check-visit { padding: 4px 10px; border-radius: 6px; border: 1px solid #1e2a3a; background: #0b0f14; color: #4fa3e0; font-weight: 600; font-size: 0.72rem; cursor: pointer; margin-left: auto; }
 .btn-check-visit:disabled { opacity: 0.4; cursor: default; }
-.visit-summary { background: #111820; border: 1px solid #1e2a3a; border-radius: 8px; padding: 8px 10px; margin-bottom: 10px; }
+.visit-summary { background: rgba(17,24,32,0.5); border: 1px solid #1a2332; border-radius: 6px; padding: 6px 8px; margin-top: 6px; }
 .visit-summary-title { font-size: 0.7rem; font-weight: 600; color: #7a8a9e; text-transform: uppercase; margin-bottom: 4px; }
-.visit-summary-item { font-size: 0.8rem; padding: 2px 0; }
+.visit-summary-item { font-size: 0.78rem; padding: 2px 0; }
 .visit-summary-item.sold { color: #5ec49e; }
 .visit-summary-item.bought { color: #4fa3e0; }
 .visit-summary-item.empty { color: #5a6a7e; font-style: italic; }
-.visit-summary-cap { font-size: 0.7rem; color: #5a6a7e; margin-top: 4px; }
-.policy-row { background: #1a2332; border: 1px solid #1e2a3a; border-radius: 8px; padding: 10px; margin-bottom: 8px; }
+.visit-summary-cap { font-size: 0.68rem; color: #5a6a7e; margin-top: 4px; }
+.policy-row { background: #1a2332; border: 1px solid #1e2a3a; border-radius: 8px; padding: 10px; margin-bottom: 8px; transition: opacity 0.2s; }
+.policy-row.not-traded { opacity: 0.5; }
 .policy-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
 .policy-res { font-weight: 600; font-size: 0.85rem; }
 .policy-stock { font-size: 0.72rem; color: #7a8a9e; }
@@ -145,6 +169,7 @@ body {
 .policy-price { font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; }
 .policy-price.sell-price { background: rgba(94,196,158,0.1); color: #5ec49e; }
 .policy-price.buy-price { background: rgba(79,163,224,0.1); color: #4fa3e0; }
+.policy-price.not-traded-label { color: #5a6a7e; font-style: italic; font-size: 0.68rem; }
 .policy-controls { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .policy-mode-select { padding: 6px 8px; background: #0b0f14; border: 1px solid #1e2a3a; border-radius: 6px; color: #e0e6ed; font-size: 0.78rem; flex: 1; min-width: 110px; }
 .policy-mode-select:focus { outline: none; border-color: #4fa3e0; }

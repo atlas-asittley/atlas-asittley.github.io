@@ -3,7 +3,7 @@ import { sb } from './config.js';
 import { state } from './state.js';
 import { showScreen, showToast, capitalize } from './ui.js';
 import { renderMap, initMapEvents } from './map.js';
-import { renderBuildPanel, renderInventory, renderTradePanel, initTabs, checkTraderVisit } from './panels.js';
+import { renderBuildPanel, renderInventory, renderTradePanel, initTabs, checkAllTraderVisits } from './panels.js';
 import { subscribeRealtime } from './realtime.js';
 
 export function updateMoney() {
@@ -62,10 +62,11 @@ function loadGameData() {
     sb.from('resources').select('*').eq('is_active', true),
     sb.from('map_tiles').select('*').order('y', { ascending: true }).order('x', { ascending: true }),
     sb.from('buildings').select('*, player_profiles(display_name, color_hex)'),
-    sb.from('trader_prices').select('*').eq('is_active', true).eq('trader_key', 'starter_trader'),
+    sb.from('trader_prices').select('*').eq('is_active', true),
     sb.from('inventories').select('resource_key, quantity').eq('player_id', state.currentUser.id),
     sb.from('trade_policies').select('*').eq('player_id', state.currentUser.id),
-    sb.from('trader_visits').select('*').eq('player_id', state.currentUser.id).eq('trader_key', 'starter_trader').order('visited_at', { ascending: false }).limit(1)
+    sb.from('trader_visits').select('*').eq('player_id', state.currentUser.id).order('visited_at', { ascending: false }).limit(10),
+    sb.from('traders').select('*').eq('is_active', true)
   ]).then(function (results) {
     state.buildingTypes = {};
     if (results[0].data) results[0].data.forEach(function (bt) { state.buildingTypes[bt.key] = bt; });
@@ -79,9 +80,16 @@ function loadGameData() {
 
     state.allBuildings = results[3].data || [];
 
-    state.traderPrices = {};
+    // Load all trader prices indexed by trader_key then resource_key
+    state.allTraderPrices = {};
     if (results[4].data) results[4].data.forEach(function (tp) {
-      state.traderPrices[tp.resource_key] = { buy_price: tp.buy_price, sell_price: tp.sell_price };
+      if (!state.allTraderPrices[tp.trader_key]) {
+        state.allTraderPrices[tp.trader_key] = {};
+      }
+      state.allTraderPrices[tp.trader_key][tp.resource_key] = {
+        buy_price: tp.buy_price,
+        sell_price: tp.sell_price
+      };
     });
 
     state.inventory = {};
@@ -95,18 +103,46 @@ function loadGameData() {
       });
     }
 
-    // Last visit (graceful if table doesn't exist yet)
-    state.lastVisit = null;
-    if (results[7].data && !results[7].error && results[7].data.length > 0) {
-      state.lastVisit = results[7].data[0];
+    // Last visits per trader (graceful if table doesn't exist yet)
+    state.lastVisits = {};
+    if (results[7].data && !results[7].error) {
+      results[7].data.forEach(function (v) {
+        // Keep only the most recent visit per trader
+        if (!state.lastVisits[v.trader_key]) {
+          state.lastVisits[v.trader_key] = v;
+        }
+      });
     }
-    if (state.lastVisit) {
-      var lastTime = new Date(state.lastVisit.visited_at).getTime();
-      state.nextVisitAt = new Date(lastTime + 10 * 60 * 1000);
-    } else {
-      var created = new Date(state.profile.created_at || Date.now()).getTime();
-      state.nextVisitAt = new Date(created + 10 * 60 * 1000);
+
+    // Load traders
+    state.traders = {};
+    if (results[8].data) {
+      results[8].data.sort(function (a, b) {
+        return (a.display_order || 0) - (b.display_order || 0);
+      });
+      results[8].data.forEach(function (t) { state.traders[t.key] = t; });
     }
+
+    // Set default selected trader
+    var traderKeys = Object.keys(state.traders);
+    if (traderKeys.length > 0) {
+      state.selectedTrader = traderKeys[0];
+      state.traderPrices = state.allTraderPrices[state.selectedTrader] || {};
+    }
+
+    // Calculate next visit times per trader
+    state.nextVisitAts = {};
+    traderKeys.forEach(function (tk) {
+      var t = state.traders[tk];
+      var lastVisit = state.lastVisits[tk];
+      var lastTime;
+      if (lastVisit) {
+        lastTime = new Date(lastVisit.visited_at).getTime();
+      } else {
+        lastTime = new Date(state.profile.created_at || Date.now()).getTime();
+      }
+      state.nextVisitAts[tk] = new Date(lastTime + t.visit_interval_minutes * 60 * 1000);
+    });
   });
 }
 
@@ -125,8 +161,8 @@ export function enterGame() {
     processProduction();
     subscribeRealtime();
     startProdLoop();
-    // Lazy visit resolution: check if a trader visit is due
-    checkTraderVisit();
+    // Lazy visit resolution: check if any trader visits are due
+    checkAllTraderVisits();
   }).catch(function (err) {
     console.error('Game load failed:', err);
     showToast('Failed to load game data', 'error');

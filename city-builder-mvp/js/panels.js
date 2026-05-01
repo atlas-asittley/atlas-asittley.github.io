@@ -103,37 +103,131 @@ export function renderInventory() {
   panel.innerHTML = html;
 }
 
-// ── Trade panel (Phase 2A: policy-driven trade) ──
+// ── Trade panel (Phase 2B: multi-partner trade) ──
 export function renderTradePanel() {
   var panel = document.getElementById('panel-trade');
   var html = '';
 
-  // Trader header + visit status
-  html += '<div class="trader-header">Starter Trader</div>';
-  html += '<div class="trader-desc">Set trade policy per resource. The trader visits every 10 min and executes your orders automatically.</div>';
-  html += renderVisitStatus();
+  var traderKeys = Object.keys(state.traders);
 
-  // Last visit summary
-  html += renderVisitSummary();
+  // Fallback if no traders loaded
+  if (traderKeys.length === 0) {
+    html = '<div style="color:#7a8a9e;text-align:center;padding:16px;">No trade partners loaded. Run the Phase 2B migration first.</div>';
+    panel.innerHTML = html;
+    return;
+  }
 
-  // Policy controls per resource
+  // Ensure selected trader is valid
+  if (!state.selectedTrader || !state.traders[state.selectedTrader]) {
+    state.selectedTrader = traderKeys[0];
+  }
+  state.traderPrices = state.allTraderPrices[state.selectedTrader] || {};
+
+  var trader = state.traders[state.selectedTrader];
+
+  // ── Partner selector tabs ──
+  html += '<div class="partner-tabs">';
+  traderKeys.forEach(function (tk) {
+    var t = state.traders[tk];
+    var selected = tk === state.selectedTrader;
+    var nextVisit = state.nextVisitAts[tk];
+    var visitLabel = '';
+    if (nextVisit) {
+      var diff = nextVisit.getTime() - Date.now();
+      if (diff <= 0) {
+        visitLabel = '<span class="partner-tab-due">Due!</span>';
+      } else {
+        visitLabel = '<span class="partner-tab-timer">~' + Math.ceil(diff / 60000) + 'm</span>';
+      }
+    }
+    html += '<button class="partner-tab' + (selected ? ' selected' : '') + '" data-trader="' + tk + '">';
+    html += '<div class="partner-tab-name">' + t.name + '</div>';
+    html += '<div class="partner-tab-meta">Cap ' + t.visit_capacity + ' &middot; ' + t.visit_interval_minutes + 'm</div>';
+    if (visitLabel) {
+      html += '<div class="partner-tab-visit">' + visitLabel + '</div>';
+    }
+    html += '</button>';
+  });
+  html += '</div>';
+
+  // ── Check All Visits button ──
+  html += '<div class="visit-status">';
+  var anyDue = traderKeys.some(function (tk) {
+    var nv = state.nextVisitAts[tk];
+    return nv && nv.getTime() <= Date.now();
+  });
+  if (anyDue) {
+    html += '<span class="visit-due">Trade visits available!</span>';
+  } else {
+    // Show time until next visit across all traders
+    var soonest = null;
+    traderKeys.forEach(function (tk) {
+      var nv = state.nextVisitAts[tk];
+      if (nv && (!soonest || nv.getTime() < soonest)) {
+        soonest = nv.getTime();
+      }
+    });
+    if (soonest) {
+      var mins = Math.ceil((soonest - Date.now()) / 60000);
+      html += '<span class="visit-timer">Next visit in ~' + mins + ' min</span>';
+    } else {
+      html += '<span class="visit-timer">Next visit: soon</span>';
+    }
+  }
+  html += ' <button class="btn-check-visit" id="btn-check-visit">Check All</button>';
+  html += '</div>';
+
+  // ── Selected partner detail ──
+  html += '<div class="partner-detail">';
+  html += '<div class="trader-header">' + trader.name + '</div>';
+  html += '<div class="trader-desc">' + (trader.description || '') + '</div>';
+
+  // Visit status for selected partner
+  var selectedNextVisit = state.nextVisitAts[state.selectedTrader];
+  if (selectedNextVisit) {
+    var sdiff = selectedNextVisit.getTime() - Date.now();
+    html += '<div class="partner-visit-info">';
+    if (sdiff <= 0) {
+      html += '<span class="visit-due">Visit due now!</span>';
+    } else {
+      html += '<span class="visit-timer">Next visit in ~' + Math.ceil(sdiff / 60000) + ' min</span>';
+    }
+    html += '</div>';
+  }
+
+  // Last visit summary for selected partner
+  html += renderVisitSummary(state.selectedTrader);
+
+  // Goods this partner trades
+  html += renderPartnerGoods(state.selectedTrader);
+
+  html += '</div>';
+
+  // ── Trade Policies (global, with selected partner prices) ──
   html += '<div class="trade-section-label">Trade Policies</div>';
+  html += '<div class="trade-policy-note">Policies apply to all partners. Each partner only trades goods they support.</div>';
   var tradeResources = ['timber', 'lumber', 'stone', 'brick'];
   tradeResources.forEach(function (rk) {
     var prices = state.traderPrices[rk];
-    if (!prices) return;
     var stock = Math.floor(state.inventory[rk] || 0);
     var policy = state.tradePolicies[rk] || { mode: 'keep', reserve_target: 0 };
+    var notTraded = !prices;
 
-    html += '<div class="policy-row" data-resource="' + rk + '">';
+    html += '<div class="policy-row' + (notTraded ? ' not-traded' : '') + '" data-resource="' + rk + '">';
     html += '<div class="policy-header">';
     html += '<span class="policy-res">' + resourceName(rk) + '</span>';
     html += '<span class="policy-stock">Stock: ' + stock + '</span>';
     html += '</div>';
-    html += '<div class="policy-prices">';
-    html += '<span class="policy-price sell-price">Sells at ' + prices.buy_price + 'g</span>';
-    html += '<span class="policy-price buy-price">Buys at ' + (prices.sell_price || '?') + 'g</span>';
-    html += '</div>';
+
+    if (prices) {
+      html += '<div class="policy-prices">';
+      if (prices.buy_price) html += '<span class="policy-price sell-price">Buys at ' + prices.buy_price + 'g</span>';
+      if (prices.sell_price) html += '<span class="policy-price buy-price">Sells at ' + prices.sell_price + 'g</span>';
+      html += '</div>';
+    } else {
+      html += '<div class="policy-prices"><span class="policy-price not-traded-label">Not traded by ' + trader.name + '</span></div>';
+    }
+
     html += '<div class="policy-controls">';
     html += '<select class="policy-mode-select" data-resource="' + rk + '">';
     html += '<option value="keep"' + (policy.mode === 'keep' ? ' selected' : '') + '>Keep</option>';
@@ -148,33 +242,44 @@ export function renderTradePanel() {
     html += '</div>';
   });
 
-  // Manual sell section (kept as fallback)
-  html += '<div class="trade-section-label" style="margin-top:12px;">Quick Sell (Manual)</div>';
-  tradeResources.forEach(function (rk) {
-    var prices = state.traderPrices[rk];
-    if (!prices) return;
-    var stock = Math.floor(state.inventory[rk] || 0);
-    var key = 'sell-' + rk;
-    var amt = state.tradeAmounts[key] || 0;
-
-    html += '<div class="trade-row-manual">';
-    html += '<span class="trade-manual-name">' + resourceName(rk) + '</span>';
-    html += '<div class="trade-controls">';
-    html += '<button class="trade-amt-btn" data-key="' + key + '" data-dir="dec">-</button>';
-    html += '<span class="trade-amt" id="ta-' + rk + '">' + amt + '</span>';
-    html += '<button class="trade-amt-btn" data-key="' + key + '" data-dir="inc" data-max="' + stock + '">+</button>';
-    html += '<button class="btn-sell" data-resource="' + rk + '" data-key="' + key + '"' + (amt < 1 ? ' disabled' : '') + '>Sell</button>';
-    html += '</div>';
-    html += '</div>';
+  // ── Manual sell section (uses selected partner) ──
+  var hasManualGoods = tradeResources.some(function (rk) {
+    var p = state.traderPrices[rk];
+    return p && p.buy_price;
   });
+  if (hasManualGoods) {
+    html += '<div class="trade-section-label" style="margin-top:12px;">Quick Sell to ' + trader.name + '</div>';
+    tradeResources.forEach(function (rk) {
+      var prices = state.traderPrices[rk];
+      if (!prices || !prices.buy_price) return;
+      var stock = Math.floor(state.inventory[rk] || 0);
+      var key = 'sell-' + rk;
+      var amt = state.tradeAmounts[key] || 0;
 
-  if (Object.keys(state.traderPrices).length === 0) {
-    html = '<div style="color:#7a8a9e;text-align:center;padding:16px;">Trader prices not loaded. Run the Phase 2A migration first.</div>';
+      html += '<div class="trade-row-manual">';
+      html += '<span class="trade-manual-name">' + resourceName(rk) + ' (' + prices.buy_price + 'g)</span>';
+      html += '<div class="trade-controls">';
+      html += '<button class="trade-amt-btn" data-key="' + key + '" data-dir="dec">-</button>';
+      html += '<span class="trade-amt" id="ta-' + rk + '">' + amt + '</span>';
+      html += '<button class="trade-amt-btn" data-key="' + key + '" data-dir="inc" data-max="' + stock + '">+</button>';
+      html += '<button class="btn-sell" data-resource="' + rk + '" data-key="' + key + '"' + (amt < 1 ? ' disabled' : '') + '>Sell</button>';
+      html += '</div>';
+      html += '</div>';
+    });
   }
 
   panel.innerHTML = html;
 
-  // Wire policy mode selects
+  // ── Wire partner tab clicks ──
+  panel.querySelectorAll('.partner-tab').forEach(function (tab) {
+    tab.addEventListener('click', function () {
+      state.selectedTrader = tab.dataset.trader;
+      state.traderPrices = state.allTraderPrices[state.selectedTrader] || {};
+      renderTradePanel();
+    });
+  });
+
+  // ── Wire policy mode selects ──
   panel.querySelectorAll('.policy-mode-select').forEach(function (sel) {
     sel.addEventListener('change', function () {
       var rk = sel.dataset.resource;
@@ -187,7 +292,7 @@ export function renderTradePanel() {
     });
   });
 
-  // Wire reserve inputs
+  // ── Wire reserve inputs ──
   panel.querySelectorAll('.policy-reserve-input').forEach(function (inp) {
     var debounceTimer = null;
     inp.addEventListener('input', function () {
@@ -202,7 +307,7 @@ export function renderTradePanel() {
     });
   });
 
-  // Wire manual sell amount buttons
+  // ── Wire manual sell amount buttons ──
   panel.querySelectorAll('.trade-amt-btn').forEach(function (btn) {
     btn.addEventListener('click', function () {
       var key = btn.dataset.key;
@@ -224,7 +329,7 @@ export function renderTradePanel() {
     });
   });
 
-  // Wire manual sell buttons
+  // ── Wire manual sell buttons ──
   panel.querySelectorAll('.btn-sell').forEach(function (btn) {
     btn.addEventListener('click', function () {
       var rk = btn.dataset.resource;
@@ -235,48 +340,29 @@ export function renderTradePanel() {
     });
   });
 
-  // Wire check-now button
+  // ── Wire check-all button ──
   var checkBtn = document.getElementById('btn-check-visit');
   if (checkBtn) {
     checkBtn.addEventListener('click', function () {
       checkBtn.disabled = true;
       checkBtn.textContent = '...';
-      checkTraderVisit();
+      checkAllTraderVisits();
     });
   }
 }
 
-function renderVisitStatus() {
-  var html = '<div class="visit-status">';
-  if (state.nextVisitAt) {
-    var now = Date.now();
-    var next = new Date(state.nextVisitAt).getTime();
-    var diff = next - now;
-    if (diff <= 0) {
-      html += '<span class="visit-due">Trader visit due now!</span>';
-    } else {
-      var mins = Math.ceil(diff / 60000);
-      html += '<span class="visit-timer">Next visit in ~' + mins + ' min</span>';
-    }
-  } else {
-    html += '<span class="visit-timer">Next visit: soon</span>';
-  }
-  html += ' <button class="btn-check-visit" id="btn-check-visit">Check Now</button>';
-  html += '</div>';
-  return html;
-}
-
-function renderVisitSummary() {
+function renderVisitSummary(traderKey) {
   var html = '';
-  if (state.lastVisit && state.lastVisit.summary) {
-    var summary = state.lastVisit.summary;
+  var lastVisit = state.lastVisits[traderKey];
+  if (lastVisit && lastVisit.summary) {
+    var summary = lastVisit.summary;
     if (typeof summary === 'string') {
       try { summary = JSON.parse(summary); } catch (e) { summary = []; }
     }
     html += '<div class="visit-summary">';
     html += '<div class="visit-summary-title">Last Visit</div>';
     if (summary.length === 0) {
-      html += '<div class="visit-summary-item empty">Trader visited — no trades matched your policy.</div>';
+      html += '<div class="visit-summary-item empty">Visited — no trades matched your policy.</div>';
     } else {
       summary.forEach(function (item) {
         if (item.type === 'sell') {
@@ -286,10 +372,31 @@ function renderVisitSummary() {
         }
       });
     }
-    var usedLabel = state.lastVisit.capacity_used + '/' + state.lastVisit.capacity_total + ' capacity used';
+    var usedLabel = lastVisit.capacity_used + '/' + lastVisit.capacity_total + ' capacity used';
     html += '<div class="visit-summary-cap">' + usedLabel + '</div>';
     html += '</div>';
   }
+  return html;
+}
+
+function renderPartnerGoods(traderKey) {
+  var prices = state.allTraderPrices[traderKey] || {};
+  var resources = Object.keys(prices);
+  if (resources.length === 0) return '';
+
+  var html = '<div class="partner-goods">';
+  html += '<div class="partner-goods-title">Traded Goods</div>';
+  resources.forEach(function (rk) {
+    var p = prices[rk];
+    var parts = [];
+    if (p.buy_price) parts.push('<span class="pg-sell">Buys at ' + p.buy_price + 'g</span>');
+    if (p.sell_price) parts.push('<span class="pg-buy">Sells at ' + p.sell_price + 'g</span>');
+    html += '<div class="partner-goods-item">';
+    html += '<span class="partner-goods-name">' + resourceName(rk) + '</span>';
+    html += '<span class="partner-goods-prices">' + parts.join(' &middot; ') + '</span>';
+    html += '</div>';
+  });
+  html += '</div>';
   return html;
 }
 
@@ -310,22 +417,68 @@ function saveTradePolicy(resourceKey, mode, reserveTarget) {
   });
 }
 
-export function checkTraderVisit() {
-  // Lazy visit resolution: call RPC and let the server decide
-  sb.rpc('resolve_trader_visit', { p_trader_key: 'starter_trader' }).then(function (r) {
-    if (r.error) {
-      // RPC may not exist yet if migration hasn't run — fail silently
-      console.warn('Trader visit check:', r.error.message);
+// ── Check all trader visits sequentially ──
+export function checkAllTraderVisits() {
+  var traderKeys = Object.keys(state.traders);
+  if (traderKeys.length === 0) return;
+
+  var idx = 0;
+  var totalEarned = 0;
+  var totalSpent = 0;
+  var anyResolved = false;
+  var resolvedNames = [];
+
+  function resolveNext() {
+    if (idx >= traderKeys.length) {
+      // All traders processed — show results
+      if (anyResolved) {
+        var msg = resolvedNames.join(', ') + ' visited!';
+        if (totalEarned > 0) msg += ' Earned $' + totalEarned + '.';
+        if (totalSpent > 0) msg += ' Spent $' + totalSpent + '.';
+        if (totalEarned === 0 && totalSpent === 0) msg += ' No trades this round.';
+        showToast(msg, 'success');
+      }
+      document.getElementById('g-money').textContent = '$' + state.profile.money;
+      renderInventory();
+      renderTradePanel();
+      state.visitChecked = true;
       return;
     }
-    var data = r.data;
-    if (!data) return;
 
-    if (data.visit_resolved) {
-      // Update local state
+    var tk = traderKeys[idx];
+    idx++;
+
+    sb.rpc('resolve_trader_visit', { p_trader_key: tk }).then(function (r) {
+      if (r.error) {
+        console.warn('Trader visit check (' + tk + '):', r.error.message);
+        resolveNext();
+        return;
+      }
+      var data = r.data;
+      if (!data) { resolveNext(); return; }
+
+      if (data.visit_resolved) {
+        anyResolved = true;
+        totalEarned += data.total_earned || 0;
+        totalSpent += data.total_spent || 0;
+        resolvedNames.push(state.traders[tk] ? state.traders[tk].name : tk);
+
+        state.lastVisits[tk] = {
+          capacity_total: data.capacity_total,
+          capacity_used: data.capacity_used,
+          summary: data.summary,
+          visited_at: new Date().toISOString(),
+          trader_key: tk
+        };
+      }
+
+      if (data.next_visit_at) {
+        state.nextVisitAts[tk] = new Date(data.next_visit_at);
+      }
+
+      // Update inventory/money from each resolved visit (last one has latest state)
       if (data.money !== undefined) {
         state.profile.money = data.money;
-        document.getElementById('g-money').textContent = '$' + state.profile.money;
       }
       if (data.inventory) {
         state.inventory = {};
@@ -333,45 +486,25 @@ export function checkTraderVisit() {
           state.inventory[k] = Number(data.inventory[k]);
         });
       }
-      state.lastVisit = {
-        capacity_total: data.capacity_total,
-        capacity_used: data.capacity_used,
-        summary: data.summary,
-        visited_at: new Date().toISOString()
-      };
-      state.nextVisitAt = data.next_visit_at ? new Date(data.next_visit_at) : new Date(Date.now() + 10 * 60 * 1000);
 
-      // Show toast summarizing visit
-      var earned = data.total_earned || 0;
-      var spent = data.total_spent || 0;
-      var msg = 'Trader visited!';
-      if (earned > 0) msg += ' Earned $' + earned + '.';
-      if (spent > 0) msg += ' Spent $' + spent + '.';
-      if (earned === 0 && spent === 0) msg += ' No trades this visit.';
-      showToast(msg, 'success');
+      resolveNext();
+    }).catch(function (err) {
+      console.warn('Trader visit check failed (' + tk + '):', err);
+      resolveNext();
+    });
+  }
 
-      renderInventory();
-      renderTradePanel();
-    } else {
-      // Not due yet — update next visit time
-      if (data.next_visit_at) {
-        state.nextVisitAt = new Date(data.next_visit_at);
-      }
-      // Re-render to update timer
-      renderTradePanel();
-    }
-    state.visitChecked = true;
-  }).catch(function (err) {
-    console.warn('Trader visit check failed:', err);
-  });
+  resolveNext();
 }
 
 function sellToTrader(resourceKey, quantity, btn) {
   btn.disabled = true;
   btn.textContent = '...';
 
+  var traderKey = state.selectedTrader || 'river_traders';
+
   sb.rpc('sell_to_trader', {
-    p_trader_key: 'starter_trader',
+    p_trader_key: traderKey,
     p_resource_key: resourceKey,
     p_quantity: quantity
   }).then(function (r) {
@@ -394,7 +527,8 @@ function sellToTrader(resourceKey, quantity, btn) {
     state.tradeAmounts['sell-' + resourceKey] = 0;
     renderInventory();
     renderTradePanel();
-    showToast('Sold ' + quantity + ' ' + resourceName(resourceKey) + ' for $' + data.total_price, 'success');
+    var traderName = state.traders[traderKey] ? state.traders[traderKey].name : traderKey;
+    showToast('Sold ' + quantity + ' ' + resourceName(resourceKey) + ' to ' + traderName + ' for $' + data.total_price, 'success');
   }).catch(function (err) {
     showToast(err.message || 'Sale failed', 'error');
     btn.disabled = false;

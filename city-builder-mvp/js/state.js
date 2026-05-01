@@ -8,14 +8,17 @@ export var state = {
   inventory: {},         // resource_key -> quantity
   buildingTypes: {},     // key -> building_type row
   resources: {},         // key -> resource row
-  traderPrices: {},      // resource_key -> { buy_price, sell_price }
   selectedBuildType: null,
   prodTimer: null,
   channel: null,
   tradeAmounts: {},
-  // Phase 2A trade policy state
+  // Phase 2B trade partner state
+  traders: {},           // trader_key -> trader row
+  allTraderPrices: {},   // trader_key -> { resource_key -> { buy_price, sell_price } }
+  traderPrices: {},      // resource_key -> { buy_price, sell_price } (selected trader, for policy display)
+  selectedTrader: null,  // currently selected trader key for detail view
   tradePolicies: {},     // resource_key -> { mode, reserve_target }
-  lastVisit: null,       // most recent trader_visits row
-  nextVisitAt: null,     // when the next visit is due
-  visitChecked: false    // whether we've checked for a visit this session
+  lastVisits: {},        // trader_key -> most recent trader_visits row
+  nextVisitAts: {},      // trader_key -> Date of next visit
+  visitChecked: false    // whether we've checked for visits this session
 };
