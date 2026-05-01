@@ -1315,6 +1315,194 @@ body {
 .trade-exec-btn:active { opacity: 0.8; }
 .trade-exec-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
+/* ── Trade tab switcher ──────────────────────────────── */
+.trade-tabs {
+  display: flex;
+  border-bottom: 1px solid #1e2a3a;
+  flex-shrink: 0;
+}
+.trade-tab {
+  flex: 1;
+  padding: 10px 0;
+  text-align: center;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #7a8a9e;
+  background: none;
+  border: none;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  -webkit-tap-highlight-color: transparent;
+}
+.trade-tab.active {
+  color: #4fa3e0;
+  border-bottom-color: #4fa3e0;
+}
+.trade-tab-content { display: none; overflow-y: auto; -webkit-overflow-scrolling: touch; flex: 1; }
+.trade-tab-content.active { display: block; }
+
+/* ── Player Market ───────────────────────────────────── */
+.market-create-form {
+  background: #0b0f14;
+  border: 1px solid #1e2a3a;
+  border-radius: 10px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+.market-create-form h4 {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #e0e6ed;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.market-form-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+  align-items: center;
+}
+.market-form-row label {
+  font-size: 0.75rem;
+  color: #7a8a9e;
+  min-width: 55px;
+  flex-shrink: 0;
+}
+.market-form-row select,
+.market-form-row input {
+  flex: 1;
+  padding: 8px 10px;
+  background: #131a24;
+  border: 1px solid #1e2a3a;
+  border-radius: 6px;
+  color: #e0e6ed;
+  font-size: 0.85rem;
+}
+.market-form-row select { appearance: auto; }
+.market-form-stock {
+  font-size: 0.7rem;
+  color: #7a8a9e;
+  margin-left: 63px;
+  margin-bottom: 6px;
+}
+.market-create-btn {
+  width: 100%;
+  padding: 10px;
+  background: #2b6a3e;
+  color: #e0e6ed;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.market-create-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.market-create-btn:active { opacity: 0.8; }
+
+.market-section-title {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #7a8a9e;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 8px;
+  margin-top: 4px;
+}
+.market-offer-card {
+  background: #0b0f14;
+  border: 1px solid #1e2a3a;
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.market-offer-card.mine {
+  border-color: #2b6a3e;
+}
+.market-offer-info {
+  flex: 1;
+  min-width: 0;
+}
+.market-offer-resource {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #e0e6ed;
+}
+.market-offer-detail {
+  font-size: 0.75rem;
+  color: #7a8a9e;
+  margin-top: 2px;
+}
+.market-offer-seller {
+  font-size: 0.7rem;
+  color: #4a5568;
+  margin-top: 2px;
+}
+.market-offer-action .btn {
+  padding: 8px 14px;
+  min-height: 36px;
+  font-size: 0.8rem;
+}
+.market-offer-action .buy-offer-btn {
+  background: #4fa3e0;
+  color: #0b0f14;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 14px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  white-space: nowrap;
+}
+.market-offer-action .buy-offer-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.market-offer-action .cancel-offer-btn {
+  background: transparent;
+  color: #f0a0a0;
+  border: 1px solid #5c1d2a;
+  border-radius: 6px;
+  padding: 8px 14px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  white-space: nowrap;
+}
+.market-offer-action .cancel-offer-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.market-recent-card {
+  background: #0b0f14;
+  border: 1px solid #1e2a3a;
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-bottom: 6px;
+  font-size: 0.8rem;
+  color: #7a8a9e;
+}
+.market-recent-status {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.market-recent-status.fulfilled { color: #5ec49e; }
+.market-recent-status.cancelled { color: #f0a0a0; }
+.market-empty {
+  text-align: center;
+  color: #4a5568;
+  font-size: 0.85rem;
+  padding: 20px 0;
+}
+
 /* ── Responsive tweaks ────────────────────────────────── */
 @media (min-width: 600px) {
   .status-grid { grid-template-columns: repeat(4, 1fr); }
@@ -1575,8 +1763,19 @@ body {
       <span class="trade-panel-title">Trade</span>
       <button class="trade-panel-close" id="trade-panel-close">&#10005;</button>
     </div>
-    <div class="trade-panel-body" id="trade-panel-body">
-      <!-- Trade partners rendered by JS -->
+    <div class="trade-tabs">
+      <button class="trade-tab active" data-tab="npc">NPC Trade</button>
+      <button class="trade-tab" data-tab="market">Player Market</button>
+    </div>
+    <div class="trade-tab-content active" id="trade-tab-npc">
+      <div class="trade-panel-body" id="trade-panel-body">
+        <!-- Trade partners rendered by JS -->
+      </div>
+    </div>
+    <div class="trade-tab-content" id="trade-tab-market">
+      <div class="trade-panel-body" id="market-panel-body">
+        <!-- Player market rendered by JS -->
+      </div>
     </div>
   </div>
 
@@ -2740,7 +2939,13 @@ body {
           panel.classList.remove('active');
           setActiveNav('nav-city');
         } else {
-          loadAndRenderTradePanel();
+          // Load whichever tab is active
+          var activeTab = document.querySelector('.trade-tab.active');
+          if (activeTab && activeTab.dataset.tab === 'market') {
+            loadAndRenderMarketPanel();
+          } else {
+            loadAndRenderTradePanel();
+          }
           panel.classList.add('active');
           setActiveNav('nav-trade');
         }
@@ -2750,6 +2955,22 @@ body {
       document.getElementById('trade-panel-close').addEventListener('click', function () {
         document.getElementById('trade-panel').classList.remove('active');
         setActiveNav('nav-city');
+      });
+
+      // Trade tab switching
+      document.querySelectorAll('.trade-tab').forEach(function (tab) {
+        tab.addEventListener('click', function () {
+          document.querySelectorAll('.trade-tab').forEach(function (t) { t.classList.remove('active'); });
+          document.querySelectorAll('.trade-tab-content').forEach(function (c) { c.classList.remove('active'); });
+          tab.classList.add('active');
+          var target = tab.dataset.tab;
+          document.getElementById('trade-tab-' + target).classList.add('active');
+          if (target === 'market') {
+            loadAndRenderMarketPanel();
+          } else {
+            loadAndRenderTradePanel();
+          }
+        });
       });
 
       // Close build panel
@@ -3432,6 +3653,284 @@ body {
         btn.disabled = false;
         btn.textContent = origText;
       });
+    }
+
+    // ── Player Market system ─────────────────────────────
+    var _marketOffers = [];
+    var _myRecentOffers = [];
+    var _marketHasDepot = false;
+
+    function loadAndRenderMarketPanel() {
+      var body = document.getElementById('market-panel-body');
+      body.innerHTML = '<div class="trade-no-depot">Loading market...</div>';
+
+      sb.rpc('get_market_offers').then(function (result) {
+        if (result.error) {
+          body.innerHTML = '<div class="trade-no-depot">Failed to load market.<br>' + result.error.message + '</div>';
+          return;
+        }
+        var data = result.data;
+        _marketHasDepot = data.has_trade_depot;
+        _marketOffers = data.offers || [];
+        _myRecentOffers = data.my_recent || [];
+
+        if (!_marketHasDepot) {
+          body.innerHTML = '<div class="trade-no-depot"><strong>Trade Depot Required</strong>Build a Trade Depot in your district to list or buy offers on the Player Market.</div>';
+          return;
+        }
+
+        renderMarketPanel();
+      }).catch(function (err) {
+        body.innerHTML = '<div class="trade-no-depot">Failed to load market.</div>';
+        console.error('Market load error:', err);
+      });
+    }
+
+    function renderMarketPanel() {
+      var body = document.getElementById('market-panel-body');
+      var html = '';
+
+      // ── Create offer form ──
+      html += '<div class="market-create-form">';
+      html += '<h4>List a Sell Offer</h4>';
+
+      // Resource picker
+      html += '<div class="market-form-row">';
+      html += '<label>Resource</label>';
+      html += '<select id="market-resource-select">';
+      var invKeys = Object.keys(_inventory).filter(function (k) { return _inventory[k] > 0; });
+      if (invKeys.length === 0) {
+        html += '<option value="">No goods in stock</option>';
+      } else {
+        invKeys.forEach(function (rk) {
+          html += '<option value="' + rk + '">' + formatResourceName(rk) + '</option>';
+        });
+      }
+      html += '</select>';
+      html += '</div>';
+
+      var firstKey = invKeys.length > 0 ? invKeys[0] : '';
+      var firstStock = firstKey ? (_inventory[firstKey] || 0) : 0;
+      html += '<div class="market-form-stock" id="market-stock-hint">In stock: ' + firstStock + '</div>';
+
+      // Amount
+      html += '<div class="market-form-row">';
+      html += '<label>Amount</label>';
+      html += '<input type="number" id="market-amount" min="1" max="' + firstStock + '" value="1" inputmode="numeric">';
+      html += '</div>';
+
+      // Price per unit
+      html += '<div class="market-form-row">';
+      html += '<label>Price/ea</label>';
+      html += '<input type="number" id="market-price" min="1" value="10" inputmode="numeric">';
+      html += '</div>';
+
+      var totalPreview = 1 * 10;
+      html += '<div class="market-form-stock" id="market-total-hint">Buyer pays: ' + totalPreview + 'g total</div>';
+
+      html += '<button class="market-create-btn" id="market-create-btn"' + (invKeys.length === 0 ? ' disabled' : '') + '>List Offer</button>';
+      html += '</div>';
+
+      // ── Open offers ──
+      var otherOffers = _marketOffers.filter(function (o) { return !o.is_mine; });
+      var myOpenOffers = _marketOffers.filter(function (o) { return o.is_mine; });
+
+      if (otherOffers.length > 0) {
+        html += '<div class="market-section-title">Available Offers</div>';
+        otherOffers.forEach(function (offer) {
+          html += renderMarketOfferCard(offer, false);
+        });
+      }
+
+      if (myOpenOffers.length > 0) {
+        html += '<div class="market-section-title">Your Open Offers</div>';
+        myOpenOffers.forEach(function (offer) {
+          html += renderMarketOfferCard(offer, true);
+        });
+      }
+
+      if (otherOffers.length === 0 && myOpenOffers.length === 0) {
+        html += '<div class="market-empty">No offers on the market yet. Be the first to list!</div>';
+      }
+
+      // ── Recent completed/cancelled ──
+      if (_myRecentOffers.length > 0) {
+        html += '<div class="market-section-title">Your Recent History</div>';
+        _myRecentOffers.forEach(function (offer) {
+          html += '<div class="market-recent-card">';
+          html += formatResourceName(offer.resource_key) + ' x' + offer.amount;
+          html += ' @ ' + offer.price_per_unit + 'g — ';
+          html += '<span class="market-recent-status ' + offer.status + '">' + offer.status + '</span>';
+          html += '</div>';
+        });
+      }
+
+      body.innerHTML = html;
+
+      // ── Wire form interactions ──
+      var resourceSelect = document.getElementById('market-resource-select');
+      var amountInput = document.getElementById('market-amount');
+      var priceInput = document.getElementById('market-price');
+      var stockHint = document.getElementById('market-stock-hint');
+      var totalHint = document.getElementById('market-total-hint');
+
+      function updateFormHints() {
+        var rk = resourceSelect.value;
+        var stock = rk ? (_inventory[rk] || 0) : 0;
+        stockHint.textContent = 'In stock: ' + stock;
+        amountInput.max = stock;
+        var amt = parseInt(amountInput.value) || 0;
+        var price = parseInt(priceInput.value) || 0;
+        totalHint.textContent = 'Buyer pays: ' + (amt * price) + 'g total';
+      }
+
+      if (resourceSelect) {
+        resourceSelect.addEventListener('change', updateFormHints);
+      }
+      if (amountInput) {
+        amountInput.addEventListener('input', updateFormHints);
+      }
+      if (priceInput) {
+        priceInput.addEventListener('input', updateFormHints);
+      }
+
+      // Create offer button
+      var createBtn = document.getElementById('market-create-btn');
+      if (createBtn) {
+        createBtn.addEventListener('click', function () {
+          var rk = resourceSelect.value;
+          var amt = parseInt(amountInput.value) || 0;
+          var price = parseInt(priceInput.value) || 0;
+          if (!rk || amt < 1 || price < 1) {
+            showToast('Select a resource, amount, and price', 'error');
+            return;
+          }
+          createBtn.disabled = true;
+          createBtn.textContent = 'Listing...';
+
+          sb.rpc('create_player_offer', {
+            p_resource_key: rk,
+            p_amount: amt,
+            p_price_per_unit: price
+          }).then(function (result) {
+            if (result.error) {
+              showToast(result.error.message || 'Failed to create offer', 'error');
+              createBtn.disabled = false;
+              createBtn.textContent = 'List Offer';
+              return;
+            }
+            var d = result.data;
+            showToast('Listed ' + d.amount + ' ' + formatResourceName(d.resource) + ' @ ' + d.price_per_unit + 'g each', 'success');
+
+            // Update local inventory
+            if (d.inventory) {
+              _inventory = {};
+              Object.keys(d.inventory).forEach(function (k) {
+                _inventory[k] = Number(d.inventory[k]);
+              });
+            }
+
+            // Refresh market
+            loadAndRenderMarketPanel();
+          }).catch(function (err) {
+            showToast(err.message || 'Failed to create offer', 'error');
+            createBtn.disabled = false;
+            createBtn.textContent = 'List Offer';
+          });
+        });
+      }
+
+      // Buy buttons
+      body.querySelectorAll('.buy-offer-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var offerId = btn.dataset.offerId;
+          btn.disabled = true;
+          btn.textContent = 'Buying...';
+
+          sb.rpc('fulfill_player_offer', { p_offer_id: offerId }).then(function (result) {
+            if (result.error) {
+              showToast(result.error.message || 'Failed to buy', 'error');
+              btn.disabled = false;
+              btn.textContent = 'Buy';
+              return;
+            }
+            var d = result.data;
+            showToast('Bought ' + d.amount + ' ' + formatResourceName(d.resource) + ' for ' + d.total_gold + 'g', 'success');
+
+            // Update local state
+            _gold = d.gold;
+            document.getElementById('game-gold').textContent = _gold;
+            if (d.inventory) {
+              _inventory = {};
+              Object.keys(d.inventory).forEach(function (k) {
+                _inventory[k] = Number(d.inventory[k]);
+              });
+            }
+
+            // Refresh market
+            loadAndRenderMarketPanel();
+          }).catch(function (err) {
+            showToast(err.message || 'Failed to buy', 'error');
+            btn.disabled = false;
+            btn.textContent = 'Buy';
+          });
+        });
+      });
+
+      // Cancel buttons
+      body.querySelectorAll('.cancel-offer-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var offerId = btn.dataset.offerId;
+          btn.disabled = true;
+          btn.textContent = 'Cancelling...';
+
+          sb.rpc('cancel_player_offer', { p_offer_id: offerId }).then(function (result) {
+            if (result.error) {
+              showToast(result.error.message || 'Failed to cancel', 'error');
+              btn.disabled = false;
+              btn.textContent = 'Cancel';
+              return;
+            }
+            var d = result.data;
+            showToast('Cancelled offer. ' + d.returned_amount + ' ' + formatResourceName(d.returned_resource) + ' returned.', 'success');
+
+            // Update local inventory
+            if (d.inventory) {
+              _inventory = {};
+              Object.keys(d.inventory).forEach(function (k) {
+                _inventory[k] = Number(d.inventory[k]);
+              });
+            }
+
+            // Refresh market
+            loadAndRenderMarketPanel();
+          }).catch(function (err) {
+            showToast(err.message || 'Failed to cancel', 'error');
+            btn.disabled = false;
+            btn.textContent = 'Cancel';
+          });
+        });
+      });
+    }
+
+    function renderMarketOfferCard(offer, isMine) {
+      var html = '<div class="market-offer-card' + (isMine ? ' mine' : '') + '">';
+      html += '<div class="market-offer-info">';
+      html += '<div class="market-offer-resource">' + formatResourceName(offer.resource_key) + ' x' + offer.amount + '</div>';
+      html += '<div class="market-offer-detail">' + offer.price_per_unit + 'g each &middot; ' + offer.total_gold + 'g total</div>';
+      if (!isMine) {
+        html += '<div class="market-offer-seller">from ' + (offer.seller_name || 'Unknown') + '</div>';
+      }
+      html += '</div>';
+      html += '<div class="market-offer-action">';
+      if (isMine) {
+        html += '<button class="cancel-offer-btn" data-offer-id="' + offer.id + '">Cancel</button>';
+      } else {
+        html += '<button class="buy-offer-btn" data-offer-id="' + offer.id + '">Buy ' + offer.total_gold + 'g</button>';
+      }
+      html += '</div>';
+      html += '</div>';
+      return html;
     }
 
     return {
