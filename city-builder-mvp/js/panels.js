@@ -1,6 +1,6 @@
 // ── Build, Inventory, and Trade panels ──
 import { sb } from './config.js';
-import { state } from './state.js';
+import { state, computeTraderUnlocks } from './state.js';
 import { showToast } from './ui.js';
 import { BLDG_LABELS, renderMap } from './map.js';
 
@@ -117,51 +117,71 @@ export function renderTradePanel() {
     return;
   }
 
-  // Ensure selected trader is valid
-  if (!state.selectedTrader || !state.traders[state.selectedTrader]) {
-    state.selectedTrader = traderKeys[0];
+  // Phase 2C: recompute unlocks (buildings may have changed)
+  computeTraderUnlocks();
+
+  // Ensure selected trader is valid and unlocked
+  if (!state.selectedTrader || !state.traders[state.selectedTrader] ||
+      (state.unlockedTraders[state.selectedTrader] && !state.unlockedTraders[state.selectedTrader].unlocked)) {
+    var firstUnlocked = traderKeys.filter(function (tk) {
+      return !state.unlockedTraders[tk] || state.unlockedTraders[tk].unlocked;
+    })[0];
+    state.selectedTrader = firstUnlocked || traderKeys[0];
   }
   state.traderPrices = state.allTraderPrices[state.selectedTrader] || {};
 
   var trader = state.traders[state.selectedTrader];
 
-  // ── Partner selector tabs ──
+  // ── Partner selector tabs (Phase 2C: locked/unlocked) ──
   html += '<div class="partner-tabs">';
   traderKeys.forEach(function (tk) {
     var t = state.traders[tk];
     var selected = tk === state.selectedTrader;
-    var nextVisit = state.nextVisitAts[tk];
-    var visitLabel = '';
-    if (nextVisit) {
-      var diff = nextVisit.getTime() - Date.now();
-      if (diff <= 0) {
-        visitLabel = '<span class="partner-tab-due">Due!</span>';
-      } else {
-        visitLabel = '<span class="partner-tab-timer">~' + Math.ceil(diff / 60000) + 'm</span>';
+    var unlockInfo = state.unlockedTraders[tk] || { unlocked: true, hint: '' };
+    var isLocked = !unlockInfo.unlocked;
+
+    if (isLocked) {
+      html += '<button class="partner-tab locked" data-trader="' + tk + '" data-locked="1" title="' + unlockInfo.hint.replace(/"/g, '&quot;') + '">';
+      html += '<div class="partner-tab-name"><span class="lock-icon">&#x1f512;</span> ' + t.name + '</div>';
+      html += '<div class="partner-tab-hint">' + unlockInfo.hint + '</div>';
+      html += '</button>';
+    } else {
+      var nextVisit = state.nextVisitAts[tk];
+      var visitLabel = '';
+      if (nextVisit) {
+        var diff = nextVisit.getTime() - Date.now();
+        if (diff <= 0) {
+          visitLabel = '<span class="partner-tab-due">Due!</span>';
+        } else {
+          visitLabel = '<span class="partner-tab-timer">~' + Math.ceil(diff / 60000) + 'm</span>';
+        }
       }
+      html += '<button class="partner-tab' + (selected ? ' selected' : '') + '" data-trader="' + tk + '">';
+      html += '<div class="partner-tab-name">' + t.name + '</div>';
+      html += '<div class="partner-tab-meta">Cap ' + t.visit_capacity + ' &middot; ' + t.visit_interval_minutes + 'm</div>';
+      if (visitLabel) {
+        html += '<div class="partner-tab-visit">' + visitLabel + '</div>';
+      }
+      html += '</button>';
     }
-    html += '<button class="partner-tab' + (selected ? ' selected' : '') + '" data-trader="' + tk + '">';
-    html += '<div class="partner-tab-name">' + t.name + '</div>';
-    html += '<div class="partner-tab-meta">Cap ' + t.visit_capacity + ' &middot; ' + t.visit_interval_minutes + 'm</div>';
-    if (visitLabel) {
-      html += '<div class="partner-tab-visit">' + visitLabel + '</div>';
-    }
-    html += '</button>';
   });
   html += '</div>';
 
-  // ── Check All Visits button ──
+  // ── Check All Visits button (only unlocked traders) ──
+  var unlockedKeys = traderKeys.filter(function (tk) {
+    return !state.unlockedTraders[tk] || state.unlockedTraders[tk].unlocked;
+  });
   html += '<div class="visit-status">';
-  var anyDue = traderKeys.some(function (tk) {
+  var anyDue = unlockedKeys.some(function (tk) {
     var nv = state.nextVisitAts[tk];
     return nv && nv.getTime() <= Date.now();
   });
   if (anyDue) {
     html += '<span class="visit-due">Trade visits available!</span>';
   } else {
-    // Show time until next visit across all traders
+    // Show time until next visit across unlocked traders
     var soonest = null;
-    traderKeys.forEach(function (tk) {
+    unlockedKeys.forEach(function (tk) {
       var nv = state.nextVisitAts[tk];
       if (nv && (!soonest || nv.getTime() < soonest)) {
         soonest = nv.getTime();
@@ -214,7 +234,8 @@ export function renderTradePanel() {
     var bestBuyPrice = null;   // what a partner pays player
     var bestSellPrice = null;  // what a partner charges player
 
-    traderKeys.forEach(function (tk) {
+    // Only count unlocked partners for best prices and "Handled by"
+    unlockedKeys.forEach(function (tk) {
       var partnerPrices = state.allTraderPrices[tk] || {};
       var partnerPrice = partnerPrices[rk];
       if (!partnerPrice) return;
@@ -322,9 +343,15 @@ export function renderTradePanel() {
 
   panel.innerHTML = html;
 
-  // ── Wire partner tab clicks ──
+  // ── Wire partner tab clicks (skip locked partners) ──
   panel.querySelectorAll('.partner-tab').forEach(function (tab) {
     tab.addEventListener('click', function () {
+      if (tab.dataset.locked === '1') {
+        var tk = tab.dataset.trader;
+        var hint = state.unlockedTraders[tk] ? state.unlockedTraders[tk].hint : 'Locked';
+        showToast(hint, 'info');
+        return;
+      }
       state.selectedTrader = tab.dataset.trader;
       state.traderPrices = state.allTraderPrices[state.selectedTrader] || {};
       renderTradePanel();
@@ -479,9 +506,12 @@ function saveTradePolicy(resourceKey, mode, reserveTarget) {
   });
 }
 
-// ── Check all trader visits sequentially ──
+// ── Check all trader visits sequentially (only unlocked) ──
 export function checkAllTraderVisits() {
-  var traderKeys = Object.keys(state.traders);
+  // Phase 2C: only resolve visits for unlocked traders
+  var traderKeys = Object.keys(state.traders).filter(function (tk) {
+    return !state.unlockedTraders[tk] || state.unlockedTraders[tk].unlocked;
+  });
   if (traderKeys.length === 0) return;
 
   var idx = 0;

@@ -1,6 +1,6 @@
 // ── Game entry, data loading, and production loop ──
 import { sb } from './config.js';
-import { state } from './state.js';
+import { state, computeTraderUnlocks } from './state.js';
 import { showScreen, showToast, capitalize } from './ui.js';
 import { renderMap, initMapEvents } from './map.js';
 import { renderBuildPanel, renderInventory, renderTradePanel, initTabs, checkAllTraderVisits } from './panels.js';
@@ -129,6 +129,9 @@ function loadGameData() {
       state.selectedTrader = traderKeys[0];
       state.traderPrices = state.allTraderPrices[state.selectedTrader] || {};
     }
+
+    // Phase 2C: compute trader unlock state from progression
+    computeTraderUnlocks();
 
     // Calculate next visit times per trader
     state.nextVisitAts = {};
