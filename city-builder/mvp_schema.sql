@@ -355,6 +355,10 @@ BEGIN
   SELECT * INTO v_player FROM public.player_profiles WHERE id = v_uid;
   IF NOT FOUND THEN RAISE EXCEPTION 'Player not found'; END IF;
 
+  IF v_bt.industry_key <> v_player.industry_key THEN
+    RAISE EXCEPTION 'You can only place buildings for your chosen industry';
+  END IF;
+
   IF v_player.money < v_bt.build_cost THEN
     RAISE EXCEPTION 'Not enough money (need %, have %)', v_bt.build_cost, v_player.money;
   END IF;

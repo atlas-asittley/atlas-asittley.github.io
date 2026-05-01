@@ -143,6 +143,9 @@ body {
 .toast.success { border-color: #5ec49e; color: #5ec49e; }
 .toast.error { border-color: #f06060; color: #f0a0a0; }
 
+/* ── Version badge ─────────────────────────────────── */
+.version-badge { position: fixed; bottom: 4px; right: 6px; font-size: 0.62rem; color: #4a5a6e; font-family: monospace; z-index: 300; pointer-events: none; user-select: none; }
+
 /* ── Responsive ────────────────────────────────────── */
 @media (max-width: 420px) {
   .topbar-left { gap: 6px; }
@@ -266,9 +269,16 @@ body {
 <!-- ── Toast ─────────────────────────────────────────── -->
 <div class="toast" id="toast"></div>
 
+<!-- ── Version badge (always visible) ─────────────────── -->
+<div class="version-badge" id="version-badge"></div>
+
 <script>
 (function () {
   'use strict';
+
+  // ── Version (update this string to change the displayed build) ──
+  var APP_VERSION = 'v0.1-mvp';
+  document.getElementById('version-badge').textContent = APP_VERSION;
 
   // ── Config ──────────────────────────────────────────
   var SUPABASE_URL = 'https://igaulapupbtdcqqjobhs.supabase.co';
