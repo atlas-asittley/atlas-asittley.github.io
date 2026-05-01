@@ -50,6 +50,8 @@ body {
 .stat .v { font-weight: 700; }
 .stat .v.gold { color: #e6c65a; }
 .stat .v.workers { color: #5ec49e; }
+.stat .v.shortage { color: #f06060; }
+.labor-badge { font-size: 0.65rem; color: #f06060; font-weight: 600; margin-left: 2px; }
 .btn-sm { padding: 4px 10px; font-size: 0.75rem; background: none; border: 1px solid #1e2a3a; color: #7a8a9e; border-radius: 6px; cursor: pointer; }
 
 /* ── Game: info bar ────────────────────────────────── */
@@ -78,6 +80,9 @@ body {
 .bldg.sawmill { background: #7a5a2a; }
 .bldg.stone_quarry { background: #5a5a7a; }
 .bldg.mason_workshop { background: #7a4a3a; }
+.bldg.house { background: #4a6a8a; }
+.bldg.unstaffed { opacity: 0.35; animation: none; }
+.bldg.unstaffed::after { content: '!'; position: absolute; top: -2px; right: -2px; font-size: 6px; color: #f06060; font-weight: 700; }
 .hq-label { font-size: 7px; color: #7a8a9e; font-weight: 600; letter-spacing: 0.05em; }
 
 /* ── Bottom panel ──────────────────────────────────── */
@@ -107,6 +112,8 @@ body {
 .inv-name { font-size: 0.85rem; }
 .inv-qty { font-weight: 700; font-size: 0.85rem; }
 .inv-qty.zero { color: #5a6a7e; }
+.labor-shortage-row { background: rgba(240,96,96,0.08); border-radius: 4px; padding: 7px 6px; }
+.labor-shortage-hint { font-size: 0.7rem; color: #8a6060; font-style: italic; padding: 2px 4px 8px; }
 
 /* ── Trade panel ───────────────────────────────────── */
 .trader-header { font-weight: 700; font-size: 0.95rem; margin-bottom: 2px; }

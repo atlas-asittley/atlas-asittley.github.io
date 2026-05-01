@@ -1,12 +1,13 @@
 // ── Map rendering and placement logic ──
 import { sb } from './config.js';
-import { state } from './state.js';
+import { state, computeLaborAllocation } from './state.js';
 import { showToast } from './ui.js';
 import { renderBuildPanel } from './panels.js';
 
 export var BLDG_LABELS = {
   timber_camp: 'TC', sawmill: 'SM',
-  stone_quarry: 'SQ', mason_workshop: 'MW'
+  stone_quarry: 'SQ', mason_workshop: 'MW',
+  house: 'H'
 };
 
 export function isPlacementValid(btKey, tile) {
@@ -59,7 +60,9 @@ export function renderMap() {
         if (!mine && building.player_profiles) {
           titleText += ' (' + building.player_profiles.display_name + ')';
         }
-        html += '<div class="bldg ' + btk + (mine ? ' mine' : '') + '" title="' + titleText + '">' + label + '</div>';
+        var isUnstaffed = mine && state.laborInfo.unstaffedIds[building.id];
+        if (isUnstaffed) titleText += ' (unstaffed)';
+        html += '<div class="bldg ' + btk + (mine ? ' mine' : '') + (isUnstaffed ? ' unstaffed' : '') + '" title="' + titleText + '">' + label + '</div>';
       } else if (x === 7 && y === 7) {
         html += '<span class="hq-label">HQ</span>';
       } else if (tile.resource_node_key) {
@@ -84,7 +87,12 @@ function updateMoney() {
 }
 
 function updateWorkers() {
-  document.getElementById('g-workers').textContent = state.profile.workers_used + '/' + state.profile.worker_capacity;
+  var li = state.laborInfo;
+  var el = document.getElementById('g-workers');
+  el.textContent = li.workersUsed + '/' + li.workerSupply;
+  el.className = 'v ' + (li.laborShortage ? 'shortage' : 'workers');
+  var badge = document.getElementById('g-labor-badge');
+  if (badge) badge.style.display = li.laborShortage ? 'inline' : 'none';
 }
 
 function placeBuilding(tileId, btKey) {
@@ -92,10 +100,6 @@ function placeBuilding(tileId, btKey) {
   if (!bt) return;
   if (state.profile.money < bt.build_cost) {
     showToast('Not enough money (need $' + bt.build_cost + ')', 'error');
-    return;
-  }
-  if (state.profile.workers_used + bt.worker_cost > state.profile.worker_capacity) {
-    showToast('Not enough workers', 'error');
     return;
   }
 
@@ -110,9 +114,22 @@ function placeBuilding(tileId, btKey) {
       state.profile.money = data.money;
       state.profile.workers_used = data.workers_used;
       state.profile.worker_capacity = data.worker_capacity;
+
+      // Update labor info from placement response
+      if (data.workers_needed !== undefined) {
+        state.laborInfo.workerSupply = data.worker_capacity;
+        state.laborInfo.workersNeeded = data.workers_needed;
+        state.laborInfo.workersUsed = data.workers_used;
+        state.laborInfo.workersIdle = Math.max(0, data.worker_capacity - data.workers_needed);
+        state.laborInfo.laborShortage = !!data.labor_shortage;
+      }
+
       updateMoney();
       updateWorkers();
-      showToast(bt.name + ' placed!', 'success');
+
+      var msg = bt.name + ' placed!';
+      if (data.labor_shortage) msg += ' (labor shortage — build housing!)';
+      showToast(msg, data.labor_shortage ? 'info' : 'success');
       cancelPlacement();
 
       Promise.all([
@@ -123,6 +140,7 @@ function placeBuilding(tileId, btKey) {
         state.tiles = results[1].data || [];
         state.tileMap = {};
         state.tiles.forEach(function (t) { state.tileMap[t.x + ',' + t.y] = t; });
+        computeLaborAllocation();
         renderMap();
         renderBuildPanel();
       });

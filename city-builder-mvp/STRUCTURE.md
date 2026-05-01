@@ -18,9 +18,12 @@ city-builder-mvp/
 │   ├── map.js          Map rendering, placement validation, building placement
 │   ├── panels.js       Build/Inventory/Trade panel rendering and events
 │   └── realtime.js     Supabase realtime subscription for multiplayer
-├── mvp_schema.sql              Base database schema
-├── phase2a_trade_migration.sql Phase 2A migration (run after mvp_schema)
-└── STRUCTURE.md                This file
+├── mvp_schema.sql                    Base database schema
+├── phase2a_trade_migration.sql       Phase 2A migration (run after mvp_schema)
+├── phase2b_trade_partners_migration.sql  Phase 2B migration (run after 2A)
+├── black_market_migration.sql        Black Market migration (run after 2B)
+├── housing_labor_migration.sql       Housing & Labor migration (run after Black Market)
+└── STRUCTURE.md                      This file
 ```
 
 ## How to update the app version
@@ -68,6 +71,37 @@ main.js
 - **Visit interval**: update `traders.visit_interval_minutes` for the starter_trader row.
 - **Capacity**: update `traders.visit_capacity`.
 - **Prices**: update `trader_prices.buy_price` (what trader pays) and `sell_price` (what trader charges).
+
+## Housing & Labor System
+
+### Overview
+Housing buildings provide workers. Workers power production buildings.
+If worker supply is insufficient, the newest buildings go unstaffed and stop producing.
+This creates a Pharaoh-style tension between expansion and housing.
+
+### Data Model
+- `building_types` — new `workers_provided` column (default 0; housing has 6)
+- `building_types` — new `'housing'` category; `output_resource_key` now nullable
+- Housing building type: `house` (industry `'common'`, available to all players)
+
+### Rules
+- **Base workers**: every player starts with 5 (from `choose_industry`)
+- **Housing workers**: each active house adds `workers_provided` (6) to supply
+- **Worker supply** = base (5) + sum of housing workers
+- **Labor allocation**: production buildings are staffed oldest-first (by `created_at`)
+- **Unstaffed buildings**: don't produce; their timestamp advances (no catch-up)
+- **Placement**: no hard worker gate — players can place buildings without workers,
+  but unstaffed buildings are visually marked and won't produce
+
+### UI
+- Topbar: workers display turns red during shortage
+- Build panel: housing appears first; warns when placing would cause understaffing
+- Inventory panel: Labor section shows supply / needed / employed / idle / shortage
+- Map: unstaffed buildings are dimmed with a `!` indicator
+
+### Migration
+Run `housing_labor_migration.sql` after the Black Market migration.
+Updates `place_building` and `process_production` RPCs in-place.
 
 ## Deployment
 

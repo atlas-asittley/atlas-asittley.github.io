@@ -15,9 +15,15 @@ export function renderBuildPanel() {
   var html = '';
 
   var available = Object.keys(state.buildingTypes).filter(function (k) {
-    return state.buildingTypes[k].industry_key === state.profile.industry_key;
+    var bt = state.buildingTypes[k];
+    return bt.industry_key === state.profile.industry_key || bt.industry_key === 'common';
   }).sort(function (a, b) {
-    return state.buildingTypes[a].tier - state.buildingTypes[b].tier;
+    var btA = state.buildingTypes[a];
+    var btB = state.buildingTypes[b];
+    // Housing first, then by tier
+    if (btA.category === 'housing' && btB.category !== 'housing') return -1;
+    if (btA.category !== 'housing' && btB.category === 'housing') return 1;
+    return btA.tier - btB.tier;
   });
 
   if (available.length === 0) {
@@ -26,33 +32,52 @@ export function renderBuildPanel() {
     return;
   }
 
+  var li = state.laborInfo;
+
   available.forEach(function (key) {
     var bt = state.buildingTypes[key];
     var canAfford = state.profile.money >= bt.build_cost;
-    var hasWorkers = state.profile.workers_used + bt.worker_cost <= state.profile.worker_capacity;
-    var disabled = !canAfford || !hasWorkers;
+    // Only money blocks placement now — workers are soft constraint
+    var disabled = !canAfford;
     var selected = state.selectedBuildType === key;
 
     var colors = {
       timber_camp: '#3a7a4a', sawmill: '#7a5a2a',
-      stone_quarry: '#5a5a7a', mason_workshop: '#7a4a3a'
+      stone_quarry: '#5a5a7a', mason_workshop: '#7a4a3a',
+      house: '#4a6a8a'
     };
     var bgColor = colors[key] || '#4a4a6a';
     var label = BLDG_LABELS[key] || '?';
 
-    var desc = bt.category === 'extractor'
-      ? 'Extracts ' + resourceName(bt.output_resource_key) + ' from resource tiles'
-      : 'Converts ' + resourceName(bt.input_resource_key) + ' into ' + resourceName(bt.output_resource_key);
+    var desc;
+    if (bt.category === 'housing') {
+      desc = 'Provides ' + (bt.workers_provided || 6) + ' workers for your city';
+    } else if (bt.category === 'extractor') {
+      desc = 'Extracts ' + resourceName(bt.output_resource_key) + ' from resource tiles';
+    } else {
+      desc = 'Converts ' + resourceName(bt.input_resource_key) + ' into ' + resourceName(bt.output_resource_key);
+    }
 
-    var costStr = '$' + bt.build_cost + ' | ' + bt.worker_cost + ' worker';
+    var costStr;
     var costClass = 'build-cost';
-    if (!canAfford) { costStr = '$' + bt.build_cost + ' (need $' + (bt.build_cost - state.profile.money) + ' more)'; costClass += ' warn'; }
-    else if (!hasWorkers) { costStr += ' (no workers available)'; costClass += ' warn'; }
+    if (bt.category === 'housing') {
+      costStr = '$' + bt.build_cost + ' | +' + (bt.workers_provided || 6) + ' workers';
+    } else {
+      costStr = '$' + bt.build_cost + ' | ' + bt.worker_cost + ' worker';
+    }
+
+    if (!canAfford) {
+      costStr = '$' + bt.build_cost + ' (need $' + (bt.build_cost - state.profile.money) + ' more)';
+      costClass += ' warn';
+    } else if (bt.category !== 'housing' && li.workerSupply - li.workersNeeded < bt.worker_cost) {
+      costStr += ' (no workers — will be inactive)';
+      costClass += ' warn';
+    }
 
     html += '<div class="build-item' + (disabled ? ' disabled' : '') + (selected ? ' selected' : '') + '" data-bt="' + key + '">';
     html += '<div class="build-icon" style="background:' + bgColor + '">' + label + '</div>';
     html += '<div class="build-info">';
-    html += '<div class="build-name">' + bt.name + ' <small>Tier ' + bt.tier + '</small></div>';
+    html += '<div class="build-name">' + bt.name + (bt.category === 'housing' ? '' : ' <small>Tier ' + bt.tier + '</small>') + '</div>';
     html += '<div class="' + costClass + '">' + costStr + '</div>';
     html += '<div class="build-desc">' + desc + '</div>';
     html += '</div></div>';
@@ -95,10 +120,24 @@ export function renderInventory() {
 
   html += '<div class="inv-section">Economy</div>';
   html += '<div class="inv-row"><span class="inv-name">Money</span><span class="inv-qty" style="color:#e6c65a;">$' + state.profile.money + '</span></div>';
-  html += '<div class="inv-row"><span class="inv-name">Workers</span><span class="inv-qty">' + state.profile.workers_used + ' / ' + state.profile.worker_capacity + '</span></div>';
 
   var myBldgs = state.allBuildings.filter(function (b) { return b.player_id === state.currentUser.id; });
   html += '<div class="inv-row"><span class="inv-name">Your Buildings</span><span class="inv-qty">' + myBldgs.length + '</span></div>';
+
+  // ── Labor section ──
+  var li = state.laborInfo;
+  html += '<div class="inv-section">Labor</div>';
+  html += '<div class="inv-row"><span class="inv-name">Worker Supply</span><span class="inv-qty" style="color:#5ec49e;">' + li.workerSupply + '</span></div>';
+  html += '<div class="inv-row"><span class="inv-name">Workers Needed</span><span class="inv-qty">' + li.workersNeeded + '</span></div>';
+  html += '<div class="inv-row"><span class="inv-name">Employed</span><span class="inv-qty">' + li.workersUsed + '</span></div>';
+  if (li.workersIdle > 0) {
+    html += '<div class="inv-row"><span class="inv-name">Idle</span><span class="inv-qty" style="color:#e6c65a;">' + li.workersIdle + '</span></div>';
+  }
+  if (li.laborShortage) {
+    var shortage = li.workersNeeded - li.workerSupply;
+    html += '<div class="inv-row labor-shortage-row"><span class="inv-name" style="color:#f06060;">Labor Shortage!</span><span class="inv-qty" style="color:#f06060;">' + shortage + ' workers short</span></div>';
+    html += '<div class="labor-shortage-hint">Build housing to increase worker supply.</div>';
+  }
 
   panel.innerHTML = html;
 }

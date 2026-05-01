@@ -23,8 +23,74 @@ export var state = {
   nextVisitAts: {},      // trader_key -> Date of next visit
   visitChecked: false,   // whether we've checked for visits this session
   // Phase 2C: partner unlock state (computed from progression)
-  unlockedTraders: {}    // trader_key -> { unlocked: bool, hint: string }
+  unlockedTraders: {},   // trader_key -> { unlocked: bool, hint: string }
+  // Housing & Labor state (computed client-side for UI, authoritative values from server)
+  laborInfo: {
+    workerSupply: 5,
+    workersNeeded: 0,
+    workersUsed: 0,
+    workersIdle: 5,
+    laborShortage: false,
+    staffedIds: {},
+    unstaffedIds: {}
+  }
 };
+
+// ── Housing & Labor: compute which buildings are staffed (mirrors server rule) ──
+// Oldest-built production buildings get workers first. Housing provides workers.
+// This is used for map rendering (unstaffed visual) and UI display.
+export function computeLaborAllocation() {
+  if (!state.currentUser) return;
+  var myBuildings = state.allBuildings.filter(function (b) {
+    return b.player_id === state.currentUser.id;
+  });
+
+  // Count workers from housing
+  var housingWorkers = 0;
+  myBuildings.forEach(function (b) {
+    var bt = state.buildingTypes[b.building_type_key];
+    if (bt && bt.category === 'housing' && b.status === 'active') {
+      housingWorkers += (bt.workers_provided || 0);
+    }
+  });
+
+  var workerSupply = 5 + housingWorkers; // base 5 + housing
+
+  // Get production buildings sorted by creation date (oldest first)
+  var prodBuildings = myBuildings.filter(function (b) {
+    var bt = state.buildingTypes[b.building_type_key];
+    return bt && bt.category !== 'housing' && b.status === 'active';
+  }).sort(function (a, b) {
+    return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+  });
+
+  var workersRemaining = workerSupply;
+  var workersNeeded = 0;
+  var staffedIds = {};
+  var unstaffedIds = {};
+
+  prodBuildings.forEach(function (b) {
+    var bt = state.buildingTypes[b.building_type_key];
+    var cost = bt ? bt.worker_cost : 1;
+    workersNeeded += cost;
+    if (workersRemaining >= cost) {
+      workersRemaining -= cost;
+      staffedIds[b.id] = true;
+    } else {
+      unstaffedIds[b.id] = true;
+    }
+  });
+
+  state.laborInfo = {
+    workerSupply: workerSupply,
+    workersNeeded: workersNeeded,
+    workersUsed: Math.min(workerSupply, workersNeeded),
+    workersIdle: Math.max(0, workerSupply - workersNeeded),
+    laborShortage: workersNeeded > workerSupply,
+    staffedIds: staffedIds,
+    unstaffedIds: unstaffedIds
+  };
+}
 
 // ── Phase 2C: compute which traders are unlocked based on player progression ──
 // Unlock state is computed from existing game state (buildings, etc.) rather than

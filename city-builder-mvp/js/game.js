@@ -1,6 +1,6 @@
 // ── Game entry, data loading, and production loop ──
 import { sb } from './config.js';
-import { state, computeTraderUnlocks } from './state.js';
+import { state, computeTraderUnlocks, computeLaborAllocation } from './state.js';
 import { showScreen, showToast, capitalize } from './ui.js';
 import { renderMap, initMapEvents } from './map.js';
 import { renderBuildPanel, renderInventory, renderTradePanel, initTabs, checkAllTraderVisits } from './panels.js';
@@ -11,7 +11,20 @@ export function updateMoney() {
 }
 
 export function updateWorkers() {
-  document.getElementById('g-workers').textContent = state.profile.workers_used + '/' + state.profile.worker_capacity;
+  var li = state.laborInfo;
+  var el = document.getElementById('g-workers');
+  el.textContent = li.workersUsed + '/' + li.workerSupply;
+  el.className = 'v ' + (li.laborShortage ? 'shortage' : 'workers');
+  el.title = li.laborShortage
+    ? 'Labor shortage! ' + li.workersNeeded + ' needed, only ' + li.workerSupply + ' available'
+    : li.workersIdle > 0
+      ? li.workersIdle + ' workers idle'
+      : 'All workers employed';
+  // Update shortage badge
+  var badge = document.getElementById('g-labor-badge');
+  if (badge) {
+    badge.style.display = li.laborShortage ? 'inline' : 'none';
+  }
 }
 
 function processProduction() {
@@ -30,6 +43,17 @@ function processProduction() {
     if (data.money !== undefined) state.profile.money = data.money;
     if (data.workers_used !== undefined) state.profile.workers_used = data.workers_used;
     if (data.worker_capacity !== undefined) state.profile.worker_capacity = data.worker_capacity;
+
+    // Update labor info from server response (authoritative)
+    if (data.workers_needed !== undefined) {
+      state.laborInfo.workerSupply = data.worker_capacity;
+      state.laborInfo.workersNeeded = data.workers_needed;
+      state.laborInfo.workersUsed = data.workers_used;
+      state.laborInfo.workersIdle = Math.max(0, data.worker_capacity - data.workers_needed);
+      state.laborInfo.laborShortage = !!data.labor_shortage;
+    }
+    // Recompute client-side staffed/unstaffed IDs for map rendering
+    computeLaborAllocation();
 
     updateMoney();
     updateWorkers();
@@ -157,6 +181,8 @@ export function enterGame() {
   updateWorkers();
 
   loadGameData().then(function () {
+    computeLaborAllocation();
+    updateWorkers();
     renderMap();
     renderBuildPanel();
     renderInventory();
