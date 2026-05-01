@@ -7,6 +7,7 @@ import { renderBuildPanel } from './panels.js';
 export var BLDG_LABELS = {
   timber_camp: 'TC', sawmill: 'SM',
   stone_quarry: 'SQ', mason_workshop: 'MW',
+  grain_farm: 'GF', mill: 'ML',
   house: 'H', road: 'R'
 };
 

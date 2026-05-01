@@ -46,6 +46,7 @@ export function renderBuildPanel() {
     var colors = {
       timber_camp: '#3a7a4a', sawmill: '#7a5a2a',
       stone_quarry: '#5a5a7a', mason_workshop: '#7a4a3a',
+      grain_farm: '#5a7a3a', mill: '#6a5a4a',
       house: '#4a6a8a', road: '#6a6a5a'
     };
     var bgColor = colors[key] || '#4a4a6a';
@@ -114,13 +115,13 @@ export function renderInventory() {
   var html = '';
 
   html += '<div class="inv-section">Raw Materials</div>';
-  ['timber', 'stone'].forEach(function (k) {
+  ['timber', 'stone', 'grain'].forEach(function (k) {
     var qty = Math.floor(state.inventory[k] || 0);
     html += '<div class="inv-row"><span class="inv-name">' + resourceName(k) + '</span><span class="inv-qty' + (qty === 0 ? ' zero' : '') + '">' + qty + '</span></div>';
   });
 
   html += '<div class="inv-section">Processed Goods</div>';
-  ['lumber', 'brick'].forEach(function (k) {
+  ['lumber', 'brick', 'flour'].forEach(function (k) {
     var qty = Math.floor(state.inventory[k] || 0);
     html += '<div class="inv-row"><span class="inv-name">' + resourceName(k) + '</span><span class="inv-qty' + (qty === 0 ? ' zero' : '') + '">' + qty + '</span></div>';
   });
@@ -301,7 +302,7 @@ export function renderTradePanel() {
   // ── Trade Policies (global, with selected partner prices) ──
   html += '<div class="trade-section-label">Trade Policies</div>';
   html += '<div class="trade-policy-note">Policies apply to all partners. Each partner only trades goods they support.</div>';
-  var tradeResources = ['timber', 'lumber', 'stone', 'brick'];
+  var tradeResources = ['timber', 'lumber', 'stone', 'brick', 'grain', 'flour'];
   tradeResources.forEach(function (rk) {
     var stock = Math.floor(state.inventory[rk] || 0);
     var policy = state.tradePolicies[rk] || { mode: 'keep', reserve_target: 0 };
@@ -368,7 +369,9 @@ export function renderTradePanel() {
     timber: { buy: 2, sell: 10 },
     stone:  { buy: 2, sell: 11 },
     lumber: { buy: 5, sell: 18 },
-    brick:  { buy: 6, sell: 20 }
+    brick:  { buy: 6, sell: 20 },
+    grain:  { buy: 2, sell: 9 },
+    flour:  { buy: 5, sell: 16 }
   };
 
   tradeResources.forEach(function (rk) {
