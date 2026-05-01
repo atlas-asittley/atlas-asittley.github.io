@@ -242,31 +242,64 @@ export function renderTradePanel() {
     html += '</div>';
   });
 
-  // ── Manual sell section (uses selected partner) ──
-  var hasManualGoods = tradeResources.some(function (rk) {
-    var p = state.traderPrices[rk];
-    return p && p.buy_price;
-  });
-  if (hasManualGoods) {
-    html += '<div class="trade-section-label" style="margin-top:12px;">Quick Sell to ' + trader.name + '</div>';
-    tradeResources.forEach(function (rk) {
-      var prices = state.traderPrices[rk];
-      if (!prices || !prices.buy_price) return;
-      var stock = Math.floor(state.inventory[rk] || 0);
-      var key = 'sell-' + rk;
-      var amt = state.tradeAmounts[key] || 0;
+  // ── Black Market section (separate from partner trade) ──
+  html += '<div class="bm-section">';
+  html += '<div class="bm-header">';
+  html += '<span class="bm-title">Black Market</span>';
+  html += '</div>';
+  html += '<div class="bm-warning">Instant trade for emergencies. Always available, but the rates are terrible.</div>';
 
-      html += '<div class="trade-row-manual">';
-      html += '<span class="trade-manual-name">' + resourceName(rk) + ' (' + prices.buy_price + 'g)</span>';
-      html += '<div class="trade-controls">';
-      html += '<button class="trade-amt-btn" data-key="' + key + '" data-dir="dec">-</button>';
-      html += '<span class="trade-amt" id="ta-' + rk + '">' + amt + '</span>';
-      html += '<button class="trade-amt-btn" data-key="' + key + '" data-dir="inc" data-max="' + stock + '">+</button>';
-      html += '<button class="btn-sell" data-resource="' + rk + '" data-key="' + key + '"' + (amt < 1 ? ' disabled' : '') + '>Sell</button>';
-      html += '</div>';
-      html += '</div>';
-    });
-  }
+  var bmPrices = {
+    timber: { buy: 2, sell: 10 },
+    stone:  { buy: 2, sell: 11 },
+    lumber: { buy: 5, sell: 18 },
+    brick:  { buy: 6, sell: 20 }
+  };
+
+  tradeResources.forEach(function (rk) {
+    var bmp = bmPrices[rk];
+    var stock = Math.floor(state.inventory[rk] || 0);
+    var sellKey = 'bm-sell-' + rk;
+    var buyKey = 'bm-buy-' + rk;
+    var sellAmt = state.blackMarketAmounts[sellKey] || 0;
+    var buyAmt = state.blackMarketAmounts[buyKey] || 0;
+    var maxBuy = bmp.sell > 0 ? Math.floor(state.profile.money / bmp.sell) : 0;
+
+    html += '<div class="bm-row">';
+    html += '<div class="bm-row-header">';
+    html += '<span class="bm-res-name">' + resourceName(rk) + '</span>';
+    html += '<span class="bm-res-stock">Stock: ' + stock + '</span>';
+    html += '</div>';
+    html += '<div class="bm-prices">';
+    html += '<span class="bm-price bm-price-sell">Sell at ' + bmp.buy + 'g</span>';
+    html += '<span class="bm-price bm-price-buy">Buy at ' + bmp.sell + 'g</span>';
+    html += '</div>';
+
+    // Sell to black market row
+    html += '<div class="bm-trade-row">';
+    html += '<span class="bm-trade-label">Sell:</span>';
+    html += '<div class="trade-controls">';
+    html += '<button class="trade-amt-btn bm-amt-btn" data-bmkey="' + sellKey + '" data-dir="dec">-</button>';
+    html += '<span class="trade-amt" id="bma-' + sellKey + '">' + sellAmt + '</span>';
+    html += '<button class="trade-amt-btn bm-amt-btn" data-bmkey="' + sellKey + '" data-dir="inc" data-max="' + stock + '">+</button>';
+    html += '<button class="btn-bm-sell" data-resource="' + rk + '" data-bmkey="' + sellKey + '"' + (sellAmt < 1 ? ' disabled' : '') + '>Sell</button>';
+    html += '</div>';
+    html += '</div>';
+
+    // Buy from black market row
+    html += '<div class="bm-trade-row">';
+    html += '<span class="bm-trade-label">Buy:</span>';
+    html += '<div class="trade-controls">';
+    html += '<button class="trade-amt-btn bm-amt-btn" data-bmkey="' + buyKey + '" data-dir="dec">-</button>';
+    html += '<span class="trade-amt" id="bma-' + buyKey + '">' + buyAmt + '</span>';
+    html += '<button class="trade-amt-btn bm-amt-btn" data-bmkey="' + buyKey + '" data-dir="inc" data-max="' + maxBuy + '">+</button>';
+    html += '<button class="btn-bm-buy" data-resource="' + rk + '" data-bmkey="' + buyKey + '"' + (buyAmt < 1 ? ' disabled' : '') + '>Buy</button>';
+    html += '</div>';
+    html += '</div>';
+
+    html += '</div>';
+  });
+  html += '</div>';
 
   panel.innerHTML = html;
 
@@ -307,39 +340,6 @@ export function renderTradePanel() {
     });
   });
 
-  // ── Wire manual sell amount buttons ──
-  panel.querySelectorAll('.trade-amt-btn').forEach(function (btn) {
-    btn.addEventListener('click', function () {
-      var key = btn.dataset.key;
-      var dir = btn.dataset.dir;
-      var max = parseInt(btn.dataset.max || '999');
-      var current = state.tradeAmounts[key] || 0;
-
-      if (dir === 'inc' && current < max) current++;
-      else if (dir === 'dec' && current > 0) current--;
-      state.tradeAmounts[key] = current;
-
-      var rk = key.replace('sell-', '');
-      var el = document.getElementById('ta-' + rk);
-      if (el) el.textContent = current;
-
-      var row = btn.closest('.trade-row-manual');
-      var sellBtn = row.querySelector('.btn-sell');
-      if (sellBtn) sellBtn.disabled = current < 1;
-    });
-  });
-
-  // ── Wire manual sell buttons ──
-  panel.querySelectorAll('.btn-sell').forEach(function (btn) {
-    btn.addEventListener('click', function () {
-      var rk = btn.dataset.resource;
-      var key = btn.dataset.key;
-      var amt = state.tradeAmounts[key] || 0;
-      if (amt < 1) return;
-      sellToTrader(rk, amt, btn);
-    });
-  });
-
   // ── Wire check-all button ──
   var checkBtn = document.getElementById('btn-check-visit');
   if (checkBtn) {
@@ -349,6 +349,49 @@ export function renderTradePanel() {
       checkAllTraderVisits();
     });
   }
+
+  // ── Wire Black Market amount buttons ──
+  panel.querySelectorAll('.bm-amt-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var key = btn.dataset.bmkey;
+      var dir = btn.dataset.dir;
+      var max = parseInt(btn.dataset.max || '999');
+      var current = state.blackMarketAmounts[key] || 0;
+
+      if (dir === 'inc' && current < max) current++;
+      else if (dir === 'dec' && current > 0) current--;
+      state.blackMarketAmounts[key] = current;
+
+      var el = document.getElementById('bma-' + key);
+      if (el) el.textContent = current;
+
+      var row = btn.closest('.bm-trade-row');
+      var actionBtn = row.querySelector('.btn-bm-sell, .btn-bm-buy');
+      if (actionBtn) actionBtn.disabled = current < 1;
+    });
+  });
+
+  // ── Wire Black Market sell buttons ──
+  panel.querySelectorAll('.btn-bm-sell').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var rk = btn.dataset.resource;
+      var key = btn.dataset.bmkey;
+      var amt = state.blackMarketAmounts[key] || 0;
+      if (amt < 1) return;
+      blackMarketTrade(rk, amt, 'sell', btn);
+    });
+  });
+
+  // ── Wire Black Market buy buttons ──
+  panel.querySelectorAll('.btn-bm-buy').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var rk = btn.dataset.resource;
+      var key = btn.dataset.bmkey;
+      var amt = state.blackMarketAmounts[key] || 0;
+      if (amt < 1) return;
+      blackMarketTrade(rk, amt, 'buy', btn);
+    });
+  });
 }
 
 function renderVisitSummary(traderKey) {
@@ -497,21 +540,20 @@ export function checkAllTraderVisits() {
   resolveNext();
 }
 
-function sellToTrader(resourceKey, quantity, btn) {
+function blackMarketTrade(resourceKey, quantity, direction, btn) {
+  var originalText = btn.textContent;
   btn.disabled = true;
   btn.textContent = '...';
 
-  var traderKey = state.selectedTrader || 'river_traders';
-
-  sb.rpc('sell_to_trader', {
-    p_trader_key: traderKey,
+  sb.rpc('black_market_trade', {
     p_resource_key: resourceKey,
-    p_quantity: quantity
+    p_quantity: quantity,
+    p_direction: direction
   }).then(function (r) {
     if (r.error) {
       showToast(r.error.message, 'error');
       btn.disabled = false;
-      btn.textContent = 'Sell';
+      btn.textContent = originalText;
       return;
     }
     var data = r.data;
@@ -524,15 +566,20 @@ function sellToTrader(resourceKey, quantity, btn) {
     }
 
     document.getElementById('g-money').textContent = '$' + state.profile.money;
-    state.tradeAmounts['sell-' + resourceKey] = 0;
+
+    var bmKey = 'bm-' + direction + '-' + resourceKey;
+    state.blackMarketAmounts[bmKey] = 0;
+
     renderInventory();
     renderTradePanel();
-    var traderName = state.traders[traderKey] ? state.traders[traderKey].name : traderKey;
-    showToast('Sold ' + quantity + ' ' + resourceName(resourceKey) + ' to ' + traderName + ' for $' + data.total_price, 'success');
+
+    var verb = direction === 'sell' ? 'Sold' : 'Bought';
+    var preposition = direction === 'sell' ? 'for' : 'for';
+    showToast(verb + ' ' + quantity + ' ' + resourceName(resourceKey) + ' on Black Market ' + preposition + ' $' + data.total_price, 'success');
   }).catch(function (err) {
-    showToast(err.message || 'Sale failed', 'error');
+    showToast(err.message || 'Black Market trade failed', 'error');
     btn.disabled = false;
-    btn.textContent = 'Sell';
+    btn.textContent = originalText;
   });
 }
 

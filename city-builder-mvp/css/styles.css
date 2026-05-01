@@ -181,6 +181,26 @@ body {
 .trade-row-manual { display: flex; align-items: center; gap: 8px; padding: 6px 10px; background: #1a2332; border-radius: 6px; margin-bottom: 6px; }
 .trade-manual-name { font-size: 0.8rem; flex: 1; }
 
+/* ── Black Market ─────────────────────────────────── */
+.bm-section { margin-top: 16px; border: 1px solid #3a2a1a; border-radius: 10px; padding: 12px; background: #1a1510; }
+.bm-header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.bm-title { font-weight: 700; font-size: 0.95rem; color: #d4a040; }
+.bm-warning { font-size: 0.72rem; color: #8a7a5a; margin-bottom: 10px; font-style: italic; line-height: 1.4; }
+.bm-row { background: #1e1a14; border: 1px solid #2e2518; border-radius: 8px; padding: 10px; margin-bottom: 8px; }
+.bm-row-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+.bm-res-name { font-weight: 600; font-size: 0.85rem; color: #e0d8c8; }
+.bm-res-stock { font-size: 0.72rem; color: #7a6a5a; }
+.bm-prices { display: flex; gap: 10px; margin-bottom: 8px; }
+.bm-price { font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; }
+.bm-price-sell { background: rgba(212,160,64,0.1); color: #d4a040; }
+.bm-price-buy { background: rgba(212,160,64,0.1); color: #c08030; }
+.bm-trade-row { display: flex; align-items: center; gap: 8px; padding: 4px 0; }
+.bm-trade-label { font-size: 0.78rem; color: #8a7a5a; min-width: 32px; }
+.btn-bm-sell { padding: 5px 10px; border-radius: 6px; border: none; background: #d4a040; color: #1a1510; font-weight: 600; font-size: 0.75rem; cursor: pointer; }
+.btn-bm-sell:disabled { opacity: 0.3; cursor: default; }
+.btn-bm-buy { padding: 5px 10px; border-radius: 6px; border: none; background: #c08030; color: #1a1510; font-weight: 600; font-size: 0.75rem; cursor: pointer; }
+.btn-bm-buy:disabled { opacity: 0.3; cursor: default; }
+
 /* ── Placement bar ─────────────────────────────────── */
 .placement-bar { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(20,30,20,0.95); border-top: 1px solid #5ec49e; padding: 10px 16px; display: none; align-items: center; justify-content: space-between; z-index: 100; }
 .placement-bar.active { display: flex; }

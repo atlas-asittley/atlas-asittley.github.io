@@ -11,7 +11,8 @@ export var state = {
   selectedBuildType: null,
   prodTimer: null,
   channel: null,
-  tradeAmounts: {},
+  // Black Market state
+  blackMarketAmounts: {},  // 'buy-timber' or 'sell-timber' -> quantity
   // Phase 2B trade partner state
   traders: {},           // trader_key -> trader row
   allTraderPrices: {},   // trader_key -> { resource_key -> { buy_price, sell_price } }
