@@ -7,7 +7,7 @@ import { renderBuildPanel } from './panels.js';
 export var BLDG_LABELS = {
   timber_camp: 'TC', sawmill: 'SM',
   stone_quarry: 'SQ', mason_workshop: 'MW',
-  house: 'H'
+  house: 'H', road: 'R'
 };
 
 export function isPlacementValid(btKey, tile) {
@@ -45,6 +45,12 @@ export function renderMap() {
         classes.push('res-' + tile.resource_node_key);
       }
 
+      // Add road-tile class to cell if building is a road
+      var buildingBt = building ? state.buildingTypes[building.building_type_key] : null;
+      if (building && buildingBt && buildingBt.category === 'road') {
+        classes.push('road-tile');
+      }
+
       if (state.selectedBuildType && !building && isPlacementValid(state.selectedBuildType, tile)) {
         classes.push('valid-placement');
       }
@@ -54,15 +60,23 @@ export function renderMap() {
       if (building) {
         var mine = building.player_id === state.currentUser.id;
         var btk = building.building_type_key;
-        var label = BLDG_LABELS[btk] || '?';
-        var btInfo = state.buildingTypes[btk];
-        var titleText = (btInfo ? btInfo.name : btk);
-        if (!mine && building.player_profiles) {
-          titleText += ' (' + building.player_profiles.display_name + ')';
+
+        // Roads render as a flat surface, not a building box
+        if (buildingBt && buildingBt.category === 'road') {
+          html += '<div class="road-surface' + (mine ? ' mine' : '') + '"></div>';
+        } else {
+          var label = BLDG_LABELS[btk] || '?';
+          var titleText = (buildingBt ? buildingBt.name : btk);
+          if (!mine && building.player_profiles) {
+            titleText += ' (' + building.player_profiles.display_name + ')';
+          }
+          var isUnstaffed = mine && state.laborInfo.unstaffedIds[building.id];
+          var isDisconnected = mine && state.noRoadAccessIds[building.id];
+          if (isDisconnected) titleText += ' (no road)';
+          else if (isUnstaffed) titleText += ' (unstaffed)';
+          var bldgClasses = 'bldg ' + btk + (mine ? ' mine' : '') + (isUnstaffed ? ' unstaffed' : '') + (isDisconnected ? ' disconnected' : '');
+          html += '<div class="' + bldgClasses + '" title="' + titleText + '">' + label + '</div>';
         }
-        var isUnstaffed = mine && state.laborInfo.unstaffedIds[building.id];
-        if (isUnstaffed) titleText += ' (unstaffed)';
-        html += '<div class="bldg ' + btk + (mine ? ' mine' : '') + (isUnstaffed ? ' unstaffed' : '') + '" title="' + titleText + '">' + label + '</div>';
       } else if (x === 7 && y === 7) {
         html += '<span class="hq-label">HQ</span>';
       } else if (tile.resource_node_key) {

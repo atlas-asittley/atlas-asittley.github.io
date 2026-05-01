@@ -33,33 +33,96 @@ export var state = {
     laborShortage: false,
     staffedIds: {},
     unstaffedIds: {}
-  }
+  },
+  // Roads state (computed client-side for UI)
+  roadAccessIds: {},     // building id -> true if has road access
+  noRoadAccessIds: {}    // building id -> true if requires road but lacks access
 };
 
-// ── Housing & Labor: compute which buildings are staffed (mirrors server rule) ──
-// Oldest-built production buildings get workers first. Housing provides workers.
-// This is used for map rendering (unstaffed visual) and UI display.
-export function computeLaborAllocation() {
+// ── Roads: compute which buildings have road access ──
+// A building has road access if any orthogonal neighbor has a road building.
+// Uses allBuildings (all players' roads count).
+export function computeRoadAccess() {
   if (!state.currentUser) return;
+
+  // Build a set of all road tile coordinates
+  var roadTiles = {};
+  state.allBuildings.forEach(function (b) {
+    var bt = state.buildingTypes[b.building_type_key];
+    if (bt && bt.category === 'road' && b.status === 'active') {
+      roadTiles[b.x + ',' + b.y] = true;
+    }
+  });
+
   var myBuildings = state.allBuildings.filter(function (b) {
     return b.player_id === state.currentUser.id;
   });
 
-  // Count workers from housing
+  var roadAccessIds = {};
+  var noRoadAccessIds = {};
+
+  myBuildings.forEach(function (b) {
+    var bt = state.buildingTypes[b.building_type_key];
+    if (!bt) return;
+
+    // Roads themselves and extractors don't need road access
+    if (bt.category === 'road' || bt.category === 'extractor') return;
+
+    // Housing and processors require road access
+    if (bt.category === 'housing' || bt.category === 'processor') {
+      var hasAccess = roadTiles[(b.x - 1) + ',' + b.y]
+        || roadTiles[(b.x + 1) + ',' + b.y]
+        || roadTiles[b.x + ',' + (b.y - 1)]
+        || roadTiles[b.x + ',' + (b.y + 1)];
+      if (hasAccess) {
+        roadAccessIds[b.id] = true;
+      } else {
+        noRoadAccessIds[b.id] = true;
+      }
+    }
+  });
+
+  state.roadAccessIds = roadAccessIds;
+  state.noRoadAccessIds = noRoadAccessIds;
+}
+
+// ── Housing & Labor: compute which buildings are staffed (mirrors server rule) ──
+// Oldest-built production buildings get workers first. Housing provides workers.
+// Housing only provides workers if it has road access.
+// Processors only participate in labor if they have road access.
+// This is used for map rendering (unstaffed visual) and UI display.
+export function computeLaborAllocation() {
+  if (!state.currentUser) return;
+
+  // Recompute road access first
+  computeRoadAccess();
+
+  var myBuildings = state.allBuildings.filter(function (b) {
+    return b.player_id === state.currentUser.id;
+  });
+
+  // Count workers from housing WITH road access only
   var housingWorkers = 0;
   myBuildings.forEach(function (b) {
     var bt = state.buildingTypes[b.building_type_key];
     if (bt && bt.category === 'housing' && b.status === 'active') {
-      housingWorkers += (bt.workers_provided || 0);
+      // Only count if has road access
+      if (state.roadAccessIds[b.id]) {
+        housingWorkers += (bt.workers_provided || 0);
+      }
     }
   });
 
-  var workerSupply = 5 + housingWorkers; // base 5 + housing
+  var workerSupply = 5 + housingWorkers; // base 5 + road-connected housing
 
   // Get production buildings sorted by creation date (oldest first)
+  // Extractors always eligible; processors only with road access
   var prodBuildings = myBuildings.filter(function (b) {
     var bt = state.buildingTypes[b.building_type_key];
-    return bt && bt.category !== 'housing' && b.status === 'active';
+    if (!bt || b.status !== 'active') return false;
+    if (bt.category === 'extractor') return true;
+    if (bt.category === 'processor') return !!state.roadAccessIds[b.id];
+    return false;
   }).sort(function (a, b) {
     return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
   });

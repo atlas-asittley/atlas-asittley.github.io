@@ -83,6 +83,13 @@ body {
 .bldg.house { background: #4a6a8a; }
 .bldg.unstaffed { opacity: 0.35; animation: none; }
 .bldg.unstaffed::after { content: '!'; position: absolute; top: -2px; right: -2px; font-size: 6px; color: #f06060; font-weight: 700; }
+/* ── Road tiles ──────────────────────────────────────── */
+.cell.road-tile { background: #2a2a22; }
+.road-surface { width: 100%; height: 100%; background: #4a4a3a; border-radius: 1px; }
+.road-surface.mine { box-shadow: inset 0 0 0 1px rgba(79,163,224,0.3); }
+/* ── Disconnected buildings (no road access) ─────────── */
+.bldg.disconnected { opacity: 0.4; }
+.bldg.disconnected::after { content: ''; position: absolute; top: -3px; right: -3px; width: 7px; height: 7px; background: #d4a040; border-radius: 50%; border: 1px solid #0b0f14; }
 .hq-label { font-size: 7px; color: #7a8a9e; font-weight: 600; letter-spacing: 0.05em; }
 
 /* ── Bottom panel ──────────────────────────────────── */

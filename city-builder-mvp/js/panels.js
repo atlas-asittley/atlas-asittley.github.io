@@ -20,9 +20,11 @@ export function renderBuildPanel() {
   }).sort(function (a, b) {
     var btA = state.buildingTypes[a];
     var btB = state.buildingTypes[b];
-    // Housing first, then by tier
-    if (btA.category === 'housing' && btB.category !== 'housing') return -1;
-    if (btA.category !== 'housing' && btB.category === 'housing') return 1;
+    // Roads first, then housing, then by tier
+    var order = { road: 0, housing: 1 };
+    var oa = order[btA.category] !== undefined ? order[btA.category] : 2;
+    var ob = order[btB.category] !== undefined ? order[btB.category] : 2;
+    if (oa !== ob) return oa - ob;
     return btA.tier - btB.tier;
   });
 
@@ -44,23 +46,27 @@ export function renderBuildPanel() {
     var colors = {
       timber_camp: '#3a7a4a', sawmill: '#7a5a2a',
       stone_quarry: '#5a5a7a', mason_workshop: '#7a4a3a',
-      house: '#4a6a8a'
+      house: '#4a6a8a', road: '#6a6a5a'
     };
     var bgColor = colors[key] || '#4a4a6a';
     var label = BLDG_LABELS[key] || '?';
 
     var desc;
-    if (bt.category === 'housing') {
-      desc = 'Provides ' + (bt.workers_provided || 6) + ' workers for your city';
+    if (bt.category === 'road') {
+      desc = 'Connects buildings to the city. Housing and processors need road access.';
+    } else if (bt.category === 'housing') {
+      desc = 'Provides ' + (bt.workers_provided || 6) + ' workers (requires road access)';
     } else if (bt.category === 'extractor') {
       desc = 'Extracts ' + resourceName(bt.output_resource_key) + ' from resource tiles';
     } else {
-      desc = 'Converts ' + resourceName(bt.input_resource_key) + ' into ' + resourceName(bt.output_resource_key);
+      desc = 'Converts ' + resourceName(bt.input_resource_key) + ' into ' + resourceName(bt.output_resource_key) + ' (requires road access)';
     }
 
     var costStr;
     var costClass = 'build-cost';
-    if (bt.category === 'housing') {
+    if (bt.category === 'road') {
+      costStr = '$' + bt.build_cost + ' | no workers';
+    } else if (bt.category === 'housing') {
       costStr = '$' + bt.build_cost + ' | +' + (bt.workers_provided || 6) + ' workers';
     } else {
       costStr = '$' + bt.build_cost + ' | ' + bt.worker_cost + ' worker';
@@ -69,15 +75,16 @@ export function renderBuildPanel() {
     if (!canAfford) {
       costStr = '$' + bt.build_cost + ' (need $' + (bt.build_cost - state.profile.money) + ' more)';
       costClass += ' warn';
-    } else if (bt.category !== 'housing' && li.workerSupply - li.workersNeeded < bt.worker_cost) {
+    } else if (bt.category !== 'housing' && bt.category !== 'road' && li.workerSupply - li.workersNeeded < bt.worker_cost) {
       costStr += ' (no workers — will be inactive)';
       costClass += ' warn';
     }
 
+    var showTier = bt.category !== 'housing' && bt.category !== 'road';
     html += '<div class="build-item' + (disabled ? ' disabled' : '') + (selected ? ' selected' : '') + '" data-bt="' + key + '">';
     html += '<div class="build-icon" style="background:' + bgColor + '">' + label + '</div>';
     html += '<div class="build-info">';
-    html += '<div class="build-name">' + bt.name + (bt.category === 'housing' ? '' : ' <small>Tier ' + bt.tier + '</small>') + '</div>';
+    html += '<div class="build-name">' + bt.name + (showTier ? ' <small>Tier ' + bt.tier + '</small>' : '') + '</div>';
     html += '<div class="' + costClass + '">' + costStr + '</div>';
     html += '<div class="build-desc">' + desc + '</div>';
     html += '</div></div>';
@@ -123,6 +130,14 @@ export function renderInventory() {
 
   var myBldgs = state.allBuildings.filter(function (b) { return b.player_id === state.currentUser.id; });
   html += '<div class="inv-row"><span class="inv-name">Your Buildings</span><span class="inv-qty">' + myBldgs.length + '</span></div>';
+
+  // ── Roads section ──
+  var disconnectedCount = Object.keys(state.noRoadAccessIds).length;
+  if (disconnectedCount > 0) {
+    html += '<div class="inv-section">Roads</div>';
+    html += '<div class="inv-row labor-shortage-row"><span class="inv-name" style="color:#d4a040;">Disconnected Buildings</span><span class="inv-qty" style="color:#d4a040;">' + disconnectedCount + '</span></div>';
+    html += '<div class="labor-shortage-hint" style="color:#8a7a5a;">Place roads next to buildings that need them.</div>';
+  }
 
   // ── Labor section ──
   var li = state.laborInfo;
