@@ -10,6 +10,9 @@ export var BLDG_LABELS = {
   house: 'H', road: 'R'
 };
 
+// Housing tier label overrides (keyed by tier number)
+var HOUSING_TIER_LABELS = { 0: 'S', 1: 'H' };
+
 export function isPlacementValid(btKey, tile) {
   var bt = state.buildingTypes[btKey];
   if (!bt) return false;
@@ -67,6 +70,21 @@ export function renderMap() {
         } else {
           var label = BLDG_LABELS[btk] || '?';
           var titleText = (buildingBt ? buildingBt.name : btk);
+
+          // Housing tier display
+          var housingTierClass = '';
+          if (buildingBt && buildingBt.category === 'housing') {
+            var hTier = building.housing_tier !== undefined ? building.housing_tier : 1;
+            var tierCfg = state.housingTierConfig[hTier];
+            if (tierCfg) {
+              label = tierCfg.label || HOUSING_TIER_LABELS[hTier] || label;
+              titleText = tierCfg.name + ' (Tier ' + hTier + ')';
+            } else {
+              label = HOUSING_TIER_LABELS[hTier] || label;
+            }
+            housingTierClass = ' house-t' + hTier;
+          }
+
           if (!mine && building.player_profiles) {
             titleText += ' (' + building.player_profiles.display_name + ')';
           }
@@ -74,7 +92,7 @@ export function renderMap() {
           var isDisconnected = mine && state.noRoadAccessIds[building.id];
           if (isDisconnected) titleText += ' (no road)';
           else if (isUnstaffed) titleText += ' (unstaffed)';
-          var bldgClasses = 'bldg ' + btk + (mine ? ' mine' : '') + (isUnstaffed ? ' unstaffed' : '') + (isDisconnected ? ' disconnected' : '');
+          var bldgClasses = 'bldg ' + btk + housingTierClass + (mine ? ' mine' : '') + (isUnstaffed ? ' unstaffed' : '') + (isDisconnected ? ' disconnected' : '');
           html += '<div class="' + bldgClasses + '" title="' + titleText + '">' + label + '</div>';
         }
       } else if (x === 7 && y === 7) {

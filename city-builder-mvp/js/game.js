@@ -63,6 +63,27 @@ function processProduction() {
       renderTradePanel();
     }
 
+    // Handle housing evolution events
+    if (data.evolution_events && data.evolution_events.length > 0) {
+      // Reload buildings to get updated tiers
+      sb.from('buildings').select('*, player_profiles(display_name, color_hex)').then(function (r) {
+        if (r.data) {
+          state.allBuildings = r.data;
+          computeLaborAllocation();
+          renderMap();
+          renderInventory();
+          updateWorkers();
+        }
+      });
+      data.evolution_events.forEach(function (ev) {
+        if (ev.direction === 'upgrade') {
+          showToast(ev.old_name + ' upgraded to ' + ev.new_name + '!', 'success');
+        } else {
+          showToast(ev.old_name + ' devolved to ' + ev.new_name, 'info');
+        }
+      });
+    }
+
     if (data.total_produced > 0) {
       showToast('+' + data.total_produced + ' goods produced', 'success');
     }
@@ -90,7 +111,8 @@ function loadGameData() {
     sb.from('inventories').select('resource_key, quantity').eq('player_id', state.currentUser.id),
     sb.from('trade_policies').select('*').eq('player_id', state.currentUser.id),
     sb.from('trader_visits').select('*').eq('player_id', state.currentUser.id).order('visited_at', { ascending: false }).limit(10),
-    sb.from('traders').select('*').eq('is_active', true)
+    sb.from('traders').select('*').eq('is_active', true),
+    sb.from('housing_tier_config').select('*')
   ]).then(function (results) {
     state.buildingTypes = {};
     if (results[0].data) results[0].data.forEach(function (bt) { state.buildingTypes[bt.key] = bt; });
@@ -145,6 +167,14 @@ function loadGameData() {
         return (a.display_order || 0) - (b.display_order || 0);
       });
       results[8].data.forEach(function (t) { state.traders[t.key] = t; });
+    }
+
+    // Load housing tier config (graceful if table doesn't exist yet)
+    state.housingTierConfig = {};
+    if (results[9] && results[9].data && !results[9].error) {
+      results[9].data.forEach(function (tc) {
+        state.housingTierConfig[tc.tier] = tc;
+      });
     }
 
     // Set default selected trader

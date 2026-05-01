@@ -81,6 +81,9 @@ body {
 .bldg.stone_quarry { background: #5a5a7a; }
 .bldg.mason_workshop { background: #7a4a3a; }
 .bldg.house { background: #4a6a8a; }
+/* Housing evolution tiers */
+.bldg.house.house-t0 { background: #5a5040; border: 1px dashed #7a6a50; }
+.bldg.house.house-t1 { background: #4a6a8a; }
 .bldg.unstaffed { opacity: 0.35; animation: none; }
 .bldg.unstaffed::after { content: '!'; position: absolute; top: -2px; right: -2px; font-size: 6px; color: #f06060; font-weight: 700; }
 /* ── Road tiles ──────────────────────────────────────── */

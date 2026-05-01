@@ -55,7 +55,7 @@ export function renderBuildPanel() {
     if (bt.category === 'road') {
       desc = 'Connects buildings to the city. Housing and processors need road access.';
     } else if (bt.category === 'housing') {
-      desc = 'Provides ' + (bt.workers_provided || 6) + ' workers (requires road access)';
+      desc = 'Starts as Shanty (2 workers). Upgrades to Mud Hut (6 workers) with road access.';
     } else if (bt.category === 'extractor') {
       desc = 'Extracts ' + resourceName(bt.output_resource_key) + ' from resource tiles';
     } else {
@@ -67,7 +67,7 @@ export function renderBuildPanel() {
     if (bt.category === 'road') {
       costStr = '$' + bt.build_cost + ' | no workers';
     } else if (bt.category === 'housing') {
-      costStr = '$' + bt.build_cost + ' | +' + (bt.workers_provided || 6) + ' workers';
+      costStr = '$' + bt.build_cost + ' | +2 workers (upgradable to +6)';
     } else {
       costStr = '$' + bt.build_cost + ' | ' + bt.worker_cost + ' worker';
     }
@@ -130,6 +130,27 @@ export function renderInventory() {
 
   var myBldgs = state.allBuildings.filter(function (b) { return b.player_id === state.currentUser.id; });
   html += '<div class="inv-row"><span class="inv-name">Your Buildings</span><span class="inv-qty">' + myBldgs.length + '</span></div>';
+
+  // ── Housing tiers section ──
+  var tierCounts = {};
+  var totalHouses = 0;
+  myBldgs.forEach(function (b) {
+    var bt = state.buildingTypes[b.building_type_key];
+    if (bt && bt.category === 'housing') {
+      var t = b.housing_tier !== undefined ? b.housing_tier : 1;
+      tierCounts[t] = (tierCounts[t] || 0) + 1;
+      totalHouses++;
+    }
+  });
+  if (totalHouses > 0) {
+    html += '<div class="inv-section">Housing</div>';
+    Object.keys(tierCounts).sort().forEach(function (t) {
+      var cfg = state.housingTierConfig[t];
+      var tierName = cfg ? cfg.name : 'Tier ' + t;
+      var tierWorkers = cfg ? cfg.workers : '?';
+      html += '<div class="inv-row"><span class="inv-name">' + tierName + ' (' + tierWorkers + 'w each)</span><span class="inv-qty">' + tierCounts[t] + '</span></div>';
+    });
+  }
 
   // ── Roads section ──
   var disconnectedCount = Object.keys(state.noRoadAccessIds).length;

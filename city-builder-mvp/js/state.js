@@ -36,7 +36,9 @@ export var state = {
   },
   // Roads state (computed client-side for UI)
   roadAccessIds: {},     // building id -> true if has road access
-  noRoadAccessIds: {}    // building id -> true if requires road but lacks access
+  noRoadAccessIds: {},   // building id -> true if requires road but lacks access
+  // Housing evolution tier config (loaded from DB)
+  housingTierConfig: {}  // tier -> { name, label, workers, needs_road }
 };
 
 // ── Roads: compute which buildings have road access ──
@@ -68,8 +70,25 @@ export function computeRoadAccess() {
     // Roads themselves and extractors don't need road access
     if (bt.category === 'road' || bt.category === 'extractor') return;
 
-    // Housing and processors require road access
-    if (bt.category === 'housing' || bt.category === 'processor') {
+    // Processors always require road access.
+    // Housing requires road access only if tier config says so (tier 0 shanties don't).
+    if (bt.category === 'processor' || bt.category === 'housing') {
+      // Check if this housing tier actually needs road
+      if (bt.category === 'housing') {
+        var tier = b.housing_tier !== undefined ? b.housing_tier : 1;
+        var tierCfg = state.housingTierConfig[tier];
+        if (tierCfg && !tierCfg.needs_road) {
+          // This tier doesn't need road; still track road access (for upgrade checks)
+          var hasAccess = roadTiles[(b.x - 1) + ',' + b.y]
+            || roadTiles[(b.x + 1) + ',' + b.y]
+            || roadTiles[b.x + ',' + (b.y - 1)]
+            || roadTiles[b.x + ',' + (b.y + 1)];
+          if (hasAccess) roadAccessIds[b.id] = true;
+          // Don't add to noRoadAccessIds — this tier is fine without roads
+          return;
+        }
+      }
+
       var hasAccess = roadTiles[(b.x - 1) + ',' + b.y]
         || roadTiles[(b.x + 1) + ',' + b.y]
         || roadTiles[b.x + ',' + (b.y - 1)]
@@ -101,19 +120,29 @@ export function computeLaborAllocation() {
     return b.player_id === state.currentUser.id;
   });
 
-  // Count workers from housing WITH road access only
+  // Count workers from housing using tier-aware config
+  // Tier 0 (shanty): provides workers without road access
+  // Tier 1 (mud hut): provides workers only with road access
   var housingWorkers = 0;
   myBuildings.forEach(function (b) {
     var bt = state.buildingTypes[b.building_type_key];
     if (bt && bt.category === 'housing' && b.status === 'active') {
-      // Only count if has road access
-      if (state.roadAccessIds[b.id]) {
-        housingWorkers += (bt.workers_provided || 0);
+      var tier = b.housing_tier !== undefined ? b.housing_tier : 1;
+      var tierCfg = state.housingTierConfig[tier];
+      if (tierCfg) {
+        if (!tierCfg.needs_road || state.roadAccessIds[b.id]) {
+          housingWorkers += tierCfg.workers;
+        }
+      } else {
+        // Fallback: use building_types.workers_provided with road requirement
+        if (state.roadAccessIds[b.id]) {
+          housingWorkers += (bt.workers_provided || 0);
+        }
       }
     }
   });
 
-  var workerSupply = 5 + housingWorkers; // base 5 + road-connected housing
+  var workerSupply = 5 + housingWorkers; // base 5 + housing
 
   // Get production buildings sorted by creation date (oldest first)
   // Extractors always eligible; processors only with road access
