@@ -6,1891 +6,265 @@
 <title>City Builder</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-/* ── Reset & Base ─────────────────────────────────────── */
+/* ── Reset ─────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { height: 100%; }
+html, body { height: 100%; overflow: hidden; }
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  background: #0b0f14;
-  color: #e0e6ed;
-  line-height: 1.5;
+  background: #0b0f14; color: #e0e6ed; line-height: 1.5;
   -webkit-font-smoothing: antialiased;
-  overflow: hidden;
 }
 
-/* ── Screen container system ──────────────────────────── */
-.screen {
-  display: none;
-  flex-direction: column;
-  height: 100%;
-  width: 100%;
-  position: absolute;
-  top: 0; left: 0;
-}
+/* ── Screen system ─────────────────────────────────── */
+.screen { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; flex-direction: column; }
 .screen.active { display: flex; }
+.screen-center { justify-content: center; align-items: center; padding: 24px; }
 
-/* ── Loading screen ───────────────────────────────────── */
-#screen-loading {
-  justify-content: center;
-  align-items: center;
-  gap: 16px;
-}
-.spinner {
-  width: 40px; height: 40px;
-  border: 3px solid #1e2a3a;
-  border-top-color: #4fa3e0;
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-}
+/* ── Shared UI ─────────────────────────────────────── */
+.card { width: 100%; max-width: 380px; background: #131a24; border: 1px solid #1e2a3a; border-radius: 12px; padding: 32px 24px; }
+.card h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 4px; }
+.card .sub { color: #7a8a9e; font-size: 0.9rem; margin-bottom: 20px; }
+.field { margin-bottom: 16px; }
+.field label { display: block; font-size: 0.75rem; font-weight: 600; color: #7a8a9e; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+.field input, .field select { display: block; width: 100%; padding: 10px 12px; background: #0b0f14; border: 1px solid #1e2a3a; border-radius: 8px; color: #e0e6ed; font-size: 1rem; }
+.field input:focus { outline: none; border-color: #4fa3e0; }
+.btn { display: block; width: 100%; padding: 12px; border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; text-align: center; touch-action: manipulation; -webkit-tap-highlight-color: transparent; transition: opacity 0.2s; }
+.btn:disabled { opacity: 0.5; cursor: default; }
+.btn-primary { background: #4fa3e0; color: #0b0f14; }
+.btn-secondary { background: transparent; color: #4fa3e0; border: 1px solid #1e2a3a; }
+.error-msg { background: #3b1219; border: 1px solid #5c1d2a; color: #f0a0a0; padding: 8px 12px; border-radius: 8px; font-size: 0.85rem; margin-bottom: 12px; display: none; }
+.error-msg.show { display: block; }
+.link { color: #4fa3e0; cursor: pointer; font-size: 0.85rem; text-align: center; margin-top: 12px; }
+
+/* ── Loading ───────────────────────────────────────── */
+.spinner { width: 32px; height: 32px; border: 3px solid #1e2a3a; border-top-color: #4fa3e0; border-radius: 50%; animation: spin 0.8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
-.loading-text { color: #7a8a9e; font-size: 0.9rem; }
 
-/* ── Welcome / Auth screens ───────────────────────────── */
-#screen-welcome, #screen-login, #screen-register {
-  justify-content: center;
-  align-items: center;
-  padding: 24px;
-}
-.auth-card {
-  width: 100%;
-  max-width: 380px;
-  background: #131a24;
-  border: 1px solid #1e2a3a;
-  border-radius: 12px;
-  padding: 32px 24px;
-}
-.auth-card h1 {
-  font-size: 1.6rem;
-  font-weight: 700;
-  color: #e0e6ed;
-  margin-bottom: 4px;
-}
-.auth-card .subtitle {
-  color: #7a8a9e;
-  font-size: 0.9rem;
-  margin-bottom: 24px;
-}
-.auth-card .tagline {
-  color: #4fa3e0;
-  font-size: 0.85rem;
-  font-weight: 500;
-  margin-bottom: 24px;
-  letter-spacing: 0.02em;
-}
-.form-group { margin-bottom: 16px; }
-.form-group label {
-  display: block;
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: #7a8a9e;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-bottom: 6px;
-}
-.form-group input {
-  display: block;
-  width: 100%;
-  padding: 12px 14px;
-  background: #0b0f14;
-  border: 1px solid #1e2a3a;
-  border-radius: 8px;
-  color: #e0e6ed;
-  font-size: 1rem;
-  transition: border-color 0.2s;
-}
-.form-group input:focus {
-  outline: none;
-  border-color: #4fa3e0;
-}
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 12px 20px;
-  border: none;
-  border-radius: 8px;
-  font-size: 1rem;
-  font-weight: 600;
-  cursor: pointer;
-  min-height: 48px;
-  touch-action: manipulation;
-  transition: opacity 0.2s, transform 0.1s;
-  -webkit-tap-highlight-color: transparent;
-}
-.btn:active { transform: scale(0.97); }
-.btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-.btn-primary {
-  background: #4fa3e0;
-  color: #0b0f14;
-  width: 100%;
-}
-.btn-secondary {
-  background: transparent;
-  color: #4fa3e0;
-  border: 1px solid #1e2a3a;
-  width: 100%;
-}
-.btn-ghost {
-  background: none;
-  border: none;
-  color: #4fa3e0;
-  padding: 8px;
-  font-size: 0.9rem;
-}
-.form-footer {
-  margin-top: 16px;
-  text-align: center;
-}
-.form-footer span { color: #7a8a9e; font-size: 0.85rem; }
-.error-banner {
-  background: #3b1219;
-  border: 1px solid #5c1d2a;
-  color: #f0a0a0;
-  padding: 10px 14px;
-  border-radius: 8px;
-  font-size: 0.85rem;
-  margin-bottom: 16px;
-  display: none;
-}
-.error-banner.visible { display: block; }
-.btn-row {
-  display: flex;
-  gap: 12px;
-  margin-top: 20px;
-}
-.btn-row .btn { flex: 1; }
+/* ── Industry picker ───────────────────────────────── */
+.industry-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 20px 0; }
+.industry-card { background: #1a2332; border: 2px solid #1e2a3a; border-radius: 12px; padding: 20px 16px; text-align: center; cursor: pointer; transition: border-color 0.2s, background 0.2s; }
+.industry-card:hover { border-color: #4fa3e0; }
+.industry-card.selected { border-color: #4fa3e0; background: #1a2a3a; }
+.industry-card .ic-icon { font-size: 2rem; margin-bottom: 8px; }
+.industry-card .ic-name { font-weight: 700; margin-bottom: 4px; }
+.industry-card .ic-desc { font-size: 0.78rem; color: #7a8a9e; }
 
-/* ── Dashboard (authenticated shell) ──────────────────── */
-#screen-dashboard {
-  background: #0b0f14;
-}
-.topbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 16px;
-  background: #131a24;
-  border-bottom: 1px solid #1e2a3a;
-  flex-shrink: 0;
-}
-.topbar-left {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.topbar-logo {
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: #e0e6ed;
-}
-.topbar-badge {
-  font-size: 0.7rem;
-  font-weight: 600;
-  color: #4fa3e0;
-  background: rgba(79, 163, 224, 0.12);
-  padding: 2px 8px;
-  border-radius: 4px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-.topbar-right {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.topbar-email {
-  font-size: 0.8rem;
-  color: #7a8a9e;
-  max-width: 140px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.btn-logout {
-  background: none;
-  border: 1px solid #1e2a3a;
-  color: #7a8a9e;
-  padding: 6px 12px;
-  border-radius: 6px;
-  font-size: 0.8rem;
-  cursor: pointer;
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
-}
+/* ── Game: top bar ─────────────────────────────────── */
+#screen-game { background: #0b0f14; }
+.topbar { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; background: #131a24; border-bottom: 1px solid #1e2a3a; flex-shrink: 0; }
+.topbar-left { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.topbar-title { font-weight: 700; font-size: 1rem; }
+.stat { font-size: 0.78rem; color: #7a8a9e; }
+.stat .v { font-weight: 700; }
+.stat .v.gold { color: #e6c65a; }
+.stat .v.workers { color: #5ec49e; }
+.btn-sm { padding: 4px 10px; font-size: 0.75rem; background: none; border: 1px solid #1e2a3a; color: #7a8a9e; border-radius: 6px; cursor: pointer; }
 
-.dashboard-content {
-  flex: 1;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  padding: 20px 16px;
-}
+/* ── Game: info bar ────────────────────────────────── */
+.info-bar { display: flex; align-items: center; justify-content: center; gap: 16px; padding: 5px 12px; background: #111820; font-size: 0.78rem; color: #7a8a9e; border-bottom: 1px solid #1a2332; flex-shrink: 0; }
+.info-bar .tag { background: rgba(79,163,224,0.1); color: #4fa3e0; padding: 2px 8px; border-radius: 4px; font-weight: 600; text-transform: capitalize; }
 
-/* Status cards */
-.status-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  margin-bottom: 24px;
-}
-.status-card {
-  background: #131a24;
-  border: 1px solid #1e2a3a;
-  border-radius: 10px;
-  padding: 16px;
-}
-.status-card .label {
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: #7a8a9e;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-bottom: 6px;
-}
-.status-card .value {
-  font-size: 1.4rem;
-  font-weight: 700;
-  color: #e0e6ed;
-}
-.status-card .value.gold { color: #e6c65a; }
-.status-card .value.pop { color: #5ec49e; }
-.status-card .value.industry { color: #4fa3e0; }
-.status-card .value.district { color: #c084e8; }
+/* ── Game: layout ──────────────────────────────────── */
+.game-body { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
+.map-area { flex: 1; display: flex; align-items: center; justify-content: center; padding: 8px; overflow: auto; min-height: 0; }
 
-/* Welcome hero */
-.welcome-hero {
-  background: linear-gradient(135deg, #131a24 0%, #162030 100%);
-  border: 1px solid #1e2a3a;
-  border-radius: 12px;
-  padding: 24px 20px;
-  margin-bottom: 24px;
-  text-align: center;
-}
-.welcome-hero h2 {
-  font-size: 1.2rem;
-  font-weight: 700;
-  margin-bottom: 8px;
-}
-.welcome-hero p {
-  color: #7a8a9e;
-  font-size: 0.9rem;
-  max-width: 320px;
-  margin: 0 auto 16px;
-}
+/* ── Map grid ──────────────────────────────────────── */
+#map-grid { display: grid; grid-template-columns: repeat(15, 1fr); gap: 1px; width: 100%; max-width: 520px; }
+.cell { aspect-ratio: 1; background: #1a2332; border-radius: 2px; display: flex; align-items: center; justify-content: center; cursor: pointer; position: relative; user-select: none; transition: box-shadow 0.15s; }
+.cell:hover { filter: brightness(1.15); }
+.cell.res-timber { background: #1a2e22; }
+.cell.res-stone { background: #252530; }
+.cell.city-center { background: #251a30; cursor: default; }
+.cell.valid-placement { box-shadow: inset 0 0 0 2px #5ec49e; cursor: crosshair; }
+.cell.valid-placement:hover { background: rgba(94,196,158,0.15); }
+.res-dot { width: 5px; height: 5px; border-radius: 50%; }
+.res-timber .res-dot { background: #5ec49e; }
+.res-stone .res-dot { background: #8888aa; }
+.bldg { width: 78%; height: 78%; border-radius: 3px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 8px; color: #fff; line-height: 1; }
+.bldg.mine { box-shadow: 0 0 0 1.5px #4fa3e0; }
+.bldg.timber_camp { background: #3a7a4a; }
+.bldg.sawmill { background: #7a5a2a; }
+.bldg.stone_quarry { background: #5a5a7a; }
+.bldg.mason_workshop { background: #7a4a3a; }
+.hq-label { font-size: 7px; color: #7a8a9e; font-weight: 600; letter-spacing: 0.05em; }
 
-/* Phases checklist */
-.phases-list {
-  margin-bottom: 24px;
-}
-.phases-list h3 {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: #7a8a9e;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-bottom: 12px;
-}
-.phase-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 14px 16px;
-  background: #131a24;
-  border: 1px solid #1e2a3a;
-  border-radius: 10px;
-  margin-bottom: 8px;
-}
-.phase-dot {
-  width: 10px; height: 10px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-.phase-dot.done { background: #5ec49e; }
-.phase-dot.current { background: #4fa3e0; animation: pulse 2s ease-in-out infinite; }
-.phase-dot.upcoming { background: #2a3545; }
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
-}
-.phase-item .phase-label {
-  font-size: 0.9rem;
-  color: #e0e6ed;
-}
-.phase-item .phase-label.muted { color: #4a5568; }
-.phase-item .phase-status {
-  margin-left: auto;
-  font-size: 0.75rem;
-  color: #7a8a9e;
-}
+/* ── Bottom panel ──────────────────────────────────── */
+.bottom-panel { flex-shrink: 0; background: #131a24; border-top: 1px solid #1e2a3a; max-height: 42vh; display: flex; flex-direction: column; }
+.tab-bar { display: flex; border-bottom: 1px solid #1e2a3a; flex-shrink: 0; }
+.tab-btn { flex: 1; padding: 9px; text-align: center; font-size: 0.78rem; font-weight: 600; color: #7a8a9e; cursor: pointer; background: none; border: none; border-bottom: 2px solid transparent; transition: color 0.2s; }
+.tab-btn.active { color: #4fa3e0; border-bottom-color: #4fa3e0; }
+.panel-content { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 12px; display: none; }
+.panel-content.active { display: block; }
 
-/* Bottom nav placeholder */
-.bottombar {
-  display: flex;
-  align-items: center;
-  justify-content: space-around;
-  padding: 10px 0;
-  padding-bottom: max(10px, env(safe-area-inset-bottom));
-  background: #131a24;
-  border-top: 1px solid #1e2a3a;
-  flex-shrink: 0;
-}
-.nav-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  color: #4a5568;
-  font-size: 0.65rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  padding: 4px 12px;
-  -webkit-tap-highlight-color: transparent;
-}
-.nav-item.active { color: #4fa3e0; }
-.nav-icon {
-  width: 24px; height: 24px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 1.1rem;
-}
+/* ── Build panel ───────────────────────────────────── */
+.build-item { display: flex; align-items: center; gap: 10px; padding: 10px; background: #1a2332; border: 1px solid #1e2a3a; border-radius: 8px; margin-bottom: 8px; cursor: pointer; transition: border-color 0.2s; }
+.build-item:hover { border-color: #4fa3e0; }
+.build-item.selected { border-color: #4fa3e0; background: #1a2a3a; }
+.build-item.disabled { opacity: 0.4; cursor: default; pointer-events: none; }
+.build-icon { width: 36px; height: 36px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: 700; color: #fff; font-size: 0.85rem; flex-shrink: 0; }
+.build-info { flex: 1; }
+.build-name { font-weight: 600; font-size: 0.85rem; }
+.build-name small { color: #7a8a9e; font-weight: 400; }
+.build-cost { font-size: 0.72rem; color: #e6c65a; }
+.build-cost.warn { color: #f0a0a0; }
+.build-desc { font-size: 0.7rem; color: #5a6a7e; }
 
-/* ── Onboarding screen ───────────────────────────────── */
-#screen-onboarding {
-  justify-content: center;
-  align-items: center;
-  padding: 24px;
-}
-.onboarding-card {
-  width: 100%;
-  max-width: 400px;
-  background: #131a24;
-  border: 1px solid #1e2a3a;
-  border-radius: 12px;
-  padding: 32px 24px;
-}
-.onboarding-card h1 {
-  font-size: 1.4rem;
-  font-weight: 700;
-  color: #e0e6ed;
-  margin-bottom: 4px;
-}
-.onboarding-card .subtitle {
-  color: #7a8a9e;
-  font-size: 0.9rem;
-  margin-bottom: 24px;
-}
-.onboarding-step { display: none; }
-.onboarding-step.active { display: block; }
-.step-indicator {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 24px;
-}
-.step-dot {
-  height: 4px;
-  flex: 1;
-  border-radius: 2px;
-  background: #1e2a3a;
-  transition: background 0.3s;
-}
-.step-dot.active { background: #4fa3e0; }
-.step-dot.done { background: #5ec49e; }
+/* ── Inventory panel ───────────────────────────────── */
+.inv-section { font-size: 0.7rem; font-weight: 600; color: #7a8a9e; text-transform: uppercase; letter-spacing: 0.04em; padding: 10px 4px 4px; }
+.inv-row { display: flex; justify-content: space-between; padding: 7px 4px; border-bottom: 1px solid #1a2332; }
+.inv-name { font-size: 0.85rem; }
+.inv-qty { font-weight: 700; font-size: 0.85rem; }
+.inv-qty.zero { color: #5a6a7e; }
 
-/* Resource picker */
-.resource-options {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-bottom: 20px;
-}
-.resource-option {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 16px;
-  background: #0b0f14;
-  border: 2px solid #1e2a3a;
-  border-radius: 10px;
-  cursor: pointer;
-  transition: border-color 0.2s, background 0.2s;
-  -webkit-tap-highlight-color: transparent;
-  touch-action: manipulation;
-}
-.resource-option:hover { border-color: #2a3d55; }
-.resource-option.selected {
-  border-color: #4fa3e0;
-  background: rgba(79, 163, 224, 0.06);
-}
-.resource-icon {
-  width: 40px; height: 40px;
-  border-radius: 8px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 1.3rem;
-  flex-shrink: 0;
-}
-.resource-icon.timber { background: rgba(76, 175, 80, 0.15); color: #66bb6a; }
-.resource-icon.stone { background: rgba(158, 158, 158, 0.15); color: #bdbdbd; }
-.resource-icon.grain { background: rgba(255, 193, 7, 0.15); color: #ffc107; }
-.resource-icon.clay { background: rgba(198, 120, 62, 0.15); color: #c6783e; }
-.resource-icon.iron { background: rgba(144, 164, 184, 0.15); color: #90a4b8; }
-.resource-info { flex: 1; }
-.resource-name {
-  font-size: 1rem;
-  font-weight: 600;
-  color: #e0e6ed;
-  margin-bottom: 2px;
-}
-.resource-desc {
-  font-size: 0.8rem;
-  color: #7a8a9e;
-}
-.resource-check {
-  width: 22px; height: 22px;
-  border-radius: 50%;
-  border: 2px solid #2a3545;
-  display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0;
-  transition: border-color 0.2s, background 0.2s;
-}
-.resource-option.selected .resource-check {
-  border-color: #4fa3e0;
-  background: #4fa3e0;
-}
-.resource-option.selected .resource-check::after {
-  content: '';
-  width: 6px; height: 6px;
-  border-radius: 50%;
-  background: #0b0f14;
-}
+/* ── Trade panel ───────────────────────────────────── */
+.trader-header { font-weight: 700; font-size: 0.95rem; margin-bottom: 2px; }
+.trader-desc { font-size: 0.78rem; color: #7a8a9e; margin-bottom: 12px; }
+.trade-row { display: flex; align-items: center; gap: 8px; padding: 10px; background: #1a2332; border-radius: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+.trade-info { flex: 1; min-width: 90px; }
+.trade-res { font-weight: 600; font-size: 0.85rem; }
+.trade-price { font-size: 0.72rem; color: #e6c65a; }
+.trade-stock { font-size: 0.72rem; color: #7a8a9e; }
+.trade-controls { display: flex; align-items: center; gap: 5px; }
+.trade-amt-btn { width: 28px; height: 28px; border-radius: 6px; border: 1px solid #1e2a3a; background: #0b0f14; color: #e0e6ed; font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.trade-amt-btn:active { background: #1e2a3a; }
+.trade-amt { font-weight: 700; min-width: 22px; text-align: center; font-size: 0.9rem; }
+.btn-sell { padding: 6px 12px; border-radius: 6px; border: none; background: #e6c65a; color: #0b0f14; font-weight: 600; font-size: 0.78rem; cursor: pointer; }
+.btn-sell:disabled { opacity: 0.3; cursor: default; }
 
-/* Onboarding confirmation */
-.confirm-summary {
-  background: #0b0f14;
-  border: 1px solid #1e2a3a;
-  border-radius: 10px;
-  padding: 20px;
-  margin-bottom: 20px;
-}
-.confirm-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 0;
-}
-.confirm-row:not(:last-child) { border-bottom: 1px solid #1e2a3a; }
-.confirm-label {
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: #7a8a9e;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-.confirm-value {
-  font-size: 1rem;
-  font-weight: 600;
-  color: #e0e6ed;
-}
-.btn-back {
-  background: transparent;
-  color: #7a8a9e;
-  border: 1px solid #1e2a3a;
-  width: 100%;
-  margin-bottom: 10px;
-}
-
-/* ── Game screen ──────────────────────────────────────── */
-#screen-game {
-  background: #0b0f14;
-}
-.game-topbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 12px;
-  background: #131a24;
-  border-bottom: 1px solid #1e2a3a;
-  flex-shrink: 0;
-  gap: 6px;
-}
-.game-topbar-left {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-}
-.game-topbar-logo {
-  font-size: 0.95rem;
-  font-weight: 700;
-  color: #e0e6ed;
-  white-space: nowrap;
-}
-.game-stat {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  white-space: nowrap;
-}
-.game-stat .stat-icon { font-size: 0.9rem; }
-.game-stat.gold { color: #e6c65a; }
-.game-stat.pop { color: #5ec49e; }
-.game-stat.tier { color: #c084e8; }
-.game-topbar-right { flex-shrink: 0; }
-
-/* Grid container */
-.grid-container {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  position: relative;
-  touch-action: none;
-}
-.grid-wrapper {
-  display: grid;
-  gap: 1px;
-  background: #0a0e13;
-  border: 1px solid #1e2a3a;
-  border-radius: 4px;
-}
-.grid-cell {
-  width: 100%;
-  aspect-ratio: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.7rem;
-  cursor: pointer;
-  position: relative;
-  transition: outline 0.1s;
-  -webkit-tap-highlight-color: transparent;
-  touch-action: manipulation;
-  user-select: none;
-}
-.grid-cell:active { opacity: 0.8; }
-
-/* Terrain colors */
-.grid-cell.terrain-grass { background: #1a2a1a; }
-.grid-cell.terrain-timber { background: #1a3020; }
-.grid-cell.terrain-stone { background: #252525; }
-.grid-cell.terrain-grain { background: #2a2a18; }
-.grid-cell.terrain-clay { background: #2a2018; }
-.grid-cell.terrain-iron_ore { background: #1e2228; }
-
-/* Resource indicator dot */
-.grid-cell .resource-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  position: absolute;
-  top: 3px;
-  right: 3px;
-}
-.resource-dot.timber { background: #4caf50; }
-.resource-dot.stone { background: #9e9e9e; }
-.resource-dot.grain { background: #ffc107; }
-.resource-dot.clay { background: #c6783e; }
-.resource-dot.iron_ore { background: #90a4b8; }
-
-/* Building on tile */
-.grid-cell .building-icon {
-  font-size: 1.1rem;
-  line-height: 1;
-  text-align: center;
-  color: #e0e6ed;
-  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
-}
-
-/* Placement preview */
-.grid-cell.placement-valid {
-  outline: 2px solid #4fa3e0;
-  outline-offset: -2px;
-  z-index: 1;
-}
-.grid-cell.placement-invalid {
-  outline: 2px solid #e05050;
-  outline-offset: -2px;
-  z-index: 1;
-}
-.grid-cell.placement-valid::after {
-  content: '+';
-  position: absolute;
-  color: #4fa3e0;
-  font-size: 1.2rem;
-  font-weight: 700;
-  opacity: 0.6;
-}
-
-/* Building palette (bottom sheet) */
-.build-panel {
-  background: #131a24;
-  border-top: 1px solid #1e2a3a;
-  flex-shrink: 0;
-  max-height: 40vh;
-  display: flex;
-  flex-direction: column;
-}
-.build-panel-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 14px;
-  border-bottom: 1px solid #1e2a3a;
-}
-.build-panel-title {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: #e0e6ed;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-.build-panel-close {
-  background: none;
-  border: none;
-  color: #7a8a9e;
-  font-size: 1.2rem;
-  cursor: pointer;
-  padding: 4px;
-  -webkit-tap-highlight-color: transparent;
-}
-.build-panel-body {
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  padding: 8px;
-}
-.build-category-label {
-  font-size: 0.7rem;
-  font-weight: 600;
-  color: #4a5568;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  padding: 6px 8px 4px;
-}
-.build-option {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  background: #0b0f14;
-  border: 1px solid #1e2a3a;
-  border-radius: 8px;
-  margin-bottom: 6px;
-  cursor: pointer;
-  transition: border-color 0.15s;
-  -webkit-tap-highlight-color: transparent;
-  touch-action: manipulation;
-}
-.build-option:active { background: #162030; }
-.build-option.selected {
-  border-color: #4fa3e0;
-  background: rgba(79, 163, 224, 0.06);
-}
-.build-option.locked {
-  opacity: 0.4;
-  pointer-events: none;
-}
-.build-option-icon {
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.2rem;
-  background: rgba(79, 163, 224, 0.1);
-  border-radius: 6px;
-  flex-shrink: 0;
-}
-.build-option-info { flex: 1; min-width: 0; }
-.build-option-name {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: #e0e6ed;
-}
-.build-option-cost {
-  font-size: 0.75rem;
-  color: #7a8a9e;
-}
-.build-option-cost .cant-afford { color: #e05050; }
-
-/* Inventory panel */
-.inventory-panel {
-  display: none;
-  background: #131a24;
-  border-top: 1px solid #1e2a3a;
-  flex-shrink: 0;
-  max-height: 45vh;
-  flex-direction: column;
-}
-.inventory-panel.active { display: flex; }
-.inventory-panel-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 14px;
-  border-bottom: 1px solid #1e2a3a;
-}
-.inventory-panel-title {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: #e0e6ed;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-.inventory-panel-close {
-  background: none;
-  border: none;
-  color: #7a8a9e;
-  font-size: 1.2rem;
-  cursor: pointer;
-  padding: 4px;
-  -webkit-tap-highlight-color: transparent;
-}
-.inventory-panel-body {
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  padding: 8px 12px;
-}
-.inv-category-label {
-  font-size: 0.7rem;
-  font-weight: 600;
-  color: #4a5568;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  padding: 8px 0 4px;
-}
-.inv-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 10px;
-  background: #0b0f14;
-  border: 1px solid #1e2a3a;
-  border-radius: 8px;
-  margin-bottom: 4px;
-}
-.inv-row-name {
-  font-size: 0.85rem;
-  font-weight: 500;
-  color: #e0e6ed;
-}
-.inv-row-amount {
-  font-size: 0.9rem;
-  font-weight: 700;
-  color: #7a8a9e;
-  min-width: 32px;
-  text-align: right;
-}
-.inv-row-amount.has-stock { color: #5ec49e; }
-.inv-row-amount.zero { color: #4a5568; }
-.inv-empty {
-  text-align: center;
-  color: #4a5568;
-  font-size: 0.85rem;
-  padding: 20px 0;
-}
-
-/* Game bottom nav */
-.game-bottombar {
-  display: flex;
-  align-items: center;
-  justify-content: space-around;
-  padding: 8px 0;
-  padding-bottom: max(8px, env(safe-area-inset-bottom));
-  background: #131a24;
-  border-top: 1px solid #1e2a3a;
-  flex-shrink: 0;
-}
-.game-nav-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  color: #4a5568;
-  font-size: 0.6rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  padding: 4px 14px;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-  touch-action: manipulation;
-  background: none;
-  border: none;
-}
-.game-nav-item.active { color: #4fa3e0; }
-.game-nav-icon {
-  width: 24px; height: 24px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 1.1rem;
-}
-
-/* Status toast */
-.game-toast {
-  position: absolute;
-  bottom: 60px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: #131a24;
-  border: 1px solid #1e2a3a;
-  color: #e0e6ed;
-  padding: 8px 16px;
-  border-radius: 8px;
-  font-size: 0.8rem;
-  font-weight: 500;
-  z-index: 100;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.3s;
-}
-.game-toast.visible { opacity: 1; }
-.game-toast.error { border-color: #5c1d2a; color: #f0a0a0; }
-.game-toast.success { border-color: #1d5c2a; color: #a0f0a0; }
-
-/* Placement info bar */
-.placement-bar {
-  display: none;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 14px;
-  background: rgba(79, 163, 224, 0.08);
-  border-bottom: 1px solid #1e3a5a;
-  flex-shrink: 0;
-}
+/* ── Placement bar ─────────────────────────────────── */
+.placement-bar { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(20,30,20,0.95); border-top: 1px solid #5ec49e; padding: 10px 16px; display: none; align-items: center; justify-content: space-between; z-index: 100; }
 .placement-bar.active { display: flex; }
-.placement-bar-text {
-  font-size: 0.8rem;
-  color: #4fa3e0;
-  font-weight: 500;
-}
-.placement-bar-cancel {
-  background: none;
-  border: 1px solid #4fa3e0;
-  color: #4fa3e0;
-  padding: 4px 12px;
-  border-radius: 6px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-}
+.placement-bar span { color: #5ec49e; font-weight: 600; font-size: 0.85rem; }
+.btn-cancel { padding: 6px 14px; border-radius: 6px; border: 1px solid #5ec49e; background: none; color: #5ec49e; font-weight: 600; cursor: pointer; font-size: 0.85rem; }
 
-/* Production status bar */
-.production-bar {
-  display: none;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 14px;
-  background: rgba(94, 196, 158, 0.08);
-  border-bottom: 1px solid #1d3a2a;
-  flex-shrink: 0;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  white-space: nowrap;
-}
-.production-bar.active { display: flex; }
-.production-bar-label {
-  font-size: 0.7rem;
-  font-weight: 600;
-  color: #5ec49e;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  flex-shrink: 0;
-}
-.production-bar-item {
-  font-size: 0.75rem;
-  color: #a0d8c0;
-  background: rgba(94, 196, 158, 0.1);
-  padding: 2px 8px;
-  border-radius: 4px;
-  flex-shrink: 0;
-}
-.production-bar-idle {
-  font-size: 0.75rem;
-  color: #4a5568;
-  font-style: italic;
-}
+/* ── Toast ──────────────────────────────────────────── */
+.toast { position: fixed; top: 56px; left: 50%; transform: translateX(-50%); background: #131a24; border: 1px solid #1e2a3a; color: #e0e6ed; padding: 8px 20px; border-radius: 8px; font-size: 0.82rem; z-index: 200; opacity: 0; transition: opacity 0.3s; pointer-events: none; white-space: nowrap; max-width: 90vw; overflow: hidden; text-overflow: ellipsis; }
+.toast.show { opacity: 1; }
+.toast.success { border-color: #5ec49e; color: #5ec49e; }
+.toast.error { border-color: #f06060; color: #f0a0a0; }
 
-/* Building production pulse animation */
-.grid-cell.producing .building-icon {
-  animation: produce-pulse 2s ease-in-out infinite;
-}
-@keyframes produce-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; filter: brightness(1.4); }
-}
-
-/* Housing tier visual styles */
-.grid-cell.housing-1 { background: #1a2020 !important; }
-.grid-cell.housing-2 { background: #1e2830 !important; }
-.grid-cell.housing-3 { background: #28223a !important; }
-.grid-cell.housing-1 .building-icon { color: #8aaa8a; }
-.grid-cell.housing-2 .building-icon { color: #6ab0d8; font-size: 1.2rem; }
-.grid-cell.housing-3 .building-icon { color: #c89aef; font-size: 1.3rem; }
-
-/* Building detail overlay */
-.building-detail-overlay {
-  display: none;
-  position: absolute;
-  bottom: 60px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: #131a24;
-  border: 1px solid #1e2a3a;
-  border-radius: 12px;
-  padding: 14px 18px;
-  z-index: 110;
-  min-width: 240px;
-  max-width: 320px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-}
-.building-detail-overlay.visible { display: block; }
-.building-detail-name {
-  font-size: 1rem;
-  font-weight: 700;
-  color: #e0e6ed;
-  margin-bottom: 4px;
-}
-.building-detail-type {
-  font-size: 0.75rem;
-  color: #7a8a9e;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  margin-bottom: 10px;
-}
-.building-detail-info {
-  font-size: 0.8rem;
-  color: #a0b0c0;
-  margin-bottom: 10px;
-  line-height: 1.4;
-}
-.building-detail-upgrade {
-  display: none;
-  flex-direction: column;
-  gap: 6px;
-  border-top: 1px solid #1e2a3a;
-  padding-top: 10px;
-  margin-top: 6px;
-}
-.building-detail-upgrade.available { display: flex; }
-.upgrade-cost-row {
-  font-size: 0.78rem;
-  color: #7a8a9e;
-}
-.upgrade-cost-row .has { color: #5ec49e; }
-.upgrade-cost-row .missing { color: #e05050; }
-.btn-upgrade {
-  background: #2a6a3a;
-  color: #c0f0c0;
-  border: none;
-  border-radius: 8px;
-  padding: 10px 16px;
-  font-size: 0.85rem;
-  font-weight: 600;
-  cursor: pointer;
-  min-height: 42px;
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
-  transition: opacity 0.2s;
-}
-.btn-upgrade:active { opacity: 0.8; }
-.btn-upgrade:disabled { opacity: 0.4; cursor: not-allowed; }
-.btn-upgrade.tier-locked {
-  background: #2a2a3a;
-  color: #7a7a9e;
-}
-.btn-close-detail {
-  position: absolute;
-  top: 8px;
-  right: 10px;
-  background: none;
-  border: none;
-  color: #7a8a9e;
-  font-size: 1.1rem;
-  cursor: pointer;
-  padding: 4px;
-  -webkit-tap-highlight-color: transparent;
-}
-
-/* District progress panel */
-.district-progress-panel {
-  display: none;
-  position: absolute;
-  top: 50px;
-  right: 8px;
-  background: #131a24;
-  border: 1px solid #1e2a3a;
-  border-radius: 12px;
-  padding: 16px 18px;
-  z-index: 120;
-  min-width: 260px;
-  max-width: 320px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-}
-.district-progress-panel.visible { display: block; }
-.dp-title {
-  font-size: 0.95rem;
-  font-weight: 700;
-  color: #e0e6ed;
-  margin-bottom: 4px;
-}
-.dp-subtitle {
-  font-size: 0.75rem;
-  color: #7a8a9e;
-  margin-bottom: 12px;
-}
-.dp-tier-badge {
-  display: inline-block;
-  font-size: 0.7rem;
-  font-weight: 700;
-  color: #c084e8;
-  background: rgba(192, 132, 232, 0.12);
-  padding: 2px 10px;
-  border-radius: 4px;
-  margin-bottom: 12px;
-}
-.dp-req-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-bottom: 12px;
-}
-.dp-req-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 10px;
-  background: #0b0f14;
-  border: 1px solid #1e2a3a;
-  border-radius: 8px;
-  font-size: 0.82rem;
-}
-.dp-req-label { color: #e0e6ed; }
-.dp-req-status { font-weight: 600; min-width: 40px; text-align: right; }
-.dp-req-status.met { color: #5ec49e; }
-.dp-req-status.unmet { color: #e05050; }
-.dp-housing-summary {
-  font-size: 0.78rem;
-  color: #7a8a9e;
-  margin-bottom: 12px;
-  line-height: 1.5;
-}
-.btn-tier-up {
-  background: #4a2a8a;
-  color: #d0b0f0;
-  border: none;
-  border-radius: 8px;
-  padding: 10px 16px;
-  font-size: 0.85rem;
-  font-weight: 600;
-  cursor: pointer;
-  width: 100%;
-  min-height: 42px;
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
-}
-.btn-tier-up:disabled { opacity: 0.4; cursor: not-allowed; }
-.btn-tier-up:active { opacity: 0.8; }
-.dp-max-tier {
-  text-align: center;
-  color: #5ec49e;
-  font-size: 0.85rem;
-  font-weight: 600;
-  padding: 8px 0;
-}
-.dp-close {
-  position: absolute;
-  top: 8px;
-  right: 10px;
-  background: none;
-  border: none;
-  color: #7a8a9e;
-  font-size: 1.1rem;
-  cursor: pointer;
-  padding: 4px;
-  -webkit-tap-highlight-color: transparent;
-}
-
-/* Next tick countdown in topbar */
-.game-stat.tick {
-  color: #5ec49e;
-  font-size: 0.7rem;
-}
-.game-stat.tick .tick-countdown {
-  font-variant-numeric: tabular-nums;
-}
-
-/* Tier badge clickable */
-.game-stat.tier {
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-}
-
-/* ── Trade panel ──────────────────────────────────────── */
-.trade-panel {
-  display: none;
-  background: #131a24;
-  border-top: 1px solid #1e2a3a;
-  flex-shrink: 0;
-  max-height: 55vh;
-  flex-direction: column;
-  position: relative;
-}
-.trade-panel.active { display: flex; }
-.trade-panel-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 14px;
-  border-bottom: 1px solid #1e2a3a;
-  flex-shrink: 0;
-}
-.trade-panel-title {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: #e0e6ed;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-.trade-panel-close {
-  background: none;
-  border: none;
-  color: #7a8a9e;
-  font-size: 1.2rem;
-  cursor: pointer;
-  padding: 4px;
-  -webkit-tap-highlight-color: transparent;
-}
-.trade-panel-body {
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  padding: 8px 12px;
-  flex: 1;
-}
-.trade-no-depot {
-  text-align: center;
-  color: #7a8a9e;
-  padding: 24px 16px;
-  font-size: 0.85rem;
-  line-height: 1.5;
-}
-.trade-no-depot strong {
-  display: block;
-  color: #e0e6ed;
-  font-size: 0.95rem;
-  margin-bottom: 8px;
-}
-.trade-partner-card {
-  background: #0b0f14;
-  border: 1px solid #1e2a3a;
-  border-radius: 10px;
-  margin-bottom: 10px;
-  overflow: hidden;
-}
-.trade-partner-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 14px;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-  touch-action: manipulation;
-}
-.trade-partner-header:active { background: #162030; }
-.trade-partner-name {
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: #e0e6ed;
-}
-.trade-partner-arrow {
-  color: #4a5568;
-  font-size: 0.9rem;
-  transition: transform 0.2s;
-}
-.trade-partner-card.expanded .trade-partner-arrow {
-  transform: rotate(90deg);
-}
-.trade-partner-desc {
-  font-size: 0.75rem;
-  color: #7a8a9e;
-  padding: 0 14px 8px;
-  line-height: 1.4;
-  display: none;
-}
-.trade-partner-card.expanded .trade-partner-desc { display: block; }
-.trade-partner-body {
-  display: none;
-  border-top: 1px solid #1e2a3a;
-  padding: 8px 10px;
-}
-.trade-partner-card.expanded .trade-partner-body { display: block; }
-.trade-section-label {
-  font-size: 0.7rem;
-  font-weight: 600;
-  color: #5ec49e;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  padding: 6px 4px 4px;
-}
-.trade-section-label.buy-label { color: #e6c65a; }
-.trade-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 6px;
-  border-bottom: 1px solid #1a2030;
-}
-.trade-item:last-child { border-bottom: none; }
-.trade-item-info {
-  flex: 1;
-  min-width: 0;
-}
-.trade-item-name {
-  font-size: 0.82rem;
-  font-weight: 500;
-  color: #e0e6ed;
-}
-.trade-item-price {
-  font-size: 0.72rem;
-  color: #7a8a9e;
-}
-.trade-item-stock {
-  font-size: 0.72rem;
-  color: #5ec49e;
-  min-width: 50px;
-  text-align: right;
-}
-.trade-item-stock.none { color: #4a5568; }
-.trade-amount-controls {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  flex-shrink: 0;
-}
-.trade-amount-btn {
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
-  border: 1px solid #1e2a3a;
-  background: #131a24;
-  color: #e0e6ed;
-  font-size: 0.9rem;
-  font-weight: 700;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  -webkit-tap-highlight-color: transparent;
-  touch-action: manipulation;
-}
-.trade-amount-btn:active { background: #1e2a3a; }
-.trade-amount-btn:disabled { opacity: 0.3; cursor: not-allowed; }
-.trade-amount-display {
-  min-width: 24px;
-  text-align: center;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: #e0e6ed;
-  font-variant-numeric: tabular-nums;
-}
-.trade-exec-btn {
-  background: #2a5a3a;
-  color: #c0f0c0;
-  border: none;
-  border-radius: 6px;
-  padding: 6px 12px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  cursor: pointer;
-  min-height: 28px;
-  min-width: 48px;
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
-  flex-shrink: 0;
-}
-.trade-exec-btn.buy-btn {
-  background: #3a4a2a;
-  color: #d0e0a0;
-}
-.trade-exec-btn:active { opacity: 0.8; }
-.trade-exec-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-
-/* ── Trade tab switcher ──────────────────────────────── */
-.trade-tabs {
-  display: flex;
-  border-bottom: 1px solid #1e2a3a;
-  flex-shrink: 0;
-}
-.trade-tab {
-  flex: 1;
-  padding: 10px 0;
-  text-align: center;
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: #7a8a9e;
-  background: none;
-  border: none;
-  cursor: pointer;
-  border-bottom: 2px solid transparent;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  -webkit-tap-highlight-color: transparent;
-}
-.trade-tab.active {
-  color: #4fa3e0;
-  border-bottom-color: #4fa3e0;
-}
-.trade-tab-content { display: none; overflow-y: auto; -webkit-overflow-scrolling: touch; flex: 1; }
-.trade-tab-content.active { display: block; }
-
-/* ── Player Market ───────────────────────────────────── */
-.market-create-form {
-  background: #0b0f14;
-  border: 1px solid #1e2a3a;
-  border-radius: 10px;
-  padding: 12px;
-  margin-bottom: 12px;
-}
-.market-create-form h4 {
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: #e0e6ed;
-  margin-bottom: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-.market-form-row {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 8px;
-  align-items: center;
-}
-.market-form-row label {
-  font-size: 0.75rem;
-  color: #7a8a9e;
-  min-width: 55px;
-  flex-shrink: 0;
-}
-.market-form-row select,
-.market-form-row input {
-  flex: 1;
-  padding: 8px 10px;
-  background: #131a24;
-  border: 1px solid #1e2a3a;
-  border-radius: 6px;
-  color: #e0e6ed;
-  font-size: 0.85rem;
-}
-.market-form-row select { appearance: auto; }
-.market-form-stock {
-  font-size: 0.7rem;
-  color: #7a8a9e;
-  margin-left: 63px;
-  margin-bottom: 6px;
-}
-.market-create-btn {
-  width: 100%;
-  padding: 10px;
-  background: #2b6a3e;
-  color: #e0e6ed;
-  border: none;
-  border-radius: 6px;
-  font-size: 0.85rem;
-  font-weight: 600;
-  cursor: pointer;
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
-}
-.market-create-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-.market-create-btn:active { opacity: 0.8; }
-
-.market-section-title {
-  font-size: 0.7rem;
-  font-weight: 700;
-  color: #7a8a9e;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  margin-bottom: 8px;
-  margin-top: 4px;
-}
-.market-offer-card {
-  background: #0b0f14;
-  border: 1px solid #1e2a3a;
-  border-radius: 10px;
-  padding: 12px 14px;
-  margin-bottom: 8px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.market-offer-card.mine {
-  border-color: #2b6a3e;
-}
-.market-offer-info {
-  flex: 1;
-  min-width: 0;
-}
-.market-offer-resource {
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: #e0e6ed;
-}
-.market-offer-detail {
-  font-size: 0.75rem;
-  color: #7a8a9e;
-  margin-top: 2px;
-}
-.market-offer-seller {
-  font-size: 0.7rem;
-  color: #4a5568;
-  margin-top: 2px;
-}
-.market-offer-action .btn {
-  padding: 8px 14px;
-  min-height: 36px;
-  font-size: 0.8rem;
-}
-.market-offer-action .buy-offer-btn {
-  background: #4fa3e0;
-  color: #0b0f14;
-  border: none;
-  border-radius: 6px;
-  padding: 8px 14px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  cursor: pointer;
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
-  white-space: nowrap;
-}
-.market-offer-action .buy-offer-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-.market-offer-action .cancel-offer-btn {
-  background: transparent;
-  color: #f0a0a0;
-  border: 1px solid #5c1d2a;
-  border-radius: 6px;
-  padding: 8px 14px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  cursor: pointer;
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
-  white-space: nowrap;
-}
-.market-offer-action .cancel-offer-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-
-.market-recent-card {
-  background: #0b0f14;
-  border: 1px solid #1e2a3a;
-  border-radius: 8px;
-  padding: 10px 14px;
-  margin-bottom: 6px;
-  font-size: 0.8rem;
-  color: #7a8a9e;
-}
-.market-recent-status {
-  font-size: 0.7rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-.market-recent-status.fulfilled { color: #5ec49e; }
-.market-recent-status.cancelled { color: #f0a0a0; }
-.market-empty {
-  text-align: center;
-  color: #4a5568;
-  font-size: 0.85rem;
-  padding: 20px 0;
-}
-
-/* ── Responsive tweaks ────────────────────────────────── */
-@media (min-width: 600px) {
-  .status-grid { grid-template-columns: repeat(4, 1fr); }
-  .dashboard-content { padding: 24px 32px; max-width: 680px; margin: 0 auto; }
-  .topbar { padding: 12px 32px; }
-  .game-topbar { padding: 10px 24px; }
-  .grid-cell .building-icon { font-size: 1.3rem; }
+/* ── Responsive ────────────────────────────────────── */
+@media (max-width: 420px) {
+  .topbar-left { gap: 6px; }
+  .topbar-title { font-size: 0.9rem; }
+  .stat { font-size: 0.72rem; }
+  .bldg { font-size: 7px; }
+  .bottom-panel { max-height: 38vh; }
 }
 </style>
 </head>
 <body>
 
-<!-- ── Loading screen ─────────────────────────────────── -->
-<div id="screen-loading" class="screen active">
+<!-- ── Loading ──────────────────────────────────────── -->
+<div id="screen-loading" class="screen active screen-center">
   <div class="spinner"></div>
-  <div class="loading-text">Restoring session...</div>
+  <div style="color:#7a8a9e;font-size:0.9rem;margin-top:12px;">Loading...</div>
 </div>
 
-<!-- ── Welcome screen ─────────────────────────────────── -->
-<div id="screen-welcome" class="screen">
-  <div class="auth-card" style="text-align:center;">
+<!-- ── Welcome ─────────────────────────────────────── -->
+<div id="screen-welcome" class="screen screen-center">
+  <div class="card" style="text-align:center;">
     <h1>City Builder</h1>
-    <div class="tagline">Build. Trade. Grow. Together.</div>
-    <p class="subtitle">A multiplayer city-building game with persistent progression, shared economies, and real-time trade.</p>
-    <div class="btn-row" style="flex-direction:column; gap:12px;">
-      <button class="btn btn-primary" id="btn-goto-login">Sign In</button>
-      <button class="btn btn-secondary" id="btn-goto-register">Create Account</button>
-    </div>
+    <div class="sub">Build, produce, trade. A shared city awaits.</div>
+    <button id="btn-to-login" class="btn btn-primary" style="margin-bottom:10px;">Sign In</button>
+    <button id="btn-to-register" class="btn btn-secondary">Create Account</button>
   </div>
 </div>
 
-<!-- ── Login screen ───────────────────────────────────── -->
-<div id="screen-login" class="screen">
-  <div class="auth-card">
-    <h1>Welcome back</h1>
-    <div class="subtitle">Sign in to your city.</div>
-    <div class="error-banner" id="login-error"></div>
-    <form id="login-form" autocomplete="on">
-      <div class="form-group">
-        <label for="login-email">Email</label>
-        <input type="email" id="login-email" name="email" autocomplete="email" required />
-      </div>
-      <div class="form-group">
-        <label for="login-password">Password</label>
-        <input type="password" id="login-password" name="password" autocomplete="current-password" required />
-      </div>
-      <button type="submit" class="btn btn-primary" id="login-submit">Sign In</button>
+<!-- ── Login ────────────────────────────────────────── -->
+<div id="screen-login" class="screen screen-center">
+  <div class="card">
+    <h1>Sign In</h1>
+    <div class="sub">Welcome back, builder.</div>
+    <div id="login-error" class="error-msg"></div>
+    <form id="login-form">
+      <div class="field"><label>Email</label><input id="login-email" type="email" autocomplete="email" required></div>
+      <div class="field"><label>Password</label><input id="login-password" type="password" autocomplete="current-password" required></div>
+      <button id="login-submit" type="submit" class="btn btn-primary">Sign In</button>
     </form>
-    <div class="form-footer">
-      <span>No account? </span>
-      <button class="btn-ghost" id="login-goto-register">Create one</button>
-    </div>
+    <div class="link" id="login-to-register">No account? Create one</div>
   </div>
 </div>
 
-<!-- ── Register screen ────────────────────────────────── -->
-<div id="screen-register" class="screen">
-  <div class="auth-card">
-    <h1>Create account</h1>
-    <div class="subtitle">Join the world and start building.</div>
-    <div class="error-banner" id="register-error"></div>
-    <form id="register-form" autocomplete="on">
-      <div class="form-group">
-        <label for="register-email">Email</label>
-        <input type="email" id="register-email" name="email" autocomplete="email" required />
-      </div>
-      <div class="form-group">
-        <label for="register-password">Password</label>
-        <input type="password" id="register-password" name="password" autocomplete="new-password" minlength="6" required />
-      </div>
-      <div class="form-group">
-        <label for="register-confirm">Confirm Password</label>
-        <input type="password" id="register-confirm" name="confirm" autocomplete="new-password" minlength="6" required />
-      </div>
-      <button type="submit" class="btn btn-primary" id="register-submit">Create Account</button>
+<!-- ── Register ─────────────────────────────────────── -->
+<div id="screen-register" class="screen screen-center">
+  <div class="card">
+    <h1>Create Account</h1>
+    <div class="sub">Join the city.</div>
+    <div id="register-error" class="error-msg"></div>
+    <form id="register-form">
+      <div class="field"><label>Email</label><input id="register-email" type="email" autocomplete="email" required></div>
+      <div class="field"><label>Password</label><input id="register-password" type="password" autocomplete="new-password" required minlength="6"></div>
+      <div class="field"><label>Confirm Password</label><input id="register-confirm" type="password" autocomplete="new-password" required></div>
+      <button id="register-submit" type="submit" class="btn btn-primary">Create Account</button>
     </form>
-    <div class="form-footer">
-      <span>Already have an account? </span>
-      <button class="btn-ghost" id="register-goto-login">Sign in</button>
-    </div>
+    <div class="link" id="register-to-login">Already have an account? Sign in</div>
   </div>
 </div>
 
-<!-- ── Onboarding screen ──────────────────────────────── -->
-<div id="screen-onboarding" class="screen">
-  <div class="onboarding-card">
-    <div class="step-indicator">
-      <div class="step-dot active" id="step-dot-1"></div>
-      <div class="step-dot" id="step-dot-2"></div>
-      <div class="step-dot" id="step-dot-3"></div>
+<!-- ── Industry Selection ───────────────────────────── -->
+<div id="screen-industry" class="screen screen-center">
+  <div class="card">
+    <h1>Choose Your Industry</h1>
+    <div class="sub">Pick your specialization. This decides your buildings and resources.</div>
+    <div class="field">
+      <label>Display Name</label>
+      <input id="industry-name" type="text" maxlength="24" placeholder="Your builder name">
     </div>
-
-    <!-- Step 1: Display Name -->
-    <div class="onboarding-step active" id="onboard-step-1">
-      <h1>Who are you?</h1>
-      <div class="subtitle">Choose a name for your city and its ruler.</div>
-      <div class="error-banner" id="onboard-name-error"></div>
-      <div class="form-group">
-        <label for="onboard-display-name">Display Name</label>
-        <input type="text" id="onboard-display-name" placeholder="2–24 characters" minlength="2" maxlength="24" autocomplete="off" />
+    <div class="industry-grid">
+      <div class="industry-card" data-industry="timber">
+        <div class="ic-icon" style="color:#5ec49e;">&#9650;</div>
+        <div class="ic-name">Timber</div>
+        <div class="ic-desc">Harvest timber, produce lumber. Sell wood products.</div>
       </div>
-      <button class="btn btn-primary" id="onboard-name-next">Continue</button>
-    </div>
-
-    <!-- Step 2: Specialization -->
-    <div class="onboarding-step" id="onboard-step-2">
-      <h1>Choose your craft</h1>
-      <div class="subtitle">Pick a resource to specialize in. This shapes your economy.</div>
-      <div class="error-banner" id="onboard-spec-error"></div>
-      <div class="resource-options">
-        <div class="resource-option" data-resource="timber">
-          <div class="resource-icon timber">&#9652;</div>
-          <div class="resource-info">
-            <div class="resource-name">Timber</div>
-            <div class="resource-desc">Harvest forests for lumber and wood planks</div>
-          </div>
-          <div class="resource-check"></div>
-        </div>
-        <div class="resource-option" data-resource="stone">
-          <div class="resource-icon stone">&#9670;</div>
-          <div class="resource-info">
-            <div class="resource-name">Stone</div>
-            <div class="resource-desc">Quarry rock for cut stone and fine masonry</div>
-          </div>
-          <div class="resource-check"></div>
-        </div>
-        <div class="resource-option" data-resource="grain">
-          <div class="resource-icon grain">&#9702;</div>
-          <div class="resource-info">
-            <div class="resource-name">Grain</div>
-            <div class="resource-desc">Farm fields for grain and flour production</div>
-          </div>
-          <div class="resource-check"></div>
-        </div>
-        <div class="resource-option" data-resource="clay">
-          <div class="resource-icon clay">&#9724;</div>
-          <div class="resource-info">
-            <div class="resource-name">Clay</div>
-            <div class="resource-desc">Dig clay for bricks and pottery crafting</div>
-          </div>
-          <div class="resource-check"></div>
-        </div>
-        <div class="resource-option" data-resource="iron_ore">
-          <div class="resource-icon iron">&#9878;</div>
-          <div class="resource-info">
-            <div class="resource-name">Iron</div>
-            <div class="resource-desc">Mine iron ore for bars, tools, and armaments</div>
-          </div>
-          <div class="resource-check"></div>
-        </div>
+      <div class="industry-card" data-industry="stone">
+        <div class="ic-icon" style="color:#8888aa;">&#9670;</div>
+        <div class="ic-name">Stone</div>
+        <div class="ic-desc">Quarry stone, craft bricks. Build with masonry.</div>
       </div>
-      <button class="btn btn-primary" id="onboard-spec-next" disabled>Continue</button>
-      <button class="btn btn-back" id="onboard-spec-back">Back</button>
     </div>
-
-    <!-- Step 3: Confirm -->
-    <div class="onboarding-step" id="onboard-step-3">
-      <h1>Ready to build?</h1>
-      <div class="subtitle">Review your choices and enter the world.</div>
-      <div class="error-banner" id="onboard-confirm-error"></div>
-      <div class="confirm-summary">
-        <div class="confirm-row">
-          <span class="confirm-label">Name</span>
-          <span class="confirm-value" id="confirm-name">--</span>
-        </div>
-        <div class="confirm-row">
-          <span class="confirm-label">Specialization</span>
-          <span class="confirm-value" id="confirm-spec">--</span>
-        </div>
-        <div class="confirm-row">
-          <span class="confirm-label">Starting Gold</span>
-          <span class="confirm-value" style="color:#e6c65a;">500</span>
-        </div>
-        <div class="confirm-row">
-          <span class="confirm-label">World</span>
-          <span class="confirm-value" style="color:#c084e8;">Alpha World</span>
-        </div>
-      </div>
-      <button class="btn btn-primary" id="onboard-confirm">Enter the World</button>
-      <button class="btn btn-back" id="onboard-confirm-back">Back</button>
-    </div>
+    <div id="industry-error" class="error-msg"></div>
+    <button id="industry-confirm" class="btn btn-primary" disabled>Start Building</button>
   </div>
 </div>
 
-<!-- ── Game screen (main gameplay view) ───────────────── -->
+<!-- ── Game ──────────────────────────────────────────── -->
 <div id="screen-game" class="screen">
-  <div class="game-topbar">
-    <div class="game-topbar-left">
-      <div class="game-topbar-logo" id="game-player-name">City Builder</div>
-      <div class="game-stat gold"><span class="stat-icon">&#9733;</span><span id="game-gold">500</span></div>
-      <div class="game-stat pop"><span class="stat-icon">&#9786;</span><span id="game-pop">0</span></div>
-      <div class="game-stat tier"><span class="stat-icon">&#9650;</span>T<span id="game-tier">1</span></div>
-      <div class="game-stat tick"><span class="tick-countdown" id="game-tick-countdown"></span></div>
-    </div>
-    <div class="game-topbar-right">
-      <button class="btn-logout" id="game-btn-logout">Out</button>
-    </div>
-  </div>
-
-  <div class="placement-bar" id="placement-bar">
-    <span class="placement-bar-text" id="placement-bar-text">Tap a tile to place Road</span>
-    <button class="placement-bar-cancel" id="placement-bar-cancel">Cancel</button>
-  </div>
-
-  <div class="production-bar" id="production-bar">
-    <span class="production-bar-label">Producing:</span>
-    <span id="production-bar-content" class="production-bar-idle">No active production</span>
-  </div>
-
-  <div class="grid-container" id="grid-container">
-    <div class="grid-wrapper" id="grid-wrapper">
-      <!-- 8x8 grid cells rendered by JS -->
-    </div>
-    <div class="game-toast" id="game-toast"></div>
-    <div class="building-detail-overlay" id="building-detail">
-      <button class="btn-close-detail" id="building-detail-close">&#10005;</button>
-      <div class="building-detail-name" id="detail-name">Building</div>
-      <div class="building-detail-type" id="detail-type">Category</div>
-      <div class="building-detail-info" id="detail-info"></div>
-      <div class="building-detail-upgrade" id="detail-upgrade">
-        <div id="detail-upgrade-costs"></div>
-        <button class="btn-upgrade" id="detail-upgrade-btn">Upgrade</button>
-      </div>
-    </div>
-    <div class="district-progress-panel" id="district-progress">
-      <button class="dp-close" id="dp-close">&#10005;</button>
-      <div class="dp-title" id="dp-title">District Progress</div>
-      <div class="dp-tier-badge" id="dp-tier-badge">Tier 1</div>
-      <div class="dp-subtitle" id="dp-subtitle">Requirements for next tier</div>
-      <div class="dp-req-list" id="dp-req-list"></div>
-      <div class="dp-housing-summary" id="dp-housing-summary"></div>
-      <button class="btn-tier-up" id="dp-tier-up-btn" disabled>Upgrade District</button>
-    </div>
-  </div>
-
-  <div class="build-panel" id="build-panel" style="display:none;">
-    <div class="build-panel-header">
-      <span class="build-panel-title">Build</span>
-      <button class="build-panel-close" id="build-panel-close">&#10005;</button>
-    </div>
-    <div class="build-panel-body" id="build-panel-body">
-      <!-- Building options rendered by JS -->
-    </div>
-  </div>
-
-  <div class="inventory-panel" id="inventory-panel">
-    <div class="inventory-panel-header">
-      <span class="inventory-panel-title">Stockpile</span>
-      <button class="inventory-panel-close" id="inventory-panel-close">&#10005;</button>
-    </div>
-    <div class="inventory-panel-body" id="inventory-panel-body">
-      <!-- Inventory rows rendered by JS -->
-    </div>
-  </div>
-
-  <div class="trade-panel" id="trade-panel">
-    <div class="trade-panel-header">
-      <span class="trade-panel-title">Trade</span>
-      <button class="trade-panel-close" id="trade-panel-close">&#10005;</button>
-    </div>
-    <div class="trade-tabs">
-      <button class="trade-tab active" data-tab="npc">NPC Trade</button>
-      <button class="trade-tab" data-tab="market">Player Market</button>
-    </div>
-    <div class="trade-tab-content active" id="trade-tab-npc">
-      <div class="trade-panel-body" id="trade-panel-body">
-        <!-- Trade partners rendered by JS -->
-      </div>
-    </div>
-    <div class="trade-tab-content" id="trade-tab-market">
-      <div class="trade-panel-body" id="market-panel-body">
-        <!-- Player market rendered by JS -->
-      </div>
-    </div>
-  </div>
-
-  <div class="game-bottombar">
-    <button class="game-nav-item active" id="nav-city">
-      <div class="game-nav-icon">&#9750;</div>
-      <span>City</span>
-    </button>
-    <button class="game-nav-item" id="nav-build">
-      <div class="game-nav-icon">&#9881;</div>
-      <span>Build</span>
-    </button>
-    <button class="game-nav-item" id="nav-inventory">
-      <div class="game-nav-icon">&#9782;</div>
-      <span>Stock</span>
-    </button>
-    <button class="game-nav-item" id="nav-trade">
-      <div class="game-nav-icon">&#8644;</div>
-      <span>Trade</span>
-    </button>
-  </div>
-</div>
-
-<!-- ── Dashboard (authenticated shell) ────────────────── -->
-<div id="screen-dashboard" class="screen">
   <div class="topbar">
     <div class="topbar-left">
-      <div class="topbar-logo">City Builder</div>
-      <div class="topbar-badge">Alpha</div>
+      <span class="topbar-title">City Builder</span>
+      <span class="stat"><span class="v gold" id="g-money">$500</span></span>
+      <span class="stat"><span class="v workers" id="g-workers">0/5</span> wkrs</span>
     </div>
-    <div class="topbar-right">
-      <span class="topbar-email" id="dash-email"></span>
-      <button class="btn-logout" id="btn-logout">Sign Out</button>
+    <button class="btn-sm" id="g-logout">Logout</button>
+  </div>
+  <div class="info-bar">
+    <span>Industry: <span class="tag" id="g-industry">-</span></span>
+    <span id="g-player-name" style="color:#e0e6ed;font-weight:600;"></span>
+  </div>
+  <div class="game-body">
+    <div class="map-area">
+      <div id="map-grid"></div>
+    </div>
+    <div class="bottom-panel">
+      <div class="tab-bar">
+        <button class="tab-btn active" data-tab="build">Build</button>
+        <button class="tab-btn" data-tab="inventory">Inventory</button>
+        <button class="tab-btn" data-tab="trade">Trade</button>
+      </div>
+      <div id="panel-build" class="panel-content active"></div>
+      <div id="panel-inventory" class="panel-content"></div>
+      <div id="panel-trade" class="panel-content"></div>
     </div>
   </div>
-
-  <div class="dashboard-content">
-    <div class="welcome-hero">
-      <h2 id="dash-greeting">Welcome, Builder</h2>
-      <p>Your city awaits. The next phase will let you choose a specialization and claim your district in the shared world.</p>
-    </div>
-
-    <div class="status-grid">
-      <div class="status-card">
-        <div class="label">Treasury</div>
-        <div class="value gold" id="dash-treasury">$500</div>
-      </div>
-      <div class="status-card">
-        <div class="label">Population</div>
-        <div class="value pop" id="dash-population">0</div>
-      </div>
-      <div class="status-card">
-        <div class="label">Industry</div>
-        <div class="value industry" id="dash-industry">--</div>
-      </div>
-      <div class="status-card">
-        <div class="label">District</div>
-        <div class="value district" id="dash-district">--</div>
-      </div>
-    </div>
-
-    <div class="phases-list">
-      <h3>Progress</h3>
-      <div class="phase-item" id="phase-account">
-        <div class="phase-dot done"></div>
-        <div class="phase-label">Account created</div>
-        <div class="phase-status">Done</div>
-      </div>
-      <div class="phase-item" id="phase-specialization">
-        <div class="phase-dot current"></div>
-        <div class="phase-label">Choose specialization</div>
-        <div class="phase-status">Next</div>
-      </div>
-      <div class="phase-item" id="phase-district">
-        <div class="phase-dot upcoming"></div>
-        <div class="phase-label muted">Claim district</div>
-        <div class="phase-status">Soon</div>
-      </div>
-      <div class="phase-item" id="phase-build">
-        <div class="phase-dot upcoming"></div>
-        <div class="phase-label muted">Build first structure</div>
-        <div class="phase-status">Soon</div>
-      </div>
-      <div class="phase-item" id="phase-production">
-        <div class="phase-dot upcoming"></div>
-        <div class="phase-label muted">Start production</div>
-        <div class="phase-status">Soon</div>
-      </div>
-      <div class="phase-item" id="phase-trade">
-        <div class="phase-dot upcoming"></div>
-        <div class="phase-label muted">Trade with others</div>
-        <div class="phase-status">Soon</div>
-      </div>
-    </div>
-  </div>
-
-  <div class="bottombar">
-    <div class="nav-item active">
-      <div class="nav-icon">&#9750;</div>
-      <span>City</span>
-    </div>
-    <div class="nav-item">
-      <div class="nav-icon">&#9881;</div>
-      <span>Build</span>
-    </div>
-    <div class="nav-item">
-      <div class="nav-icon">&#8644;</div>
-      <span>Trade</span>
-    </div>
-    <div class="nav-item">
-      <div class="nav-icon">&#9776;</div>
-      <span>More</span>
-    </div>
+  <div class="placement-bar" id="placement-bar">
+    <span id="placement-text">Tap a tile to place</span>
+    <button class="btn-cancel" id="placement-cancel">Cancel</button>
   </div>
 </div>
+
+<!-- ── Toast ─────────────────────────────────────────── -->
+<div class="toast" id="toast"></div>
 
 <script>
 (function () {
@@ -1900,2048 +274,703 @@ body {
   var SUPABASE_URL = 'https://igaulapupbtdcqqjobhs.supabase.co';
   var SUPABASE_ANON_KEY = 'sb_publishable_7yi3BNg-J-K5nralw5JSww_c71Pge6e';
 
-  // ── Supabase client ─────────────────────────────────
   if (!window.supabase || typeof window.supabase.createClient !== 'function') {
     document.getElementById('screen-loading').innerHTML =
-      '<div style="color:#f0a0a0;padding:24px;text-align:center;">Failed to load Supabase library.<br>Check your network connection and reload.</div>';
+      '<div style="color:#f0a0a0;padding:24px;text-align:center;">Failed to load Supabase library.<br>Check your connection and reload.</div>';
     return;
   }
+
   var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-  // ── Current user + player state ─────────────────────
+  // ── State ───────────────────────────────────────────
   var currentUser = null;
-  var playerProfile = null;
+  var profile = null;
+  var tiles = [];
+  var tileMap = {};          // "x,y" -> tile object
+  var allBuildings = [];     // all players' buildings
+  var inventory = {};        // resource_key -> quantity
+  var buildingTypes = {};    // key -> building_type row
+  var resources = {};        // key -> resource row
+  var traderPrices = {};     // resource_key -> buy_price
+  var selectedBuildType = null;
+  var prodTimer = null;
+  var channel = null;
+  var tradeAmounts = {};
 
-  // ── Screen management ───────────────────────────────
+  // ── Screens ─────────────────────────────────────────
   var screens = document.querySelectorAll('.screen');
   function showScreen(id) {
     screens.forEach(function (s) { s.classList.remove('active'); });
     document.getElementById(id).classList.add('active');
   }
 
-  // ── DOM refs ────────────────────────────────────────
-  var loginForm = document.getElementById('login-form');
-  var registerForm = document.getElementById('register-form');
-  var loginError = document.getElementById('login-error');
-  var registerError = document.getElementById('register-error');
-  var dashEmail = document.getElementById('dash-email');
-  var dashGreeting = document.getElementById('dash-greeting');
-
-  // ── Error helpers ───────────────────────────────────
-  function showFormError(el, msg) {
-    el.textContent = msg;
-    el.classList.add('visible');
-  }
-  function clearFormError(el) {
-    el.textContent = '';
-    el.classList.remove('visible');
+  // ── Helpers ─────────────────────────────────────────
+  function showError(el, msg) { el.textContent = msg; el.classList.add('show'); }
+  function clearError(el) { el.textContent = ''; el.classList.remove('show'); }
+  function capitalize(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : ''; }
+  function resourceName(key) {
+    return resources[key] ? resources[key].name : capitalize(key);
   }
 
-  // ── Set loading state on submit buttons ─────────────
-  function setSubmitting(btn, loading) {
-    btn.disabled = loading;
-    btn.dataset.originalText = btn.dataset.originalText || btn.textContent;
-    btn.textContent = loading ? 'Please wait...' : btn.dataset.originalText;
+  var toastTimer = null;
+  function showToast(msg, type) {
+    var t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'toast show' + (type ? ' ' + type : '');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { t.classList.remove('show'); }, 2500);
   }
 
-  // ── Capitalize helper ──────────────────────────────
-  function capitalize(s) {
-    return s ? s.charAt(0).toUpperCase() + s.slice(1) : '';
-  }
-
-  // ── Check player profile and route accordingly ─────
+  // ── Auth routing ────────────────────────────────────
   function checkProfileAndRoute(user) {
     currentUser = user;
-    sb.from('player_profiles')
-      .select('id, display_name, specialization_key, home_world_id, home_district_id')
-      .eq('id', user.id)
-      .maybeSingle()
-      .then(function (result) {
-        if (result.error) {
-          // Table might not exist yet or RLS blocks — go to onboarding
-          console.warn('Profile check error:', result.error.message);
-          enterOnboarding(user);
+    sb.from('player_profiles').select('*').eq('id', user.id).maybeSingle()
+      .then(function (r) {
+        if (r.error) {
+          console.warn('Profile check error:', r.error.message);
+          enterIndustrySelect();
           return;
         }
-        if (result.data && result.data.specialization_key) {
-          // Onboarding complete — go to game view if district exists, else dashboard
-          playerProfile = result.data;
-          if (result.data.home_district_id) {
-            enterGame(user);
-          } else {
-            enterDashboard(user);
-          }
+        if (r.data && r.data.industry_key) {
+          profile = r.data;
+          enterGame();
         } else {
-          // No profile or incomplete — go to onboarding
-          enterOnboarding(user);
+          enterIndustrySelect();
         }
       })
-      .catch(function () {
-        enterOnboarding(user);
-      });
+      .catch(function () { enterIndustrySelect(); });
   }
 
-  // ── Enter onboarding ───────────────────────────────
-  function enterOnboarding(user) {
-    currentUser = user;
-    // Reset onboarding state
-    onboardStep = 1;
-    selectedResource = null;
-    document.getElementById('onboard-display-name').value = '';
-    showOnboardStep(1);
-    showScreen('screen-onboarding');
+  function enterIndustrySelect() {
+    var nameInput = document.getElementById('industry-name');
+    nameInput.value = (currentUser.email || '').split('@')[0];
+    selectedIndustry = null;
+    document.querySelectorAll('.industry-card').forEach(function (c) { c.classList.remove('selected'); });
+    document.getElementById('industry-confirm').disabled = true;
+    clearError(document.getElementById('industry-error'));
+    showScreen('screen-industry');
   }
 
-  // ── Enter dashboard (fallback for players without district) ──
-  function enterDashboard(user) {
-    var displayName = (playerProfile && playerProfile.display_name) || '';
-    var email = user.email || '';
-    dashEmail.textContent = email;
-
-    if (displayName) {
-      dashGreeting.textContent = 'Welcome, ' + displayName;
-    } else {
-      var name = email.split('@')[0] || 'Builder';
-      dashGreeting.textContent = 'Welcome, ' + capitalize(name);
-    }
-
-    showScreen('screen-dashboard');
-  }
-
-  // ── Enter game (main gameplay view) ────────────────
-  function enterGame(user) {
-    // Load catalog first, then load game state
-    var catalogPromise = CatalogHelper.isLoaded()
-      ? Promise.resolve()
-      : CatalogHelper.load(sb);
-
-    catalogPromise.then(function () {
-      GameView.init(user, playerProfile);
-      showScreen('screen-game');
-    }).catch(function (err) {
-      console.error('Failed to load catalog:', err);
-      // Fall back to dashboard
-      enterDashboard(user);
-    });
-  }
-
-  // ── Onboarding step management ─────────────────────
-  var onboardStep = 1;
-  var selectedResource = null;
-
-  function showOnboardStep(step) {
-    onboardStep = step;
-    for (var i = 1; i <= 3; i++) {
-      var stepEl = document.getElementById('onboard-step-' + i);
-      var dotEl = document.getElementById('step-dot-' + i);
-      stepEl.classList.toggle('active', i === step);
-      dotEl.classList.remove('active', 'done');
-      if (i < step) dotEl.classList.add('done');
-      else if (i === step) dotEl.classList.add('active');
-    }
-    // Clear errors on step change
-    clearFormError(document.getElementById('onboard-name-error'));
-    clearFormError(document.getElementById('onboard-spec-error'));
-    clearFormError(document.getElementById('onboard-confirm-error'));
-  }
-
-  // Step 1: Display name → next
-  document.getElementById('onboard-name-next').addEventListener('click', function () {
-    var nameInput = document.getElementById('onboard-display-name');
-    var nameVal = nameInput.value.trim();
-    var errEl = document.getElementById('onboard-name-error');
-    clearFormError(errEl);
-    if (nameVal.length < 2) {
-      showFormError(errEl, 'Name must be at least 2 characters.');
-      return;
-    }
-    if (nameVal.length > 24) {
-      showFormError(errEl, 'Name must be 24 characters or fewer.');
-      return;
-    }
-    showOnboardStep(2);
-  });
-
-  // Allow enter key on name input
-  document.getElementById('onboard-display-name').addEventListener('keydown', function (e) {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      document.getElementById('onboard-name-next').click();
-    }
-  });
-
-  // Step 2: Resource selection
-  var resourceOptions = document.querySelectorAll('.resource-option');
-  resourceOptions.forEach(function (opt) {
-    opt.addEventListener('click', function () {
-      resourceOptions.forEach(function (o) { o.classList.remove('selected'); });
-      opt.classList.add('selected');
-      selectedResource = opt.getAttribute('data-resource');
-      document.getElementById('onboard-spec-next').disabled = false;
+  // ── Industry selection ──────────────────────────────
+  var selectedIndustry = null;
+  document.querySelectorAll('.industry-card').forEach(function (card) {
+    card.addEventListener('click', function () {
+      document.querySelectorAll('.industry-card').forEach(function (c) { c.classList.remove('selected'); });
+      card.classList.add('selected');
+      selectedIndustry = card.dataset.industry;
+      document.getElementById('industry-confirm').disabled = false;
     });
   });
 
-  document.getElementById('onboard-spec-next').addEventListener('click', function () {
-    if (!selectedResource) {
-      showFormError(document.getElementById('onboard-spec-error'), 'Please choose a specialization.');
-      return;
-    }
-    // Populate confirmation
-    document.getElementById('confirm-name').textContent = document.getElementById('onboard-display-name').value.trim();
-    document.getElementById('confirm-spec').textContent = capitalize(selectedResource);
-    showOnboardStep(3);
-  });
+  document.getElementById('industry-confirm').addEventListener('click', function () {
+    var name = document.getElementById('industry-name').value.trim();
+    var errEl = document.getElementById('industry-error');
+    clearError(errEl);
+    if (!name || name.length < 2) { showError(errEl, 'Name must be at least 2 characters.'); return; }
+    if (!selectedIndustry) { showError(errEl, 'Choose an industry.'); return; }
 
-  document.getElementById('onboard-spec-back').addEventListener('click', function () {
-    showOnboardStep(1);
-  });
+    var btn = this;
+    btn.disabled = true;
+    btn.textContent = 'Setting up...';
 
-  document.getElementById('onboard-confirm-back').addEventListener('click', function () {
-    showOnboardStep(2);
-  });
-
-  // Step 3: Confirm and bootstrap
-  document.getElementById('onboard-confirm').addEventListener('click', function () {
-    var btn = document.getElementById('onboard-confirm');
-    var errEl = document.getElementById('onboard-confirm-error');
-    var displayName = document.getElementById('onboard-display-name').value.trim();
-    clearFormError(errEl);
-    setSubmitting(btn, true);
-
-    completeOnboarding(displayName, selectedResource)
-      .then(function (profile) {
-        setSubmitting(btn, false);
-        playerProfile = profile;
-        if (profile.home_district_id) {
-          enterGame(currentUser);
-        } else {
-          enterDashboard(currentUser);
+    sb.rpc('choose_industry', { p_display_name: name, p_industry_key: selectedIndustry })
+      .then(function (r) {
+        if (r.error) {
+          showError(errEl, r.error.message);
+          btn.disabled = false;
+          btn.textContent = 'Start Building';
+          return;
         }
+        profile = r.data;
+        enterGame();
       })
       .catch(function (err) {
-        setSubmitting(btn, false);
-        showFormError(errEl, err.message || 'Failed to complete setup. Please try again.');
+        showError(errEl, err.message || 'Setup failed. Try again.');
+        btn.disabled = false;
+        btn.textContent = 'Start Building';
       });
   });
 
-  // ── Onboarding bootstrap logic ─────────────────────
-  // Attempts RPC first (server-side atomic bootstrap).
-  // Falls back to client-side inserts if RPC is not deployed.
-  //
-  // LIMITATION: Client-side fallback relies on RLS INSERT
-  // policies existing on player_profiles, player_treasuries,
-  // player_inventories, and population_state tables. If those
-  // policies are not in place, the fallback will also fail.
-  // Deploy 0002_onboarding_rpc.sql to enable the RPC path.
-  function completeOnboarding(displayName, specialization) {
-    return sb.rpc('complete_onboarding', {
-      p_display_name: displayName,
-      p_specialization_key: specialization
-    }).then(function (result) {
-      if (result.error) {
-        // RPC doesn't exist or failed — try client-side fallback
-        console.warn('RPC onboarding failed, trying client fallback:', result.error.message);
-        return clientSideFallback(displayName, specialization);
-      }
-      // RPC succeeded — return profile-like object
-      var data = result.data;
-      return {
-        id: currentUser.id,
-        display_name: data.display_name || displayName,
-        specialization_key: data.specialization || specialization,
-        home_world_id: data.world_id || null,
-        home_district_id: data.district_id || null,
-        district_tier: data.district_tier || 1
-      };
-    }).catch(function () {
-      return clientSideFallback(displayName, specialization);
+  // ── Enter game ──────────────────────────────────────
+  function enterGame() {
+    showScreen('screen-game');
+    document.getElementById('g-industry').textContent = capitalize(profile.industry_key);
+    document.getElementById('g-player-name').textContent = profile.display_name;
+    updateMoney();
+    updateWorkers();
+
+    loadGameData().then(function () {
+      renderMap();
+      renderBuildPanel();
+      renderInventory();
+      renderTradePanel();
+      processProduction();
+      subscribeRealtime();
+      startProdLoop();
+    }).catch(function (err) {
+      console.error('Game load failed:', err);
+      showToast('Failed to load game data', 'error');
     });
   }
 
-  // All 15 v1 goods — must match resource_types catalog
-  var V1_GOODS = [
-    'timber', 'stone', 'grain', 'clay', 'iron_ore',
-    'wood_planks', 'cut_stone', 'bricks', 'iron_bars',
-    'flour', 'bread', 'tools', 'pottery', 'furniture', 'fine_goods'
-  ];
+  function loadGameData() {
+    return Promise.all([
+      sb.from('building_types').select('*').eq('is_active', true),
+      sb.from('resources').select('*').eq('is_active', true),
+      sb.from('map_tiles').select('*').order('y', { ascending: true }).order('x', { ascending: true }),
+      sb.from('buildings').select('*, player_profiles(display_name, color_hex)'),
+      sb.from('trader_prices').select('*').eq('is_active', true).eq('trader_key', 'starter_trader'),
+      sb.from('inventories').select('resource_key, quantity').eq('player_id', currentUser.id)
+    ]).then(function (results) {
+      buildingTypes = {};
+      if (results[0].data) results[0].data.forEach(function (bt) { buildingTypes[bt.key] = bt; });
 
-  function clientSideFallback(displayName, specialization) {
-    var userId = currentUser.id;
-    var email = currentUser.email || '';
+      resources = {};
+      if (results[1].data) results[1].data.forEach(function (r) { resources[r.key] = r; });
 
-    // Step 1: Get alpha-world id
-    return sb.from('worlds')
-      .select('id')
-      .eq('slug', 'alpha-world')
-      .eq('status', 'active')
-      .maybeSingle()
-      .then(function (worldResult) {
-        var worldId = (worldResult.data && worldResult.data.id) || null;
+      tiles = results[2].data || [];
+      tileMap = {};
+      tiles.forEach(function (t) { tileMap[t.x + ',' + t.y] = t; });
 
-        // Step 2: Upsert player profile
-        return sb.from('player_profiles')
-          .upsert({
-            id: userId,
-            email: email,
-            display_name: displayName,
-            specialization_key: specialization,
-            home_world_id: worldId
-          }, { onConflict: 'id' })
-          .then(function (profileResult) {
-            if (profileResult.error) throw profileResult.error;
+      allBuildings = results[3].data || [];
 
-            // Step 3: Create treasury + inventory (all 15 goods) + population (parallel)
-            var inventoryRows = V1_GOODS.map(function (key) {
-              return { player_id: userId, resource_key: key, amount: 0 };
-            });
+      traderPrices = {};
+      if (results[4].data) results[4].data.forEach(function (tp) { traderPrices[tp.resource_key] = tp.buy_price; });
 
-            return Promise.all([
-              sb.from('player_treasuries').upsert({
-                player_id: userId,
-                gold: 500,
-                income_per_tick: 0,
-                expenses_per_tick: 0
-              }, { onConflict: 'player_id' }),
-              sb.from('player_inventories').upsert(
-                inventoryRows,
-                { onConflict: 'player_id,resource_key' }
-              ),
-              sb.from('population_state').upsert({
-                player_id: userId,
-                total_population: 0,
-                housed_population: 0,
-                employed_population: 0,
-                unhoused_population: 0,
-                happiness: 50
-              }, { onConflict: 'player_id' })
-            ]);
-          })
-          .then(function (results) {
-            // Check for errors in parallel results
-            for (var i = 0; i < results.length; i++) {
-              if (results[i].error) {
-                console.warn('Bootstrap sub-insert error:', results[i].error.message);
-              }
-            }
-            // NOTE: Client-side fallback does not auto-create a district.
-            // District creation requires server-side RPC for slot allocation.
-            return {
-              id: userId,
-              display_name: displayName,
-              specialization_key: specialization,
-              home_world_id: worldId,
-              home_district_id: null,
-              district_tier: null
-            };
-          });
+      inventory = {};
+      if (results[5].data) results[5].data.forEach(function (inv) { inventory[inv.resource_key] = Number(inv.quantity); });
+    });
+  }
+
+  // ── Production ──────────────────────────────────────
+  function processProduction() {
+    return sb.rpc('process_production').then(function (r) {
+      if (r.error) {
+        console.warn('Production error:', r.error.message);
+        return;
+      }
+      var data = r.data;
+      if (data.inventory) {
+        inventory = {};
+        Object.keys(data.inventory).forEach(function (k) {
+          inventory[k] = Number(data.inventory[k]);
+        });
+      }
+      if (data.money !== undefined) profile.money = data.money;
+      if (data.workers_used !== undefined) profile.workers_used = data.workers_used;
+      if (data.worker_capacity !== undefined) profile.worker_capacity = data.worker_capacity;
+
+      updateMoney();
+      updateWorkers();
+      renderInventory();
+
+      // Only re-render trade if that panel is visible
+      if (document.getElementById('panel-trade').classList.contains('active')) {
+        renderTradePanel();
+      }
+
+      if (data.total_produced > 0) {
+        showToast('+' + data.total_produced + ' goods produced', 'success');
+      }
+    }).catch(function (err) {
+      console.warn('Production fetch error:', err);
+    });
+  }
+
+  function startProdLoop() {
+    stopProdLoop();
+    prodTimer = setInterval(function () { processProduction(); }, 30000);
+  }
+
+  function stopProdLoop() {
+    if (prodTimer) { clearInterval(prodTimer); prodTimer = null; }
+  }
+
+  // ── Map rendering ───────────────────────────────────
+  var BLDG_LABELS = {
+    timber_camp: 'TC', sawmill: 'SM',
+    stone_quarry: 'SQ', mason_workshop: 'MW'
+  };
+
+  function renderMap() {
+    var grid = document.getElementById('map-grid');
+    var buildingAt = {};
+    allBuildings.forEach(function (b) { buildingAt[b.x + ',' + b.y] = b; });
+
+    var html = '';
+    for (var y = 0; y < 15; y++) {
+      for (var x = 0; x < 15; x++) {
+        var tile = tileMap[x + ',' + y];
+        var building = buildingAt[x + ',' + y];
+        var classes = ['cell'];
+
+        if (!tile) {
+          html += '<div class="cell" data-x="' + x + '" data-y="' + y + '"></div>';
+          continue;
+        }
+
+        if (x === 7 && y === 7) {
+          classes.push('city-center');
+        } else if (tile.resource_node_key) {
+          classes.push('res-' + tile.resource_node_key);
+        }
+
+        if (selectedBuildType && !building && isPlacementValid(selectedBuildType, tile)) {
+          classes.push('valid-placement');
+        }
+
+        html += '<div class="' + classes.join(' ') + '" data-x="' + x + '" data-y="' + y + '" data-tile-id="' + tile.id + '">';
+
+        if (building) {
+          var mine = building.player_id === currentUser.id;
+          var btk = building.building_type_key;
+          var label = BLDG_LABELS[btk] || '?';
+          var btInfo = buildingTypes[btk];
+          var titleText = (btInfo ? btInfo.name : btk);
+          if (!mine && building.player_profiles) {
+            titleText += ' (' + building.player_profiles.display_name + ')';
+          }
+          html += '<div class="bldg ' + btk + (mine ? ' mine' : '') + '" title="' + titleText + '">' + label + '</div>';
+        } else if (x === 7 && y === 7) {
+          html += '<span class="hq-label">HQ</span>';
+        } else if (tile.resource_node_key) {
+          html += '<div class="res-dot"></div>';
+        }
+
+        html += '</div>';
+      }
+    }
+    grid.innerHTML = html;
+  }
+
+  function isPlacementValid(btKey, tile) {
+    var bt = buildingTypes[btKey];
+    if (!bt) return false;
+    if (!tile.buildable) return false;
+    if (tile.occupied_building_id) return false;
+
+    if (bt.category === 'extractor') {
+      return tile.resource_node_key === bt.output_resource_key;
+    }
+    // Processors can go on any buildable empty tile (including resource tiles)
+    return true;
+  }
+
+  // ── Map click ───────────────────────────────────────
+  document.getElementById('map-grid').addEventListener('click', function (e) {
+    var cell = e.target.closest('.cell');
+    if (!cell) return;
+
+    if (!selectedBuildType) return;
+
+    var tileId = cell.dataset.tileId;
+    if (!tileId) return;
+    var tile = tileMap[cell.dataset.x + ',' + cell.dataset.y];
+    if (!tile || !isPlacementValid(selectedBuildType, tile)) {
+      showToast('Cannot place here', 'error');
+      return;
+    }
+    placeBuilding(tileId, selectedBuildType);
+  });
+
+  function placeBuilding(tileId, btKey) {
+    var bt = buildingTypes[btKey];
+    if (!bt) return;
+    if (profile.money < bt.build_cost) {
+      showToast('Not enough money (need $' + bt.build_cost + ')', 'error');
+      return;
+    }
+    if (profile.workers_used + bt.worker_cost > profile.worker_capacity) {
+      showToast('Not enough workers', 'error');
+      return;
+    }
+
+    showToast('Placing...', '');
+    sb.rpc('place_building', { p_tile_id: tileId, p_building_type_key: btKey })
+      .then(function (r) {
+        if (r.error) {
+          showToast(r.error.message, 'error');
+          return;
+        }
+        var data = r.data;
+        profile.money = data.money;
+        profile.workers_used = data.workers_used;
+        profile.worker_capacity = data.worker_capacity;
+        updateMoney();
+        updateWorkers();
+        showToast(bt.name + ' placed!', 'success');
+        cancelPlacement();
+
+        // Reload buildings and tiles to get fresh state
+        Promise.all([
+          sb.from('buildings').select('*, player_profiles(display_name, color_hex)'),
+          sb.from('map_tiles').select('*').order('y', { ascending: true }).order('x', { ascending: true })
+        ]).then(function (results) {
+          allBuildings = results[0].data || [];
+          tiles = results[1].data || [];
+          tileMap = {};
+          tiles.forEach(function (t) { tileMap[t.x + ',' + t.y] = t; });
+          renderMap();
+          renderBuildPanel();
+        });
+      })
+      .catch(function (err) {
+        showToast(err.message || 'Placement failed', 'error');
       });
   }
 
-  // ── Catalog helper: build validation layer ─────────
-  // Provides reusable logic for checking building unlock status,
-  // costs, and placement rules against the v1 building_types catalog.
-  //
-  // Usage:
-  //   CatalogHelper.load(sb)            — fetch catalog from Supabase
-  //   CatalogHelper.isBuildingUnlocked(key, districtTier)
-  //   CatalogHelper.getBuildCosts(key)
-  //   CatalogHelper.canAffordBuilding(key, gold, inventory)
-  //   CatalogHelper.getPlacementRules(key)
-  //   CatalogHelper.getBuildingsForTier(districtTier)
-  //   CatalogHelper.getSpecializationChain(specKey)
-  //
-  // NOTE: Catalog data is read-only reference data fetched once per
-  // session. Server-side RPC remains authoritative for actual placement.
+  // ── Build panel ─────────────────────────────────────
+  function renderBuildPanel() {
+    var panel = document.getElementById('panel-build');
+    var html = '';
 
-  var CatalogHelper = (function () {
-    var _buildingTypes = {};   // key → building_type row
-    var _resourceTypes = {};   // key → resource_type row
-    var _loaded = false;
+    var available = Object.keys(buildingTypes).filter(function (k) {
+      return buildingTypes[k].industry_key === profile.industry_key;
+    }).sort(function (a, b) {
+      return buildingTypes[a].tier - buildingTypes[b].tier;
+    });
 
-    function load(supabaseClient) {
-      return Promise.all([
-        supabaseClient.from('building_types').select('*').eq('is_active', true),
-        supabaseClient.from('resource_types').select('*').eq('is_active', true)
-      ]).then(function (results) {
-        if (results[0].data) {
-          results[0].data.forEach(function (bt) { _buildingTypes[bt.key] = bt; });
-        }
-        if (results[1].data) {
-          results[1].data.forEach(function (rt) { _resourceTypes[rt.key] = rt; });
-        }
-        _loaded = true;
-        return { buildings: _buildingTypes, resources: _resourceTypes };
-      });
+    if (available.length === 0) {
+      html = '<div style="color:#7a8a9e;text-align:center;padding:20px;">No buildings available for your industry.</div>';
+      panel.innerHTML = html;
+      return;
     }
 
-    // Is this building available at the given district tier?
-    function isBuildingUnlocked(buildingKey, districtTier) {
-      var bt = _buildingTypes[buildingKey];
-      if (!bt) return false;
-      var rules = bt.build_rules || {};
-      var requiredTier = rules.districtTierRequired || 1;
-      return districtTier >= requiredTier;
-    }
+    available.forEach(function (key) {
+      var bt = buildingTypes[key];
+      var canAfford = profile.money >= bt.build_cost;
+      var hasWorkers = profile.workers_used + bt.worker_cost <= profile.worker_capacity;
+      var disabled = !canAfford || !hasWorkers;
+      var selected = selectedBuildType === key;
 
-    // Get the resource + gold costs for placing this building
-    function getBuildCosts(buildingKey) {
-      var bt = _buildingTypes[buildingKey];
-      if (!bt) return null;
-      var rules = bt.build_rules || {};
-      // buildCosts includes gold and resource costs in one object
-      return rules.buildCosts || { gold: bt.cost_gold };
-    }
-
-    // Can the player afford this building given their gold and inventory?
-    // inventory: { resource_key: amount, ... }
-    function canAffordBuilding(buildingKey, gold, inventory) {
-      var costs = getBuildCosts(buildingKey);
-      if (!costs) return { affordable: false, reason: 'Unknown building' };
-      var missing = [];
-      if (costs.gold && gold < costs.gold) {
-        missing.push('Need ' + costs.gold + ' gold (have ' + gold + ')');
-      }
-      Object.keys(costs).forEach(function (key) {
-        if (key === 'gold') return;
-        var have = (inventory && inventory[key]) || 0;
-        if (have < costs[key]) {
-          missing.push('Need ' + costs[key] + ' ' + key + ' (have ' + have + ')');
-        }
-      });
-      return {
-        affordable: missing.length === 0,
-        missing: missing
+      var colors = {
+        timber_camp: '#3a7a4a', sawmill: '#7a5a2a',
+        stone_quarry: '#5a5a7a', mason_workshop: '#7a4a3a'
       };
+      var bgColor = colors[key] || '#4a4a6a';
+      var label = BLDG_LABELS[key] || '?';
+
+      var desc = bt.category === 'extractor'
+        ? 'Extracts ' + resourceName(bt.output_resource_key) + ' from resource tiles'
+        : 'Converts ' + resourceName(bt.input_resource_key) + ' into ' + resourceName(bt.output_resource_key);
+
+      var costStr = '$' + bt.build_cost + ' | ' + bt.worker_cost + ' worker';
+      var costClass = 'build-cost';
+      if (!canAfford) { costStr = '$' + bt.build_cost + ' (need $' + (bt.build_cost - profile.money) + ' more)'; costClass += ' warn'; }
+      else if (!hasWorkers) { costStr += ' (no workers available)'; costClass += ' warn'; }
+
+      html += '<div class="build-item' + (disabled ? ' disabled' : '') + (selected ? ' selected' : '') + '" data-bt="' + key + '">';
+      html += '<div class="build-icon" style="background:' + bgColor + '">' + label + '</div>';
+      html += '<div class="build-info">';
+      html += '<div class="build-name">' + bt.name + ' <small>Tier ' + bt.tier + '</small></div>';
+      html += '<div class="' + costClass + '">' + costStr + '</div>';
+      html += '<div class="build-desc">' + desc + '</div>';
+      html += '</div></div>';
+    });
+
+    panel.innerHTML = html;
+
+    panel.querySelectorAll('.build-item:not(.disabled)').forEach(function (item) {
+      item.addEventListener('click', function () {
+        selectBuildingType(item.dataset.bt);
+      });
+    });
+  }
+
+  function selectBuildingType(key) {
+    selectedBuildType = key;
+    var bt = buildingTypes[key];
+    document.getElementById('placement-text').textContent = 'Tap a tile to place ' + bt.name;
+    document.getElementById('placement-bar').classList.add('active');
+    renderMap();
+    renderBuildPanel();
+  }
+
+  function cancelPlacement() {
+    selectedBuildType = null;
+    document.getElementById('placement-bar').classList.remove('active');
+    renderMap();
+    renderBuildPanel();
+  }
+
+  document.getElementById('placement-cancel').addEventListener('click', cancelPlacement);
+
+  // ── Inventory panel ─────────────────────────────────
+  function renderInventory() {
+    var panel = document.getElementById('panel-inventory');
+    var html = '';
+
+    html += '<div class="inv-section">Raw Materials</div>';
+    ['timber', 'stone'].forEach(function (k) {
+      var qty = Math.floor(inventory[k] || 0);
+      html += '<div class="inv-row"><span class="inv-name">' + resourceName(k) + '</span><span class="inv-qty' + (qty === 0 ? ' zero' : '') + '">' + qty + '</span></div>';
+    });
+
+    html += '<div class="inv-section">Processed Goods</div>';
+    ['lumber', 'brick'].forEach(function (k) {
+      var qty = Math.floor(inventory[k] || 0);
+      html += '<div class="inv-row"><span class="inv-name">' + resourceName(k) + '</span><span class="inv-qty' + (qty === 0 ? ' zero' : '') + '">' + qty + '</span></div>';
+    });
+
+    html += '<div class="inv-section">Economy</div>';
+    html += '<div class="inv-row"><span class="inv-name">Money</span><span class="inv-qty" style="color:#e6c65a;">$' + profile.money + '</span></div>';
+    html += '<div class="inv-row"><span class="inv-name">Workers</span><span class="inv-qty">' + profile.workers_used + ' / ' + profile.worker_capacity + '</span></div>';
+
+    // Show building count
+    var myBldgs = allBuildings.filter(function (b) { return b.player_id === currentUser.id; });
+    html += '<div class="inv-row"><span class="inv-name">Your Buildings</span><span class="inv-qty">' + myBldgs.length + '</span></div>';
+
+    panel.innerHTML = html;
+  }
+
+  // ── Trade panel ─────────────────────────────────────
+  function renderTradePanel() {
+    var panel = document.getElementById('panel-trade');
+    var html = '';
+
+    html += '<div class="trader-header">Starter Trader</div>';
+    html += '<div class="trader-desc">Buys goods at fixed prices. Sell your production here.</div>';
+
+    var tradeResources = ['timber', 'lumber', 'stone', 'brick'];
+    tradeResources.forEach(function (rk) {
+      var price = traderPrices[rk];
+      if (price === undefined) return;
+      var stock = Math.floor(inventory[rk] || 0);
+      var key = 'sell-' + rk;
+      var amt = tradeAmounts[key] || 0;
+
+      html += '<div class="trade-row">';
+      html += '<div class="trade-info">';
+      html += '<div class="trade-res">' + resourceName(rk) + '</div>';
+      html += '<div class="trade-price">' + price + 'g each</div>';
+      html += '<div class="trade-stock">In stock: ' + stock + '</div>';
+      html += '</div>';
+      html += '<div class="trade-controls">';
+      html += '<button class="trade-amt-btn" data-key="' + key + '" data-dir="dec">-</button>';
+      html += '<span class="trade-amt" id="ta-' + rk + '">' + amt + '</span>';
+      html += '<button class="trade-amt-btn" data-key="' + key + '" data-dir="inc" data-max="' + stock + '">+</button>';
+      html += '<button class="btn-sell" data-resource="' + rk + '" data-key="' + key + '"' + (amt < 1 ? ' disabled' : '') + '>Sell</button>';
+      html += '</div>';
+      html += '</div>';
+    });
+
+    if (Object.keys(traderPrices).length === 0) {
+      html += '<div style="color:#7a8a9e;text-align:center;padding:16px;">Trader prices not loaded. Run the migration first.</div>';
     }
 
-    // Get placement rules for a building
-    function getPlacementRules(buildingKey) {
-      var bt = _buildingTypes[buildingKey];
-      if (!bt) return null;
-      var rules = bt.build_rules || {};
-      return {
-        footprint: [bt.footprint_w, bt.footprint_h],
-        mustMatchResource: !!rules.mustMatchResource,
-        requiresRoadAccess: !!rules.requiresRoadAccess,
-        specialization: rules.specialization || null,
-        requiredResourceKey: bt.required_resource_key || null
-      };
-    }
+    panel.innerHTML = html;
 
-    // Get all buildings unlocked at a given district tier
-    function getBuildingsForTier(districtTier) {
-      var result = [];
-      Object.keys(_buildingTypes).forEach(function (key) {
-        if (isBuildingUnlocked(key, districtTier)) {
-          result.push(_buildingTypes[key]);
-        }
+    // Wire amount buttons
+    panel.querySelectorAll('.trade-amt-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var key = btn.dataset.key;
+        var dir = btn.dataset.dir;
+        var max = parseInt(btn.dataset.max || '999');
+        var current = tradeAmounts[key] || 0;
+
+        if (dir === 'inc' && current < max) current++;
+        else if (dir === 'dec' && current > 0) current--;
+        tradeAmounts[key] = current;
+
+        var rk = key.replace('sell-', '');
+        var el = document.getElementById('ta-' + rk);
+        if (el) el.textContent = current;
+
+        var row = btn.closest('.trade-row');
+        var sellBtn = row.querySelector('.btn-sell');
+        if (sellBtn) sellBtn.disabled = current < 1;
       });
-      return result;
-    }
+    });
 
-    // Get the production chain for a specialization
-    // Returns { extraction, refining, production } building keys
-    function getSpecializationChain(specKey) {
-      // Map specialization key to the iron_ore variant if needed
-      // Maps specialization_key (= resource_types.key) to the
-      // catalog's build_rules.specialization value
-      var specMap = {
-        timber: 'timber', stone: 'stone', grain: 'grain',
-        clay: 'clay', iron_ore: 'iron'
-      };
-      var spec = specMap[specKey];
-      if (!spec) return null;
-      var chain = { extraction: [], refining: [], production: [] };
-      Object.keys(_buildingTypes).forEach(function (key) {
-        var bt = _buildingTypes[key];
-        var rules = bt.build_rules || {};
-        if (rules.specialization !== spec) return;
-        if (bt.category === 'extraction') chain.extraction.push(bt);
-        else if (bt.category === 'refining') chain.refining.push(bt);
-        else if (bt.category === 'production') chain.production.push(bt);
+    // Wire sell buttons
+    panel.querySelectorAll('.btn-sell').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var rk = btn.dataset.resource;
+        var key = btn.dataset.key;
+        var amt = tradeAmounts[key] || 0;
+        if (amt < 1) return;
+        sellToTrader(rk, amt, btn);
       });
-      return chain;
-    }
-
-    // Get a single building type by key
-    function get(buildingKey) {
-      return _buildingTypes[buildingKey] || null;
-    }
-
-    // Get a resource type by key
-    function getResource(resourceKey) {
-      return _resourceTypes[resourceKey] || null;
-    }
-
-    function isLoaded() { return _loaded; }
-
-    return {
-      load: load,
-      isLoaded: isLoaded,
-      get: get,
-      getResource: getResource,
-      isBuildingUnlocked: isBuildingUnlocked,
-      getBuildCosts: getBuildCosts,
-      canAffordBuilding: canAffordBuilding,
-      getPlacementRules: getPlacementRules,
-      getBuildingsForTier: getBuildingsForTier,
-      getSpecializationChain: getSpecializationChain
-    };
-  })();
-
-  // ── Game view: grid, building palette, placement ───
-  var GameView = (function () {
-    var _user = null;
-    var _profile = null;
-    var _district = null;
-    var _tiles = {};       // "x,y" → tile row
-    var _buildings = [];   // building rows from DB
-    var _inventory = {};   // resource_key → amount
-    var _gold = 500;
-    var _districtTier = 1;
-    var _selectedBuilding = null; // building_type_key
-    var _initialized = false;
-    var _tickTimer = null;         // setInterval handle
-    var _tickCountdown = null;     // countdown interval
-    var _lastTickTime = null;      // last successful tick timestamp
-    var _lastProduction = [];      // last tick's production summary
-    var TICK_INTERVAL_SEC = 60;    // must match server
-
-    // Building icons for the grid — housing tiers get distinct glyphs
-    var BUILDING_ICONS = {
-      road: '\u2550',
-      housing_1: '\u2302',
-      housing_2: '\u2616',
-      housing_3: '\u2656',
-      lumber_camp: '\u2666',
-      quarry: '\u25C6',
-      grain_farm: '\u2637',
-      clay_pit: '\u25A0',
-      iron_mine: '\u2692',
-      sawmill: '\u2261',
-      mason_yard: '\u2227',
-      mill: '\u2299',
-      kiln_yard: '\u2234',
-      smelter: '\u2604',
-      bakery: '\u25CB',
-      pottery_works: '\u2615',
-      forge_works: '\u2694',
-      carpentry_works: '\u2692',
-      artisan_studio: '\u2605',
-      warehouse: '\u25A1',
-      market: '\u2696',
-      trade_depot: '\u21C4',
-      district_hall: '\u2691',
-      civic_center_upgrade: '\u2691'
-    };
-
-    // Category display order
-    var CATEGORY_ORDER = ['infrastructure', 'extraction', 'refining', 'housing', 'storage', 'trade', 'production', 'civic'];
-    var CATEGORY_LABELS = {
-      infrastructure: 'Infrastructure',
-      extraction: 'Extraction',
-      refining: 'Refining',
-      housing: 'Housing',
-      storage: 'Storage',
-      trade: 'Trade',
-      production: 'Production',
-      civic: 'Civic'
-    };
-
-    function init(user, profile) {
-      _user = user;
-      _profile = profile;
-      _selectedBuilding = null;
-
-      // Set player name in topbar
-      document.getElementById('game-player-name').textContent = profile.display_name || 'Builder';
-
-      // Load all game data in parallel
-      loadGameData().then(function () {
-        renderGrid();
-        _initialized = true;
-        // Start production tick loop
-        startTickLoop();
-      }).catch(function (err) {
-        console.error('Failed to load game data:', err);
-        showToast('Failed to load game data', 'error');
-      });
-
-      // Wire up event handlers (only once)
-      if (!_initialized) {
-        wireEvents();
-      }
-    }
-
-    function loadGameData() {
-      var districtId = _profile.home_district_id;
-      return Promise.all([
-        // District info
-        sb.from('districts').select('*').eq('id', districtId).maybeSingle(),
-        // Tiles for this district
-        sb.from('tiles').select('*').eq('district_id', districtId),
-        // Buildings in this district
-        sb.from('buildings').select('*').eq('district_id', districtId).eq('status', 'active'),
-        // Player treasury
-        sb.from('player_treasuries').select('gold').eq('player_id', _user.id).maybeSingle(),
-        // Player inventory
-        sb.from('player_inventories').select('resource_key, amount').eq('player_id', _user.id),
-        // Population
-        sb.from('population_state').select('total_population').eq('player_id', _user.id).maybeSingle()
-      ]).then(function (results) {
-        // District
-        if (results[0].data) {
-          _district = results[0].data;
-          _districtTier = _district.tier || 1;
-          document.getElementById('game-tier').textContent = _districtTier;
-        }
-
-        // Tiles
-        _tiles = {};
-        if (results[1].data) {
-          results[1].data.forEach(function (t) {
-            _tiles[t.x + ',' + t.y] = t;
-          });
-        }
-
-        // Buildings
-        _buildings = results[2].data || [];
-
-        // Treasury
-        if (results[3].data) {
-          _gold = results[3].data.gold;
-        }
-        document.getElementById('game-gold').textContent = _gold;
-
-        // Inventory
-        _inventory = {};
-        if (results[4].data) {
-          results[4].data.forEach(function (inv) {
-            _inventory[inv.resource_key] = inv.amount;
-          });
-        }
-
-        // Population
-        var pop = results[5].data ? results[5].data.total_population : 0;
-        document.getElementById('game-pop').textContent = pop;
-      });
-    }
-
-    function renderGrid() {
-      if (!_district) return;
-      var wrapper = document.getElementById('grid-wrapper');
-      var w = _district.width;
-      var h = _district.height;
-
-      // Calculate cell size to fit container
-      var container = document.getElementById('grid-container');
-      var containerW = container.clientWidth - 16;
-      var containerH = container.clientHeight - 16;
-      var cellSize = Math.floor(Math.min(containerW / w, containerH / h));
-      cellSize = Math.max(cellSize, 32); // minimum 32px
-      cellSize = Math.min(cellSize, 64); // maximum 64px
-
-      wrapper.style.gridTemplateColumns = 'repeat(' + w + ', ' + cellSize + 'px)';
-      wrapper.style.gridTemplateRows = 'repeat(' + h + ', ' + cellSize + 'px)';
-
-      // Build a lookup for buildings by position
-      var buildingAt = {};
-      _buildings.forEach(function (b) {
-        var bt = CatalogHelper.get(b.building_type_key);
-        var fw = bt ? bt.footprint_w : 1;
-        var fh = bt ? bt.footprint_h : 1;
-        for (var dy = 0; dy < fh; dy++) {
-          for (var dx = 0; dx < fw; dx++) {
-            buildingAt[(b.anchor_x + dx) + ',' + (b.anchor_y + dy)] = b;
-          }
-        }
-      });
-
-      // Render cells
-      var html = '';
-      for (var dy = 0; dy < h; dy++) {
-        for (var dx = 0; dx < w; dx++) {
-          var ax = _district.origin_x + dx;
-          var ay = _district.origin_y + dy;
-          var tile = _tiles[ax + ',' + ay];
-          var terrain = tile ? tile.terrain_key : 'grass';
-          var resource = tile ? tile.resource_key : null;
-          var building = buildingAt[ax + ',' + ay];
-
-          var cellClasses = 'grid-cell terrain-' + terrain;
-          // Add housing tier class for visual distinction
-          if (building && building.anchor_x === ax && building.anchor_y === ay) {
-            var btk = building.building_type_key;
-            if (btk === 'housing_1') cellClasses += ' housing-1';
-            else if (btk === 'housing_2') cellClasses += ' housing-2';
-            else if (btk === 'housing_3') cellClasses += ' housing-3';
-          }
-          html += '<div class="' + cellClasses + '" data-x="' + ax + '" data-y="' + ay + '">';
-
-          if (resource && !building) {
-            html += '<div class="resource-dot ' + resource + '"></div>';
-          }
-
-          if (building && building.anchor_x === ax && building.anchor_y === ay) {
-            var icon = BUILDING_ICONS[building.building_type_key] || '?';
-            html += '<div class="building-icon">' + icon + '</div>';
-          }
-
-          html += '</div>';
-        }
-      }
-      wrapper.innerHTML = html;
-    }
-
-    function renderBuildPanel() {
-      var body = document.getElementById('build-panel-body');
-      var allBuildings = CatalogHelper.getBuildingsForTier(99); // get all
-      var grouped = {};
-
-      allBuildings.forEach(function (bt) {
-        var cat = bt.category;
-        if (!grouped[cat]) grouped[cat] = [];
-        grouped[cat].push(bt);
-      });
-
-      var html = '';
-      CATEGORY_ORDER.forEach(function (cat) {
-        var items = grouped[cat];
-        if (!items || items.length === 0) return;
-
-        html += '<div class="build-category-label">' + (CATEGORY_LABELS[cat] || cat) + '</div>';
-        items.forEach(function (bt) {
-          var unlocked = CatalogHelper.isBuildingUnlocked(bt.key, _districtTier);
-          var costs = CatalogHelper.getBuildCosts(bt.key);
-          var goldCost = costs ? (costs.gold || bt.cost_gold) : bt.cost_gold;
-          var afford = CatalogHelper.canAffordBuilding(bt.key, _gold, _inventory);
-          var icon = BUILDING_ICONS[bt.key] || '?';
-
-          var costParts = [];
-          if (costs) {
-            Object.keys(costs).forEach(function (k) {
-              if (k === 'gold') {
-                var cls = _gold < costs[k] ? ' cant-afford' : '';
-                costParts.push('<span class="' + cls + '">' + costs[k] + 'g</span>');
-              } else {
-                var have = _inventory[k] || 0;
-                var cls2 = have < costs[k] ? ' cant-afford' : '';
-                costParts.push('<span class="' + cls2 + '">' + costs[k] + ' ' + k.replace(/_/g, ' ') + '</span>');
-              }
-            });
-          }
-
-          var locked = !unlocked;
-          var selected = _selectedBuilding === bt.key;
-          html += '<div class="build-option' + (locked ? ' locked' : '') + (selected ? ' selected' : '') + '" data-building="' + bt.key + '">';
-          html += '<div class="build-option-icon">' + icon + '</div>';
-          html += '<div class="build-option-info">';
-          html += '<div class="build-option-name">' + bt.name + (locked ? ' (Tier ' + ((bt.build_rules || {}).districtTierRequired || '?') + ')' : '') + '</div>';
-          html += '<div class="build-option-cost">' + costParts.join(' &middot; ') + '</div>';
-          html += '</div>';
-          html += '</div>';
-        });
-      });
-
-      body.innerHTML = html;
-
-      // Wire click handlers on build options
-      var options = body.querySelectorAll('.build-option:not(.locked)');
-      options.forEach(function (opt) {
-        opt.addEventListener('click', function () {
-          var key = opt.getAttribute('data-building');
-          selectBuilding(key);
-        });
-      });
-    }
-
-    // Resource display names and category grouping
-    var INV_CATEGORIES = [
-      { label: 'Raw Materials', keys: ['timber', 'stone', 'grain', 'clay', 'iron_ore'] },
-      { label: 'Construction', keys: ['wood_planks', 'cut_stone', 'bricks', 'iron_bars'] },
-      { label: 'Food', keys: ['flour', 'bread'] },
-      { label: 'Industrial & Utility', keys: ['tools', 'pottery'] },
-      { label: 'Prestige', keys: ['furniture', 'fine_goods'] }
-    ];
-
-    function renderInventoryPanel() {
-      var body = document.getElementById('inventory-panel-body');
-      var html = '';
-      var hasAny = false;
-
-      INV_CATEGORIES.forEach(function (cat) {
-        html += '<div class="inv-category-label">' + cat.label + '</div>';
-        cat.keys.forEach(function (key) {
-          var amt = _inventory[key] || 0;
-          if (amt > 0) hasAny = true;
-          var rt = CatalogHelper.getResource(key);
-          var name = rt ? rt.name : capitalize(key.replace(/_/g, ' '));
-          var amtClass = amt > 0 ? 'has-stock' : 'zero';
-          html += '<div class="inv-row">';
-          html += '<span class="inv-row-name">' + name + '</span>';
-          html += '<span class="inv-row-amount ' + amtClass + '">' + amt + '</span>';
-          html += '</div>';
-        });
-      });
-
-      body.innerHTML = html;
-    }
-
-    function selectBuilding(key) {
-      _selectedBuilding = key;
-      var bt = CatalogHelper.get(key);
-      var name = bt ? bt.name : key;
-
-      // Update selection UI
-      var options = document.querySelectorAll('.build-option');
-      options.forEach(function (opt) {
-        opt.classList.toggle('selected', opt.getAttribute('data-building') === key);
-      });
-
-      // Show placement bar
-      document.getElementById('placement-bar-text').textContent = 'Tap a tile to place ' + name;
-      document.getElementById('placement-bar').classList.add('active');
-
-      // Hide build panel
-      document.getElementById('build-panel').style.display = 'none';
-
-      // Update grid cell hover hints
-      updateGridPlacementHints();
-    }
-
-    function cancelPlacement() {
-      _selectedBuilding = null;
-      document.getElementById('placement-bar').classList.remove('active');
-      clearGridPlacementHints();
-    }
-
-    function updateGridPlacementHints() {
-      if (!_selectedBuilding || !_district) return;
-      var cells = document.querySelectorAll('.grid-cell');
-      cells.forEach(function (cell) {
-        var x = parseInt(cell.getAttribute('data-x'));
-        var y = parseInt(cell.getAttribute('data-y'));
-        var valid = isPlacementValid(_selectedBuilding, x, y);
-        cell.classList.remove('placement-valid', 'placement-invalid');
-        if (valid) {
-          cell.classList.add('placement-valid');
-        }
-      });
-    }
-
-    function clearGridPlacementHints() {
-      var cells = document.querySelectorAll('.grid-cell');
-      cells.forEach(function (cell) {
-        cell.classList.remove('placement-valid', 'placement-invalid');
-      });
-    }
-
-    function isPlacementValid(buildingKey, x, y) {
-      var bt = CatalogHelper.get(buildingKey);
-      if (!bt) return false;
-      var rules = bt.build_rules || {};
-      var fw = bt.footprint_w;
-      var fh = bt.footprint_h;
-
-      // Check bounds
-      for (var dy = 0; dy < fh; dy++) {
-        for (var dx = 0; dx < fw; dx++) {
-          var cx = x + dx;
-          var cy = y + dy;
-          if (cx < _district.origin_x || cx >= _district.origin_x + _district.width) return false;
-          if (cy < _district.origin_y || cy >= _district.origin_y + _district.height) return false;
-
-          // Check tile exists
-          var tile = _tiles[cx + ',' + cy];
-          if (!tile) return false;
-
-          // Check no building occupies this cell
-          var occupied = _buildings.some(function (b) {
-            var obt = CatalogHelper.get(b.building_type_key);
-            var ofw = obt ? obt.footprint_w : 1;
-            var ofh = obt ? obt.footprint_h : 1;
-            return cx >= b.anchor_x && cx < b.anchor_x + ofw
-                && cy >= b.anchor_y && cy < b.anchor_y + ofh;
-          });
-          if (occupied) return false;
-        }
-      }
-
-      // Check resource match for extraction buildings
-      if (rules.mustMatchResource) {
-        var anchorTile = _tiles[x + ',' + y];
-        if (!anchorTile || anchorTile.resource_key !== bt.required_resource_key) return false;
-      }
-
-      return true;
-    }
-
-    function attemptPlacement(x, y) {
-      if (!_selectedBuilding) return;
-      var buildingKey = _selectedBuilding;
-
-      // Client-side validation first
-      if (!isPlacementValid(buildingKey, x, y)) {
-        showToast('Cannot place here', 'error');
-        return;
-      }
-
-      var afford = CatalogHelper.canAffordBuilding(buildingKey, _gold, _inventory);
-      if (!afford.affordable) {
-        showToast(afford.missing[0] || 'Cannot afford', 'error');
-        return;
-      }
-
-      // Call server RPC
-      showToast('Placing...', '');
-      sb.rpc('place_building', {
-        p_building_type_key: buildingKey,
-        p_anchor_x: x,
-        p_anchor_y: y
-      }).then(function (result) {
-        if (result.error) {
-          // Parse server error for clearer material feedback
-          var errMsg = result.error.message || 'Placement failed';
-          showToast(errMsg, 'error');
-          return;
-        }
-        var data = result.data;
-        showToast(CatalogHelper.get(buildingKey).name + ' placed!', 'success');
-
-        // Update gold from server
-        if (data.gold_remaining !== undefined) {
-          _gold = data.gold_remaining;
-          document.getElementById('game-gold').textContent = _gold;
-        }
-
-        // Sync full inventory from server response
-        if (data.inventory) {
-          Object.keys(data.inventory).forEach(function (key) {
-            _inventory[key] = data.inventory[key];
-          });
-        }
-
-        // Add building to local list
-        _buildings.push({
-          id: data.building_id,
-          building_type_key: buildingKey,
-          anchor_x: x,
-          anchor_y: y,
-          status: 'active'
-        });
-
-        // Cancel placement mode and re-render
-        cancelPlacement();
-        renderGrid();
-        // Refresh production bar (new building may be a producer)
-        updateProductionBar(_lastProduction);
-      }).catch(function (err) {
-        showToast(err.message || 'Placement failed', 'error');
-      });
-    }
-
-    function showToast(msg, type) {
-      var toast = document.getElementById('game-toast');
-      toast.textContent = msg;
-      toast.className = 'game-toast visible' + (type ? ' ' + type : '');
-      clearTimeout(toast._timer);
-      toast._timer = setTimeout(function () {
-        toast.classList.remove('visible');
-      }, 2500);
-    }
-
-    function wireEvents() {
-      // Grid cell clicks
-      document.getElementById('grid-wrapper').addEventListener('click', function (e) {
-        var cell = e.target.closest('.grid-cell');
-        if (!cell) return;
-        var x = parseInt(cell.getAttribute('data-x'));
-        var y = parseInt(cell.getAttribute('data-y'));
-
-        if (_selectedBuilding) {
-          attemptPlacement(x, y);
-        } else {
-          // Close any open panels first
-          closeBuildingDetail();
-          closeDistrictProgress();
-
-          var tile = _tiles[x + ',' + y];
-          var building = _buildings.find(function (b) {
-            var bt = CatalogHelper.get(b.building_type_key);
-            var fw = bt ? bt.footprint_w : 1;
-            var fh = bt ? bt.footprint_h : 1;
-            return x >= b.anchor_x && x < b.anchor_x + fw
-                && y >= b.anchor_y && y < b.anchor_y + fh;
-          });
-          if (building) {
-            showBuildingDetail(building);
-          } else if (tile && tile.resource_key) {
-            var rt = CatalogHelper.getResource(tile.resource_key);
-            showToast((rt ? rt.name : tile.resource_key) + ' deposit', '');
-          }
-        }
-      });
-
-      // Build nav button
-      document.getElementById('nav-build').addEventListener('click', function () {
-        var panel = document.getElementById('build-panel');
-        document.getElementById('inventory-panel').classList.remove('active');
-        document.getElementById('trade-panel').classList.remove('active');
-        if (panel.style.display === 'none' || !panel.style.display) {
-          renderBuildPanel();
-          panel.style.display = 'flex';
-          setActiveNav('nav-build');
-        } else {
-          panel.style.display = 'none';
-          setActiveNav('nav-city');
-        }
-      });
-
-      // City nav button
-      document.getElementById('nav-city').addEventListener('click', function () {
-        document.getElementById('build-panel').style.display = 'none';
-        document.getElementById('inventory-panel').classList.remove('active');
-        document.getElementById('trade-panel').classList.remove('active');
-        cancelPlacement();
-        setActiveNav('nav-city');
-      });
-
-      // Inventory nav button — toggle inventory panel
-      document.getElementById('nav-inventory').addEventListener('click', function () {
-        var panel = document.getElementById('inventory-panel');
-        var buildPanel = document.getElementById('build-panel');
-        document.getElementById('trade-panel').classList.remove('active');
-        if (panel.classList.contains('active')) {
-          panel.classList.remove('active');
-          setActiveNav('nav-city');
-        } else {
-          buildPanel.style.display = 'none';
-          cancelPlacement();
-          renderInventoryPanel();
-          panel.classList.add('active');
-          setActiveNav('nav-inventory');
-        }
-      });
-
-      // Close inventory panel
-      document.getElementById('inventory-panel-close').addEventListener('click', function () {
-        document.getElementById('inventory-panel').classList.remove('active');
-        setActiveNav('nav-city');
-      });
-
-      // Trade nav button
-      document.getElementById('nav-trade').addEventListener('click', function () {
-        var panel = document.getElementById('trade-panel');
-        document.getElementById('build-panel').style.display = 'none';
-        document.getElementById('inventory-panel').classList.remove('active');
-        cancelPlacement();
-        if (panel.classList.contains('active')) {
-          panel.classList.remove('active');
-          setActiveNav('nav-city');
-        } else {
-          // Load whichever tab is active
-          var activeTab = document.querySelector('.trade-tab.active');
-          if (activeTab && activeTab.dataset.tab === 'market') {
-            loadAndRenderMarketPanel();
-          } else {
-            loadAndRenderTradePanel();
-          }
-          panel.classList.add('active');
-          setActiveNav('nav-trade');
-        }
-      });
-
-      // Close trade panel
-      document.getElementById('trade-panel-close').addEventListener('click', function () {
-        document.getElementById('trade-panel').classList.remove('active');
-        setActiveNav('nav-city');
-      });
-
-      // Trade tab switching
-      document.querySelectorAll('.trade-tab').forEach(function (tab) {
-        tab.addEventListener('click', function () {
-          document.querySelectorAll('.trade-tab').forEach(function (t) { t.classList.remove('active'); });
-          document.querySelectorAll('.trade-tab-content').forEach(function (c) { c.classList.remove('active'); });
-          tab.classList.add('active');
-          var target = tab.dataset.tab;
-          document.getElementById('trade-tab-' + target).classList.add('active');
-          if (target === 'market') {
-            loadAndRenderMarketPanel();
-          } else {
-            loadAndRenderTradePanel();
-          }
-        });
-      });
-
-      // Close build panel
-      document.getElementById('build-panel-close').addEventListener('click', function () {
-        document.getElementById('build-panel').style.display = 'none';
-        setActiveNav('nav-city');
-      });
-
-      // Cancel placement
-      document.getElementById('placement-bar-cancel').addEventListener('click', function () {
-        cancelPlacement();
-      });
-
-      // Building detail close
-      document.getElementById('building-detail-close').addEventListener('click', function () {
-        closeBuildingDetail();
-      });
-
-      // Housing upgrade button
-      document.getElementById('detail-upgrade-btn').addEventListener('click', function () {
-        doHousingUpgrade();
-      });
-
-      // Tier badge → show district progress
-      document.querySelector('.game-stat.tier').addEventListener('click', function () {
-        closeBuildingDetail();
-        var panel = document.getElementById('district-progress');
-        if (panel.classList.contains('visible')) {
-          closeDistrictProgress();
-        } else {
-          showDistrictProgress();
-        }
-      });
-
-      // District progress close
-      document.getElementById('dp-close').addEventListener('click', function () {
-        closeDistrictProgress();
-      });
-
-      // District tier-up button
-      document.getElementById('dp-tier-up-btn').addEventListener('click', function () {
-        doDistrictUpgrade();
-      });
-
-      // Logout from game screen
-      document.getElementById('game-btn-logout').addEventListener('click', function () {
-        stopTickLoop();
-        sb.auth.signOut().then(function () {
-          showScreen('screen-welcome');
-        });
-      });
-    }
-
-    function setActiveNav(id) {
-      var navItems = document.querySelectorAll('.game-nav-item');
-      navItems.forEach(function (item) {
-        item.classList.toggle('active', item.id === id);
-      });
-    }
-
-    // ── Production tick system ─────────────────────────
-    function runProductionTick(isInitial) {
-      sb.rpc('run_production_tick').then(function (result) {
-        if (result.error) {
-          console.warn('Production tick failed:', result.error.message);
-          if (isInitial) {
-            // RPC might not exist yet — show idle state
-            updateProductionBar([]);
-          }
-          return;
-        }
-        var data = result.data;
-        _lastTickTime = new Date();
-
-        // Sync inventory from server
-        if (data.inventory) {
-          _inventory = {};
-          Object.keys(data.inventory).forEach(function (key) {
-            _inventory[key] = data.inventory[key];
-          });
-        }
-
-        // Sync gold from server
-        if (data.gold !== undefined && data.gold !== null) {
-          _gold = data.gold;
-          document.getElementById('game-gold').textContent = _gold;
-        }
-
-        // Store and display production summary
-        _lastProduction = data.production || [];
-        updateProductionBar(_lastProduction);
-
-        // Show toast on meaningful production (skip initial catch-up noise)
-        if (!isInitial && data.total_produced > 0) {
-          var summary = _lastProduction.map(function (p) {
-            return '+' + p.amount + ' ' + formatResourceName(p.output);
-          }).join(', ');
-          showToast(summary, 'success');
-        } else if (isInitial && data.total_produced > 0) {
-          showToast('Caught up: +' + data.total_produced + ' goods produced while away', 'success');
-        }
-
-        // Mark producing buildings on the grid
-        updateProducingBuildings(data.production || []);
-
-        // Re-render inventory if panel is open
-        if (document.getElementById('inventory-panel').classList.contains('active')) {
-          renderInventoryPanel();
-        }
-
-        startTickCountdown();
-      }).catch(function (err) {
-        console.warn('Production tick error:', err);
-      });
-    }
-
-    function startTickLoop() {
-      // Run initial tick immediately (catches up offline production)
-      runProductionTick(true);
-
-      // Set up recurring tick
-      if (_tickTimer) clearInterval(_tickTimer);
-      _tickTimer = setInterval(function () {
-        runProductionTick(false);
-      }, TICK_INTERVAL_SEC * 1000);
-    }
-
-    function stopTickLoop() {
-      if (_tickTimer) {
-        clearInterval(_tickTimer);
-        _tickTimer = null;
-      }
-      if (_tickCountdown) {
-        clearInterval(_tickCountdown);
-        _tickCountdown = null;
-      }
-    }
-
-    function startTickCountdown() {
-      var el = document.getElementById('game-tick-countdown');
-      if (_tickCountdown) clearInterval(_tickCountdown);
-
-      function updateCountdown() {
-        if (!_lastTickTime) { el.textContent = ''; return; }
-        var elapsed = Math.floor((Date.now() - _lastTickTime.getTime()) / 1000);
-        var remaining = Math.max(0, TICK_INTERVAL_SEC - elapsed);
-        if (remaining > 0) {
-          el.textContent = remaining + 's';
-        } else {
-          el.textContent = '...';
-        }
-      }
-
-      updateCountdown();
-      _tickCountdown = setInterval(updateCountdown, 1000);
-    }
-
-    function updateProductionBar(production) {
-      var bar = document.getElementById('production-bar');
-      var content = document.getElementById('production-bar-content');
-
-      // Count producing buildings
-      var producingBuildings = _buildings.filter(function (b) {
-        var bt = CatalogHelper.get(b.building_type_key);
-        return bt && bt.output_resource_key;
-      });
-
-      if (producingBuildings.length === 0) {
-        bar.classList.remove('active');
-        return;
-      }
-
-      bar.classList.add('active');
-
-      if (production.length > 0) {
-        var items = production.map(function (p) {
-          return '<span class="production-bar-item">+' + p.amount + ' ' + formatResourceName(p.output) + '</span>';
-        });
-        content.innerHTML = items.join('');
-        content.className = '';
-      } else {
-        // Buildings exist but didn't produce (starved or waiting)
-        var starvedCount = producingBuildings.length;
-        content.innerHTML = '<span class="production-bar-idle">' + starvedCount + ' building' + (starvedCount > 1 ? 's' : '') + ' waiting for inputs</span>';
-        content.className = '';
-      }
-    }
-
-    function updateProducingBuildings(production) {
-      // Build set of building IDs that produced
-      var producedIds = {};
-      production.forEach(function (p) {
-        producedIds[p.building_id] = true;
-      });
-
-      // Update grid cells
-      var cells = document.querySelectorAll('.grid-cell');
-      cells.forEach(function (cell) {
-        cell.classList.remove('producing');
-        var x = parseInt(cell.getAttribute('data-x'));
-        var y = parseInt(cell.getAttribute('data-y'));
-
-        // Find building at this anchor position
-        var building = _buildings.find(function (b) {
-          return b.anchor_x === x && b.anchor_y === y;
-        });
-        if (building && producedIds[building.id]) {
-          cell.classList.add('producing');
-        }
-      });
-    }
-
-    function formatResourceName(key) {
-      var rt = CatalogHelper.getResource(key);
-      if (rt) return rt.name;
-      return capitalize(key.replace(/_/g, ' '));
-    }
-
-    // ── Building detail overlay ─────────────────────────
-    var _detailBuildingId = null;
-
-    // Housing upgrade costs (must match server migration 0007)
-    var HOUSING_UPGRADE_COSTS = {
-      housing_1: { gold: 50, wood_planks: 3, bricks: 2 },
-      housing_2: { gold: 80, furniture: 2, pottery: 2, bread: 2 }
-    };
-    var HOUSING_UPGRADE_TARGET = {
-      housing_1: 'housing_2',
-      housing_2: 'housing_3'
-    };
-
-    function showBuildingDetail(building) {
-      var overlay = document.getElementById('building-detail');
-      var bt = CatalogHelper.get(building.building_type_key);
-      var name = bt ? bt.name : building.building_type_key;
-      var category = bt ? bt.category : '';
-
-      document.getElementById('detail-name').textContent = name;
-      document.getElementById('detail-type').textContent = category;
-
-      // Build info text
-      var info = '';
-      if (bt && bt.output_resource_key) {
-        var outName = formatResourceName(bt.output_resource_key);
-        var consumes = (bt.build_rules || {}).consumes;
-        if (consumes && Object.keys(consumes).length > 0) {
-          var inNames = Object.keys(consumes).map(function (k) {
-            return consumes[k] + ' ' + formatResourceName(k);
-          }).join(', ');
-          info = 'Produces: ' + outName + '\nConsumes: ' + inNames;
-        } else {
-          info = 'Produces: ' + outName;
-        }
-      }
-      if (bt && (bt.build_rules || {}).populationCap) {
-        info += (info ? '\n' : '') + 'Houses up to ' + bt.build_rules.populationCap + ' citizens';
-      }
-      document.getElementById('detail-info').textContent = info;
-
-      // Housing upgrade section
-      var upgradeSection = document.getElementById('detail-upgrade');
-      var upgradeCosts = HOUSING_UPGRADE_COSTS[building.building_type_key];
-      var upgradeTarget = HOUSING_UPGRADE_TARGET[building.building_type_key];
-
-      if (upgradeCosts && upgradeTarget) {
-        upgradeSection.classList.add('available');
-        _detailBuildingId = building.id;
-
-        var targetBt = CatalogHelper.get(upgradeTarget);
-        var targetName = targetBt ? targetBt.name : upgradeTarget;
-
-        // Check district tier requirement
-        var targetRules = targetBt ? (targetBt.build_rules || {}) : {};
-        var reqTier = targetRules.districtTierRequired || 1;
-        var tierLocked = _districtTier < reqTier;
-
-        // Build cost display
-        var costHtml = '<div style="font-size:0.78rem;font-weight:600;color:#e0e6ed;margin-bottom:6px;">Upgrade to ' + targetName + '</div>';
-        var canAfford = true;
-
-        if (tierLocked) {
-          costHtml += '<div class="upgrade-cost-row"><span class="missing">Requires District Tier ' + reqTier + '</span></div>';
-          canAfford = false;
-        } else {
-          Object.keys(upgradeCosts).forEach(function (k) {
-            var need = upgradeCosts[k];
-            if (k === 'gold') {
-              var cls = _gold >= need ? 'has' : 'missing';
-              if (_gold < need) canAfford = false;
-              costHtml += '<div class="upgrade-cost-row"><span class="' + cls + '">' + need + ' gold (have ' + _gold + ')</span></div>';
-            } else {
-              var have = _inventory[k] || 0;
-              var cls2 = have >= need ? 'has' : 'missing';
-              if (have < need) canAfford = false;
-              costHtml += '<div class="upgrade-cost-row"><span class="' + cls2 + '">' + need + ' ' + formatResourceName(k) + ' (have ' + have + ')</span></div>';
-            }
-          });
-        }
-
-        document.getElementById('detail-upgrade-costs').innerHTML = costHtml;
-        var btn = document.getElementById('detail-upgrade-btn');
-        btn.disabled = !canAfford || tierLocked;
-        btn.textContent = tierLocked ? 'Tier ' + reqTier + ' Required' : 'Upgrade';
-        btn.className = 'btn-upgrade' + (tierLocked ? ' tier-locked' : '');
-      } else {
-        upgradeSection.classList.remove('available');
-        _detailBuildingId = null;
-      }
-
-      overlay.classList.add('visible');
-    }
-
-    function closeBuildingDetail() {
-      document.getElementById('building-detail').classList.remove('visible');
-      _detailBuildingId = null;
-    }
-
-    function doHousingUpgrade() {
-      if (!_detailBuildingId) return;
-      var btn = document.getElementById('detail-upgrade-btn');
-      btn.disabled = true;
-      btn.textContent = 'Upgrading...';
-
-      sb.rpc('upgrade_housing', { p_building_id: _detailBuildingId })
-        .then(function (result) {
-          if (result.error) {
-            showToast(result.error.message || 'Upgrade failed', 'error');
-            btn.disabled = false;
-            btn.textContent = 'Upgrade';
-            return;
-          }
-          var data = result.data;
-          showToast('Housing upgraded to ' + formatResourceName(data.new_type).replace(/_/g, ' ') + '!', 'success');
-
-          // Update gold
-          if (data.gold_remaining !== undefined) {
-            _gold = data.gold_remaining;
-            document.getElementById('game-gold').textContent = _gold;
-          }
-
-          // Sync inventory
-          if (data.inventory) {
-            _inventory = {};
-            Object.keys(data.inventory).forEach(function (k) {
-              _inventory[k] = data.inventory[k];
-            });
-          }
-
-          // Update the local building record
-          var b = _buildings.find(function (b) { return b.id === _detailBuildingId; });
-          if (b) {
-            b.building_type_key = data.new_type;
-          }
-
-          closeBuildingDetail();
-          renderGrid();
-
-          // Re-render inventory if open
-          if (document.getElementById('inventory-panel').classList.contains('active')) {
-            renderInventoryPanel();
-          }
-        })
-        .catch(function (err) {
-          showToast(err.message || 'Upgrade failed', 'error');
-          btn.disabled = false;
-          btn.textContent = 'Upgrade';
-        });
-    }
-
-    // ── District progress panel ─────────────────────────
-    function showDistrictProgress() {
-      var panel = document.getElementById('district-progress');
-      document.getElementById('dp-title').textContent = (_district ? _district.name : 'District') + ' Progress';
-      document.getElementById('dp-tier-badge').textContent = 'Tier ' + _districtTier;
-
-      // Load progress from server
-      sb.rpc('get_district_progress').then(function (result) {
-        if (result.error) {
-          console.warn('District progress error:', result.error.message);
-          return;
-        }
-        var data = result.data;
-        var reqs = data.requirements || [];
-        var counts = data.building_counts || {};
-        var canUpgrade = data.can_upgrade;
-        var nextTier = data.next_tier;
-
-        if (!nextTier) {
-          // Max tier
-          document.getElementById('dp-subtitle').textContent = 'Maximum tier reached';
-          document.getElementById('dp-req-list').innerHTML = '';
-          document.getElementById('dp-tier-up-btn').style.display = 'none';
-          document.getElementById('dp-housing-summary').innerHTML = '<div class="dp-max-tier">Your district has reached its full potential!</div>';
-        } else {
-          document.getElementById('dp-subtitle').textContent = 'Requirements for Tier ' + nextTier;
-
-          var reqHtml = '';
-          reqs.forEach(function (req) {
-            var statusCls = req.met ? 'met' : 'unmet';
-            var statusText = req.have + '/' + req.need;
-            reqHtml += '<div class="dp-req-item">';
-            reqHtml += '<span class="dp-req-label">' + req.label + '</span>';
-            reqHtml += '<span class="dp-req-status ' + statusCls + '">' + statusText + '</span>';
-            reqHtml += '</div>';
-          });
-          document.getElementById('dp-req-list').innerHTML = reqHtml;
-
-          // Housing summary
-          var sumHtml = 'Housing: ' + (counts.housing_1 || 0) + ' basic, ' +
-            (counts.housing_2 || 0) + ' improved, ' +
-            (counts.housing_3 || 0) + ' upper | ' +
-            (counts.total || 0) + ' buildings total';
-          document.getElementById('dp-housing-summary').textContent = sumHtml;
-
-          var tierBtn = document.getElementById('dp-tier-up-btn');
-          tierBtn.style.display = '';
-          tierBtn.disabled = !canUpgrade;
-          tierBtn.textContent = canUpgrade ? 'Upgrade to Tier ' + nextTier : 'Requirements not met';
-        }
-
-        panel.classList.add('visible');
-      }).catch(function (err) {
-        console.warn('District progress fetch failed:', err);
-        showToast('Could not load district progress', 'error');
-      });
-    }
-
-    function closeDistrictProgress() {
-      document.getElementById('district-progress').classList.remove('visible');
-    }
-
-    function doDistrictUpgrade() {
-      var btn = document.getElementById('dp-tier-up-btn');
-      btn.disabled = true;
-      btn.textContent = 'Upgrading...';
-
-      sb.rpc('upgrade_district').then(function (result) {
-        if (result.error) {
-          showToast(result.error.message || 'District upgrade failed', 'error');
-          btn.disabled = false;
-          btn.textContent = 'Upgrade District';
-          return;
-        }
-        var data = result.data;
-        _districtTier = data.new_tier;
-        if (_district) _district.tier = data.new_tier;
-        document.getElementById('game-tier').textContent = _districtTier;
-
-        showToast('District upgraded to Tier ' + _districtTier + '!', 'success');
-        closeDistrictProgress();
-
-        // Re-render build panel if open (new buildings may be unlocked)
-        if (document.getElementById('build-panel').style.display === 'flex') {
-          renderBuildPanel();
-        }
-      }).catch(function (err) {
-        showToast(err.message || 'District upgrade failed', 'error');
+    });
+  }
+
+  function sellToTrader(resourceKey, quantity, btn) {
+    btn.disabled = true;
+    btn.textContent = '...';
+
+    sb.rpc('sell_to_trader', {
+      p_trader_key: 'starter_trader',
+      p_resource_key: resourceKey,
+      p_quantity: quantity
+    }).then(function (r) {
+      if (r.error) {
+        showToast(r.error.message, 'error');
         btn.disabled = false;
-        btn.textContent = 'Upgrade District';
-      });
-    }
+        btn.textContent = 'Sell';
+        return;
+      }
+      var data = r.data;
+      profile.money = data.money;
+      if (data.inventory) {
+        inventory = {};
+        Object.keys(data.inventory).forEach(function (k) {
+          inventory[k] = Number(data.inventory[k]);
+        });
+      }
 
-    // ── Trade system ──────────────────────────────────────
-    var _tradePartners = [];
-    var _hasTradeDepot = false;
-    var _tradeAmounts = {}; // "partnerId:resource:direction" → amount
+      updateMoney();
+      tradeAmounts['sell-' + resourceKey] = 0;
+      renderInventory();
+      renderTradePanel();
+      showToast('Sold ' + quantity + ' ' + resourceName(resourceKey) + ' for $' + data.total_price, 'success');
+    }).catch(function (err) {
+      showToast(err.message || 'Sale failed', 'error');
+      btn.disabled = false;
+      btn.textContent = 'Sell';
+    });
+  }
 
-    function loadAndRenderTradePanel() {
-      var body = document.getElementById('trade-panel-body');
-      body.innerHTML = '<div class="trade-no-depot">Loading trade partners...</div>';
+  // ── Realtime ────────────────────────────────────────
+  function subscribeRealtime() {
+    if (channel) sb.removeChannel(channel);
 
-      sb.rpc('get_trade_partners').then(function (result) {
-        if (result.error) {
-          body.innerHTML = '<div class="trade-no-depot">Failed to load trade data.<br>' + result.error.message + '</div>';
-          return;
-        }
-        var data = result.data;
-        _hasTradeDepot = data.has_trade_depot;
-        _tradePartners = data.partners || [];
+    channel = sb.channel('city-realtime')
+      .on('postgres_changes', {
+        event: 'INSERT', schema: 'public', table: 'buildings'
+      }, function (payload) {
+        var newB = payload.new;
+        if (newB.player_id === currentUser.id) return;
 
-        if (!_hasTradeDepot) {
-          body.innerHTML = '<div class="trade-no-depot"><strong>Trade Depot Required</strong>Build a Trade Depot in your district to unlock trade with external partners.</div>';
-          return;
-        }
-
-        if (_tradePartners.length === 0) {
-          body.innerHTML = '<div class="trade-no-depot">No trade partners available in this world.</div>';
-          return;
-        }
-
-        renderTradePartners();
-      }).catch(function (err) {
-        body.innerHTML = '<div class="trade-no-depot">Failed to load trade data.</div>';
-        console.error('Trade load error:', err);
-      });
-    }
-
-    function renderTradePartners() {
-      var body = document.getElementById('trade-panel-body');
-      var html = '';
-
-      _tradePartners.forEach(function (partner) {
-        var buyCatalog = partner.buy_catalog || {};
-        var sellCatalog = partner.sell_catalog || {};
-        var buyKeys = Object.keys(buyCatalog);
-        var sellKeys = Object.keys(sellCatalog);
-
-        html += '<div class="trade-partner-card" data-partner-id="' + partner.id + '">';
-        html += '<div class="trade-partner-header">';
-        html += '<span class="trade-partner-name">' + partner.name + '</span>';
-        html += '<span class="trade-partner-arrow">&#9654;</span>';
-        html += '</div>';
-        html += '<div class="trade-partner-desc">' + (partner.description || '') + '</div>';
-        html += '<div class="trade-partner-body">';
-
-        // Sell section — player sells TO this NPC
-        if (buyKeys.length > 0) {
-          html += '<div class="trade-section-label">Sell to ' + partner.name + '</div>';
-          buyKeys.forEach(function (rk) {
-            var entry = buyCatalog[rk];
-            var price = entry.price;
-            var maxPer = entry.max_per_trade || 50;
-            var stock = _inventory[rk] || 0;
-            var tradeKey = partner.id + ':' + rk + ':sell';
-            var amt = _tradeAmounts[tradeKey] || 0;
-
-            html += '<div class="trade-item">';
-            html += '<div class="trade-item-info">';
-            html += '<div class="trade-item-name">' + formatResourceName(rk) + '</div>';
-            html += '<div class="trade-item-price">' + price + 'g each &middot; max ' + maxPer + '</div>';
-            html += '</div>';
-            html += '<div class="trade-item-stock ' + (stock > 0 ? '' : 'none') + '">Have: ' + stock + '</div>';
-            html += '<div class="trade-amount-controls">';
-            html += '<button class="trade-amount-btn" data-action="dec" data-key="' + tradeKey + '">-</button>';
-            html += '<span class="trade-amount-display" id="ta-' + tradeKey.replace(/:/g, '-') + '">' + amt + '</span>';
-            html += '<button class="trade-amount-btn" data-action="inc" data-key="' + tradeKey + '" data-max="' + Math.min(maxPer, stock) + '">+</button>';
-            html += '</div>';
-            html += '<button class="trade-exec-btn" data-partner="' + partner.id + '" data-resource="' + rk + '" data-direction="sell"' + (amt < 1 ? ' disabled' : '') + '>Sell</button>';
-            html += '</div>';
+        // Fetch building with player name
+        sb.from('buildings')
+          .select('*, player_profiles(display_name, color_hex)')
+          .eq('id', newB.id)
+          .maybeSingle()
+          .then(function (r) {
+            if (!r.data) return;
+            allBuildings.push(r.data);
+            var tile = tileMap[r.data.x + ',' + r.data.y];
+            if (tile) tile.occupied_building_id = r.data.id;
+            renderMap();
+            var btName = buildingTypes[r.data.building_type_key]
+              ? buildingTypes[r.data.building_type_key].name
+              : r.data.building_type_key;
+            var pName = r.data.player_profiles
+              ? r.data.player_profiles.display_name
+              : 'Someone';
+            showToast(pName + ' built a ' + btName + '!', '');
           });
-        }
+      })
+      .subscribe();
+  }
 
-        // Buy section — player buys FROM this NPC
-        if (sellKeys.length > 0) {
-          html += '<div class="trade-section-label buy-label">Buy from ' + partner.name + '</div>';
-          sellKeys.forEach(function (rk) {
-            var entry = sellCatalog[rk];
-            var price = entry.price;
-            var maxPer = entry.max_per_trade || 50;
-            var maxAfford = Math.min(maxPer, Math.floor(_gold / price));
-            var stock = _inventory[rk] || 0;
-            var tradeKey = partner.id + ':' + rk + ':buy';
-            var amt = _tradeAmounts[tradeKey] || 0;
+  // ── UI updates ──────────────────────────────────────
+  function updateMoney() {
+    document.getElementById('g-money').textContent = '$' + profile.money;
+  }
 
-            html += '<div class="trade-item">';
-            html += '<div class="trade-item-info">';
-            html += '<div class="trade-item-name">' + formatResourceName(rk) + '</div>';
-            html += '<div class="trade-item-price">' + price + 'g each &middot; max ' + maxPer + '</div>';
-            html += '</div>';
-            html += '<div class="trade-item-stock ' + (stock > 0 ? '' : 'none') + '">Have: ' + stock + '</div>';
-            html += '<div class="trade-amount-controls">';
-            html += '<button class="trade-amount-btn" data-action="dec" data-key="' + tradeKey + '">-</button>';
-            html += '<span class="trade-amount-display" id="ta-' + tradeKey.replace(/:/g, '-') + '">' + amt + '</span>';
-            html += '<button class="trade-amount-btn" data-action="inc" data-key="' + tradeKey + '" data-max="' + maxAfford + '">+</button>';
-            html += '</div>';
-            html += '<button class="trade-exec-btn buy-btn" data-partner="' + partner.id + '" data-resource="' + rk + '" data-direction="buy"' + (amt < 1 ? ' disabled' : '') + '>Buy</button>';
-            html += '</div>';
-          });
-        }
+  function updateWorkers() {
+    document.getElementById('g-workers').textContent = profile.workers_used + '/' + profile.worker_capacity;
+  }
 
-        html += '</div>'; // body
-        html += '</div>'; // card
+  // ── Tab system ──────────────────────────────────────
+  document.querySelectorAll('.tab-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      document.querySelectorAll('.tab-btn').forEach(function (b) { b.classList.remove('active'); });
+      document.querySelectorAll('.panel-content').forEach(function (p) { p.classList.remove('active'); });
+      btn.classList.add('active');
+      var tabId = 'panel-' + btn.dataset.tab;
+      document.getElementById(tabId).classList.add('active');
+
+      // Refresh panel data when switching
+      if (btn.dataset.tab === 'inventory') renderInventory();
+      else if (btn.dataset.tab === 'trade') renderTradePanel();
+      else if (btn.dataset.tab === 'build') renderBuildPanel();
+    });
+  });
+
+  // ── Auth form wiring ────────────────────────────────
+  document.getElementById('btn-to-login').addEventListener('click', function () { showScreen('screen-login'); });
+  document.getElementById('btn-to-register').addEventListener('click', function () { showScreen('screen-register'); });
+  document.getElementById('login-to-register').addEventListener('click', function () {
+    clearError(document.getElementById('login-error'));
+    showScreen('screen-register');
+  });
+  document.getElementById('register-to-login').addEventListener('click', function () {
+    clearError(document.getElementById('register-error'));
+    showScreen('screen-login');
+  });
+
+  // Login
+  document.getElementById('login-form').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var err = document.getElementById('login-error');
+    clearError(err);
+    var email = document.getElementById('login-email').value.trim();
+    var pw = document.getElementById('login-password').value;
+    if (!email || !pw) { showError(err, 'Email and password are required.'); return; }
+    var btn = document.getElementById('login-submit');
+    btn.disabled = true; btn.textContent = 'Signing in...';
+    sb.auth.signInWithPassword({ email: email, password: pw }).then(function (r) {
+      btn.disabled = false; btn.textContent = 'Sign In';
+      if (r.error) showError(err, r.error.message);
+    }).catch(function (e) {
+      btn.disabled = false; btn.textContent = 'Sign In';
+      showError(err, e.message || 'Login failed.');
+    });
+  });
+
+  // Register
+  document.getElementById('register-form').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var err = document.getElementById('register-error');
+    clearError(err);
+    var email = document.getElementById('register-email').value.trim();
+    var pw = document.getElementById('register-password').value;
+    var confirm = document.getElementById('register-confirm').value;
+    if (!email || !pw) { showError(err, 'Email and password are required.'); return; }
+    if (pw.length < 6) { showError(err, 'Password must be at least 6 characters.'); return; }
+    if (pw !== confirm) { showError(err, 'Passwords do not match.'); return; }
+    var btn = document.getElementById('register-submit');
+    btn.disabled = true; btn.textContent = 'Creating account...';
+    sb.auth.signUp({ email: email, password: pw }).then(function (r) {
+      if (r.error) {
+        btn.disabled = false; btn.textContent = 'Create Account';
+        showError(err, r.error.message);
+        return;
+      }
+      if (r.data && r.data.session) {
+        btn.disabled = false; btn.textContent = 'Create Account';
+        return; // onAuthStateChange will handle routing
+      }
+      // Auto-login after signup
+      sb.auth.signInWithPassword({ email: email, password: pw }).then(function (lr) {
+        btn.disabled = false; btn.textContent = 'Create Account';
+        if (lr.error) showError(err, 'Account created! Please sign in.');
+      }).catch(function () {
+        btn.disabled = false; btn.textContent = 'Create Account';
+        showError(err, 'Account created! Please sign in.');
       });
+    }).catch(function (e) {
+      btn.disabled = false; btn.textContent = 'Create Account';
+      showError(err, e.message || 'Registration failed.');
+    });
+  });
 
-      body.innerHTML = html;
+  // Logout
+  document.getElementById('g-logout').addEventListener('click', function () {
+    stopProdLoop();
+    if (channel) sb.removeChannel(channel);
+    sb.auth.signOut().then(function () {
+      currentUser = null;
+      profile = null;
+      showScreen('screen-welcome');
+    });
+  });
 
-      // Wire partner header clicks (expand/collapse)
-      body.querySelectorAll('.trade-partner-header').forEach(function (hdr) {
-        hdr.addEventListener('click', function () {
-          var card = hdr.closest('.trade-partner-card');
-          card.classList.toggle('expanded');
-        });
-      });
-
-      // Wire amount buttons
-      body.querySelectorAll('.trade-amount-btn').forEach(function (btn) {
-        btn.addEventListener('click', function (e) {
-          e.stopPropagation();
-          var key = btn.getAttribute('data-key');
-          var action = btn.getAttribute('data-action');
-          var max = parseInt(btn.getAttribute('data-max') || '50');
-          var current = _tradeAmounts[key] || 0;
-
-          if (action === 'inc' && current < max) {
-            current++;
-          } else if (action === 'dec' && current > 0) {
-            current--;
-          }
-          _tradeAmounts[key] = current;
-
-          // Update display
-          var displayId = 'ta-' + key.replace(/:/g, '-');
-          var el = document.getElementById(displayId);
-          if (el) el.textContent = current;
-
-          // Enable/disable the trade exec button in same trade-item
-          var item = btn.closest('.trade-item');
-          var execBtn = item.querySelector('.trade-exec-btn');
-          if (execBtn) execBtn.disabled = current < 1;
-        });
-      });
-
-      // Wire trade execute buttons
-      body.querySelectorAll('.trade-exec-btn').forEach(function (btn) {
-        btn.addEventListener('click', function (e) {
-          e.stopPropagation();
-          var partnerId = btn.getAttribute('data-partner');
-          var resource = btn.getAttribute('data-resource');
-          var direction = btn.getAttribute('data-direction');
-          var tradeKey = partnerId + ':' + resource + ':' + direction;
-          var amount = _tradeAmounts[tradeKey] || 0;
-          if (amount < 1) return;
-
-          executeTrade(partnerId, resource, direction, amount, btn);
-        });
-      });
-
-      // Auto-expand first partner
-      var first = body.querySelector('.trade-partner-card');
-      if (first) first.classList.add('expanded');
-    }
-
-    function executeTrade(partnerId, resource, direction, amount, btn) {
-      var origText = btn.textContent;
-      btn.disabled = true;
-      btn.textContent = '...';
-
-      sb.rpc('execute_npc_trade', {
-        p_partner_id: partnerId,
-        p_resource_key: resource,
-        p_direction: direction,
-        p_amount: amount
-      }).then(function (result) {
-        if (result.error) {
-          showToast(result.error.message || 'Trade failed', 'error');
-          btn.disabled = false;
-          btn.textContent = origText;
-          return;
-        }
-
-        var data = result.data;
-        var verb = direction === 'sell' ? 'Sold' : 'Bought';
-        showToast(verb + ' ' + amount + ' ' + formatResourceName(resource) + ' for ' + data.total_gold + 'g', 'success');
-
-        // Sync gold and inventory
-        if (data.gold !== undefined) {
-          _gold = data.gold;
-          document.getElementById('game-gold').textContent = _gold;
-        }
-        if (data.inventory) {
-          _inventory = {};
-          Object.keys(data.inventory).forEach(function (k) {
-            _inventory[k] = data.inventory[k];
-          });
-        }
-
-        // Reset the trade amount for this item
-        var tradeKey = partnerId + ':' + resource + ':' + direction;
-        _tradeAmounts[tradeKey] = 0;
-
-        // Re-render the trade panel to reflect updated inventory/gold
-        renderTradePartners();
-
-        // Re-render inventory if open
-        if (document.getElementById('inventory-panel').classList.contains('active')) {
-          renderInventoryPanel();
-        }
-      }).catch(function (err) {
-        showToast(err.message || 'Trade failed', 'error');
-        btn.disabled = false;
-        btn.textContent = origText;
-      });
-    }
-
-    // ── Player Market system ─────────────────────────────
-    var _marketOffers = [];
-    var _myRecentOffers = [];
-    var _marketHasDepot = false;
-
-    function loadAndRenderMarketPanel() {
-      var body = document.getElementById('market-panel-body');
-      body.innerHTML = '<div class="trade-no-depot">Loading market...</div>';
-
-      sb.rpc('get_market_offers').then(function (result) {
-        if (result.error) {
-          body.innerHTML = '<div class="trade-no-depot">Failed to load market.<br>' + result.error.message + '</div>';
-          return;
-        }
-        var data = result.data;
-        _marketHasDepot = data.has_trade_depot;
-        _marketOffers = data.offers || [];
-        _myRecentOffers = data.my_recent || [];
-
-        if (!_marketHasDepot) {
-          body.innerHTML = '<div class="trade-no-depot"><strong>Trade Depot Required</strong>Build a Trade Depot in your district to list or buy offers on the Player Market.</div>';
-          return;
-        }
-
-        renderMarketPanel();
-      }).catch(function (err) {
-        body.innerHTML = '<div class="trade-no-depot">Failed to load market.</div>';
-        console.error('Market load error:', err);
-      });
-    }
-
-    function renderMarketPanel() {
-      var body = document.getElementById('market-panel-body');
-      var html = '';
-
-      // ── Create offer form ──
-      html += '<div class="market-create-form">';
-      html += '<h4>List a Sell Offer</h4>';
-
-      // Resource picker
-      html += '<div class="market-form-row">';
-      html += '<label>Resource</label>';
-      html += '<select id="market-resource-select">';
-      var invKeys = Object.keys(_inventory).filter(function (k) { return _inventory[k] > 0; });
-      if (invKeys.length === 0) {
-        html += '<option value="">No goods in stock</option>';
-      } else {
-        invKeys.forEach(function (rk) {
-          html += '<option value="' + rk + '">' + formatResourceName(rk) + '</option>';
-        });
-      }
-      html += '</select>';
-      html += '</div>';
-
-      var firstKey = invKeys.length > 0 ? invKeys[0] : '';
-      var firstStock = firstKey ? (_inventory[firstKey] || 0) : 0;
-      html += '<div class="market-form-stock" id="market-stock-hint">In stock: ' + firstStock + '</div>';
-
-      // Amount
-      html += '<div class="market-form-row">';
-      html += '<label>Amount</label>';
-      html += '<input type="number" id="market-amount" min="1" max="' + firstStock + '" value="1" inputmode="numeric">';
-      html += '</div>';
-
-      // Price per unit
-      html += '<div class="market-form-row">';
-      html += '<label>Price/ea</label>';
-      html += '<input type="number" id="market-price" min="1" value="10" inputmode="numeric">';
-      html += '</div>';
-
-      var totalPreview = 1 * 10;
-      html += '<div class="market-form-stock" id="market-total-hint">Buyer pays: ' + totalPreview + 'g total</div>';
-
-      html += '<button class="market-create-btn" id="market-create-btn"' + (invKeys.length === 0 ? ' disabled' : '') + '>List Offer</button>';
-      html += '</div>';
-
-      // ── Open offers ──
-      var otherOffers = _marketOffers.filter(function (o) { return !o.is_mine; });
-      var myOpenOffers = _marketOffers.filter(function (o) { return o.is_mine; });
-
-      if (otherOffers.length > 0) {
-        html += '<div class="market-section-title">Available Offers</div>';
-        otherOffers.forEach(function (offer) {
-          html += renderMarketOfferCard(offer, false);
-        });
-      }
-
-      if (myOpenOffers.length > 0) {
-        html += '<div class="market-section-title">Your Open Offers</div>';
-        myOpenOffers.forEach(function (offer) {
-          html += renderMarketOfferCard(offer, true);
-        });
-      }
-
-      if (otherOffers.length === 0 && myOpenOffers.length === 0) {
-        html += '<div class="market-empty">No offers on the market yet. Be the first to list!</div>';
-      }
-
-      // ── Recent completed/cancelled ──
-      if (_myRecentOffers.length > 0) {
-        html += '<div class="market-section-title">Your Recent History</div>';
-        _myRecentOffers.forEach(function (offer) {
-          html += '<div class="market-recent-card">';
-          html += formatResourceName(offer.resource_key) + ' x' + offer.amount;
-          html += ' @ ' + offer.price_per_unit + 'g — ';
-          html += '<span class="market-recent-status ' + offer.status + '">' + offer.status + '</span>';
-          html += '</div>';
-        });
-      }
-
-      body.innerHTML = html;
-
-      // ── Wire form interactions ──
-      var resourceSelect = document.getElementById('market-resource-select');
-      var amountInput = document.getElementById('market-amount');
-      var priceInput = document.getElementById('market-price');
-      var stockHint = document.getElementById('market-stock-hint');
-      var totalHint = document.getElementById('market-total-hint');
-
-      function updateFormHints() {
-        var rk = resourceSelect.value;
-        var stock = rk ? (_inventory[rk] || 0) : 0;
-        stockHint.textContent = 'In stock: ' + stock;
-        amountInput.max = stock;
-        var amt = parseInt(amountInput.value) || 0;
-        var price = parseInt(priceInput.value) || 0;
-        totalHint.textContent = 'Buyer pays: ' + (amt * price) + 'g total';
-      }
-
-      if (resourceSelect) {
-        resourceSelect.addEventListener('change', updateFormHints);
-      }
-      if (amountInput) {
-        amountInput.addEventListener('input', updateFormHints);
-      }
-      if (priceInput) {
-        priceInput.addEventListener('input', updateFormHints);
-      }
-
-      // Create offer button
-      var createBtn = document.getElementById('market-create-btn');
-      if (createBtn) {
-        createBtn.addEventListener('click', function () {
-          var rk = resourceSelect.value;
-          var amt = parseInt(amountInput.value) || 0;
-          var price = parseInt(priceInput.value) || 0;
-          if (!rk || amt < 1 || price < 1) {
-            showToast('Select a resource, amount, and price', 'error');
-            return;
-          }
-          createBtn.disabled = true;
-          createBtn.textContent = 'Listing...';
-
-          sb.rpc('create_player_offer', {
-            p_resource_key: rk,
-            p_amount: amt,
-            p_price_per_unit: price
-          }).then(function (result) {
-            if (result.error) {
-              showToast(result.error.message || 'Failed to create offer', 'error');
-              createBtn.disabled = false;
-              createBtn.textContent = 'List Offer';
-              return;
-            }
-            var d = result.data;
-            showToast('Listed ' + d.amount + ' ' + formatResourceName(d.resource) + ' @ ' + d.price_per_unit + 'g each', 'success');
-
-            // Update local inventory
-            if (d.inventory) {
-              _inventory = {};
-              Object.keys(d.inventory).forEach(function (k) {
-                _inventory[k] = Number(d.inventory[k]);
-              });
-            }
-
-            // Refresh market
-            loadAndRenderMarketPanel();
-          }).catch(function (err) {
-            showToast(err.message || 'Failed to create offer', 'error');
-            createBtn.disabled = false;
-            createBtn.textContent = 'List Offer';
-          });
-        });
-      }
-
-      // Buy buttons
-      body.querySelectorAll('.buy-offer-btn').forEach(function (btn) {
-        btn.addEventListener('click', function () {
-          var offerId = btn.dataset.offerId;
-          btn.disabled = true;
-          btn.textContent = 'Buying...';
-
-          sb.rpc('fulfill_player_offer', { p_offer_id: offerId }).then(function (result) {
-            if (result.error) {
-              showToast(result.error.message || 'Failed to buy', 'error');
-              btn.disabled = false;
-              btn.textContent = 'Buy';
-              return;
-            }
-            var d = result.data;
-            showToast('Bought ' + d.amount + ' ' + formatResourceName(d.resource) + ' for ' + d.total_gold + 'g', 'success');
-
-            // Update local state
-            _gold = d.gold;
-            document.getElementById('game-gold').textContent = _gold;
-            if (d.inventory) {
-              _inventory = {};
-              Object.keys(d.inventory).forEach(function (k) {
-                _inventory[k] = Number(d.inventory[k]);
-              });
-            }
-
-            // Refresh market
-            loadAndRenderMarketPanel();
-          }).catch(function (err) {
-            showToast(err.message || 'Failed to buy', 'error');
-            btn.disabled = false;
-            btn.textContent = 'Buy';
-          });
-        });
-      });
-
-      // Cancel buttons
-      body.querySelectorAll('.cancel-offer-btn').forEach(function (btn) {
-        btn.addEventListener('click', function () {
-          var offerId = btn.dataset.offerId;
-          btn.disabled = true;
-          btn.textContent = 'Cancelling...';
-
-          sb.rpc('cancel_player_offer', { p_offer_id: offerId }).then(function (result) {
-            if (result.error) {
-              showToast(result.error.message || 'Failed to cancel', 'error');
-              btn.disabled = false;
-              btn.textContent = 'Cancel';
-              return;
-            }
-            var d = result.data;
-            showToast('Cancelled offer. ' + d.returned_amount + ' ' + formatResourceName(d.returned_resource) + ' returned.', 'success');
-
-            // Update local inventory
-            if (d.inventory) {
-              _inventory = {};
-              Object.keys(d.inventory).forEach(function (k) {
-                _inventory[k] = Number(d.inventory[k]);
-              });
-            }
-
-            // Refresh market
-            loadAndRenderMarketPanel();
-          }).catch(function (err) {
-            showToast(err.message || 'Failed to cancel', 'error');
-            btn.disabled = false;
-            btn.textContent = 'Cancel';
-          });
-        });
-      });
-    }
-
-    function renderMarketOfferCard(offer, isMine) {
-      var html = '<div class="market-offer-card' + (isMine ? ' mine' : '') + '">';
-      html += '<div class="market-offer-info">';
-      html += '<div class="market-offer-resource">' + formatResourceName(offer.resource_key) + ' x' + offer.amount + '</div>';
-      html += '<div class="market-offer-detail">' + offer.price_per_unit + 'g each &middot; ' + offer.total_gold + 'g total</div>';
-      if (!isMine) {
-        html += '<div class="market-offer-seller">from ' + (offer.seller_name || 'Unknown') + '</div>';
-      }
-      html += '</div>';
-      html += '<div class="market-offer-action">';
-      if (isMine) {
-        html += '<button class="cancel-offer-btn" data-offer-id="' + offer.id + '">Cancel</button>';
-      } else {
-        html += '<button class="buy-offer-btn" data-offer-id="' + offer.id + '">Buy ' + offer.total_gold + 'g</button>';
-      }
-      html += '</div>';
-      html += '</div>';
-      return html;
-    }
-
-    return {
-      init: init,
-      stopTickLoop: stopTickLoop
-    };
-  })();
-
-  // ── Init: restore session ──────────────────────────
-  sb.auth.getSession().then(function (result) {
-    var session = result.data && result.data.session;
+  // ── Init: restore session ───────────────────────────
+  sb.auth.getSession().then(function (r) {
+    var session = r.data && r.data.session;
     if (session && session.user) {
       checkProfileAndRoute(session.user);
     } else {
@@ -3951,109 +980,15 @@ body {
     showScreen('screen-welcome');
   });
 
-  // ── Listen for auth state changes ──────────────────
+  // Listen for auth changes
   sb.auth.onAuthStateChange(function (event, session) {
     if (event === 'SIGNED_IN' && session && session.user) {
       checkProfileAndRoute(session.user);
     } else if (event === 'SIGNED_OUT') {
       currentUser = null;
-      playerProfile = null;
+      profile = null;
       showScreen('screen-welcome');
     }
-  });
-
-  // ── Navigation between auth screens ────────────────
-  document.getElementById('btn-goto-login').addEventListener('click', function () {
-    showScreen('screen-login');
-  });
-  document.getElementById('btn-goto-register').addEventListener('click', function () {
-    showScreen('screen-register');
-  });
-  document.getElementById('login-goto-register').addEventListener('click', function () {
-    clearFormError(loginError);
-    showScreen('screen-register');
-  });
-  document.getElementById('register-goto-login').addEventListener('click', function () {
-    clearFormError(registerError);
-    showScreen('screen-login');
-  });
-
-  // ── Login ──────────────────────────────────────────
-  loginForm.addEventListener('submit', function (e) {
-    e.preventDefault();
-    clearFormError(loginError);
-    var email = document.getElementById('login-email').value.trim();
-    var password = document.getElementById('login-password').value;
-    if (!email || !password) {
-      showFormError(loginError, 'Email and password are required.');
-      return;
-    }
-    var btn = document.getElementById('login-submit');
-    setSubmitting(btn, true);
-    sb.auth.signInWithPassword({ email: email, password: password }).then(function (result) {
-      setSubmitting(btn, false);
-      if (result.error) {
-        showFormError(loginError, result.error.message);
-        return;
-      }
-    }).catch(function (err) {
-      setSubmitting(btn, false);
-      showFormError(loginError, err.message || 'Login failed. Try again.');
-    });
-  });
-
-  // ── Register ───────────────────────────────────────
-  registerForm.addEventListener('submit', function (e) {
-    e.preventDefault();
-    clearFormError(registerError);
-    var email = document.getElementById('register-email').value.trim();
-    var password = document.getElementById('register-password').value;
-    var confirm = document.getElementById('register-confirm').value;
-    if (!email || !password) {
-      showFormError(registerError, 'Email and password are required.');
-      return;
-    }
-    if (password.length < 6) {
-      showFormError(registerError, 'Password must be at least 6 characters.');
-      return;
-    }
-    if (password !== confirm) {
-      showFormError(registerError, 'Passwords do not match.');
-      return;
-    }
-    var btn = document.getElementById('register-submit');
-    setSubmitting(btn, true);
-    sb.auth.signUp({ email: email, password: password }).then(function (result) {
-      if (result.error) {
-        setSubmitting(btn, false);
-        showFormError(registerError, result.error.message);
-        return;
-      }
-      if (result.data && result.data.session) {
-        setSubmitting(btn, false);
-        return;
-      }
-      sb.auth.signInWithPassword({ email: email, password: password }).then(function (loginResult) {
-        setSubmitting(btn, false);
-        if (loginResult.error) {
-          showFormError(registerError, 'Account created. Check your email to confirm, then sign in.');
-          return;
-        }
-      }).catch(function () {
-        setSubmitting(btn, false);
-        showFormError(registerError, 'Account created. Please sign in.');
-      });
-    }).catch(function (err) {
-      setSubmitting(btn, false);
-      showFormError(registerError, err.message || 'Registration failed. Try again.');
-    });
-  });
-
-  // ── Logout ─────────────────────────────────────────
-  document.getElementById('btn-logout').addEventListener('click', function () {
-    sb.auth.signOut().then(function () {
-      showScreen('screen-welcome');
-    });
   });
 
 })();
