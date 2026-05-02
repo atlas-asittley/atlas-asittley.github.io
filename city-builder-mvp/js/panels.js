@@ -48,6 +48,7 @@ export function renderBuildPanel() {
       stone_quarry: '#5a5a7a', mason_workshop: '#7a4a3a',
       grain_farm: '#5a7a3a', mill: '#6a5a4a',
       clay_pit: '#8a5a3a', pottery_kiln: '#7a4a4a',
+      bakery: '#8a7a3a', woodcarver: '#5a6a3a',
       house: '#4a6a8a', road: '#6a6a5a'
     };
     var spriteIcons = {
