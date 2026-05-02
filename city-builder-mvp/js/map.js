@@ -4,6 +4,7 @@ import { state, computeLaborAllocation } from './state.js';
 import { showToast } from './ui.js';
 import { renderBuildPanel } from './panels.js';
 import { rebuildRoadSet, renderWalkers, snapWalkersToZoom } from './walkers.js';
+import { openInspector } from './inspector.js';
 
 export var BLDG_LABELS = {
   timber_camp: 'TC', sawmill: 'SM',
@@ -316,16 +317,30 @@ export function initMapEvents() {
     if (Date.now() < pinchSuppressClickUntil) return;
     var cell = e.target.closest('.cell');
     if (!cell) return;
-    if (!state.selectedBuildType) return;
 
-    var tileId = cell.dataset.tileId;
-    if (!tileId) return;
-    var tile = state.tileMap[cell.dataset.x + ',' + cell.dataset.y];
-    if (!tile || !isPlacementValid(state.selectedBuildType, tile)) {
-      showToast('Cannot place here', 'error');
+    var x = parseInt(cell.dataset.x);
+    var y = parseInt(cell.dataset.y);
+
+    // Placement mode: try to place building
+    if (state.selectedBuildType) {
+      var tileId = cell.dataset.tileId;
+      if (!tileId) return;
+      var tile = state.tileMap[x + ',' + y];
+      if (!tile || !isPlacementValid(state.selectedBuildType, tile)) {
+        showToast('Cannot place here', 'error');
+        return;
+      }
+      placeBuilding(tileId, state.selectedBuildType);
       return;
     }
-    placeBuilding(tileId, state.selectedBuildType);
+
+    // Inspection mode: open inspector if a building is here
+    var building = state.allBuildings.find(function (b) {
+      return b.x === x && b.y === y;
+    });
+    if (building) {
+      openInspector(building);
+    }
   });
 
   document.getElementById('placement-cancel').addEventListener('click', cancelPlacement);

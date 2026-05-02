@@ -6,6 +6,7 @@ import { renderMap, initMapEvents } from './map.js';
 import { renderBuildPanel, renderInventory, renderTradePanel, initTabs, checkAllTraderVisits } from './panels.js';
 import { subscribeRealtime } from './realtime.js';
 import { startWalkers, stopWalkers } from './walkers.js';
+import { initInspector } from './inspector.js';
 
 export function updateMoney() {
   document.getElementById('g-money').textContent = '$' + state.profile.money;
@@ -236,4 +237,5 @@ export function enterGame() {
 export function initGameEvents() {
   initMapEvents();
   initTabs();
+  initInspector();
 }
