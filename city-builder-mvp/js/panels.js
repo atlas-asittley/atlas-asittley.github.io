@@ -775,9 +775,17 @@ function blackMarketTrade(resourceKey, quantity, direction, btn) {
 // ── Panel collapse toggle ──
 export function initPanelCollapse() {
   var btn = document.getElementById('panel-collapse');
-  if (!btn) return;
+  var panel = document.getElementById('bottom-panel');
+  if (!btn || !panel) return;
+
+  function syncLabel() {
+    btn.textContent = panel.classList.contains('collapsed') ? 'Show panel ▴' : 'Hide panel ▾';
+  }
+
+  syncLabel();
   btn.addEventListener('click', function () {
-    btn.closest('.bottom-panel').classList.toggle('collapsed');
+    panel.classList.toggle('collapsed');
+    syncLabel();
   });
 }
 

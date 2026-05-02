@@ -738,19 +738,28 @@ export function initMapEvents() {
   // ── Cancel button ──
   document.getElementById('placement-cancel').addEventListener('click', cancelPlacement);
 
-  // ── Zoom controls ──
-  document.getElementById('zoom-in').addEventListener('click', function () {
-    var rect = viewport.getBoundingClientRect();
-    setMapZoomAtPoint(state.mapZoom + MAP_ZOOM_STEP, rect.left + rect.width / 2, rect.top + rect.height / 2);
-  });
-  document.getElementById('zoom-out').addEventListener('click', function () {
-    var rect = viewport.getBoundingClientRect();
-    setMapZoomAtPoint(state.mapZoom - MAP_ZOOM_STEP, rect.left + rect.width / 2, rect.top + rect.height / 2);
-  });
-  document.getElementById('zoom-reset').addEventListener('click', function () {
-    var rect = viewport.getBoundingClientRect();
-    setMapZoomAtPoint(1, rect.left + rect.width / 2, rect.top + rect.height / 2);
-  });
+  // ── Optional zoom controls (desktop/dev only if present) ──
+  var zoomInBtn = document.getElementById('zoom-in');
+  var zoomOutBtn = document.getElementById('zoom-out');
+  var zoomResetBtn = document.getElementById('zoom-reset');
+  if (zoomInBtn) {
+    zoomInBtn.addEventListener('click', function () {
+      var rect = viewport.getBoundingClientRect();
+      setMapZoomAtPoint(state.mapZoom + MAP_ZOOM_STEP, rect.left + rect.width / 2, rect.top + rect.height / 2);
+    });
+  }
+  if (zoomOutBtn) {
+    zoomOutBtn.addEventListener('click', function () {
+      var rect = viewport.getBoundingClientRect();
+      setMapZoomAtPoint(state.mapZoom - MAP_ZOOM_STEP, rect.left + rect.width / 2, rect.top + rect.height / 2);
+    });
+  }
+  if (zoomResetBtn) {
+    zoomResetBtn.addEventListener('click', function () {
+      var rect = viewport.getBoundingClientRect();
+      setMapZoomAtPoint(1, rect.left + rect.width / 2, rect.top + rect.height / 2);
+    });
+  }
 
   // ── Pinch zoom ──
   viewport.addEventListener('touchstart', function (e) {

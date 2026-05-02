@@ -98,12 +98,6 @@
   </div>
   <div class="game-body">
     <div class="map-area">
-      <div class="map-controls">
-        <button class="map-zoom-btn" id="zoom-out" type="button">−</button>
-        <span class="map-zoom-label" id="zoom-label">100%</span>
-        <button class="map-zoom-btn" id="zoom-in" type="button">+</button>
-        <button class="map-reset-btn" id="zoom-reset" type="button">Reset</button>
-      </div>
       <div class="map-viewport" id="map-viewport">
         <div class="map-canvas">
           <div id="map-grid"></div>
@@ -111,8 +105,8 @@
         </div>
       </div>
     </div>
-    <div class="bottom-panel">
-      <button class="panel-collapse-btn" id="panel-collapse" type="button"></button>
+    <div class="bottom-panel" id="bottom-panel">
+      <button class="panel-collapse-btn" id="panel-collapse" type="button">Hide panel ▾</button>
       <div class="tab-bar">
         <button class="tab-btn active" data-tab="build">Build</button>
         <button class="tab-btn" data-tab="inventory">Inventory</button>
