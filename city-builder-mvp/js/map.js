@@ -205,6 +205,19 @@ export function renderMap() {
           html += '<div class="' + bldgClasses + '" title="' + titleText + '">' + label + '</div>';
         }
       } else if (x === 7 && y === 7) {
+        // Show road connectors from city center to adjacent roads
+        var hqRoadDirs = [];
+        if (isRoadBuilding(buildingAt['7,6'])) hqRoadDirs.push('north');
+        if (isRoadBuilding(buildingAt['7,8'])) hqRoadDirs.push('south');
+        if (isRoadBuilding(buildingAt['8,7'])) hqRoadDirs.push('east');
+        if (isRoadBuilding(buildingAt['6,7'])) hqRoadDirs.push('west');
+        if (hqRoadDirs.length) {
+          var hqClasses = 'road-surface hq-road road-' + hqRoadDirs.join(' road-');
+          html += '<div class="' + hqClasses + '">';
+          html += '<span class="road-conn north"></span><span class="road-conn south"></span>';
+          html += '<span class="road-conn east"></span><span class="road-conn west"></span>';
+          html += '</div>';
+        }
         html += '<span class="hq-label">HQ</span>';
       } else if (tile.resource_node_key) {
         html += '<div class="res-dot"></div>';
