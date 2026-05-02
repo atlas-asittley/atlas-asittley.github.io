@@ -38,6 +38,9 @@ var dragState = {
   suppressClick: 0  // timestamp: suppress click events until this time
 };
 
+// Drag cost counter element reference
+var dragCostEl = null;
+
 // ── Placement validation ──
 
 export function isPlacementValid(btKey, tile) {
@@ -361,6 +364,31 @@ function clearDragState() {
   dragState.active = false;
   dragState.planned = [];
   dragState.plannedSet = {};
+  hideDragCost();
+}
+
+function showDragCost() {
+  if (!dragCostEl) {
+    dragCostEl = document.getElementById('drag-cost-counter');
+  }
+  if (!dragCostEl) return;
+  var bt = state.buildingTypes[state.selectedBuildType];
+  if (!bt) return;
+  var count = dragState.planned.length;
+  var cost = count * bt.build_cost;
+  var affordable = Math.floor(state.profile.money / bt.build_cost);
+  var overBudget = count > affordable;
+  dragCostEl.textContent = count + ' road' + (count !== 1 ? 's' : '') + ' — $' + cost;
+  dragCostEl.className = 'drag-cost-counter active' + (overBudget ? ' over-budget' : '');
+}
+
+function hideDragCost() {
+  if (!dragCostEl) {
+    dragCostEl = document.getElementById('drag-cost-counter');
+  }
+  if (dragCostEl) {
+    dragCostEl.classList.remove('active');
+  }
 }
 
 function getCellFromPoint(clientX, clientY) {
@@ -381,6 +409,19 @@ function tryAddDragTile(cell) {
   var y = parseInt(cell.dataset.y);
   var key = x + ',' + y;
 
+  // Backtracking: if cursor moves to the second-to-last tile, remove the last one
+  if (dragState.planned.length >= 2) {
+    var prev = dragState.planned[dragState.planned.length - 2];
+    if (prev.x === x && prev.y === y) {
+      var removed = dragState.planned.pop();
+      delete dragState.plannedSet[removed.x + ',' + removed.y];
+      var removedCell = document.querySelector('.cell[data-x="' + removed.x + '"][data-y="' + removed.y + '"]');
+      if (removedCell) removedCell.classList.remove('drag-preview');
+      showDragCost();
+      return true;
+    }
+  }
+
   // Already planned
   if (dragState.plannedSet[key]) return false;
 
@@ -399,6 +440,7 @@ function tryAddDragTile(cell) {
   dragState.planned.push({ x: x, y: y, tileId: tile.id });
   dragState.plannedSet[key] = true;
   cell.classList.add('drag-preview');
+  showDragCost();
   return true;
 }
 
