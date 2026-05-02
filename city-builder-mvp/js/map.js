@@ -16,7 +16,7 @@ export var BLDG_LABELS = {
 };
 
 // Housing tier label overrides (keyed by tier number)
-var HOUSING_TIER_LABELS = { 0: 'S', 1: 'H' };
+var HOUSING_TIER_LABELS = { 0: 'L', 1: 'S', 2: 'K', 3: 'H', 4: 'C' };
 var CELL_BASE_SIZE = 520 / 15;  // px per cell at 1x zoom (original 520px / 15 cols)
 var MAP_MIN_ZOOM = 0.5;
 var MAP_MAX_ZOOM = 3;
@@ -257,7 +257,7 @@ export function renderMap() {
           // Housing tier display
           var housingTierClass = '';
           if (buildingBt && buildingBt.category === 'housing') {
-            var hTier = building.housing_tier !== undefined ? building.housing_tier : 1;
+            var hTier = building.housing_tier !== undefined ? building.housing_tier : 0;
             var tierCfg = state.housingTierConfig[hTier];
             if (tierCfg) {
               label = tierCfg.label || HOUSING_TIER_LABELS[hTier] || label;

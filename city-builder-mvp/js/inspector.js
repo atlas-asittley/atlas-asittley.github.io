@@ -82,7 +82,7 @@ function renderInspector() {
   // Title
   var name = bt.name;
   if (bt.category === 'housing') {
-    var tier = b.housing_tier !== undefined ? b.housing_tier : 1;
+    var tier = b.housing_tier !== undefined ? b.housing_tier : 0;
     var tierCfg = state.housingTierConfig[tier];
     if (tierCfg) name = tierCfg.name + ' (Tier ' + tier + ')';
   }
@@ -115,7 +115,7 @@ function renderInspector() {
         html += '<div class="insp-hint">Place a road next to this building to enable production and trade.</div>';
       }
     } else if (bt.category === 'housing') {
-      var tier = b.housing_tier !== undefined ? b.housing_tier : 1;
+      var tier = b.housing_tier !== undefined ? b.housing_tier : 0;
       var tierCfg = state.housingTierConfig[tier];
       if (tierCfg && tierCfg.needs_road) {
         var hasRoad = !!state.roadAccessIds[b.id];
@@ -191,7 +191,7 @@ function renderInspector() {
 
     // Housing: workers provided
     if (bt.category === 'housing') {
-      var tier = b.housing_tier !== undefined ? b.housing_tier : 1;
+      var tier = b.housing_tier !== undefined ? b.housing_tier : 0;
       var tierCfg = state.housingTierConfig[tier];
       var workers = tierCfg ? tierCfg.workers : (bt.workers_provided || 0);
       var providing = true;

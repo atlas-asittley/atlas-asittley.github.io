@@ -105,7 +105,7 @@ export function computeRoadAccess() {
     if (bt.category === 'processor' || bt.category === 'housing') {
       // Check if this housing tier actually needs road
       if (bt.category === 'housing') {
-        var tier = b.housing_tier !== undefined ? b.housing_tier : 1;
+        var tier = b.housing_tier !== undefined ? b.housing_tier : 0;
         var tierCfg = state.housingTierConfig[tier];
         if (tierCfg && !tierCfg.needs_road) {
           // This tier doesn't need road; still track road access (for upgrade checks)
@@ -151,13 +151,13 @@ export function computeLaborAllocation() {
   });
 
   // Count workers from housing using tier-aware config
-  // Tier 0 (shanty): provides workers without road access
-  // Tier 1 (mud hut): provides workers only with road access
+  // Tiers 0-2 (lean-to/shanty/shack): provide workers without road access
+  // Tiers 3-4 (hut/cottage): provide workers only with road access
   var housingWorkers = 0;
   myBuildings.forEach(function (b) {
     var bt = state.buildingTypes[b.building_type_key];
     if (bt && bt.category === 'housing' && b.status === 'active') {
-      var tier = b.housing_tier !== undefined ? b.housing_tier : 1;
+      var tier = b.housing_tier !== undefined ? b.housing_tier : 0;
       var tierCfg = state.housingTierConfig[tier];
       if (tierCfg) {
         if (!tierCfg.needs_road || state.roadAccessIds[b.id]) {

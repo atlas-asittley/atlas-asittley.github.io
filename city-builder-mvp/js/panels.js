@@ -67,7 +67,7 @@ export function renderBuildPanel() {
     if (bt.category === 'road') {
       desc = 'Connects buildings to the city. Housing and processors need road access.';
     } else if (bt.category === 'housing') {
-      desc = 'Starts as Shanty (2 workers). Upgrades to Mud Hut (6 workers) with road access.';
+      desc = 'Starts as Lean-to (1w). Upgrades through Shanty, Shack, Hut, Cottage with time and road access.';
     } else if (bt.category === 'extractor') {
       desc = 'Produces ' + bt.output_rate + ' ' + resourceName(bt.output_resource_key).toLowerCase() + '/min';
     } else {
@@ -79,7 +79,7 @@ export function renderBuildPanel() {
     if (bt.category === 'road') {
       costStr = '$' + bt.build_cost + ' | no workers';
     } else if (bt.category === 'housing') {
-      costStr = '$' + bt.build_cost + ' | +2 workers (upgradable to +6)';
+      costStr = '$' + bt.build_cost + ' | +1 worker (up to +8 at Cottage)';
     } else {
       costStr = '$' + bt.build_cost + ' | ' + bt.worker_cost + ' worker';
     }
@@ -197,7 +197,7 @@ export function renderInventory() {
   myBldgs.forEach(function (b) {
     var bt = state.buildingTypes[b.building_type_key];
     if (bt && bt.category === 'housing') {
-      var t = b.housing_tier !== undefined ? b.housing_tier : 1;
+      var t = b.housing_tier !== undefined ? b.housing_tier : 0;
       tierCounts[t] = (tierCounts[t] || 0) + 1;
       totalHouses++;
     }

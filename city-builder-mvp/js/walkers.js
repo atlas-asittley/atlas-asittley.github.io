@@ -88,7 +88,7 @@ function spawnWalker(building) {
     prevDir: start.dir,   // direction we moved to get here (from building)
     steps: 0,
     sourceId: building.id,
-    sourceTier: building.housing_tier !== undefined ? building.housing_tier : 1
+    sourceTier: building.housing_tier !== undefined ? building.housing_tier : 0
   });
 }
 
@@ -200,7 +200,7 @@ export function renderWalkers() {
     var lifeRatio = 1 - (w.steps / WALKER_MAX_STEPS);
     var opacity = Math.min(1, lifeRatio * 2);
 
-    el.className = 'walker-dot walker-tier-' + (w.sourceTier || 1);
+    el.className = 'walker-dot walker-tier-' + (w.sourceTier !== undefined ? w.sourceTier : 0);
     el.style.left = left.toFixed(1) + 'px';
     el.style.top = top.toFixed(1) + 'px';
     el.style.opacity = opacity.toFixed(2);
