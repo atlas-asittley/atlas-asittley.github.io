@@ -187,9 +187,12 @@ export function renderWalkers() {
     if (!el) {
       el = document.createElement('div');
       el.className = 'walker-dot';
+      el.style.pointerEvents = 'auto';
+      el.dataset.walkerIndex = i;
       layer.appendChild(el);
       walkerEls[i] = el;
     }
+    el.dataset.walkerIndex = i;
 
     // Calculate pixel position within the grid (offset by grid origin)
     var gx = w.x - (state.gridMinX || 0);
@@ -220,9 +223,26 @@ export function snapWalkersToZoom() {
 }
 
 // ── Lifecycle ──
+// Callback set by external code (inspector) to handle walker clicks
+var onWalkerClick = null;
+export function setWalkerClickHandler(fn) { onWalkerClick = fn; }
+
 export function startWalkers() {
   rebuildRoadSet();
   stopWalkers();
+  // Attach click listener to walker layer (event delegation)
+  var layer = document.getElementById('walker-layer');
+  if (layer && !layer._walkerClickBound) {
+    layer.addEventListener('click', function (e) {
+      var dot = e.target.closest('.walker-dot');
+      if (!dot) return;
+      var idx = parseInt(dot.dataset.walkerIndex);
+      if (isNaN(idx)) return;
+      var info = getWalkerAt(idx);
+      if (info && onWalkerClick) onWalkerClick(info);
+    });
+    layer._walkerClickBound = true;
+  }
   walkerTickTimer = setInterval(walkerTick, WALKER_TICK_MS);
 }
 
@@ -240,4 +260,23 @@ export function stopWalkers() {
 
 export function getWalkerCount() {
   return walkers.length;
+}
+
+// Return walker data at a given index (for inspection on click)
+export function getWalkerAt(index) {
+  if (index < 0 || index >= walkers.length) return null;
+  var w = walkers[index];
+  var source = state.allBuildings.find(function (b) { return b.id === w.sourceId; });
+  var sourceBt = source ? state.buildingTypes[source.building_type_key] : null;
+  var tierCfg = source ? state.housingTierConfig[w.sourceTier !== undefined ? w.sourceTier : 1] : null;
+  return {
+    x: w.x,
+    y: w.y,
+    steps: w.steps,
+    maxSteps: WALKER_MAX_STEPS,
+    sourceTier: w.sourceTier,
+    sourceName: tierCfg ? tierCfg.name : (sourceBt ? sourceBt.name : 'Housing'),
+    sourceX: source ? source.x : null,
+    sourceY: source ? source.y : null
+  };
 }

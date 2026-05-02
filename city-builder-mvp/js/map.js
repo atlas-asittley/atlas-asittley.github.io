@@ -621,7 +621,7 @@ export function initMapEvents() {
   var grid = document.getElementById('map-grid');
   var viewport = document.getElementById('map-viewport');
 
-  // Single-click placement for non-road buildings
+  // Single-click: inspect existing buildings OR place new ones
   grid.addEventListener('click', function (e) {
     if (Date.now() < pinchSuppressClickUntil) return;
     if (Date.now() < dragState.suppressClick) return;
@@ -633,7 +633,17 @@ export function initMapEvents() {
     var x = parseInt(cell.dataset.x);
     var y = parseInt(cell.dataset.y);
 
-    // Placement mode: try to place building
+    // Always check for existing building first — tapping a building opens the inspector
+    // even in placement mode. This makes inspect/demolish discoverable.
+    var building = state.allBuildings.find(function (b) {
+      return b.x === x && b.y === y;
+    });
+    if (building) {
+      openInspector(building);
+      return;
+    }
+
+    // Placement mode: try to place building on empty tile
     if (state.selectedBuildType) {
       var tileId = cell.dataset.tileId;
       if (!tileId) return;
@@ -644,14 +654,6 @@ export function initMapEvents() {
       }
       placeBuilding(tileId, state.selectedBuildType);
       return;
-    }
-
-    // Inspection mode: open inspector if a building is here
-    var building = state.allBuildings.find(function (b) {
-      return b.x === x && b.y === y;
-    });
-    if (building) {
-      openInspector(building);
     }
   });
 

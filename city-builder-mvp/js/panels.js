@@ -106,6 +106,9 @@ export function renderBuildPanel() {
     html += '</div></div>';
   });
 
+  // Hint about inspection/demolition
+  html += '<div class="build-hint">Tap any building or citizen on the map to inspect it. Demolish from the inspector.</div>';
+
   panel.innerHTML = html;
 
   panel.querySelectorAll('.build-item:not(.disabled)').forEach(function (item) {
