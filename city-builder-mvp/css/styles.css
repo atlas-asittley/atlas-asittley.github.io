@@ -71,18 +71,13 @@ body {
 .map-zoom-label { min-width: 44px; text-align: center; font-size: 0.72rem; color: #7a8a9e; font-weight: 700; }
 
 /* ── Map grid ──────────────────────────────────────── */
-#map-grid { display: grid; gap: 0px; width: 520px; margin: 0 auto; background: #162116; position: relative; }
-.cell { aspect-ratio: 1; background: #223322; border-radius: 0; display: flex; align-items: center; justify-content: center; cursor: pointer; position: relative; user-select: none; transition: box-shadow 0.15s, filter 0.15s; box-shadow: inset 0 0 0 0.5px rgba(0,0,0,0.025); }
-.cell:hover { filter: brightness(1.12); }
-/* Base terrain stays nearly uniform; variation comes from subtle overlays instead of tile-by-tile color jumps. */
-/* Wilderness texture overlay — reduces flat grid feel without obvious patchwork */
-.cell::before { content: ''; position: absolute; inset: 0; opacity: 0.18; pointer-events: none; z-index: 0;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='34' height='34'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' seed='42'/%3E%3C/filter%3E%3Crect width='34' height='34' filter='url(%23n)' opacity='0.4'/%3E%3C/svg%3E");
+#map-grid { display: grid; gap: 0px; width: 520px; margin: 0 auto; background: #223322; position: relative; }
+.cell { aspect-ratio: 1; background: #223322; border-radius: 0; display: flex; align-items: center; justify-content: center; cursor: pointer; position: relative; user-select: none; transition: box-shadow 0.15s, filter 0.15s; box-shadow: none; }
+.cell:hover { filter: brightness(1.08); }
+/* Base terrain is intentionally uniform so the eye reads continuous ground instead of patchwork tiles. */
+.cell::before { content: ''; position: absolute; inset: 0; opacity: 0.12; pointer-events: none; z-index: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='34' height='34'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' seed='42'/%3E%3C/filter%3E%3Crect width='34' height='34' filter='url(%23n)' opacity='0.35'/%3E%3C/svg%3E");
   background-size: cover; border-radius: inherit; }
-/* Occasional grass / dirt detail without changing the tile's base color noticeably */
-.cell:nth-child(17n+3)::before { opacity: 0.22; }
-.cell:nth-child(23n+7)::before { opacity: 0.16; }
-.cell:nth-child(31n+11)::before { opacity: 0.24; mix-blend-mode: overlay; }
 /* Resource tiles — richer ground with natural scatter */
 .cell.res-timber { background: linear-gradient(160deg, #1a2e22 0%, #16281a 50%, #1a3020 100%); box-shadow: inset 0 0 8px rgba(60,120,70,0.12), inset 0 0 0 0.5px rgba(0,0,0,0.1); }
 .cell.res-timber::before { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='34' height='34'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='2' seed='7'/%3E%3C/filter%3E%3Crect width='34' height='34' filter='url(%23n)' opacity='0.35'/%3E%3Ccircle cx='8' cy='26' r='2' fill='%23264a30' opacity='0.5'/%3E%3Ccircle cx='24' cy='10' r='1.5' fill='%23264a30' opacity='0.4'/%3E%3C/svg%3E"); opacity: 0.4; }
