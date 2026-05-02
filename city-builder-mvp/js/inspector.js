@@ -8,6 +8,21 @@ import { setWalkerClickHandler } from './walkers.js';
 
 var inspectedBuilding = null;
 
+// Helper: show trade value per minute for a given output resource/rate
+function buildTradeValueRow(resourceKey, rate) {
+  // Find the best sell price across all traders the player has unlocked
+  var bestPrice = 0;
+  Object.keys(state.allTraderPrices || {}).forEach(function (tk) {
+    var unlocked = state.unlockedTraders[tk];
+    if (!unlocked || !unlocked.unlocked) return;
+    var prices = state.allTraderPrices[tk][resourceKey];
+    if (prices && prices.buy_price > bestPrice) bestPrice = prices.buy_price;
+  });
+  if (bestPrice <= 0) return '';
+  var valuePerMin = bestPrice * rate;
+  return '<div class="insp-row"><span class="insp-label">Trade value</span><span class="insp-value" style="color:#e6c65a;">$' + valuePerMin + '/min</span></div>';
+}
+
 export function openInspector(building) {
   if (!building) return;
   inspectedBuilding = building;
@@ -203,6 +218,31 @@ function renderInspector() {
       var wText = providing ? '+' + workers + ' workers' : '+0 (needs road)';
       html += '<div class="insp-row"><span class="insp-label">Provides</span><span class="insp-value ' + wClass + '">' + wText + '</span></div>';
 
+      // Housing evolution / progression feedback
+      var nextTierCfg = state.housingTierConfig[tier + 1];
+      var hasRoad = !!state.roadAccessIds[b.id];
+      if (nextTierCfg) {
+        var canUpgrade = !nextTierCfg.needs_road || hasRoad;
+        var evolving = canUpgrade && b.evolution_eligible_at;
+        if (evolving) {
+          var elapsed = Math.floor((Date.now() - new Date(b.evolution_eligible_at).getTime()) / 1000);
+          var needed = tierCfg ? tierCfg.upgrade_secs : 30;
+          var remaining = Math.max(0, needed - elapsed);
+          var progressPct = Math.min(100, Math.round((elapsed / needed) * 100));
+          var progressText = remaining > 0 ? 'Upgrading (' + remaining + 's)' : 'Upgrading soon';
+          html += '<div class="insp-row"><span class="insp-label">Next</span><span class="insp-value insp-good">' + nextTierCfg.name + ' — ' + progressText + '</span></div>';
+          html += '<div class="insp-evolution-bar"><div class="insp-evolution-fill" style="width:' + progressPct + '%"></div></div>';
+        } else if (canUpgrade) {
+          html += '<div class="insp-row"><span class="insp-label">Next</span><span class="insp-value">' + nextTierCfg.name + ' (+' + nextTierCfg.workers + ' wkrs)</span></div>';
+          html += '<div class="insp-hint insp-hint-muted">Conditions met — will begin upgrading at next production tick.</div>';
+        } else {
+          html += '<div class="insp-row"><span class="insp-label">Next</span><span class="insp-value insp-warn">' + nextTierCfg.name + ' — needs road</span></div>';
+          html += '<div class="insp-hint">Connect a road to this house to enable upgrades and full worker output.</div>';
+        }
+      } else {
+        html += '<div class="insp-row"><span class="insp-label">Tier</span><span class="insp-value insp-good">Max tier reached</span></div>';
+      }
+
       // Labor context
       var li = state.laborInfo;
       if (providing && li.laborShortage) {
@@ -216,6 +256,7 @@ function renderInspector() {
     if (bt.category === 'extractor' && bt.output_resource_key) {
       var resName = state.resources[bt.output_resource_key] ? state.resources[bt.output_resource_key].name : bt.output_resource_key;
       html += '<div class="insp-row"><span class="insp-label">Output</span><span class="insp-value">' + bt.output_rate + ' ' + resName + '/min</span></div>';
+      html += buildTradeValueRow(bt.output_resource_key, bt.output_rate);
     } else if (bt.category === 'processor') {
       if (bt.input_resource_key) {
         var inName = state.resources[bt.input_resource_key] ? state.resources[bt.input_resource_key].name : bt.input_resource_key;
@@ -228,6 +269,7 @@ function renderInspector() {
       if (bt.output_resource_key) {
         var outName = state.resources[bt.output_resource_key] ? state.resources[bt.output_resource_key].name : bt.output_resource_key;
         html += '<div class="insp-row"><span class="insp-label">Output</span><span class="insp-value">' + bt.output_rate + ' ' + outName + '/min</span></div>';
+        html += buildTradeValueRow(bt.output_resource_key, bt.output_rate);
       }
     }
   }
