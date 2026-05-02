@@ -9,6 +9,7 @@ export var BLDG_LABELS = {
   timber_camp: 'TC', sawmill: 'SM',
   stone_quarry: 'SQ', mason_workshop: 'MW',
   grain_farm: 'GF', mill: 'ML',
+  clay_pit: 'CP', pottery_kiln: 'PK',
   house: 'H', road: 'R'
 };
 

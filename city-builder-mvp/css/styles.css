@@ -76,6 +76,7 @@ body {
 .cell.res-timber { background: #1a2e22; }
 .cell.res-stone { background: #252530; }
 .cell.res-grain { background: #2e2a1a; }
+.cell.res-clay { background: #2a2020; }
 .cell.city-center { background: #251a30; cursor: default; }
 .cell.valid-placement { box-shadow: inset 0 0 0 2px #5ec49e; cursor: crosshair; }
 .cell.valid-placement:hover { background: rgba(94,196,158,0.15); }
@@ -83,6 +84,7 @@ body {
 .res-timber .res-dot { background: #5ec49e; }
 .res-stone .res-dot { background: #8888aa; }
 .res-grain .res-dot { background: #e6c65a; }
+.res-clay .res-dot { background: #c47a5a; }
 .bldg { width: 100%; height: 100%; border-radius: 2px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0; color: transparent; line-height: 1; background-size: contain; background-repeat: no-repeat; background-position: center; position: relative; }
 .bldg.mine { box-shadow: 0 0 0 1.5px #4fa3e0; }
 .bldg.timber_camp { background-image: url('../assets/sprites/timber_camp.png'); background-color: transparent; }
@@ -91,6 +93,8 @@ body {
 .bldg.mason_workshop { background-image: url('../assets/sprites/mason_workshop.png'); background-color: transparent; }
 .bldg.grain_farm { background: #5a7a3a; font-size: 8px; color: #fff; }
 .bldg.mill { background: #6a5a4a; font-size: 8px; color: #fff; }
+.bldg.clay_pit { background: #8a5a3a; font-size: 8px; color: #fff; }
+.bldg.pottery_kiln { background: #7a4a4a; font-size: 8px; color: #fff; }
 .bldg.house { background-image: url('../assets/sprites/house_t1.png'); background-color: transparent; }
 /* Housing evolution tiers */
 .bldg.house.house-t0 { background-image: url('../assets/sprites/house_t0.png'); background-color: transparent; border: none; }
