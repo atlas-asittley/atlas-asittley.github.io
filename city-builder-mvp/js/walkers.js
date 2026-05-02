@@ -202,6 +202,7 @@ export function renderWalkers() {
     el.style.left = left.toFixed(1) + 'px';
     el.style.top = top.toFixed(1) + 'px';
     el.style.opacity = opacity.toFixed(2);
+    el.style.setProperty('--wk-scale', (state.mapZoom || 1).toFixed(3));
   }
 }
 
