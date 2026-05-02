@@ -63,7 +63,7 @@ body {
 .map-area { flex: 1; position: relative; padding: 8px; min-height: 0; }
 .map-viewport { width: 100%; height: 100%; overflow: auto; min-height: 0; padding-top: 34px; touch-action: pan-x pan-y; }
 .map-canvas { position: relative; display: inline-block; margin: 44px 40px 40px; }
-.map-canvas::after { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; z-index: 1; box-shadow: inset 0 0 30px 8px rgba(8,12,6,0.55), inset 0 0 80px 20px rgba(8,12,6,0.25); border-radius: 4px; }
+.map-canvas::after { content: ''; position: absolute; top: -4px; left: -4px; right: -4px; bottom: -4px; pointer-events: none; z-index: 1; box-shadow: inset 0 0 40px 12px rgba(6,10,4,0.7), inset 0 0 90px 30px rgba(6,10,4,0.35); border-radius: 6px; }
 .map-controls { position: absolute; top: 8px; right: 8px; z-index: 3; display: flex; align-items: center; gap: 6px; background: rgba(11, 15, 20, 0.9); border: 1px solid #1e2a3a; border-radius: 999px; padding: 4px 6px; }
 .map-zoom-btn, .map-reset-btn { height: 28px; border: none; border-radius: 999px; background: #1a2332; color: #e0e6ed; cursor: pointer; }
 .map-zoom-btn { width: 28px; font-size: 1rem; font-weight: 700; }
@@ -71,26 +71,40 @@ body {
 .map-zoom-label { min-width: 44px; text-align: center; font-size: 0.72rem; color: #7a8a9e; font-weight: 700; }
 
 /* ── Map grid ──────────────────────────────────────── */
-#map-grid { display: grid; gap: 1px; width: 520px; margin: 0 auto; background: #10130e; position: relative; }
-.cell { aspect-ratio: 1; background: #1a2218; border-radius: 2px; display: flex; align-items: center; justify-content: center; cursor: pointer; position: relative; user-select: none; transition: box-shadow 0.15s, filter 0.15s; box-shadow: inset 0 0 0 0.5px rgba(0,0,0,0.12); }
-.cell:hover { filter: brightness(1.18); }
-/* Terrain variation — organic ground feel */
+#map-grid { display: grid; gap: 0px; width: 520px; margin: 0 auto; background: #0e110b; position: relative; }
+.cell { aspect-ratio: 1; background: #1a2218; border-radius: 0; display: flex; align-items: center; justify-content: center; cursor: pointer; position: relative; user-select: none; transition: box-shadow 0.15s, filter 0.15s; box-shadow: inset 0 0 0 0.5px rgba(0,0,0,0.06); }
+.cell:hover { filter: brightness(1.15); }
+/* Terrain variation — multi-layer organic ground */
 .cell:nth-child(3n+1) { background-color: #1c2519; }
 .cell:nth-child(5n+2) { background-color: #18201a; }
 .cell:nth-child(7n+4) { background-color: #1b2417; }
 .cell:nth-child(11n+6) { background-color: #1d261b; }
 .cell:nth-child(13n+9) { background-color: #171f18; }
-/* Resource tiles */
-.cell.res-timber { background: linear-gradient(160deg, #1a2e22 0%, #16281a 50%, #1a3020 100%); box-shadow: inset 0 0 6px rgba(60,120,70,0.08), inset 0 0 0 0.5px rgba(0,0,0,0.15); }
-.cell.res-stone { background: linear-gradient(145deg, #252530 0%, #202028 50%, #282838 100%); box-shadow: inset 0 0 6px rgba(100,100,140,0.08), inset 0 0 0 0.5px rgba(0,0,0,0.15); }
-.cell.res-grain { background: linear-gradient(155deg, #2e2a1a 0%, #28241a 50%, #302c18 100%); box-shadow: inset 0 0 6px rgba(180,150,60,0.06), inset 0 0 0 0.5px rgba(0,0,0,0.15); }
-.cell.res-clay { background: linear-gradient(140deg, #2a2020 0%, #28201c 50%, #2c2220 100%); box-shadow: inset 0 0 6px rgba(160,80,60,0.06), inset 0 0 0 0.5px rgba(0,0,0,0.15); }
+/* Wilderness texture overlay — reduces flat grid feel */
+.cell::before { content: ''; position: absolute; inset: 0; opacity: 0.25; pointer-events: none; z-index: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='34' height='34'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' seed='42'/%3E%3C/filter%3E%3Crect width='34' height='34' filter='url(%23n)' opacity='0.4'/%3E%3C/svg%3E");
+  background-size: cover; border-radius: inherit; }
+/* Occasional grass tufts / ground detail */
+.cell:nth-child(17n+3)::before { opacity: 0.35; }
+.cell:nth-child(23n+7)::before { opacity: 0.18; }
+.cell:nth-child(31n+11)::before { opacity: 0.4; mix-blend-mode: overlay; }
+/* Resource tiles — richer ground with natural scatter */
+.cell.res-timber { background: linear-gradient(160deg, #1a2e22 0%, #16281a 50%, #1a3020 100%); box-shadow: inset 0 0 8px rgba(60,120,70,0.12), inset 0 0 0 0.5px rgba(0,0,0,0.1); }
+.cell.res-timber::before { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='34' height='34'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='2' seed='7'/%3E%3C/filter%3E%3Crect width='34' height='34' filter='url(%23n)' opacity='0.35'/%3E%3Ccircle cx='8' cy='26' r='2' fill='%23264a30' opacity='0.5'/%3E%3Ccircle cx='24' cy='10' r='1.5' fill='%23264a30' opacity='0.4'/%3E%3C/svg%3E"); opacity: 0.4; }
+.cell.res-stone { background: linear-gradient(145deg, #252530 0%, #202028 50%, #282838 100%); box-shadow: inset 0 0 8px rgba(100,100,140,0.12), inset 0 0 0 0.5px rgba(0,0,0,0.1); }
+.cell.res-stone::before { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='34' height='34'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' seed='13'/%3E%3C/filter%3E%3Crect width='34' height='34' filter='url(%23n)' opacity='0.3'/%3E%3Crect x='6' y='20' width='5' height='3' rx='1' fill='%23444460' opacity='0.3'/%3E%3Crect x='20' y='8' width='4' height='3' rx='1' fill='%23444460' opacity='0.25'/%3E%3C/svg%3E"); opacity: 0.45; }
+.cell.res-grain { background: linear-gradient(155deg, #2e2a1a 0%, #28241a 50%, #302c18 100%); box-shadow: inset 0 0 8px rgba(180,150,60,0.1), inset 0 0 0 0.5px rgba(0,0,0,0.1); }
+.cell.res-grain::before { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='34' height='34'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.6' numOctaves='2' seed='21'/%3E%3C/filter%3E%3Crect width='34' height='34' filter='url(%23n)' opacity='0.25'/%3E%3Cline x1='10' y1='28' x2='10' y2='18' stroke='%23807020' stroke-width='0.5' opacity='0.3'/%3E%3Cline x1='20' y1='30' x2='20' y2='20' stroke='%23807020' stroke-width='0.5' opacity='0.25'/%3E%3C/svg%3E"); opacity: 0.45; }
+.cell.res-clay { background: linear-gradient(140deg, #2a2020 0%, #28201c 50%, #2c2220 100%); box-shadow: inset 0 0 8px rgba(160,80,60,0.1), inset 0 0 0 0.5px rgba(0,0,0,0.1); }
+.cell.res-clay::before { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='34' height='34'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='2' seed='33'/%3E%3C/filter%3E%3Crect width='34' height='34' filter='url(%23n)' opacity='0.3'/%3E%3Cellipse cx='17' cy='24' rx='6' ry='3' fill='%23604030' opacity='0.2'/%3E%3C/svg%3E"); opacity: 0.4; }
 .cell.city-center { background: linear-gradient(135deg, #2e2240 0%, #221a30 100%); cursor: default; box-shadow: inset 0 0 0 1px #5a4a6a, inset 0 0 8px rgba(120,80,180,0.15); }
+.cell.city-center::before { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='34' height='34'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.5' numOctaves='2' seed='99'/%3E%3C/filter%3E%3Crect width='34' height='34' filter='url(%23n)' opacity='0.15'/%3E%3C/svg%3E"); opacity: 0.3; }
 .cell.valid-placement { box-shadow: inset 0 0 0 2px #5ec49e; cursor: crosshair; }
 .cell.valid-placement:hover { background: rgba(94,196,158,0.15); }
 .cell.empty-cell { background: transparent; cursor: default; pointer-events: none; }
+.cell.empty-cell::before { display: none; }
 .cell.drag-preview { background: rgba(40, 36, 26, 0.7) !important; box-shadow: inset 0 0 0 2px rgba(212, 170, 80, 0.6); cursor: crosshair; }
-.res-dot { width: 6px; height: 6px; border-radius: 50%; animation: res-dot-pulse 3s ease-in-out infinite; }
+.res-dot { width: 6px; height: 6px; border-radius: 50%; animation: res-dot-pulse 3s ease-in-out infinite; position: relative; z-index: 1; }
 .res-timber .res-dot { background: radial-gradient(circle, #7ed4ae 0%, #3a8a5a 100%); box-shadow: 0 0 3px rgba(94,196,158,0.3); }
 .res-stone .res-dot { background: radial-gradient(circle, #aaaacc 0%, #6a6a88 100%); box-shadow: 0 0 3px rgba(136,136,170,0.3); }
 .res-grain .res-dot { background: radial-gradient(circle, #f0d870 0%, #c0a040 100%); box-shadow: 0 0 3px rgba(230,198,90,0.3); }
@@ -99,97 +113,58 @@ body {
   0%, 100% { opacity: 0.7; transform: scale(1); }
   50% { opacity: 1; transform: scale(1.15); }
 }
-.bldg { width: 100%; height: 100%; border-radius: 2px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0; color: transparent; line-height: 1; background-size: contain; background-repeat: no-repeat; background-position: center; position: relative; transition: filter 0.3s; }
+.bldg { width: 100%; height: 100%; border-radius: 2px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0; color: transparent; line-height: 1; background-size: contain; background-repeat: no-repeat; background-position: center; position: relative; transition: filter 0.3s; z-index: 1; }
 .bldg.mine { box-shadow: 0 0 0 1.5px #4fa3e0; }
 /* ── Sprite buildings (tier 1-2 timber/stone + housing) ── */
 .bldg.timber_camp { background-image: url('../assets/sprites/timber_camp.png'); background-color: transparent; filter: drop-shadow(0 1px 1px rgba(0,0,0,0.3)); }
 .bldg.sawmill { background-image: url('../assets/sprites/sawmill.png'); background-color: transparent; filter: drop-shadow(0 1px 1px rgba(0,0,0,0.3)); }
 .bldg.stone_quarry { background-image: url('../assets/sprites/stone_quarry.png'); background-color: transparent; filter: drop-shadow(0 1px 1px rgba(0,0,0,0.3)); }
 .bldg.mason_workshop { background-image: url('../assets/sprites/mason_workshop.png'); background-color: transparent; filter: drop-shadow(0 1px 1px rgba(0,0,0,0.3)); }
-/* ── Placeholder buildings (grain chain) ── */
+/* ── Sprite buildings (grain chain) ── */
 .bldg.grain_farm {
-  background:
-    repeating-linear-gradient(0deg, rgba(90,120,40,0.4) 0px, rgba(90,120,40,0.4) 2px, rgba(70,100,30,0.3) 2px, rgba(70,100,30,0.3) 5px),
-    linear-gradient(180deg, #5a7a2a 0%, #4a6a22 60%, #3a5a1a 100%);
-  border-radius: 2px;
-  box-shadow: inset 0 -3px 4px rgba(0,0,0,0.3), inset 0 1px 2px rgba(200,220,100,0.08), 0 1px 2px rgba(0,0,0,0.3);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='soil' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%234a6a22'/%3E%3Cstop offset='1' stop-color='%23354d18'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='32' height='32' rx='2' fill='url(%23soil)'/%3E%3Cg stroke='%23c4a030' stroke-width='0.7' fill='none' opacity='0.9'%3E%3Cpath d='M6 28V16M6 16c-1-3 0-6 0-6s2 3 0 6'/%3E%3Cpath d='M10 28V14M10 14c-1-3 0-7 0-7s2 4 0 7'/%3E%3Cpath d='M14 28V15M14 15c-1-3 0-6 0-6s2 3 0 6'/%3E%3Cpath d='M18 28V13M18 13c-1-3 0-7 0-7s2 4 0 7'/%3E%3Cpath d='M22 28V16M22 16c-1-3 0-6 0-6s2 3 0 6'/%3E%3Cpath d='M26 28V14M26 14c-1-3 0-7 0-7s2 4 0 7'/%3E%3C/g%3E%3Crect x='1' y='26' width='30' height='5' rx='1' fill='%23483a18' opacity='0.6'/%3E%3C/svg%3E");
+  background-color: transparent; background-size: contain; background-repeat: no-repeat; background-position: center;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.4));
 }
-.bldg.grain_farm::before {
-  content: ''; position: absolute; bottom: 3px; left: 15%; right: 15%; height: 2px;
-  background: #d4b440; border-radius: 1px; opacity: 0.7;
-  box-shadow: 0 -4px 0 0 rgba(180,160,40,0.35), 0 -8px 0 0 rgba(180,160,40,0.2);
-}
+.bldg.grain_farm::before { display: none; }
 .bldg.mill {
-  background:
-    linear-gradient(180deg, #5a4a35 0%, #4a3a2a 15%, #6a5a40 16%, #5a4a35 50%, #4a3a28 100%);
-  border-radius: 1px 1px 2px 2px;
-  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.2), inset 0 -2px 4px rgba(0,0,0,0.35), inset 0 8px 3px -6px rgba(120,100,70,0.25), 0 1px 2px rgba(0,0,0,0.4);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='wall' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%237a6a50'/%3E%3Cstop offset='1' stop-color='%23504028'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect x='10' y='14' width='12' height='17' rx='1' fill='url(%23wall)'/%3E%3Cpolygon points='16,8 8,14 24,14' fill='%236a5a3a'/%3E%3Cg stroke='%23a09070' stroke-width='1.2' fill='none' opacity='0.9' transform='translate(16,14)'%3E%3Cline x1='0' y1='-7' x2='0' y2='7'/%3E%3Cline x1='-7' y1='0' x2='7' y2='0'/%3E%3Cline x1='-5' y1='-5' x2='5' y2='5'/%3E%3Cline x1='5' y1='-5' x2='-5' y2='5'/%3E%3C/g%3E%3Ccircle cx='16' cy='14' r='2' fill='%23806a48'/%3E%3Crect x='14' y='26' width='4' height='5' fill='%23403020'/%3E%3C/svg%3E");
+  background-color: transparent; background-size: contain; background-repeat: no-repeat; background-position: center;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.4));
 }
-.bldg.mill::before {
-  content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-  width: 8px; height: 8px; border: 1.5px solid #a09070; border-radius: 50%;
-  background: radial-gradient(circle, #8a7a60 0%, #6a5a40 100%);
-  box-shadow: 0 0 3px rgba(160,140,100,0.25);
-}
+.bldg.mill::before { display: none; }
 .bldg.bakery {
-  background:
-    linear-gradient(180deg, #7a6a30 0%, #8a7a38 20%, #7a6a30 50%, #6a5a28 100%);
-  border-radius: 3px 3px 2px 2px;
-  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.2), inset 0 -2px 3px rgba(0,0,0,0.3), inset 0 3px 3px -1px rgba(255,220,120,0.12), 0 1px 2px rgba(0,0,0,0.4);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='bwall' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23906830'/%3E%3Cstop offset='1' stop-color='%23604520'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect x='6' y='14' width='20' height='16' rx='2' fill='url(%23bwall)'/%3E%3Cpath d='M6 14 Q16 6 26 14' fill='%23785828'/%3E%3Crect x='12' y='20' width='8' height='6' rx='1' fill='%23302010'/%3E%3Cellipse cx='16' cy='20' rx='3' ry='1.5' fill='%23f08020' opacity='0.6'/%3E%3Crect x='22' y='8' width='3' height='8' rx='1' fill='%23585048'/%3E%3Cellipse cx='23.5' cy='7' rx='2' ry='1.5' fill='%23888' opacity='0.5'/%3E%3C/svg%3E");
+  background-color: transparent; background-size: contain; background-repeat: no-repeat; background-position: center;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.4));
 }
-.bldg.bakery::before {
-  content: ''; position: absolute; top: 0; left: 50%; transform: translateX(-50%);
-  width: 12px; height: 5px;
-  background: radial-gradient(ellipse, #a08040 0%, #7a6530 100%);
-  border-radius: 6px 6px 0 0;
-  box-shadow: 0 -1px 4px rgba(200,160,60,0.25), inset 0 -1px 2px rgba(0,0,0,0.3);
-}
-/* ── Placeholder buildings (clay chain) ── */
+.bldg.bakery::before { display: none; }
+/* ── Sprite buildings (clay chain) ── */
 .bldg.clay_pit {
-  background: radial-gradient(ellipse at 50% 60%, #8a5a35 0%, #6a4025 45%, #5a3520 100%);
-  border-radius: 4px;
-  box-shadow: inset 0 2px 5px rgba(0,0,0,0.45), inset 0 -1px 2px rgba(180,120,80,0.15), 0 1px 2px rgba(0,0,0,0.3);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3CradialGradient id='pit' cx='50%25' cy='60%25' r='50%25'%3E%3Cstop offset='0' stop-color='%23a06838'/%3E%3Cstop offset='0.6' stop-color='%23704828'/%3E%3Cstop offset='1' stop-color='%23503018'/%3E%3C/radialGradient%3E%3C/defs%3E%3Cellipse cx='16' cy='18' rx='14' ry='11' fill='url(%23pit)'/%3E%3Cellipse cx='16' cy='18' rx='9' ry='6' fill='%23503420' opacity='0.6'/%3E%3Cellipse cx='16' cy='20' rx='5' ry='3' fill='%23c07848' opacity='0.5'/%3E%3Cpath d='M4 12c2-2 5-1 7 0s4 0 5-1' stroke='%23806040' stroke-width='0.8' fill='none' opacity='0.6'/%3E%3Crect x='24' y='8' width='2' height='10' rx='0.5' fill='%23604020'/%3E%3Crect x='23' y='6' width='4' height='3' rx='1' fill='%23785830'/%3E%3C/svg%3E");
+  background-color: transparent; background-size: contain; background-repeat: no-repeat; background-position: center;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.4));
 }
-.bldg.clay_pit::before {
-  content: ''; position: absolute; bottom: 4px; left: 20%; right: 20%; height: 4px;
-  background: linear-gradient(90deg, #b07050 0%, #c47a5a 50%, #b07050 100%);
-  border-radius: 50%; opacity: 0.65;
-  box-shadow: 0 0 3px rgba(196,122,90,0.3);
-}
+.bldg.clay_pit::before { display: none; }
 .bldg.pottery_kiln {
-  background: radial-gradient(ellipse at 50% 65%, #7a4a3a 0%, #5a3530 55%, #4a2a28 100%);
-  border-radius: 50% 50% 6px 6px;
-  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.15), inset 0 -3px 5px rgba(0,0,0,0.35), inset 0 3px 4px -1px rgba(160,100,70,0.18), 0 1px 3px rgba(0,0,0,0.4);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='kiln' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23805040'/%3E%3Cstop offset='1' stop-color='%23503028'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M8 28h16V16c0-6-4-10-8-10s-8 4-8 10v12z' fill='url(%23kiln)'/%3E%3Cpath d='M10 28h12V17c0-5-3-8-6-8s-6 3-6 8v11z' fill='%23402820' opacity='0.5'/%3E%3Crect x='12' y='24' width='8' height='5' rx='1' fill='%23201010'/%3E%3Cellipse cx='16' cy='24' rx='3' ry='2' fill='%23f08020' opacity='0.7'/%3E%3Cellipse cx='16' cy='22' rx='2' ry='1' fill='%23ffa040' opacity='0.4'/%3E%3Cpath d='M14 6c0-2 1-3 2-3s2 1 2 3' stroke='%23888' stroke-width='0.8' fill='none' opacity='0.5'/%3E%3C/svg%3E");
+  background-color: transparent; background-size: contain; background-repeat: no-repeat; background-position: center;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.4));
 }
-.bldg.pottery_kiln::before {
-  content: ''; position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%);
-  width: 6px; height: 5px;
-  background: radial-gradient(ellipse, rgba(255,160,60,0.7) 0%, rgba(200,100,30,0.2) 100%);
-  border-radius: 3px 3px 1px 1px;
-  box-shadow: 0 0 5px rgba(255,140,60,0.4), 0 -1px 3px rgba(255,180,80,0.2);
-}
-/* ── Placeholder buildings (tier 3) ── */
+.bldg.pottery_kiln::before { display: none; }
+/* ── Sprite buildings (tier 3 artisan) ── */
 .bldg.woodcarver {
-  background: linear-gradient(180deg, #4a5a25 0%, #3e4e20 15%, #5a6a30 16%, #4a5a28 50%, #3a4a20 100%);
-  border-radius: 2px;
-  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.2), inset 0 -2px 4px rgba(0,0,0,0.3), inset 0 2px 2px -1px rgba(120,140,60,0.12), 0 1px 2px rgba(0,0,0,0.35);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='ww' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23607030'/%3E%3Cstop offset='1' stop-color='%23384520'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect x='4' y='12' width='24' height='18' rx='2' fill='url(%23ww)'/%3E%3Crect x='4' y='10' width='24' height='4' rx='1' fill='%23506028'/%3E%3Crect x='12' y='18' width='8' height='3' rx='0.5' fill='%23c4a060'/%3E%3Crect x='8' y='22' width='6' height='2' rx='0.5' fill='%23a08040' opacity='0.7'/%3E%3Crect x='18' y='22' width='6' height='2' rx='0.5' fill='%23a08040' opacity='0.7'/%3E%3Cpath d='M20 14l4-4' stroke='%23807050' stroke-width='1' stroke-linecap='round'/%3E%3Ccircle cx='24' cy='10' r='1.5' fill='%23a09070'/%3E%3Cpath d='M10 14l-2-3' stroke='%23807050' stroke-width='0.8' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-color: transparent; background-size: contain; background-repeat: no-repeat; background-position: center;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.4));
 }
-.bldg.woodcarver::before {
-  content: ''; position: absolute; bottom: 2px; left: 25%; width: 50%; height: 2px;
-  background: #8a7a50; border-radius: 1px;
-  box-shadow: 0 -4px 0 0 rgba(100,90,50,0.35);
-}
+.bldg.woodcarver::before { display: none; }
 .bldg.sculptor {
-  background: linear-gradient(180deg, #5a4a6a 0%, #4e4060 15%, #6a5a7a 16%, #5a4a6a 50%, #4a3a5a 100%);
-  border-radius: 2px;
-  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.2), inset 0 -2px 4px rgba(0,0,0,0.3), inset 0 2px 2px -1px rgba(140,120,170,0.12), 0 1px 2px rgba(0,0,0,0.35);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='sw' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%236a5a7a'/%3E%3Cstop offset='1' stop-color='%23403050'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect x='6' y='14' width='20' height='16' rx='2' fill='url(%23sw)'/%3E%3Cpolygon points='16,8 6,14 26,14' fill='%23584870'/%3E%3Crect x='13' y='18' width='6' height='8' rx='0.5' fill='%23e0d8e8' opacity='0.6'/%3E%3Cpath d='M14 18 L16 16 L18 18' fill='%23c8c0d8' opacity='0.5'/%3E%3Ccircle cx='10' cy='20' r='2' fill='%23b0a0c0' opacity='0.4'/%3E%3Crect x='22' y='16' width='2' height='8' rx='0.5' fill='%23706080' opacity='0.6'/%3E%3Ccircle cx='23' cy='15' r='1' fill='%23a090b0' opacity='0.5'/%3E%3C/svg%3E");
+  background-color: transparent; background-size: contain; background-repeat: no-repeat; background-position: center;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.4));
 }
-.bldg.sculptor::before {
-  content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-  width: 7px; height: 7px;
-  background: linear-gradient(135deg, #9a8aaa 0%, #7a6a8a 100%);
-  border-radius: 1px; box-shadow: 0 0 2px rgba(160,140,190,0.3);
-}
+.bldg.sculptor::before { display: none; }
 /* ── Housing sprites ── */
 .bldg.house { background-image: url('../assets/sprites/house_t1.png'); background-color: transparent; filter: drop-shadow(0 1px 1px rgba(0,0,0,0.3)); }
 /* Housing evolution tiers */
@@ -202,19 +177,16 @@ body {
   0%, 100% { filter: drop-shadow(0 1px 1px rgba(0,0,0,0.3)) brightness(1); }
   50% { filter: drop-shadow(0 1px 2px rgba(94,196,158,0.25)) brightness(1.08); }
 }
-/* Placeholder buildings use drop-shadow for activity glow */
+/* SVG sprite buildings use same activity glow as PNG sprites */
 .bldg.grain_farm.producing, .bldg.mill.producing, .bldg.bakery.producing,
 .bldg.clay_pit.producing, .bldg.pottery_kiln.producing,
-.bldg.woodcarver.producing, .bldg.sculptor.producing { animation: bldg-produce-placeholder 2.5s ease-in-out infinite; }
-@keyframes bldg-produce-placeholder {
-  0%, 100% { filter: brightness(1) drop-shadow(0 1px 1px rgba(0,0,0,0.3)); }
-  50% { filter: brightness(1.12) drop-shadow(0 1px 3px rgba(94,196,158,0.3)); }
-}
+.bldg.woodcarver.producing, .bldg.sculptor.producing { animation: bldg-produce 2.5s ease-in-out infinite; }
 /* ── Unstaffed / disconnected ── */
 .bldg.unstaffed { opacity: 0.35; animation: none; }
 .bldg.unstaffed::after { content: '!'; position: absolute; top: -2px; right: -2px; font-size: 6px; color: #f06060; font-weight: 700; z-index: 1; }
 /* ── Road tiles ──────────────────────────────────────── */
 .cell.road-tile { background: #26221a; box-shadow: none; }
+.cell.road-tile::before { display: none; }
 .road-surface { width: 100%; height: 100%; position: relative; }
 .road-surface.mine { box-shadow: inset 0 0 0 1px rgba(79,163,224,0.25); }
 .road-center, .road-conn { position: absolute; display: block; background-image: url('../assets/sprites/road.png'); background-size: 250%; }
@@ -432,6 +404,6 @@ body {
   .map-zoom-btn { width: 26px; }
   .map-reset-btn { padding: 0 8px; font-size: 0.66rem; }
   .map-zoom-label { min-width: 40px; font-size: 0.68rem; }
-  .bldg.grain_farm, .bldg.mill { font-size: 7px; }
+  /* grain/mill sprites scale with cell naturally */
   .bottom-panel { max-height: 38vh; }
 }
