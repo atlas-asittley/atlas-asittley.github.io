@@ -129,14 +129,23 @@ export function renderInventory() {
   var panel = document.getElementById('panel-inventory');
   var html = '';
 
+  // Build resource lists dynamically from loaded resources
+  var rawKeys = [];
+  var processedKeys = [];
+  Object.keys(state.resources).forEach(function (k) {
+    var r = state.resources[k];
+    if (r.kind === 'raw') rawKeys.push(k);
+    else if (r.kind === 'processed') processedKeys.push(k);
+  });
+
   html += '<div class="inv-section">Raw Materials</div>';
-  ['timber', 'stone', 'grain'].forEach(function (k) {
+  rawKeys.forEach(function (k) {
     var qty = Math.floor(state.inventory[k] || 0);
     html += '<div class="inv-row"><span class="inv-name">' + resourceName(k) + '</span><span class="inv-qty' + (qty === 0 ? ' zero' : '') + '">' + qty + '</span></div>';
   });
 
   html += '<div class="inv-section">Processed Goods</div>';
-  ['lumber', 'brick', 'flour'].forEach(function (k) {
+  processedKeys.forEach(function (k) {
     var qty = Math.floor(state.inventory[k] || 0);
     html += '<div class="inv-row"><span class="inv-name">' + resourceName(k) + '</span><span class="inv-qty' + (qty === 0 ? ' zero' : '') + '">' + qty + '</span></div>';
   });
