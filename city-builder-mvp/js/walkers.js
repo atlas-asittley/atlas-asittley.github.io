@@ -219,10 +219,89 @@ export function snapWalkersToZoom() {
   layer.classList.remove('no-transition');
 }
 
+// ── Pre-seed walkers so streets feel alive on first frame ──
+// Places walkers mid-walk along roads, distributed by housing with road access.
+// Each walker starts with a random number of steps already taken so they fade
+// naturally instead of all disappearing at the same time.
+function preseedWalkers() {
+  var spawners = getSpawnBuildings();
+  if (spawners.length === 0) return;
+
+  // Collect all road tile keys for random mid-road placement
+  var roadKeys = Object.keys(roadSet);
+  if (roadKeys.length === 0) return;
+
+  // Target: fill to ~60-75% of cap, scaled by available housing
+  var target = Math.min(
+    Math.max(3, Math.ceil(spawners.length * 1.5)),
+    Math.floor(WALKER_MAX_COUNT * 0.75)
+  );
+
+  // Build a map of road tiles adjacent to housing for weighted spawning.
+  // We prefer placing walkers near housing but also scatter some further out.
+  var housingRoads = [];
+  for (var s = 0; s < spawners.length; s++) {
+    var adj = roadNeighbors(spawners[s].x, spawners[s].y);
+    for (var a = 0; a < adj.length; a++) {
+      housingRoads.push({ tile: adj[a], building: spawners[s] });
+    }
+  }
+
+  for (var i = 0; i < target; i++) {
+    // 60% chance to start near housing, 40% chance at a random road tile
+    var startX, startY, dir, tier;
+    if (housingRoads.length > 0 && Math.random() < 0.6) {
+      var pick = housingRoads[Math.floor(Math.random() * housingRoads.length)];
+      startX = pick.tile.x;
+      startY = pick.tile.y;
+      dir = pick.tile.dir;
+      tier = pick.building.housing_tier !== undefined ? pick.building.housing_tier : 1;
+    } else {
+      var key = roadKeys[Math.floor(Math.random() * roadKeys.length)];
+      var parts = key.split(',');
+      startX = parseInt(parts[0], 10);
+      startY = parseInt(parts[1], 10);
+      dir = DIRS[Math.floor(Math.random() * DIRS.length)];
+      // Pick tier from a random spawner
+      var rb = spawners[Math.floor(Math.random() * spawners.length)];
+      tier = rb.housing_tier !== undefined ? rb.housing_tier : 1;
+    }
+
+    // Walk the walker a few random steps along roads so it's mid-journey
+    var walkSteps = Math.floor(Math.random() * Math.floor(WALKER_MAX_STEPS * 0.6));
+    var cx = startX, cy = startY, cd = dir;
+    for (var step = 0; step < walkSteps; step++) {
+      var neighbors = roadNeighbors(cx, cy);
+      if (neighbors.length === 0) break;
+      var back = oppositeDir(cd);
+      var forward = neighbors.filter(function (n) {
+        return !dirsEqual(n.dir, back);
+      });
+      var choices = forward.length > 0 ? forward : neighbors;
+      var next = choices[Math.floor(Math.random() * choices.length)];
+      cx = next.x;
+      cy = next.y;
+      cd = next.dir;
+    }
+
+    walkers.push({
+      x: cx,
+      y: cy,
+      prevDir: cd,
+      steps: walkSteps,
+      sourceId: null,
+      sourceTier: tier
+    });
+  }
+
+  renderWalkers();
+}
+
 // ── Lifecycle ──
 export function startWalkers() {
   rebuildRoadSet();
   stopWalkers();
+  preseedWalkers();
   walkerTickTimer = setInterval(walkerTick, WALKER_TICK_MS);
 }
 
