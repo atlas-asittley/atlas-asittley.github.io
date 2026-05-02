@@ -5,6 +5,7 @@ import { showScreen, showToast, capitalize } from './ui.js';
 import { renderMap, initMapEvents } from './map.js';
 import { renderBuildPanel, renderInventory, renderTradePanel, initTabs, checkAllTraderVisits } from './panels.js';
 import { subscribeRealtime } from './realtime.js';
+import { startWalkers, stopWalkers } from './walkers.js';
 
 export function updateMoney() {
   document.getElementById('g-money').textContent = '$' + state.profile.money;
@@ -99,6 +100,7 @@ function startProdLoop() {
 
 export function stopProdLoop() {
   if (state.prodTimer) { clearInterval(state.prodTimer); state.prodTimer = null; }
+  stopWalkers();
 }
 
 function loadGameData() {
@@ -220,6 +222,8 @@ export function enterGame() {
     processProduction();
     subscribeRealtime();
     startProdLoop();
+    // Start walker system (visual walkers on roads)
+    startWalkers();
     // Lazy visit resolution: check if any trader visits are due
     checkAllTraderVisits();
   }).catch(function (err) {

@@ -3,6 +3,7 @@ import { sb } from './config.js';
 import { state, computeLaborAllocation } from './state.js';
 import { showToast } from './ui.js';
 import { renderBuildPanel } from './panels.js';
+import { rebuildRoadSet, renderWalkers } from './walkers.js';
 
 export var BLDG_LABELS = {
   timber_camp: 'TC', sawmill: 'SM',
@@ -207,6 +208,9 @@ export function renderMap() {
   }
   grid.innerHTML = html;
   applyMapZoom();
+  // Sync walker system with new road layout
+  rebuildRoadSet();
+  renderWalkers();
 }
 
 export function cancelPlacement() {
