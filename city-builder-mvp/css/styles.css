@@ -100,15 +100,37 @@ body {
 .cell.gv6::after { opacity: 0.55; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='34' height='34'%3E%3Cellipse cx='8' cy='26' rx='5' ry='3' fill='%23183214' opacity='0.55'/%3E%3Cellipse cx='10' cy='25' rx='3' ry='2' fill='%231c3818' opacity='0.45'/%3E%3C/svg%3E"); }
 /* Grass + accent dot */
 .cell.gv7::after { opacity: 0.55; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='34' height='34'%3E%3Cg stroke='%232a4a28' stroke-width='0.6' opacity='0.5'%3E%3Cline x1='16' y1='24' x2='15' y2='18'/%3E%3Cline x1='18' y1='24' x2='19' y2='17'/%3E%3C/g%3E%3Ccircle cx='15' cy='17' r='1.2' fill='%233a4a30' opacity='0.5'/%3E%3C/svg%3E"); }
-/* Resource tiles — use actual resource artwork instead of flat color reads */
-.cell.res-timber { background: linear-gradient(160deg, #18311f 0%, #142818 50%, #17301d 100%); box-shadow: inset 0 0 10px rgba(32,72,40,0.18), inset 0 0 0 0.5px rgba(0,0,0,0.08); }
-.cell.res-timber::before { background-image: url('../assets/exploration/resource-tiles/timber_a_dense_canopy.svg'); opacity: 0.96; }
-.cell.res-stone { background: linear-gradient(145deg, #2a2a34 0%, #24242d 50%, #2e2e38 100%); box-shadow: inset 0 0 10px rgba(110,110,130,0.14), inset 0 0 0 0.5px rgba(0,0,0,0.08); }
-.cell.res-stone::before { background-image: url('../assets/exploration/resource-tiles/stone_a_quarry_blocks.svg'); opacity: 0.96; }
-.cell.res-grain { background: linear-gradient(155deg, #5a4a20 0%, #493b18 52%, #625126 100%); box-shadow: inset 0 0 10px rgba(190,155,60,0.14), inset 0 0 0 0.5px rgba(0,0,0,0.08); }
-.cell.res-grain::before { background-image: url('../assets/exploration/resource-tiles/grain_a_wheat_rows.svg'); opacity: 0.96; }
-.cell.res-clay { background: linear-gradient(140deg, #5a3428 0%, #4b2b22 50%, #65382a 100%); box-shadow: inset 0 0 10px rgba(120,70,48,0.16), inset 0 0 0 0.5px rgba(0,0,0,0.08); }
-.cell.res-clay::before { background-image: url('../assets/exploration/resource-tiles/clay_c_cracked_flats.svg'); opacity: 0.96; }
+/* Resource tiles — strong, unmistakable terrain reads even before buildings exist */
+.cell.res-timber,
+.cell.res-stone,
+.cell.res-grain,
+.cell.res-clay {
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.14), inset 0 0 10px rgba(0,0,0,0.16);
+}
+.cell.res-timber { background-color: #18311f; background-image: url('../assets/exploration/resource-tiles/timber_a_dense_canopy.svg'); }
+.cell.res-stone { background-color: #2a2a34; background-image: url('../assets/exploration/resource-tiles/stone_a_quarry_blocks.svg'); }
+.cell.res-grain { background-color: #5a4a20; background-image: url('../assets/exploration/resource-tiles/grain_a_wheat_rows.svg'); }
+.cell.res-clay { background-color: #5a3428; background-image: url('../assets/exploration/resource-tiles/clay_c_cracked_flats.svg'); }
+.cell.res-timber::before,
+.cell.res-stone::before,
+.cell.res-grain::before,
+.cell.res-clay::before {
+  display: none;
+}
+.cell.res-timber::after,
+.cell.res-stone::after,
+.cell.res-grain::after,
+.cell.res-clay::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0) 30%, rgba(0,0,0,0.08) 100%);
+  z-index: 0;
+}
 .cell.city-center { background: linear-gradient(135deg, #2e2240 0%, #221a30 100%); cursor: default; box-shadow: inset 0 0 0 1px #5a4a6a, inset 0 0 8px rgba(120,80,180,0.15); }
 .cell.city-center::before { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='34' height='34'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.5' numOctaves='2' seed='99'/%3E%3C/filter%3E%3Crect width='34' height='34' filter='url(%23n)' opacity='0.15'/%3E%3C/svg%3E"); opacity: 0.3; }
 .cell.valid-placement { box-shadow: inset 0 0 0 2px #5ec49e; cursor: crosshair; }
@@ -117,11 +139,11 @@ body {
 .cell.empty-cell::before { display: none; }
 .cell.drag-preview { background: rgba(40, 36, 26, 0.7) !important; box-shadow: inset 0 0 0 2px rgba(212, 170, 80, 0.6); cursor: crosshair; position: relative; }
 .cell.drag-preview::after { content: ''; position: absolute; inset: 20%; background: rgba(212,170,80,0.25); border-radius: 2px; }
-.res-dot { width: 6px; height: 6px; border-radius: 50%; animation: res-dot-pulse 3s ease-in-out infinite; position: relative; z-index: 1; }
-.res-timber .res-dot { background: radial-gradient(circle, #7ed4ae 0%, #3a8a5a 100%); box-shadow: 0 0 3px rgba(94,196,158,0.3); }
-.res-stone .res-dot { background: radial-gradient(circle, #aaaacc 0%, #6a6a88 100%); box-shadow: 0 0 3px rgba(136,136,170,0.3); }
-.res-grain .res-dot { background: radial-gradient(circle, #f0d870 0%, #c0a040 100%); box-shadow: 0 0 3px rgba(230,198,90,0.3); }
-.res-clay .res-dot { background: radial-gradient(circle, #d89a7a 0%, #a06040 100%); box-shadow: 0 0 3px rgba(196,122,90,0.3); }
+.res-dot { width: 4px; height: 4px; border-radius: 50%; animation: res-dot-pulse 3s ease-in-out infinite; position: relative; z-index: 1; opacity: 0.35; }
+.res-timber .res-dot { background: radial-gradient(circle, #7ed4ae 0%, #3a8a5a 100%); box-shadow: 0 0 2px rgba(94,196,158,0.22); }
+.res-stone .res-dot { background: radial-gradient(circle, #c4c4d6 0%, #6a6a88 100%); box-shadow: 0 0 2px rgba(136,136,170,0.2); }
+.res-grain .res-dot { background: radial-gradient(circle, #f0d870 0%, #c0a040 100%); box-shadow: 0 0 2px rgba(230,198,90,0.2); }
+.res-clay .res-dot { background: radial-gradient(circle, #d89a7a 0%, #a06040 100%); box-shadow: 0 0 2px rgba(196,122,90,0.2); }
 @keyframes res-dot-pulse {
   0%, 100% { opacity: 0.7; transform: scale(1); }
   50% { opacity: 1; transform: scale(1.15); }
