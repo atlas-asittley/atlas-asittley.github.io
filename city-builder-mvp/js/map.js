@@ -3,7 +3,7 @@ import { sb } from './config.js';
 import { state, computeLaborAllocation } from './state.js';
 import { showToast } from './ui.js';
 import { renderBuildPanel } from './panels.js';
-import { rebuildRoadSet, renderWalkers } from './walkers.js';
+import { rebuildRoadSet, renderWalkers, snapWalkersToZoom } from './walkers.js';
 
 export var BLDG_LABELS = {
   timber_camp: 'TC', sawmill: 'SM',
@@ -76,6 +76,8 @@ export function applyMapZoom() {
   if (!grid) return;
   grid.style.width = Math.round(MAP_BASE_SIZE * state.mapZoom) + 'px';
   if (label) label.textContent = Math.round(state.mapZoom * 100) + '%';
+  // Immediately reposition walkers to match new grid scale (no transition)
+  snapWalkersToZoom();
 }
 
 function setMapZoom(nextZoom) {

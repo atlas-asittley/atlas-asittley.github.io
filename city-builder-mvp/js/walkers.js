@@ -205,6 +205,17 @@ export function renderWalkers() {
   }
 }
 
+// ── Zoom sync: snap walkers to new grid scale without transition ──
+export function snapWalkersToZoom() {
+  var layer = document.getElementById('walker-layer');
+  if (!layer) return;
+  layer.classList.add('no-transition');
+  renderWalkers();
+  // Force reflow so positions apply before transitions are restored
+  void layer.offsetHeight;
+  layer.classList.remove('no-transition');
+}
+
 // ── Lifecycle ──
 export function startWalkers() {
   rebuildRoadSet();

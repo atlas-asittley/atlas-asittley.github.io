@@ -156,6 +156,7 @@ body {
 .road-surface.hq-road .road-conn { opacity: 0.5; }
 /* ── Walker overlay ─────────────────────────────────── */
 #walker-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2; }
+#walker-layer.no-transition .walker-dot { transition: opacity 0.45s !important; }
 .walker-dot { position: absolute; width: 10px; height: 14px; transform: translate(-50%, -50%); transition: left 1.35s ease-in-out, top 1.35s ease-in-out, opacity 0.45s; animation: walker-bob 0.7s ease-in-out infinite alternate, walker-waddle 0.55s ease-in-out infinite; }
 .walker-dot::before { content: ''; position: absolute; left: 2px; top: 0; width: 6px; height: 6px; border-radius: 50%; background: #d8c3a0; box-shadow: 0 0 0 1px rgba(10,12,18,0.18); }
 .walker-dot::after { content: ''; position: absolute; left: 1px; top: 5px; width: 8px; height: 8px; border-radius: 3px 3px 2px 2px; background: #7a6756; box-shadow: 0 0 0 1px rgba(10,12,18,0.16); }
