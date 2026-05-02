@@ -26,6 +26,21 @@ export function isPlacementValid(btKey, tile) {
   return true;
 }
 
+function isRoadBuilding(building) {
+  if (!building) return false;
+  var bt = state.buildingTypes[building.building_type_key];
+  return !!(bt && bt.category === 'road');
+}
+
+function roadNeighborClasses(x, y, buildingAt) {
+  var classes = [];
+  if (isRoadBuilding(buildingAt[x + ',' + (y - 1)])) classes.push('north');
+  if (isRoadBuilding(buildingAt[x + ',' + (y + 1)])) classes.push('south');
+  if (isRoadBuilding(buildingAt[(x + 1) + ',' + y])) classes.push('east');
+  if (isRoadBuilding(buildingAt[(x - 1) + ',' + y])) classes.push('west');
+  return classes;
+}
+
 export function renderMap() {
   var grid = document.getElementById('map-grid');
   var buildingAt = {};
@@ -67,7 +82,16 @@ export function renderMap() {
 
         // Roads render as a flat surface, not a building box
         if (buildingBt && buildingBt.category === 'road') {
-          html += '<div class="road-surface' + (mine ? ' mine' : '') + '"></div>';
+          var roadDirs = roadNeighborClasses(x, y, buildingAt);
+          var roadClasses = 'road-surface' + (mine ? ' mine' : '');
+          if (roadDirs.length) roadClasses += ' road-' + roadDirs.join(' road-');
+          html += '<div class="' + roadClasses + '">';
+          html += '<span class="road-center"></span>';
+          html += '<span class="road-conn north"></span>';
+          html += '<span class="road-conn south"></span>';
+          html += '<span class="road-conn east"></span>';
+          html += '<span class="road-conn west"></span>';
+          html += '</div>';
         } else {
           var label = BLDG_LABELS[btk] || '?';
           var titleText = (buildingBt ? buildingBt.name : btk);
