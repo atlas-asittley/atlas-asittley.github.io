@@ -7,18 +7,45 @@ import { initGameEvents } from './game.js';
 
 var versionBadge = document.getElementById('version-badge');
 versionBadge.textContent = PAGE_BUILD + ' • checking repo…';
+versionBadge.title = 'Click to copy build info';
+
+function flashBadgeCopied(ok) {
+  var original = versionBadge.textContent;
+  versionBadge.classList.add('copied');
+  versionBadge.textContent = ok ? 'Copied build info' : 'Copy failed';
+  setTimeout(function () {
+    versionBadge.classList.remove('copied');
+    versionBadge.textContent = original;
+  }, 1100);
+}
+
+versionBadge.addEventListener('click', function () {
+  var text = versionBadge.dataset.copyText || versionBadge.textContent;
+  if (!navigator.clipboard || !navigator.clipboard.writeText) {
+    flashBadgeCopied(false);
+    return;
+  }
+  navigator.clipboard.writeText(text)
+    .then(function () { flashBadgeCopied(true); })
+    .catch(function () { flashBadgeCopied(false); });
+});
+
+function setBadgeText(text) {
+  versionBadge.textContent = text;
+  versionBadge.dataset.copyText = text;
+}
 
 fetch('https://api.github.com/repos/' + REPO_OWNER + '/' + REPO_NAME + '/commits/main', { cache: 'no-store' })
   .then(function (r) { return r.ok ? r.json() : null; })
   .then(function (data) {
     if (!data || !data.sha) {
-      versionBadge.textContent = PAGE_BUILD + ' • repo unknown';
+      setBadgeText(PAGE_BUILD + ' • REPO unknown');
       return;
     }
-    versionBadge.textContent = PAGE_BUILD + ' • REPO ' + data.sha.slice(0, 7);
+    setBadgeText(PAGE_BUILD + ' • REPO ' + data.sha.slice(0, 7));
   })
   .catch(function () {
-    versionBadge.textContent = PAGE_BUILD + ' • repo unknown';
+    setBadgeText(PAGE_BUILD + ' • REPO unknown');
   });
 
 // Wire up all event listeners
