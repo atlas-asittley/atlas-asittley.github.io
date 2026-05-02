@@ -1,3 +1,7 @@
+// ── Constants ──
+export var CITY_CENTER_X = 7;
+export var CITY_CENTER_Y = 7;
+
 // ── Shared mutable game state ──
 export var state = {
   currentUser: null,

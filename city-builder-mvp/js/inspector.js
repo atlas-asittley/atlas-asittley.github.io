@@ -1,7 +1,7 @@
 // ── Building Inspector & Demolition ──
 import { sb } from './config.js';
 import { state, computeLaborAllocation } from './state.js';
-import { showToast } from './ui.js';
+import { showToast, updateMoney, updateWorkers } from './ui.js';
 import { renderMap } from './map.js';
 import { renderBuildPanel, renderInventory } from './panels.js';
 
@@ -333,17 +333,11 @@ function executeDemolish(building) {
       var refund = bt ? Math.floor(bt.build_cost * 0.5) : 0;
       if (refund > 0) {
         state.profile.money += refund;
-        document.getElementById('g-money').textContent = '$' + state.profile.money;
       }
 
       computeLaborAllocation();
-      // Update worker display
-      var li = state.laborInfo;
-      var wEl = document.getElementById('g-workers');
-      wEl.textContent = li.workersUsed + '/' + li.workerSupply;
-      wEl.className = 'v ' + (li.laborShortage ? 'shortage' : 'workers');
-      var badge = document.getElementById('g-labor-badge');
-      if (badge) badge.style.display = li.laborShortage ? 'inline' : 'none';
+      updateMoney();
+      updateWorkers();
 
       renderMap();
       renderBuildPanel();
@@ -355,13 +349,17 @@ function executeDemolish(building) {
       if (refund > 0) msg += ' (+$' + refund + ' refund)';
       showToast(msg, 'success');
 
-      // Persist refund to server
+      // Persist refund to server (fire-and-forget with error logging)
       if (refund > 0) {
         sb.from('player_profiles')
           .update({ money: state.profile.money })
           .eq('id', state.currentUser.id)
-          .then(function () {})
-          .catch(function () {});
+          .then(function (r) {
+            if (r.error) console.warn('Refund persist failed:', r.error.message);
+          })
+          .catch(function (err) {
+            console.warn('Refund persist error:', err);
+          });
       }
     })
     .catch(function (err) {

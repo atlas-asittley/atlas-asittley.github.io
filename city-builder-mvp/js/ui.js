@@ -1,4 +1,5 @@
-// ── UI helpers: screens, toasts, errors ──
+// ── UI helpers: screens, toasts, errors, topbar ──
+import { state } from './state.js';
 
 var screens = document.querySelectorAll('.screen');
 
@@ -28,4 +29,25 @@ export function showToast(msg, type) {
   t.className = 'toast show' + (type ? ' ' + type : '');
   clearTimeout(toastTimer);
   toastTimer = setTimeout(function () { t.classList.remove('show'); }, 2500);
+}
+
+// ── Topbar state display ──
+export function updateMoney() {
+  document.getElementById('g-money').textContent = '$' + state.profile.money;
+}
+
+export function updateWorkers() {
+  var li = state.laborInfo;
+  var el = document.getElementById('g-workers');
+  el.textContent = li.workersUsed + '/' + li.workerSupply;
+  el.className = 'v ' + (li.laborShortage ? 'shortage' : 'workers');
+  el.title = li.laborShortage
+    ? 'Labor shortage! ' + li.workersNeeded + ' needed, only ' + li.workerSupply + ' available'
+    : li.workersIdle > 0
+      ? li.workersIdle + ' workers idle'
+      : 'All workers employed';
+  var badge = document.getElementById('g-labor-badge');
+  if (badge) {
+    badge.style.display = li.laborShortage ? 'inline' : 'none';
+  }
 }
