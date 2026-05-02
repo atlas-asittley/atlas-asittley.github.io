@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="34" height="34" viewBox="0 0 34 34">
+  <!-- Timber A: Dense canopy - overlapping tree crowns from above -->
+  <rect width="34" height="34" fill="#1a2e22"/>
+  <filter id="tn"><feTurbulence type="fractalNoise" baseFrequency="0.7" numOctaves="2" seed="7"/></filter>
+  <rect width="34" height="34" filter="url(#tn)" opacity="0.25"/>
+  <!-- Tree crowns seen from above -->
+  <circle cx="9" cy="10" r="6" fill="#264a30" opacity="0.7"/>
+  <circle cx="22" cy="8" r="5" fill="#1e4228" opacity="0.65"/>
+  <circle cx="26" cy="22" r="6" fill="#224a2c" opacity="0.6"/>
+  <circle cx="8" cy="24" r="5" fill="#2a5234" opacity="0.65"/>
+  <circle cx="17" cy="18" r="7" fill="#1e4026" opacity="0.7"/>
+  <!-- Highlight dapples -->
+  <circle cx="7" cy="8" r="2" fill="#3a6a42" opacity="0.4"/>
+  <circle cx="18" cy="15" r="2.5" fill="#3a6a42" opacity="0.35"/>
+  <circle cx="25" cy="20" r="2" fill="#3a6a42" opacity="0.3"/>
+</svg>

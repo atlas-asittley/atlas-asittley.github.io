@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="34" height="34" viewBox="0 0 34 34">
+  <!-- Clay C: Cracked flats - dried clay with polygonal crack pattern -->
+  <rect width="34" height="34" fill="#2a1e18"/>
+  <filter id="cn"><feTurbulence type="fractalNoise" baseFrequency="0.7" numOctaves="2" seed="44"/></filter>
+  <rect width="34" height="34" filter="url(#cn)" opacity="0.2"/>
+  <!-- Dried clay surface -->
+  <rect width="34" height="34" fill="#5a3828" opacity="0.15"/>
+  <!-- Crack network (polygonal mud cracks) -->
+  <g stroke="#1e1410" stroke-width="0.6" opacity="0.45" fill="none">
+    <path d="M0,12 L10,8 L20,14 L34,10"/>
+    <path d="M0,24 L8,20 L18,26 L28,22 L34,26"/>
+    <path d="M10,0 L8,8 L12,16 L10,24 L14,34"/>
+    <path d="M24,0 L22,10 L26,18 L22,26 L26,34"/>
+    <path d="M8,8 L18,12"/>
+    <path d="M20,14 L18,20"/>
+    <path d="M12,16 L18,18"/>
+    <path d="M22,10 L20,14"/>
+  </g>
+  <!-- Slight clay color variation in crack polygons -->
+  <polygon points="10,8 20,14 18,20 12,16 8,8" fill="#6a4030" opacity="0.1"/>
+  <polygon points="20,14 34,10 34,22 28,22 22,18" fill="#5a3020" opacity="0.08"/>
+</svg>
