@@ -373,7 +373,15 @@ body {
 .toast.info { border-color: #4fa3e0; color: #a0d0f0; }
 
 /* ── Version badge ─────────────────────────────────── */
-.version-badge { position: fixed; bottom: 4px; right: 6px; font-size: 0.62rem; color: #4a5a6e; font-family: monospace; z-index: 300; pointer-events: none; user-select: none; }
+.version-badge {
+  position: fixed; bottom: 8px; right: 8px;
+  font-size: 0.72rem; color: #d7e7ff; font-family: monospace;
+  z-index: 300; pointer-events: none; user-select: none;
+  background: rgba(8, 14, 22, 0.88); border: 1px solid rgba(79,163,224,0.45);
+  border-radius: 999px; padding: 4px 10px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.35);
+  letter-spacing: 0.04em;
+}
 
 /* ── Building Inspector ───────────────────────────── */
 .inspector-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 150; display: none; align-items: flex-end; justify-content: center; }
