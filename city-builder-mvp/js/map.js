@@ -242,10 +242,13 @@ export function renderMap() {
         }
       }
 
-      // Add road-tile class to cell if building is a road
+      // Add per-building cell classes for layering/render behavior
       var buildingBt = building ? state.buildingTypes[building.building_type_key] : null;
       if (building && buildingBt && buildingBt.category === 'road') {
         classes.push('road-tile');
+      }
+      if (building && buildingBt && buildingBt.category === 'housing') {
+        classes.push('has-house');
       }
 
       if (state.selectedBuildType && !building && isPlacementValid(state.selectedBuildType, tile)) {
