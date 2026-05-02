@@ -125,9 +125,41 @@ function selectBuildingType(key) {
 }
 
 // ── Inventory panel ──
+function computeNetRates() {
+  var rates = {};
+  if (!state.currentUser) return rates;
+  var myBuildings = state.allBuildings.filter(function (b) {
+    return b.player_id === state.currentUser.id;
+  });
+  myBuildings.forEach(function (b) {
+    var bt = state.buildingTypes[b.building_type_key];
+    if (!bt || bt.category === 'road' || bt.category === 'housing') return;
+    // Only staffed buildings produce
+    if (state.laborInfo.unstaffedIds[b.id]) return;
+    // Processors need road access
+    if (bt.category === 'processor' && state.noRoadAccessIds[b.id]) return;
+    if (bt.output_resource_key && bt.output_rate) {
+      rates[bt.output_resource_key] = (rates[bt.output_resource_key] || 0) + bt.output_rate;
+    }
+    if (bt.input_resource_key && bt.input_rate) {
+      rates[bt.input_resource_key] = (rates[bt.input_resource_key] || 0) - bt.input_rate;
+    }
+  });
+  return rates;
+}
+
+function rateLabel(rate) {
+  if (!rate) return '';
+  var sign = rate > 0 ? '+' : '';
+  var color = rate > 0 ? '#5ec49e' : '#f0a0a0';
+  var val = Math.round(rate * 100) / 100;
+  return ' <span style="font-size:0.68rem;color:' + color + '">' + sign + val + '/m</span>';
+}
+
 export function renderInventory() {
   var panel = document.getElementById('panel-inventory');
   var html = '';
+  var rates = computeNetRates();
 
   // Build resource lists dynamically from loaded resources
   var rawKeys = [];
@@ -141,13 +173,13 @@ export function renderInventory() {
   html += '<div class="inv-section">Raw Materials</div>';
   rawKeys.forEach(function (k) {
     var qty = Math.floor(state.inventory[k] || 0);
-    html += '<div class="inv-row"><span class="inv-name">' + resourceName(k) + '</span><span class="inv-qty' + (qty === 0 ? ' zero' : '') + '">' + qty + '</span></div>';
+    html += '<div class="inv-row"><span class="inv-name">' + resourceName(k) + rateLabel(rates[k]) + '</span><span class="inv-qty' + (qty === 0 ? ' zero' : '') + '">' + qty + '</span></div>';
   });
 
   html += '<div class="inv-section">Processed Goods</div>';
   processedKeys.forEach(function (k) {
     var qty = Math.floor(state.inventory[k] || 0);
-    html += '<div class="inv-row"><span class="inv-name">' + resourceName(k) + '</span><span class="inv-qty' + (qty === 0 ? ' zero' : '') + '">' + qty + '</span></div>';
+    html += '<div class="inv-row"><span class="inv-name">' + resourceName(k) + rateLabel(rates[k]) + '</span><span class="inv-qty' + (qty === 0 ? ' zero' : '') + '">' + qty + '</span></div>';
   });
 
   html += '<div class="inv-section">Economy</div>';
