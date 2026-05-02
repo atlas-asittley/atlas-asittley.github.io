@@ -1,12 +1,25 @@
 // ── Entry point: bootstrap the app ──
-import { APP_VERSION } from './version.js';
+import { PAGE_BUILD, REPO_OWNER, REPO_NAME } from './version.js';
 import { sb } from './config.js';
 import { showScreen } from './ui.js';
 import { checkProfileAndRoute, initAuthEvents } from './auth.js';
 import { initGameEvents } from './game.js';
 
-// Display version
-document.getElementById('version-badge').textContent = APP_VERSION;
+var versionBadge = document.getElementById('version-badge');
+versionBadge.textContent = PAGE_BUILD + ' • checking repo…';
+
+fetch('https://api.github.com/repos/' + REPO_OWNER + '/' + REPO_NAME + '/commits/main', { cache: 'no-store' })
+  .then(function (r) { return r.ok ? r.json() : null; })
+  .then(function (data) {
+    if (!data || !data.sha) {
+      versionBadge.textContent = PAGE_BUILD + ' • repo unknown';
+      return;
+    }
+    versionBadge.textContent = PAGE_BUILD + ' • REPO ' + data.sha.slice(0, 7);
+  })
+  .catch(function () {
+    versionBadge.textContent = PAGE_BUILD + ' • repo unknown';
+  });
 
 // Wire up all event listeners
 initAuthEvents();
