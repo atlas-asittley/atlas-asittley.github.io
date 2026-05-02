@@ -89,7 +89,8 @@ body {
 .cell.valid-placement { box-shadow: inset 0 0 0 2px #5ec49e; cursor: crosshair; }
 .cell.valid-placement:hover { background: rgba(94,196,158,0.15); }
 .cell.empty-cell { background: transparent; cursor: default; pointer-events: none; }
-.cell.drag-preview { background: rgba(40, 36, 26, 0.7) !important; box-shadow: inset 0 0 0 2px rgba(212, 170, 80, 0.6); cursor: crosshair; }
+.cell.drag-preview { background: rgba(40, 36, 26, 0.7) !important; box-shadow: inset 0 0 0 2px rgba(212, 170, 80, 0.6); cursor: crosshair; position: relative; }
+.cell.drag-preview::after { content: ''; position: absolute; inset: 20%; background: rgba(212,170,80,0.25); border-radius: 2px; }
 .res-dot { width: 6px; height: 6px; border-radius: 50%; animation: res-dot-pulse 3s ease-in-out infinite; }
 .res-timber .res-dot { background: radial-gradient(circle, #7ed4ae 0%, #3a8a5a 100%); box-shadow: 0 0 3px rgba(94,196,158,0.3); }
 .res-stone .res-dot { background: radial-gradient(circle, #aaaacc 0%, #6a6a88 100%); box-shadow: 0 0 3px rgba(136,136,170,0.3); }
@@ -387,6 +388,10 @@ body {
 .placement-bar.active { display: flex; }
 .placement-bar span { color: #5ec49e; font-weight: 600; font-size: 0.85rem; }
 .btn-cancel { padding: 6px 14px; border-radius: 6px; border: 1px solid #5ec49e; background: none; color: #5ec49e; font-weight: 600; cursor: pointer; font-size: 0.85rem; }
+/* ── Drag cost counter ──────────────────────────────── */
+.drag-cost-counter { position: fixed; bottom: 52px; left: 50%; transform: translateX(-50%); background: rgba(20,30,20,0.92); border: 1px solid #d4aa50; color: #d4aa50; padding: 5px 14px; border-radius: 6px; font-size: 0.78rem; font-weight: 600; z-index: 101; pointer-events: none; opacity: 0; transition: opacity 0.15s; white-space: nowrap; }
+.drag-cost-counter.active { opacity: 1; }
+.drag-cost-counter.over-budget { border-color: #f06060; color: #f0a0a0; }
 
 /* ── Toast ──────────────────────────────────────────── */
 .toast { position: fixed; top: 56px; left: 50%; transform: translateX(-50%); background: #131a24; border: 1px solid #1e2a3a; color: #e0e6ed; padding: 8px 20px; border-radius: 8px; font-size: 0.82rem; z-index: 200; opacity: 0; transition: opacity 0.3s; pointer-events: none; white-space: nowrap; max-width: 90vw; overflow: hidden; text-overflow: ellipsis; }
@@ -416,8 +421,15 @@ body {
 .insp-value.insp-bad { color: #f06060; }
 .insp-value.insp-warn { color: #e6c65a; }
 .inspector-actions { padding: 12px 16px 16px; border-top: 1px solid #1e2a3a; }
+.insp-hint { font-size: 0.72rem; color: #8a9aae; padding: 2px 0 8px; line-height: 1.4; }
+.insp-hint.insp-hint-muted { color: #5a6a7e; font-style: italic; }
+.demolish-info { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; padding: 0 2px; }
+.demolish-refund { font-size: 0.78rem; color: #5ec49e; font-weight: 600; }
+.demolish-warning { font-size: 0.72rem; color: #e6c65a; font-weight: 600; }
 .btn-demolish { width: 100%; padding: 11px; border: none; border-radius: 8px; background: #3b1a1a; color: #f06060; font-weight: 600; font-size: 0.85rem; cursor: pointer; transition: background 0.2s, color 0.2s; }
 .btn-demolish:hover { background: #4a2020; }
+.btn-demolish.btn-demolish-caution { background: #3b2a1a; color: #e6c65a; border: 1px solid rgba(230,198,90,0.2); }
+.btn-demolish.btn-demolish-caution:hover { background: #4a3520; }
 .btn-demolish.confirm { background: #f06060; color: #fff; }
 .btn-demolish:disabled { opacity: 0.5; cursor: default; }
 
