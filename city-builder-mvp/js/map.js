@@ -14,9 +14,12 @@ export var BLDG_LABELS = {
 // Housing tier label overrides (keyed by tier number)
 var HOUSING_TIER_LABELS = { 0: 'S', 1: 'H' };
 var MAP_BASE_SIZE = 520;
-var MAP_MIN_ZOOM = 0.75;
-var MAP_MAX_ZOOM = 2;
+var MAP_MIN_ZOOM = 0.5;
+var MAP_MAX_ZOOM = 3;
 var MAP_ZOOM_STEP = 0.25;
+var pinchStartDistance = null;
+var pinchStartZoom = 1;
+var pinchSuppressClickUntil = 0;
 
 export function isPlacementValid(btKey, tile) {
   var bt = state.buildingTypes[btKey];
@@ -57,6 +60,13 @@ function setMapZoom(nextZoom) {
   var clamped = Math.max(MAP_MIN_ZOOM, Math.min(MAP_MAX_ZOOM, nextZoom));
   state.mapZoom = Math.round(clamped * 100) / 100;
   applyMapZoom();
+}
+
+function touchDistance(touches) {
+  if (!touches || touches.length < 2) return 0;
+  var dx = touches[0].clientX - touches[1].clientX;
+  var dy = touches[0].clientY - touches[1].clientY;
+  return Math.sqrt(dx * dx + dy * dy);
 }
 
 export function renderMap() {
@@ -228,6 +238,7 @@ function placeBuilding(tileId, btKey) {
 
 export function initMapEvents() {
   document.getElementById('map-grid').addEventListener('click', function (e) {
+    if (Date.now() < pinchSuppressClickUntil) return;
     var cell = e.target.closest('.cell');
     if (!cell) return;
     if (!state.selectedBuildType) return;
@@ -248,5 +259,31 @@ export function initMapEvents() {
   });
   document.getElementById('zoom-out').addEventListener('click', function () {
     setMapZoom(state.mapZoom - MAP_ZOOM_STEP);
+  });
+
+  var viewport = document.getElementById('map-viewport');
+  viewport.addEventListener('touchstart', function (e) {
+    if (e.touches.length === 2) {
+      pinchStartDistance = touchDistance(e.touches);
+      pinchStartZoom = state.mapZoom;
+      pinchSuppressClickUntil = Date.now() + 400;
+    }
+  }, { passive: true });
+
+  viewport.addEventListener('touchmove', function (e) {
+    if (e.touches.length !== 2 || !pinchStartDistance) return;
+    var nextDistance = touchDistance(e.touches);
+    if (!nextDistance) return;
+    e.preventDefault();
+    setMapZoom(pinchStartZoom * (nextDistance / pinchStartDistance));
+    pinchSuppressClickUntil = Date.now() + 400;
+  }, { passive: false });
+
+  viewport.addEventListener('touchend', function (e) {
+    if (e.touches.length < 2) {
+      pinchStartDistance = null;
+      pinchStartZoom = state.mapZoom;
+    }
+    pinchSuppressClickUntil = Date.now() + 250;
   });
 }
