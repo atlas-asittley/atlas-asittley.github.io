@@ -64,7 +64,7 @@ body {
 .map-viewport { width: 100%; height: 100%; overflow: auto; min-height: 0; padding-top: 34px; touch-action: pan-x pan-y; }
 .map-canvas { position: relative; display: inline-block; margin: 44px 40px 40px; }
 .map-canvas::after { content: ''; position: absolute; top: -4px; left: -4px; right: -4px; bottom: -4px; pointer-events: none; z-index: 1; box-shadow: inset 0 0 40px 12px rgba(6,10,4,0.7), inset 0 0 90px 30px rgba(6,10,4,0.35); border-radius: 6px; }
-.map-controls { position: absolute; top: 8px; right: 8px; z-index: 3; display: flex; align-items: center; gap: 6px; background: rgba(11, 15, 20, 0.9); border: 1px solid #1e2a3a; border-radius: 999px; padding: 4px 6px; }
+.map-controls { display: none; }
 .map-zoom-btn, .map-reset-btn { height: 28px; border: none; border-radius: 999px; background: #1a2332; color: #e0e6ed; cursor: pointer; }
 .map-zoom-btn { width: 28px; font-size: 1rem; font-weight: 700; }
 .map-reset-btn { padding: 0 10px; font-size: 0.72rem; font-weight: 600; color: #7a8a9e; }
@@ -132,8 +132,8 @@ body {
 }
 .bldg { width: 100%; height: 100%; border-radius: 2px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0; color: transparent; line-height: 1; background-size: contain; background-repeat: no-repeat; background-position: center; position: relative; transition: filter 0.3s, box-shadow 0.2s; z-index: 1; cursor: pointer; }
 .bldg:hover { filter: brightness(1.15) !important; }
-.bldg.mine { box-shadow: inset 0 0 0 1px rgba(79,163,224,0.35); }
-.bldg.mine:hover { box-shadow: inset 0 0 0 1px rgba(79,163,224,0.45); }
+.bldg.mine { box-shadow: none; }
+.bldg.mine:hover { box-shadow: inset 0 0 0 1px rgba(79,163,224,0.25); }
 /* ── Sprite buildings (tier 1-2 timber/stone + housing) ── */
 .bldg.timber_camp { background-image: url('../assets/sprites/timber_camp.png'); background-color: transparent; filter: drop-shadow(0 1px 1px rgba(0,0,0,0.3)); }
 .bldg.sawmill { background-image: url('../assets/sprites/sawmill.png'); background-color: transparent; filter: drop-shadow(0 1px 1px rgba(0,0,0,0.3)); }
@@ -216,7 +216,7 @@ body {
 /* ── Building activity state: producing ── */
 /* Base: no generic glow — activity shown by per-type visual cues */
 .bldg.producing { box-shadow: none; }
-.bldg.producing.mine { box-shadow: inset 0 0 0 1px rgba(79,163,224,0.35); }
+.bldg.producing.mine { box-shadow: none; }
 .bldg.producing::after { content: none; }
 /* ── Activity keyframes ── */
 @keyframes act-smoke {
@@ -348,7 +348,7 @@ body {
 .road-surface::after { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(to right, rgba(255,255,200,0.25) 0px, rgba(255,255,200,0.25) 3px, transparent 3px, transparent 7px) left center / 100% 1px no-repeat, repeating-linear-gradient(to bottom, rgba(255,255,200,0.25) 0px, rgba(255,255,200,0.25) 3px, transparent 3px, transparent 7px) center top / 1px 100% no-repeat; pointer-events: none; }
 .road-surface { cursor: pointer; }
 .road-surface:hover { filter: brightness(1.2); }
-.road-surface.mine { box-shadow: inset 0 0 0 1.5px rgba(79,163,224,0.35), inset 0 0 3px rgba(0,0,0,0.3); }
+.road-surface.mine { box-shadow: inset 0 0 0 1.5px rgba(0,0,0,0.55), inset 0 0 3px rgba(0,0,0,0.3); }
 /* ── Disconnected buildings (no road access) ─────────── */
 .bldg.disconnected { opacity: 0.4; }
 .bldg.disconnected::after { content: ''; position: absolute; top: -3px; right: -3px; width: 7px; height: 7px; background: #d4a040; border-radius: 50%; border: 1px solid #0b0f14; }
@@ -380,6 +380,12 @@ body {
 
 /* ── Bottom panel ──────────────────────────────────── */
 .bottom-panel { flex-shrink: 0; background: #131a24; border-top: 1px solid #1e2a3a; max-height: 42vh; display: flex; flex-direction: column; }
+.panel-collapse-btn { display: flex; align-items: center; justify-content: center; width: 100%; height: 22px; background: #131a24; border: none; border-bottom: 1px solid #1e2a3a; color: #5a6a7e; font-size: 0.7rem; cursor: pointer; flex-shrink: 0; padding: 0; transition: color 0.15s; }
+.panel-collapse-btn:hover { color: #7a8a9e; }
+.panel-collapse-btn::after { content: '▾ Hide'; }
+.bottom-panel.collapsed .panel-collapse-btn::after { content: '▴ Show'; }
+.bottom-panel.collapsed .tab-bar,
+.bottom-panel.collapsed .panel-content { display: none; }
 .tab-bar { display: flex; border-bottom: 1px solid #1e2a3a; flex-shrink: 0; }
 .tab-btn { flex: 1; padding: 9px; text-align: center; font-size: 0.78rem; font-weight: 600; color: #7a8a9e; cursor: pointer; background: none; border: none; border-bottom: 2px solid transparent; transition: color 0.2s; }
 .tab-btn.active { color: #4fa3e0; border-bottom-color: #4fa3e0; }
@@ -580,11 +586,6 @@ body {
   .topbar-title { font-size: 0.9rem; }
   .stat { font-size: 0.72rem; }
   .map-canvas { margin: 40px 28px 28px; }
-  .map-controls { top: 6px; right: 6px; }
-  .map-zoom-btn, .map-reset-btn { height: 26px; }
-  .map-zoom-btn { width: 26px; }
-  .map-reset-btn { padding: 0 8px; font-size: 0.66rem; }
-  .map-zoom-label { min-width: 40px; font-size: 0.68rem; }
   /* grain/mill sprites scale with cell naturally */
   .bottom-panel { max-height: 38vh; }
 }

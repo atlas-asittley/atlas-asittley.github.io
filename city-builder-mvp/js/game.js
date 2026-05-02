@@ -3,7 +3,7 @@ import { sb } from './config.js';
 import { state, computeTraderUnlocks, computeLaborAllocation, computeGridBounds } from './state.js';
 import { showScreen, showToast, capitalize, updateMoney, updateWorkers } from './ui.js';
 import { renderMap, initMapEvents, expandMapIfNeeded } from './map.js';
-import { renderBuildPanel, renderInventory, renderTradePanel, initTabs, checkAllTraderVisits } from './panels.js';
+import { renderBuildPanel, renderInventory, renderTradePanel, initTabs, initPanelCollapse, checkAllTraderVisits } from './panels.js';
 import { subscribeRealtime } from './realtime.js';
 import { startWalkers, stopWalkers } from './walkers.js';
 import { initInspector } from './inspector.js';
@@ -234,5 +234,6 @@ function showTapHintOnce() {
 export function initGameEvents() {
   initMapEvents();
   initTabs();
+  initPanelCollapse();
   initInspector();
 }

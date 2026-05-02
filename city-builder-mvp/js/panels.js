@@ -772,6 +772,15 @@ function blackMarketTrade(resourceKey, quantity, direction, btn) {
   });
 }
 
+// ── Panel collapse toggle ──
+export function initPanelCollapse() {
+  var btn = document.getElementById('panel-collapse');
+  if (!btn) return;
+  btn.addEventListener('click', function () {
+    btn.closest('.bottom-panel').classList.toggle('collapsed');
+  });
+}
+
 // ── Tab system ──
 export function initTabs() {
   document.querySelectorAll('.tab-btn').forEach(function (btn) {
