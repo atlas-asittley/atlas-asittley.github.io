@@ -1,9 +1,10 @@
-// ── Building Inspector & Demolition ──
+// ── Building Inspector, Walker Inspector & Demolition ──
 import { sb } from './config.js';
 import { state, computeLaborAllocation } from './state.js';
 import { showToast, updateMoney, updateWorkers } from './ui.js';
 import { renderMap } from './map.js';
 import { renderBuildPanel, renderInventory } from './panels.js';
+import { setWalkerClickHandler } from './walkers.js';
 
 var inspectedBuilding = null;
 
@@ -373,9 +374,42 @@ function executeDemolish(building) {
     });
 }
 
+// ── Walker Inspector ──
+export function openWalkerInspector(walkerInfo) {
+  inspectedBuilding = null; // clear building inspection
+  var titleEl = document.getElementById('inspector-title');
+  var bodyEl = document.getElementById('inspector-body');
+  var actionsEl = document.getElementById('inspector-actions');
+
+  titleEl.textContent = 'Citizen';
+
+  var tierLabel = walkerInfo.sourceTier === 0 ? 'Shanty dweller' : 'Villager';
+  var stepsLeft = walkerInfo.maxSteps - walkerInfo.steps;
+  var activity = stepsLeft > 4 ? 'Strolling' : 'Heading home';
+
+  var html = '';
+  html += '<div class="insp-row"><span class="insp-label">Type</span><span class="insp-value">' + tierLabel + '</span></div>';
+  html += '<div class="insp-row"><span class="insp-label">Activity</span><span class="insp-value">' + activity + '</span></div>';
+  html += '<div class="insp-row"><span class="insp-label">Home</span><span class="insp-value">' + walkerInfo.sourceName + '</span></div>';
+  if (walkerInfo.sourceX !== null) {
+    html += '<div class="insp-row"><span class="insp-label">Home location</span><span class="insp-value">(' + walkerInfo.sourceX + ', ' + walkerInfo.sourceY + ')</span></div>';
+  }
+  html += '<div class="insp-row"><span class="insp-label">Position</span><span class="insp-value">(' + walkerInfo.x + ', ' + walkerInfo.y + ')</span></div>';
+  html += '<div class="insp-row"><span class="insp-label">Steps</span><span class="insp-value">' + walkerInfo.steps + ' / ' + walkerInfo.maxSteps + '</span></div>';
+  html += '<div class="insp-hint">Citizens wander from their homes along roads. They are purely cosmetic and don\'t affect production.</div>';
+
+  bodyEl.innerHTML = html;
+  actionsEl.innerHTML = '';
+  document.getElementById('inspector-overlay').classList.add('active');
+}
+
 export function initInspector() {
   document.getElementById('inspector-close').addEventListener('click', closeInspector);
   document.getElementById('inspector-overlay').addEventListener('click', function (e) {
     if (e.target === this) closeInspector();
+  });
+  // Wire up walker click -> inspector
+  setWalkerClickHandler(function (walkerInfo) {
+    openWalkerInspector(walkerInfo);
   });
 }
