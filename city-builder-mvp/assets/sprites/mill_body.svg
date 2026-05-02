@@ -1,129 +1,87 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
   <defs>
     <linearGradient id="sw" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#a09480"/>
-      <stop offset=".5" stop-color="#887860"/>
-      <stop offset="1" stop-color="#685840"/>
+      <stop offset="0" stop-color="#b0a8a0"/>
+      <stop offset=".5" stop-color="#908880"/>
+      <stop offset="1" stop-color="#706860"/>
     </linearGradient>
-    <linearGradient id="rf" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#8a6838"/>
-      <stop offset="1" stop-color="#6a4c28"/>
+    <linearGradient id="ts" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#686060"/>
+      <stop offset="1" stop-color="#908880"/>
     </linearGradient>
-    <linearGradient id="rs" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#7a5830"/>
-      <stop offset="1" stop-color="#5a3c20"/>
+    <linearGradient id="cap" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#505058"/>
+      <stop offset="1" stop-color="#383840"/>
     </linearGradient>
     <linearGradient id="gd" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#7a6838"/>
-      <stop offset="1" stop-color="#5a4a28"/>
+      <stop offset="0" stop-color="#7a7268"/>
+      <stop offset="1" stop-color="#5a5248"/>
     </linearGradient>
   </defs>
 
-  <!-- Ground shadow/dirt -->
-  <ellipse cx="30" cy="58" rx="28" ry="8" fill="url(#gd)" opacity=".5"/>
+  <!-- Ground shadow -->
+  <ellipse cx="32" cy="60" rx="22" ry="6" fill="url(#gd)" opacity=".4"/>
 
-  <!-- Main stone building body -->
-  <rect x="14" y="30" width="26" height="24" rx="1" fill="url(#sw)"/>
-  <!-- Stone block texture -->
-  <g stroke="#6a5a40" stroke-width=".4" fill="none" opacity=".35">
-    <line x1="14" y1="34" x2="40" y2="34"/>
-    <line x1="14" y1="38" x2="40" y2="38"/>
-    <line x1="14" y1="42" x2="40" y2="42"/>
-    <line x1="14" y1="46" x2="40" y2="46"/>
-    <line x1="14" y1="50" x2="40" y2="50"/>
-    <line x1="20" y1="30" x2="20" y2="34"/>
-    <line x1="27" y1="30" x2="27" y2="34"/>
-    <line x1="34" y1="30" x2="34" y2="34"/>
-    <line x1="17" y1="34" x2="17" y2="38"/>
-    <line x1="24" y1="34" x2="24" y2="38"/>
-    <line x1="31" y1="34" x2="31" y2="38"/>
-    <line x1="38" y1="34" x2="38" y2="38"/>
-    <line x1="20" y1="38" x2="20" y2="42"/>
-    <line x1="27" y1="38" x2="27" y2="42"/>
-    <line x1="34" y1="38" x2="34" y2="42"/>
-    <line x1="17" y1="42" x2="17" y2="46"/>
-    <line x1="24" y1="42" x2="24" y2="46"/>
-    <line x1="31" y1="42" x2="31" y2="46"/>
-    <line x1="38" y1="42" x2="38" y2="46"/>
-    <line x1="20" y1="46" x2="20" y2="50"/>
-    <line x1="27" y1="46" x2="27" y2="50"/>
-    <line x1="34" y1="46" x2="34" y2="50"/>
+  <!-- Tower body -->
+  <ellipse cx="32" cy="38" rx="14" ry="22" fill="#686060" opacity=".2"/>
+  <path d="M20,58 L22,22 Q32,20 42,22 L44,58 Q32,60 20,58Z" fill="url(#sw)"/>
+  <path d="M20,58 L22,22 Q18,24 20,58Z" fill="url(#ts)" opacity=".5"/>
+  <!-- Stone texture -->
+  <g stroke="#605850" stroke-width=".4" fill="none" opacity=".3">
+    <path d="M21,28 Q32,26 43,28"/>
+    <path d="M21,34 Q32,32 43,34"/>
+    <path d="M20,40 Q32,38 44,40"/>
+    <path d="M20,46 Q32,44 44,46"/>
+    <path d="M20,52 Q32,50 44,52"/>
+    <line x1="27" y1="22" x2="26" y2="28"/>
+    <line x1="37" y1="22" x2="38" y2="28"/>
+    <line x1="24" y1="28" x2="23" y2="34"/>
+    <line x1="32" y1="27" x2="32" y2="34"/>
+    <line x1="40" y1="28" x2="41" y2="34"/>
+    <line x1="27" y1="34" x2="26" y2="40"/>
+    <line x1="37" y1="34" x2="38" y2="40"/>
+    <line x1="24" y1="40" x2="23" y2="46"/>
+    <line x1="32" y1="39" x2="32" y2="46"/>
+    <line x1="40" y1="40" x2="41" y2="46"/>
   </g>
-  <rect x="14" y="30" width="26" height="1.5" fill="#b0a080" opacity=".3"/>
+  <path d="M38,22 Q44,22 44,58 Q42,58 38,22Z" fill="#c0b8b0" opacity=".15"/>
 
-  <!-- Side wall -->
-  <polygon points="14,30 8,34 8,58 14,54" fill="#786840" opacity=".5"/>
-  <g stroke="#5a4a30" stroke-width=".3" fill="none" opacity=".25">
-    <line x1="8" y1="38" x2="14" y2="34"/>
-    <line x1="8" y1="42" x2="14" y2="38"/>
-    <line x1="8" y1="46" x2="14" y2="42"/>
-    <line x1="8" y1="50" x2="14" y2="46"/>
-    <line x1="8" y1="54" x2="14" y2="50"/>
-  </g>
+  <!-- Conical cap -->
+  <polygon points="32,6 18,22 46,22" fill="url(#cap)"/>
+  <line x1="32" y1="6" x2="46" y2="22" stroke="#60606a" stroke-width=".6" opacity=".4"/>
 
-  <!-- Roof -->
-  <polygon points="12,30 27,18 42,30" fill="url(#rf)"/>
-  <polygon points="12,30 8,34 22,22 27,18" fill="url(#rs)"/>
-  <line x1="27" y1="18" x2="22" y2="22" stroke="#9a7a40" stroke-width=".6" opacity=".4"/>
-  <g stroke="#5a4020" stroke-width=".4" opacity=".25">
-    <line x1="15" y1="29" x2="27" y2="19"/>
-    <line x1="20" y1="29" x2="30" y2="21"/>
-    <line x1="25" y1="29" x2="33" y2="23"/>
-    <line x1="30" y1="29" x2="36" y2="25"/>
-    <line x1="35" y1="29" x2="39" y2="27"/>
-  </g>
-
-  <!-- Sail hub only (no sail arms — those spin via CSS overlay) -->
-  <circle cx="27" cy="24" r="2.2" fill="#806848"/>
-  <circle cx="27" cy="24" r="1.4" fill="#6a5838"/>
+  <!-- Hub only (sails spin via CSS) -->
+  <circle cx="32" cy="18" r="2.8" fill="#706868"/>
+  <circle cx="32" cy="18" r="1.8" fill="#585050"/>
 
   <!-- Door -->
-  <rect x="22" y="44" width="8" height="10" rx=".8" fill="#403020"/>
-  <rect x="22.5" y="44.5" width="7" height="9" rx=".5" fill="#503828" opacity=".7"/>
-  <path d="M22 44 Q26 40 30 44" fill="#503828" stroke="#403020" stroke-width=".5"/>
-  <circle cx="29" cy="49" r=".6" fill="#b09850"/>
+  <path d="M28,58 L28,48 Q32,44 36,48 L36,58Z" fill="#302828"/>
+  <path d="M28.5,57 L28.5,48.5 Q32,45 35.5,48.5 L35.5,57Z" fill="#403838" opacity=".7"/>
+  <circle cx="35" cy="53" r=".6" fill="#b0a080"/>
 
   <!-- Window -->
-  <rect x="33" y="36" width="4" height="4" rx=".5" fill="#302818"/>
-  <rect x="33.3" y="36.3" width="3.4" height="3.4" rx=".3" fill="#c8d8f0" opacity=".3"/>
-  <line x1="35" y1="36" x2="35" y2="40" stroke="#504030" stroke-width=".4"/>
-  <line x1="33" y1="38" x2="37" y2="38" stroke="#504030" stroke-width=".4"/>
+  <rect x="34" y="36" width="4" height="4" rx=".5" fill="#282428"/>
+  <rect x="34.3" y="36.3" width="3.4" height="3.4" rx=".3" fill="#a0b8d0" opacity=".35"/>
+  <line x1="36" y1="36" x2="36" y2="40" stroke="#404040" stroke-width=".4"/>
+  <line x1="34" y1="38" x2="38" y2="38" stroke="#404040" stroke-width=".4"/>
 
   <!-- Grain sacks (input) -->
-  <g transform="translate(4,46)">
-    <path d="M0 10 Q0 4 3 3 Q6 4 6 10Z" fill="#c4a868"/>
-    <path d="M1 6 Q3 5 5 6" stroke="#a08848" stroke-width=".5" fill="none"/>
-    <ellipse cx="3" cy="3" rx="2" ry="1" fill="#b49858"/>
-    <circle cx="2" cy="2.5" r=".4" fill="#d4b848" opacity=".6"/>
-    <circle cx="4" cy="2.8" r=".3" fill="#d4b848" opacity=".5"/>
-  </g>
-  <g transform="translate(7,48)">
-    <path d="M0 8 Q0 3 2.5 2 Q5 3 5 8Z" fill="#b89848"/>
-    <ellipse cx="2.5" cy="2" rx="1.5" ry=".8" fill="#a88838"/>
+  <g transform="translate(6,50)">
+    <path d="M0 8 Q0 3 2.5 2 Q5 3 5 8Z" fill="#c4a868"/>
+    <ellipse cx="2.5" cy="2" rx="1.5" ry=".8" fill="#b49858"/>
   </g>
 
   <!-- Flour sacks (output) -->
-  <g transform="translate(42,48)">
-    <path d="M0 8 Q0 3 2.5 2 Q5 3 5 8Z" fill="#e8dcc0"/>
-    <ellipse cx="2.5" cy="2" rx="1.5" ry=".8" fill="#d8ccb0"/>
-    <circle cx="1" cy="6" r=".5" fill="#f0e8d0" opacity=".4"/>
-  </g>
-  <g transform="translate(45,50)">
-    <path d="M0 6 Q0 2 2 1.5 Q4 2 4 6Z" fill="#dcd0b8"/>
-    <ellipse cx="2" cy="1.5" rx="1.2" ry=".6" fill="#ccc0a8"/>
+  <g transform="translate(46,52)">
+    <path d="M0 6 Q0 2 2 1.5 Q4 2 4 6Z" fill="#e8e0d0"/>
+    <ellipse cx="2" cy="1.5" rx="1.2" ry=".6" fill="#d8d0c0"/>
   </g>
 
-  <!-- Flour dust -->
-  <g fill="#e8dcc0" opacity=".25">
-    <circle cx="20" cy="54" r="1.5"/>
-    <circle cx="32" cy="55" r="1.2"/>
-    <circle cx="25" cy="56" r="1.8"/>
-  </g>
-
-  <!-- Rocks -->
-  <g fill="#8a8070" opacity=".35">
-    <ellipse cx="10" cy="56" rx="1.2" ry=".7"/>
-    <ellipse cx="44" cy="57" rx="1" ry=".6"/>
-    <ellipse cx="48" cy="55" rx=".8" ry=".5"/>
+  <!-- Cobblestones -->
+  <g fill="#808078" opacity=".3">
+    <ellipse cx="18" cy="58" rx="2" ry="1"/>
+    <ellipse cx="46" cy="58" rx="1.8" ry=".9"/>
+    <ellipse cx="24" cy="60" rx="1.5" ry=".8"/>
+    <ellipse cx="40" cy="60" rx="1.5" ry=".8"/>
   </g>
 </svg>
