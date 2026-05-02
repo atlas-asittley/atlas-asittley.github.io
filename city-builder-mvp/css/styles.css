@@ -188,10 +188,10 @@ body {
 .bldg.house::before {
   content: '';
   position: absolute;
-  left: -6%;
-  right: -6%;
-  top: -18%;
-  bottom: -2%;
+  left: -4%;
+  width: 108%;
+  height: 132%;
+  bottom: -14%;
   background-image: var(--house-sprite);
   background-color: transparent;
   background-position: bottom center;
