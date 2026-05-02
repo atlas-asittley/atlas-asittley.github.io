@@ -10,7 +10,7 @@ export var BLDG_LABELS = {
   stone_quarry: 'SQ', mason_workshop: 'MW',
   grain_farm: 'GF', mill: 'ML',
   clay_pit: 'CP', pottery_kiln: 'PK',
-  bakery: 'BK', woodcarver: 'WC',
+  bakery: 'BK', woodcarver: 'WC', sculptor: 'SC',
   house: 'H', road: 'R'
 };
 

@@ -97,6 +97,7 @@ body {
 .bldg.pottery_kiln { background: #7a4a4a; font-size: 8px; color: #fff; }
 .bldg.bakery { background: #8a7a3a; font-size: 8px; color: #fff; }
 .bldg.woodcarver { background: #5a6a3a; font-size: 8px; color: #fff; }
+.bldg.sculptor { background: #6a5a7a; font-size: 8px; color: #fff; }
 .bldg.house { background-image: url('../assets/sprites/house_t1.png'); background-color: transparent; }
 /* Housing evolution tiers */
 .bldg.house.house-t0 { background-image: url('../assets/sprites/house_t0.png'); background-color: transparent; border: none; }
