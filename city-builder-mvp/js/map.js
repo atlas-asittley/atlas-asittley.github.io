@@ -69,13 +69,42 @@ function isRoadOrCenter(x, y, buildingAt) {
   return isRoadBuilding(buildingAt[x + ',' + y]);
 }
 
-function roadNeighborClasses(x, y, buildingAt) {
-  var classes = [];
-  if (isRoadOrCenter(x, y - 1, buildingAt)) classes.push('north');
-  if (isRoadOrCenter(x, y + 1, buildingAt)) classes.push('south');
-  if (isRoadOrCenter(x + 1, y, buildingAt)) classes.push('east');
-  if (isRoadOrCenter(x - 1, y, buildingAt)) classes.push('west');
-  return classes;
+function roadNeighborFlags(x, y, buildingAt) {
+  return {
+    n: isRoadOrCenter(x, y - 1, buildingAt),
+    s: isRoadOrCenter(x, y + 1, buildingAt),
+    e: isRoadOrCenter(x + 1, y, buildingAt),
+    w: isRoadOrCenter(x - 1, y, buildingAt)
+  };
+}
+
+// Pre-computed road clip-path polygons for all 16 neighbor combos.
+// Road lane covers 15%-85% of tile; corners filled where two adjacent arms meet.
+var ROAD_CLIPS = (function() {
+  var L = 15, R = 85, clips = [];
+  clips[0]  = [[L,L],[R,L],[R,R],[L,R]];
+  clips[1]  = [[0,L],[R,L],[R,R],[0,R]];
+  clips[2]  = [[L,L],[100,L],[100,R],[L,R]];
+  clips[3]  = [[0,L],[100,L],[100,R],[0,R]];
+  clips[4]  = [[L,L],[R,L],[R,100],[L,100]];
+  clips[5]  = [[0,L],[R,L],[R,100],[0,100]];
+  clips[6]  = [[L,L],[100,L],[100,100],[L,100]];
+  clips[7]  = [[0,L],[100,L],[100,100],[0,100]];
+  clips[8]  = [[L,0],[R,0],[R,R],[L,R]];
+  clips[9]  = [[0,0],[R,0],[R,R],[0,R]];
+  clips[10] = [[L,0],[100,0],[100,R],[L,R]];
+  clips[11] = [[0,0],[100,0],[100,R],[0,R]];
+  clips[12] = [[L,0],[R,0],[R,100],[L,100]];
+  clips[13] = [[0,0],[R,0],[R,100],[0,100]];
+  clips[14] = [[L,0],[100,0],[100,100],[L,100]];
+  clips[15] = [[0,0],[100,0],[100,100],[0,100]];
+  return clips;
+})();
+
+function buildRoadClipPath(n, s, e, w) {
+  var key = (n?8:0) | (s?4:0) | (e?2:0) | (w?1:0);
+  var pts = ROAD_CLIPS[key];
+  return 'polygon(' + pts.map(function(p) { return p[0]+'% '+p[1]+'%'; }).join(',') + ')';
 }
 
 // Cached road tile set for O(1) connectivity lookups during placement/drag
@@ -215,18 +244,12 @@ export function renderMap() {
         var mine = building.player_id === state.currentUser.id;
         var btk = building.building_type_key;
 
-        // Roads render as textured surface with connector spans
+        // Roads render as clipped surface — shape computed from neighbor connections
         if (buildingBt && buildingBt.category === 'road') {
-          var roadDirs = roadNeighborClasses(x, y, buildingAt);
+          var rf = roadNeighborFlags(x, y, buildingAt);
+          var clip = buildRoadClipPath(rf.n, rf.s, rf.e, rf.w);
           var roadClasses = 'road-surface' + (mine ? ' mine' : '');
-          if (roadDirs.length) roadClasses += ' road-' + roadDirs.join(' road-');
-          html += '<div class="' + roadClasses + '">';
-          html += '<span class="road-center"></span>';
-          html += '<span class="road-conn north"></span>';
-          html += '<span class="road-conn south"></span>';
-          html += '<span class="road-conn east"></span>';
-          html += '<span class="road-conn west"></span>';
-          html += '</div>';
+          html += '<div class="' + roadClasses + '" style="clip-path:' + clip + '"></div>';
         } else {
           var label = BLDG_LABELS[btk] || '?';
           var titleText = (buildingBt ? buildingBt.name : btk);
@@ -257,18 +280,14 @@ export function renderMap() {
           html += '<div class="' + bldgClasses + '" title="' + titleText + '">' + label + '</div>';
         }
       } else if (x === CITY_CENTER_X && y === CITY_CENTER_Y) {
-        // Show road connectors from city center to adjacent roads
-        var hqRoadDirs = [];
-        if (isRoadBuilding(buildingAt[CITY_CENTER_X + ',' + (CITY_CENTER_Y - 1)])) hqRoadDirs.push('north');
-        if (isRoadBuilding(buildingAt[CITY_CENTER_X + ',' + (CITY_CENTER_Y + 1)])) hqRoadDirs.push('south');
-        if (isRoadBuilding(buildingAt[(CITY_CENTER_X + 1) + ',' + CITY_CENTER_Y])) hqRoadDirs.push('east');
-        if (isRoadBuilding(buildingAt[(CITY_CENTER_X - 1) + ',' + CITY_CENTER_Y])) hqRoadDirs.push('west');
-        if (hqRoadDirs.length) {
-          var hqClasses = 'road-surface hq-road road-' + hqRoadDirs.join(' road-');
-          html += '<div class="' + hqClasses + '">';
-          html += '<span class="road-conn north"></span><span class="road-conn south"></span>';
-          html += '<span class="road-conn east"></span><span class="road-conn west"></span>';
-          html += '</div>';
+        // Show road surface from city center toward adjacent roads
+        var hqN = isRoadBuilding(buildingAt[CITY_CENTER_X + ',' + (CITY_CENTER_Y - 1)]);
+        var hqS = isRoadBuilding(buildingAt[CITY_CENTER_X + ',' + (CITY_CENTER_Y + 1)]);
+        var hqE = isRoadBuilding(buildingAt[(CITY_CENTER_X + 1) + ',' + CITY_CENTER_Y]);
+        var hqW = isRoadBuilding(buildingAt[(CITY_CENTER_X - 1) + ',' + CITY_CENTER_Y]);
+        if (hqN || hqS || hqE || hqW) {
+          var hqClip = buildRoadClipPath(hqN, hqS, hqE, hqW);
+          html += '<div class="road-surface hq-road" style="clip-path:' + hqClip + '"></div>';
         }
         html += '<span class="hq-label">HQ</span>';
       } else if (tile.resource_node_key) {
