@@ -4,7 +4,7 @@
 import { state } from './state.js';
 
 // ── Walker config ──
-var WALKER_TICK_MS = 600;       // movement interval
+var WALKER_TICK_MS = 1400;      // movement interval
 var WALKER_MAX_STEPS = 18;      // despawn after this many steps
 var WALKER_MAX_COUNT = 12;      // global cap (mobile-safe)
 var WALKER_SPAWN_CHANCE = 0.12; // per eligible housing per tick
