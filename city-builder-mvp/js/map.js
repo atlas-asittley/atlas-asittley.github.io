@@ -16,7 +16,7 @@ export var BLDG_LABELS = {
 };
 
 // Housing tier label overrides (keyed by tier number)
-var HOUSING_TIER_LABELS = { 0: 'S', 1: 'H', 2: 'C', 3: 'V', 4: 'M' };
+var HOUSING_TIER_LABELS = { 0: 'S', 1: 'H', 2: 'C', 3: 'T', 4: 'V', 5: 'M' };
 var CELL_BASE_SIZE = 520 / 15;  // px per cell at 1x zoom (original 520px / 15 cols)
 
 // Deterministic hash for per-tile visual variation (grass details, noise seeds)

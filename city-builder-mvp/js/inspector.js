@@ -383,7 +383,8 @@ export function openWalkerInspector(walkerInfo) {
 
   titleEl.textContent = 'Citizen';
 
-  var tierLabel = walkerInfo.sourceTier === 0 ? 'Shanty dweller' : 'Villager';
+  var walkerTierLabels = { 0: 'Shanty dweller', 1: 'Villager', 2: 'Cottage resident', 3: 'Townhouse resident', 4: 'Villa resident', 5: 'Manor estate resident' };
+  var tierLabel = walkerTierLabels[walkerInfo.sourceTier] || 'Citizen';
   var stepsLeft = walkerInfo.maxSteps - walkerInfo.steps;
   var activity = stepsLeft > 4 ? 'Strolling' : 'Heading home';
 

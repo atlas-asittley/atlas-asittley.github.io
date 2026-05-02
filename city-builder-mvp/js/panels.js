@@ -67,7 +67,7 @@ export function renderBuildPanel() {
     if (bt.category === 'road') {
       desc = 'Connects buildings to the city. Housing and processors need road access.';
     } else if (bt.category === 'housing') {
-      desc = 'Shanty \u2192 Hut \u2192 Cottage \u2192 Villa \u2192 Mansion. Workers: 2\u201324 as conditions improve.';
+      desc = 'Shanty \u2192 Hut \u2192 Cottage \u2192 Townhouse \u2192 Villa \u2192 Manor Estate. Workers: 2\u201334 as conditions improve.';
     } else if (bt.category === 'extractor') {
       desc = 'Produces ' + bt.output_rate + ' ' + resourceName(bt.output_resource_key).toLowerCase() + '/min';
     } else {
@@ -79,7 +79,7 @@ export function renderBuildPanel() {
     if (bt.category === 'road') {
       costStr = '$' + bt.build_cost + ' | no workers';
     } else if (bt.category === 'housing') {
-      costStr = '$' + bt.build_cost + ' | +2\u201324 workers (evolves with conditions)';
+      costStr = '$' + bt.build_cost + ' | +2\u201334 workers (evolves with conditions)';
     } else {
       costStr = '$' + bt.build_cost + ' | ' + bt.worker_cost + ' worker';
     }
