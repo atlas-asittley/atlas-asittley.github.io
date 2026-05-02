@@ -118,12 +118,19 @@ body {
 .hq-label { font-size: 7px; color: #7a8a9e; font-weight: 600; letter-spacing: 0.05em; }
 /* ── Walker overlay ─────────────────────────────────── */
 #walker-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2; }
-.walker-dot { position: absolute; width: 22px; height: 22px; transform: translate(-50%, -50%); transition: left 1.15s ease-in-out, top 1.15s ease-in-out, opacity 0.45s; background-repeat: no-repeat; background-size: 400% 100%; background-position: 0% 50%; filter: drop-shadow(0 0 2px rgba(10,12,18,0.45)); animation: walker-frames 0.8s steps(4) infinite; }
-.walker-dot.walker-tier-0 { background-image: url('../assets/sprites/walkers/resident_t0_strip.png'); }
-.walker-dot.walker-tier-1 { background-image: url('../assets/sprites/walkers/resident_t1_strip.png'); }
-@keyframes walker-frames {
-  from { background-position: 0% 50%; }
-  to { background-position: 100% 50%; }
+.walker-dot { position: absolute; width: 10px; height: 14px; transform: translate(-50%, -50%); transition: left 1.35s ease-in-out, top 1.35s ease-in-out, opacity 0.45s; animation: walker-bob 0.7s ease-in-out infinite alternate, walker-waddle 0.55s ease-in-out infinite; }
+.walker-dot::before { content: ''; position: absolute; left: 2px; top: 0; width: 6px; height: 6px; border-radius: 50%; background: #d8c3a0; box-shadow: 0 0 0 1px rgba(10,12,18,0.18); }
+.walker-dot::after { content: ''; position: absolute; left: 1px; top: 5px; width: 8px; height: 8px; border-radius: 3px 3px 2px 2px; background: #7a6756; box-shadow: 0 0 0 1px rgba(10,12,18,0.16); }
+.walker-dot.walker-tier-0::after { background: linear-gradient(180deg, #7b624d 0%, #5e4a3a 100%); }
+.walker-dot.walker-tier-1::after { background: linear-gradient(180deg, #8e8262 0%, #6f7b52 100%); }
+@keyframes walker-bob {
+  from { margin-top: -1px; }
+  to { margin-top: 1px; }
+}
+@keyframes walker-waddle {
+  0% { transform: translate(-50%, -50%) rotate(-3deg); }
+  50% { transform: translate(-50%, -50%) rotate(3deg); }
+  100% { transform: translate(-50%, -50%) rotate(-3deg); }
 }
 
 /* ── Bottom panel ──────────────────────────────────── */
