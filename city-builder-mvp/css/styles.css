@@ -78,6 +78,32 @@ body {
 .cell::before { content: ''; position: absolute; inset: 0; opacity: 0.12; pointer-events: none; z-index: 0;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='34' height='34'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' seed='42'/%3E%3C/filter%3E%3Crect width='34' height='34' filter='url(%23n)' opacity='0.35'/%3E%3C/svg%3E");
   background-size: cover; border-radius: inherit; }
+/* Noise seed variants — break tile-to-tile noise repetition */
+.cell.nv1::before { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='34' height='34'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' seed='17'/%3E%3C/filter%3E%3Crect width='34' height='34' filter='url(%23n)' opacity='0.35'/%3E%3C/svg%3E"); }
+.cell.nv2::before { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='34' height='34'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' seed='73'/%3E%3C/filter%3E%3Crect width='34' height='34' filter='url(%23n)' opacity='0.35'/%3E%3C/svg%3E"); }
+.cell.nv3::before { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='34' height='34'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' seed='91'/%3E%3C/filter%3E%3Crect width='34' height='34' filter='url(%23n)' opacity='0.35'/%3E%3C/svg%3E"); }
+/* Grass detail overlays — subtle bushes, clumps, rocks to break grid uniformity */
+.cell.gv0::after, .cell.gv1::after, .cell.gv2::after, .cell.gv3::after,
+.cell.gv4::after, .cell.gv5::after, .cell.gv6::after, .cell.gv7::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 0;
+  background-size: cover; background-repeat: no-repeat;
+}
+/* Bush cluster bottom-right */
+.cell.gv0::after { opacity: 0.55; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='34' height='34'%3E%3Cellipse cx='24' cy='22' rx='5' ry='3.5' fill='%231a3318' opacity='0.6'/%3E%3Cellipse cx='22' cy='21' rx='3' ry='2.5' fill='%231e3d1c' opacity='0.5'/%3E%3C/svg%3E"); }
+/* Grass tufts left */
+.cell.gv1::after { opacity: 0.6; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='34' height='34'%3E%3Cg stroke='%232a4a28' stroke-width='0.8' opacity='0.55'%3E%3Cline x1='8' y1='28' x2='7' y2='22'/%3E%3Cline x1='10' y1='28' x2='11' y2='21'/%3E%3Cline x1='9' y1='28' x2='9' y2='20'/%3E%3C/g%3E%3C/svg%3E"); }
+/* Small rocks */
+.cell.gv2::after { opacity: 0.5; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='34' height='34'%3E%3Cellipse cx='20' cy='26' rx='3' ry='2' fill='%232a2e26' opacity='0.5'/%3E%3Cellipse cx='24' cy='28' rx='2' ry='1.5' fill='%23262a24' opacity='0.4'/%3E%3C/svg%3E"); }
+/* Bush + grass opposite corners */
+.cell.gv3::after { opacity: 0.5; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='34' height='34'%3E%3Cellipse cx='10' cy='10' rx='4' ry='3' fill='%231a3518' opacity='0.5'/%3E%3Cg stroke='%232a4a28' stroke-width='0.6' opacity='0.45'%3E%3Cline x1='26' y1='28' x2='25' y2='22'/%3E%3Cline x1='28' y1='28' x2='28' y2='21'/%3E%3C/g%3E%3C/svg%3E"); }
+/* Scattered pebbles */
+.cell.gv4::after { opacity: 0.5; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='34' height='34'%3E%3Ccircle cx='6' cy='14' r='1.5' fill='%232e3228' opacity='0.45'/%3E%3Ccircle cx='22' cy='8' r='1' fill='%232e3228' opacity='0.4'/%3E%3Ccircle cx='14' cy='26' r='1.2' fill='%232a2e26' opacity='0.45'/%3E%3C/svg%3E"); }
+/* Tall grass right */
+.cell.gv5::after { opacity: 0.55; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='34' height='34'%3E%3Cg stroke='%23254522' stroke-width='0.7' opacity='0.55'%3E%3Cpath d='M28 30 Q27 24 29 18' fill='none'/%3E%3Cpath d='M30 30 Q31 22 29 16' fill='none'/%3E%3Cpath d='M26 30 Q25 25 27 20' fill='none'/%3E%3C/g%3E%3C/svg%3E"); }
+/* Bush bottom-left */
+.cell.gv6::after { opacity: 0.55; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='34' height='34'%3E%3Cellipse cx='8' cy='26' rx='5' ry='3' fill='%23183214' opacity='0.55'/%3E%3Cellipse cx='10' cy='25' rx='3' ry='2' fill='%231c3818' opacity='0.45'/%3E%3C/svg%3E"); }
+/* Grass + accent dot */
+.cell.gv7::after { opacity: 0.55; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='34' height='34'%3E%3Cg stroke='%232a4a28' stroke-width='0.6' opacity='0.5'%3E%3Cline x1='16' y1='24' x2='15' y2='18'/%3E%3Cline x1='18' y1='24' x2='19' y2='17'/%3E%3C/g%3E%3Ccircle cx='15' cy='17' r='1.2' fill='%233a4a30' opacity='0.5'/%3E%3C/svg%3E"); }
 /* Resource tiles — richer ground with natural scatter */
 .cell.res-timber { background: linear-gradient(160deg, #1a2e22 0%, #16281a 50%, #1a3020 100%); box-shadow: inset 0 0 8px rgba(60,120,70,0.12), inset 0 0 0 0.5px rgba(0,0,0,0.1); }
 .cell.res-timber::before { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='34' height='34'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='2' seed='7'/%3E%3C/filter%3E%3Crect width='34' height='34' filter='url(%23n)' opacity='0.35'/%3E%3Ccircle cx='8' cy='26' r='2' fill='%23264a30' opacity='0.5'/%3E%3Ccircle cx='24' cy='10' r='1.5' fill='%23264a30' opacity='0.4'/%3E%3C/svg%3E"); opacity: 0.4; }
@@ -159,10 +185,31 @@ body {
 }
 .bldg.sculptor::before { display: none; }
 /* ── Housing sprites ── */
-.bldg.house { background-image: url('../assets/sprites/house_t1.png'); background-color: transparent; filter: drop-shadow(0 1px 1px rgba(0,0,0,0.3)); }
+.bldg.house { background-image: url('../assets/sprites/house_t1.png'); background-color: transparent; background-position: center 58%; filter: drop-shadow(0 1px 1px rgba(0,0,0,0.3)); }
 /* Housing evolution tiers */
-.bldg.house.house-t0 { background-image: url('../assets/sprites/house_t0.png'); background-color: transparent; border: none; }
-.bldg.house.house-t1 { background-image: url('../assets/sprites/house_t1.png'); background-color: transparent; }
+.bldg.house.house-t0 { background-image: url('../assets/sprites/house_t0.png'); background-color: transparent; background-position: center 58%; border: none; }
+.bldg.house.house-t1 { background-image: url('../assets/sprites/house_t1.png'); background-color: transparent; background-position: center 58%; }
+/* Tier 2: Cottage — stone/wood house with peaked roof */
+.bldg.house.house-t2 {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='cw' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%238a7a60'/%3E%3Cstop offset='1' stop-color='%236a5a40'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect x='6' y='14' width='20' height='16' rx='1' fill='url(%23cw)'/%3E%3Cpolygon points='16,4 2,14 30,14' fill='%235a4030'/%3E%3Cpolygon points='16,4 4,14 28,14' fill='%236a5038'/%3E%3Crect x='10' y='17' width='5' height='5' rx='0.5' fill='%23c0d8e8' opacity='0.6'/%3E%3Cline x1='12.5' y1='17' x2='12.5' y2='22' stroke='%235a4a3a' stroke-width='0.5'/%3E%3Cline x1='10' y1='19.5' x2='15' y2='19.5' stroke='%235a4a3a' stroke-width='0.5'/%3E%3Crect x='19' y='20' width='5' height='10' rx='0.5' fill='%234a3a28'/%3E%3Ccircle cx='22.5' cy='25' r='0.6' fill='%23c0a060'/%3E%3Crect x='22' y='4' width='3' height='10' fill='%236a5a4a'/%3E%3C/svg%3E");
+  background-color: transparent; background-size: contain; background-repeat: no-repeat; background-position: center;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.4));
+}
+.bldg.house.house-t2::before { display: none; }
+/* Tier 3: Villa — larger building with multiple windows */
+.bldg.house.house-t3 {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='vw' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23c0b090'/%3E%3Cstop offset='1' stop-color='%23a09070'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect x='3' y='12' width='26' height='18' rx='1' fill='url(%23vw)'/%3E%3Cpolygon points='16,2 0,12 32,12' fill='%237a4030'/%3E%3Cpolygon points='16,2 2,12 30,12' fill='%238a4838'/%3E%3Crect x='5' y='15' width='4' height='4' rx='0.5' fill='%23a0c0e0' opacity='0.5'/%3E%3Crect x='14' y='15' width='4' height='4' rx='0.5' fill='%23a0c0e0' opacity='0.5'/%3E%3Crect x='23' y='15' width='4' height='4' rx='0.5' fill='%23a0c0e0' opacity='0.5'/%3E%3Crect x='13' y='22' width='6' height='8' rx='1' fill='%23503828'/%3E%3Ccircle cx='17.5' cy='26' r='0.5' fill='%23d4a040'/%3E%3Crect x='5' y='22' width='4' height='4' rx='0.5' fill='%23a0c0e0' opacity='0.4'/%3E%3Crect x='23' y='22' width='4' height='4' rx='0.5' fill='%23a0c0e0' opacity='0.4'/%3E%3C/svg%3E");
+  background-color: transparent; background-size: contain; background-repeat: no-repeat; background-position: center;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.4));
+}
+.bldg.house.house-t3::before { display: none; }
+/* Tier 4: Mansion — grand building with columns */
+.bldg.house.house-t4 {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='mw' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23e0d8c0'/%3E%3Cstop offset='1' stop-color='%23c0b090'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect x='2' y='10' width='28' height='20' rx='1' fill='url(%23mw)'/%3E%3Crect x='1' y='8' width='30' height='3' fill='%238a5038'/%3E%3Cpolygon points='16,2 4,8 28,8' fill='%239a5838'/%3E%3Crect x='5' y='10' width='2' height='18' fill='%23d0c8b0'/%3E%3Crect x='13' y='10' width='2' height='18' fill='%23d0c8b0'/%3E%3Crect x='17' y='10' width='2' height='18' fill='%23d0c8b0'/%3E%3Crect x='25' y='10' width='2' height='18' fill='%23d0c8b0'/%3E%3Crect x='8' y='13' width='4' height='5' rx='0.5' fill='%2390b8d8' opacity='0.6'/%3E%3Crect x='20' y='13' width='4' height='5' rx='0.5' fill='%2390b8d8' opacity='0.6'/%3E%3Crect x='13.5' y='20' width='5' height='10' rx='2' fill='%23604030'/%3E%3Ccircle cx='17' cy='25' r='0.5' fill='%23e0c070'/%3E%3Crect x='8' y='21' width='3' height='3' rx='0.5' fill='%2390b8d8' opacity='0.5'/%3E%3Crect x='21' y='21' width='3' height='3' rx='0.5' fill='%2390b8d8' opacity='0.5'/%3E%3C/svg%3E");
+  background-color: transparent; background-size: contain; background-repeat: no-repeat; background-position: center;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.4));
+}
+.bldg.house.house-t4::before { display: none; }
 /* ── Building activity state: producing ── */
 .bldg.producing {
   animation: bldg-produce 2s ease-in-out infinite;
@@ -225,6 +272,9 @@ body {
 .walker-dot::after { content: ''; position: absolute; left: 1px; top: 5px; width: 8px; height: 8px; border-radius: 3px 3px 2px 2px; background: #7a6756; box-shadow: 0 0 0 1px rgba(10,12,18,0.16); }
 .walker-dot.walker-tier-0::after { background: linear-gradient(180deg, #7b624d 0%, #5e4a3a 100%); }
 .walker-dot.walker-tier-1::after { background: linear-gradient(180deg, #8e8262 0%, #6f7b52 100%); }
+.walker-dot.walker-tier-2::after { background: linear-gradient(180deg, #6a7a90 0%, #4a5a70 100%); }
+.walker-dot.walker-tier-3::after { background: linear-gradient(180deg, #8a7060 0%, #6a5040 100%); }
+.walker-dot.walker-tier-4::after { background: linear-gradient(180deg, #a09070 0%, #806a4a 100%); }
 @keyframes walker-bob {
   from { margin-top: -1px; }
   to { margin-top: 1px; }
