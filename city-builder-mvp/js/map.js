@@ -31,6 +31,9 @@ export function isPlacementValid(btKey, tile) {
   if (bt.category === 'extractor') {
     return tile.resource_node_key === bt.output_resource_key;
   }
+  if (bt.category === 'road') {
+    return isRoadPlacementConnected(tile);
+  }
   return true;
 }
 
@@ -47,6 +50,16 @@ function roadNeighborClasses(x, y, buildingAt) {
   if (isRoadBuilding(buildingAt[(x + 1) + ',' + y])) classes.push('east');
   if (isRoadBuilding(buildingAt[(x - 1) + ',' + y])) classes.push('west');
   return classes;
+}
+
+function isRoadPlacementConnected(tile) {
+  if (!tile) return false;
+  if ((Math.abs(tile.x - 7) + Math.abs(tile.y - 7)) === 1) return true;
+
+  return state.allBuildings.some(function (b) {
+    return isRoadBuilding(b)
+      && Math.abs(b.x - tile.x) + Math.abs(b.y - tile.y) === 1;
+  });
 }
 
 export function applyMapZoom() {
