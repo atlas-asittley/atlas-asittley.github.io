@@ -49,7 +49,16 @@ export function renderBuildPanel() {
       grain_farm: '#5a7a3a', mill: '#6a5a4a',
       house: '#4a6a8a', road: '#6a6a5a'
     };
+    var spriteIcons = {
+      timber_camp: 'assets/sprites/icons/timber_camp.png',
+      sawmill: 'assets/sprites/icons/sawmill.png',
+      stone_quarry: 'assets/sprites/icons/stone_quarry.png',
+      mason_workshop: 'assets/sprites/icons/mason_workshop.png',
+      house: 'assets/sprites/icons/house_t1.png',
+      road: 'assets/sprites/icons/road.png'
+    };
     var bgColor = colors[key] || '#4a4a6a';
+    var spriteUrl = spriteIcons[key] || null;
     var label = BLDG_LABELS[key] || '?';
 
     var desc;
@@ -83,7 +92,11 @@ export function renderBuildPanel() {
 
     var showTier = bt.category !== 'housing' && bt.category !== 'road';
     html += '<div class="build-item' + (disabled ? ' disabled' : '') + (selected ? ' selected' : '') + '" data-bt="' + key + '">';
-    html += '<div class="build-icon" style="background:' + bgColor + '">' + label + '</div>';
+    if (spriteUrl) {
+      html += '<div class="build-icon" data-sprite="1" style="background-image:url(' + spriteUrl + ');background-color:' + bgColor + '"></div>';
+    } else {
+      html += '<div class="build-icon" style="background:' + bgColor + '">' + label + '</div>';
+    }
     html += '<div class="build-info">';
     html += '<div class="build-name">' + bt.name + (showTier ? ' <small>Tier ' + bt.tier + '</small>' : '') + '</div>';
     html += '<div class="' + costClass + '">' + costStr + '</div>';
