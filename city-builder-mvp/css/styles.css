@@ -118,17 +118,12 @@ body {
 .hq-label { font-size: 7px; color: #7a8a9e; font-weight: 600; letter-spacing: 0.05em; }
 /* ── Walker overlay ─────────────────────────────────── */
 #walker-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2; }
-.walker-dot { position: absolute; width: 18px; height: 18px; transform: translate(-50%, -50%); transition: left 1.15s ease-in-out, top 1.15s ease-in-out, opacity 0.45s; background-size: contain; background-repeat: no-repeat; background-position: center; filter: drop-shadow(0 0 2px rgba(10,12,18,0.45)); animation: walker-bob 0.7s ease-in-out infinite alternate, walker-sway 1.1s ease-in-out infinite; transform-origin: 50% 80%; }
-.walker-dot.walker-tier-0 { background-image: url('../assets/sprites/walkers/resident_t0.png'); }
-.walker-dot.walker-tier-1 { background-image: url('../assets/sprites/walkers/resident_t1.png'); }
-@keyframes walker-bob {
-  from { margin-top: -1px; }
-  to { margin-top: 1px; }
-}
-@keyframes walker-sway {
-  0% { filter: drop-shadow(0 0 2px rgba(10,12,18,0.45)); }
-  50% { filter: drop-shadow(0 1px 2px rgba(10,12,18,0.35)); }
-  100% { filter: drop-shadow(0 0 2px rgba(10,12,18,0.45)); }
+.walker-dot { position: absolute; width: 22px; height: 22px; transform: translate(-50%, -50%); transition: left 1.15s ease-in-out, top 1.15s ease-in-out, opacity 0.45s; background-repeat: no-repeat; background-size: 400% 100%; background-position: 0% 50%; filter: drop-shadow(0 0 2px rgba(10,12,18,0.45)); animation: walker-frames 0.8s steps(4) infinite; }
+.walker-dot.walker-tier-0 { background-image: url('../assets/sprites/walkers/resident_t0_strip.png'); }
+.walker-dot.walker-tier-1 { background-image: url('../assets/sprites/walkers/resident_t1_strip.png'); }
+@keyframes walker-frames {
+  from { background-position: 0% 50%; }
+  to { background-position: 100% 50%; }
 }
 
 /* ── Bottom panel ──────────────────────────────────── */
