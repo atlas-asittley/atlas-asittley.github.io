@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="34" height="34" viewBox="0 0 34 34">
+  <!-- Stone B: Boulder field - scattered rounded boulders on rocky ground -->
+  <rect width="34" height="34" fill="#222230"/>
+  <filter id="sn"><feTurbulence type="fractalNoise" baseFrequency="1.0" numOctaves="2" seed="17"/></filter>
+  <rect width="34" height="34" filter="url(#sn)" opacity="0.2"/>
+  <!-- Large boulders -->
+  <ellipse cx="10" cy="10" rx="6" ry="4.5" fill="#383848" opacity="0.6"/>
+  <ellipse cx="9" cy="9" rx="4" ry="3" fill="#444460" opacity="0.35"/>
+  <ellipse cx="26" cy="22" rx="5.5" ry="4" fill="#383848" opacity="0.55"/>
+  <ellipse cx="25" cy="21" rx="3.5" ry="2.5" fill="#484868" opacity="0.3"/>
+  <!-- Medium stones -->
+  <ellipse cx="22" cy="8" rx="3" ry="2.5" fill="#3a3a4e" opacity="0.5"/>
+  <ellipse cx="8" cy="26" rx="4" ry="3" fill="#3a3a4e" opacity="0.5"/>
+  <!-- Small pebbles -->
+  <circle cx="17" cy="17" r="1.5" fill="#444460" opacity="0.35"/>
+  <circle cx="30" cy="12" r="1.2" fill="#3a3a4e" opacity="0.3"/>
+  <circle cx="15" cy="28" r="1" fill="#3a3a4e" opacity="0.3"/>
+  <!-- Shadow under boulders -->
+  <ellipse cx="10" cy="13" rx="5" ry="1.5" fill="#0a0a14" opacity="0.2"/>
+  <ellipse cx="26" cy="25" rx="4.5" ry="1.5" fill="#0a0a14" opacity="0.18"/>
+</svg>

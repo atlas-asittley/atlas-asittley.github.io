@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="34" height="34" viewBox="0 0 34 34">
+  <!-- Clay A: Wet deposit - wet clay with pooling water, river-bank feel -->
+  <rect width="34" height="34" fill="#2a2020"/>
+  <filter id="cn"><feTurbulence type="fractalNoise" baseFrequency="0.75" numOctaves="2" seed="33"/></filter>
+  <rect width="34" height="34" filter="url(#cn)" opacity="0.25"/>
+  <!-- Clay mounds -->
+  <ellipse cx="10" cy="14" rx="8" ry="5" fill="#604030" opacity="0.35"/>
+  <ellipse cx="26" cy="22" rx="7" ry="4.5" fill="#583828" opacity="0.3"/>
+  <ellipse cx="20" cy="8" rx="6" ry="3.5" fill="#604030" opacity="0.25"/>
+  <!-- Wet sheen / puddles -->
+  <ellipse cx="17" cy="24" rx="5" ry="2" fill="#4a3828" opacity="0.3"/>
+  <ellipse cx="17" cy="24" rx="3" ry="1" fill="#5a4838" opacity="0.2"/>
+  <ellipse cx="6" cy="28" rx="4" ry="1.5" fill="#4a3828" opacity="0.25"/>
+  <!-- Cracked dry edges -->
+  <g stroke="#3a2820" stroke-width="0.4" opacity="0.3">
+    <path d="M2,8 L6,10 L4,14" fill="none"/>
+    <path d="M28,12 L30,16 L26,18" fill="none"/>
+    <path d="M14,30 L18,32 L16,34" fill="none"/>
+  </g>
+</svg>

@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="34" height="34" viewBox="0 0 34 34">
+  <!-- Timber D: Old growth - large canopy with visible trunk circles -->
+  <rect width="34" height="34" fill="#142418"/>
+  <filter id="tn"><feTurbulence type="fractalNoise" baseFrequency="0.5" numOctaves="3" seed="25"/></filter>
+  <rect width="34" height="34" filter="url(#tn)" opacity="0.2"/>
+  <!-- Massive canopy -->
+  <ellipse cx="17" cy="17" rx="14" ry="13" fill="#1a3820" opacity="0.5"/>
+  <!-- Individual crowns within -->
+  <circle cx="10" cy="12" r="7" fill="#1e4228" opacity="0.6"/>
+  <circle cx="24" cy="14" r="6" fill="#224a2c" opacity="0.55"/>
+  <circle cx="14" cy="24" r="6.5" fill="#204428" opacity="0.6"/>
+  <circle cx="24" cy="26" r="5" fill="#1e4228" opacity="0.5"/>
+  <!-- Trunk circles visible through gaps -->
+  <circle cx="17" cy="17" r="1.5" fill="#2a1e14" opacity="0.45"/>
+  <circle cx="8" cy="10" r="1.2" fill="#2a1e14" opacity="0.4"/>
+  <circle cx="26" cy="22" r="1" fill="#2a1e14" opacity="0.35"/>
+  <!-- Canopy highlights -->
+  <circle cx="8" cy="9" r="3" fill="#306838" opacity="0.3"/>
+  <circle cx="22" cy="12" r="2.5" fill="#306838" opacity="0.25"/>
+</svg>

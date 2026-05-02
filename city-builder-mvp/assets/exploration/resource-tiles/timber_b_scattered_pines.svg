@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="34" height="34" viewBox="0 0 34 34">
+  <!-- Timber B: Scattered pines - distinct conifer silhouettes -->
+  <rect width="34" height="34" fill="#1a2e22"/>
+  <filter id="tn"><feTurbulence type="fractalNoise" baseFrequency="0.6" numOctaves="2" seed="12"/></filter>
+  <rect width="34" height="34" filter="url(#tn)" opacity="0.2"/>
+  <!-- Pine tree tops (diamond shapes from above) -->
+  <polygon points="8,4 12,10 8,16 4,10" fill="#1e4228" opacity="0.7"/>
+  <polygon points="24,2 28,7 24,12 20,7" fill="#264a30" opacity="0.65"/>
+  <polygon points="16,14 20,20 16,26 12,20" fill="#1e4228" opacity="0.7"/>
+  <polygon points="28,18 32,24 28,30 24,24" fill="#224a2c" opacity="0.6"/>
+  <polygon points="4,22 8,28 4,34 0,28" fill="#264a30" opacity="0.55"/>
+  <!-- Trunk dots -->
+  <circle cx="8" cy="10" r="1" fill="#3a2a1a" opacity="0.5"/>
+  <circle cx="24" cy="7" r="1" fill="#3a2a1a" opacity="0.45"/>
+  <circle cx="16" cy="20" r="1" fill="#3a2a1a" opacity="0.5"/>
+</svg>

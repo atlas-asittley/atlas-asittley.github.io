@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Graphics Lab — Asset Exploration Preview</title>
+<link rel="stylesheet" href="walkers/walker-variants.css">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #0b0f14; color: #e0e6ed; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 24px; }
+  h1 { font-size: 1.4rem; margin-bottom: 8px; color: #c8d4e0; }
+  h2 { font-size: 1.1rem; margin: 32px 0 12px; color: #4fa3e0; border-bottom: 1px solid #1e2a3a; padding-bottom: 6px; }
+  h3 { font-size: 0.9rem; margin: 16px 0 8px; color: #8aa0b8; }
+  p.desc { font-size: 0.8rem; color: #6a7a8a; margin-bottom: 16px; }
+  .subtitle { font-size: 0.85rem; color: #6a7a8a; margin-bottom: 24px; }
+
+  /* Tile grid */
+  .tile-row { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 12px; }
+  .tile-card { text-align: center; }
+  .tile-card label { display: block; font-size: 0.7rem; color: #8aa0b8; margin-top: 4px; max-width: 120px; }
+
+  /* Preview cell - matches game cell rendering */
+  .preview-cell {
+    width: 68px; height: 68px;
+    position: relative;
+    border-radius: 2px;
+    overflow: hidden;
+    border: 1px solid #1e2a3a;
+  }
+  .preview-cell.large {
+    width: 102px; height: 102px;
+  }
+
+  /* Resource tile cells using inline SVG backgrounds */
+  .preview-cell::before {
+    content: '';
+    position: absolute; inset: 0;
+    background-size: cover;
+    pointer-events: none;
+  }
+
+  /* Current (baseline) resource tiles */
+  .cell-current-timber { background: linear-gradient(160deg, #1a2e22 0%, #16281a 50%, #1a3020 100%); }
+  .cell-current-timber::before { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='34' height='34'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='2' seed='7'/%3E%3C/filter%3E%3Crect width='34' height='34' filter='url(%23n)' opacity='0.35'/%3E%3Ccircle cx='8' cy='26' r='2' fill='%23264a30' opacity='0.5'/%3E%3Ccircle cx='24' cy='10' r='1.5' fill='%23264a30' opacity='0.4'/%3E%3C/svg%3E"); opacity: 0.4; }
+
+  .cell-current-stone { background: linear-gradient(145deg, #252530 0%, #202028 50%, #282838 100%); }
+  .cell-current-stone::before { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='34' height='34'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' seed='13'/%3E%3C/filter%3E%3Crect width='34' height='34' filter='url(%23n)' opacity='0.3'/%3E%3Crect x='6' y='20' width='5' height='3' rx='1' fill='%23444460' opacity='0.3'/%3E%3Crect x='20' y='8' width='4' height='3' rx='1' fill='%23444460' opacity='0.25'/%3E%3C/svg%3E"); opacity: 0.45; }
+
+  .cell-current-grain { background: linear-gradient(155deg, #2e2a1a 0%, #28241a 50%, #302c18 100%); }
+  .cell-current-grain::before { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='34' height='34'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.6' numOctaves='2' seed='21'/%3E%3C/filter%3E%3Crect width='34' height='34' filter='url(%23n)' opacity='0.25'/%3E%3Cline x1='10' y1='28' x2='10' y2='18' stroke='%23807020' stroke-width='0.5' opacity='0.3'/%3E%3Cline x1='20' y1='30' x2='20' y2='20' stroke='%23807020' stroke-width='0.5' opacity='0.25'/%3E%3C/svg%3E"); opacity: 0.45; }
+
+  .cell-current-clay { background: linear-gradient(140deg, #2a2020 0%, #28201c 50%, #2c2220 100%); }
+  .cell-current-clay::before { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='34' height='34'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='2' seed='33'/%3E%3C/filter%3E%3Crect width='34' height='34' filter='url(%23n)' opacity='0.3'/%3E%3Cellipse cx='17' cy='24' rx='6' ry='3' fill='%23604030' opacity='0.2'/%3E%3C/svg%3E"); opacity: 0.4; }
+
+  /* Current road */
+  .cell-current-road { background: #2a2a28; }
+  .cell-current-road::before { display: block; background: #525558; inset: 15%; border-radius: 0; box-shadow: inset 0 0 0 1.5px rgba(0,0,0,0.55), inset 0 0 3px rgba(0,0,0,0.3); }
+
+  /* SVG tile previews */
+  .svg-tile {
+    width: 68px; height: 68px;
+    border: 1px solid #1e2a3a;
+    border-radius: 2px;
+    object-fit: cover;
+  }
+  .svg-tile.large {
+    width: 102px; height: 102px;
+  }
+
+  /* Road preview with connectivity simulation */
+  .road-preview {
+    width: 68px; height: 68px;
+    position: relative;
+    border: 1px solid #1e2a3a;
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .road-preview img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+  }
+
+  /* Walker preview area */
+  .walker-row { display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 8px; }
+  .walker-card { text-align: center; padding: 12px; background: #131a24; border: 1px solid #1e2a3a; border-radius: 4px; min-width: 70px; }
+  .walker-card label { display: block; font-size: 0.65rem; color: #8aa0b8; margin-top: 8px; }
+  .walker-stage {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 30px;
+    /* Dark road background to simulate in-game context */
+    background: #2a2a28;
+    border-radius: 3px;
+    padding: 8px 12px;
+  }
+
+  /* Scale walkers up for easier viewing */
+  .wk-preview { transform: scale(2.5); margin: 8px 12px; }
+
+  /* Side-by-side comparison */
+  .compare { display: flex; gap: 32px; flex-wrap: wrap; }
+  .compare-group { flex: 1; min-width: 280px; }
+
+  /* Color swatch */
+  .swatch { display: inline-block; width: 12px; height: 12px; border-radius: 2px; vertical-align: middle; margin-right: 4px; border: 1px solid rgba(255,255,255,0.1); }
+
+  .section { margin-bottom: 48px; }
+</style>
+</head>
+<body>
+
+<h1>Graphics Lab — Asset Exploration Preview</h1>
+<p class="subtitle">Branch: atlas/graphics-lab &middot; Review page for style-matched art options</p>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<div class="section">
+<h2>1. Resource Tiles — Timber</h2>
+<p class="desc">Goal: read as forest/trees, not just dark green ground. Current tile is subtle noise + 2 dark circles.</p>
+
+<h3>Current (baseline)</h3>
+<div class="tile-row">
+  <div class="tile-card">
+    <div class="preview-cell cell-current-timber"></div>
+    <label>Current — noise + dots</label>
+  </div>
+</div>
+
+<h3>Options</h3>
+<div class="tile-row">
+  <div class="tile-card">
+    <img class="svg-tile" src="resource-tiles/timber_a_dense_canopy.svg">
+    <label>A — Dense canopy (overlapping tree crowns)</label>
+  </div>
+  <div class="tile-card">
+    <img class="svg-tile" src="resource-tiles/timber_b_scattered_pines.svg">
+    <label>B — Scattered pines (conifer diamonds)</label>
+  </div>
+  <div class="tile-card">
+    <img class="svg-tile" src="resource-tiles/timber_c_mixed_forest.svg">
+    <label>C — Mixed forest (round + pointed trees)</label>
+  </div>
+  <div class="tile-card">
+    <img class="svg-tile" src="resource-tiles/timber_d_old_growth.svg">
+    <label>D — Old growth (large canopy, trunk dots)</label>
+  </div>
+</div>
+
+<!-- At game scale -->
+<h3>At game scale (~35px)</h3>
+<div class="tile-row">
+  <div class="tile-card">
+    <img class="svg-tile" src="resource-tiles/timber_a_dense_canopy.svg" style="width:35px;height:35px">
+    <label>A</label>
+  </div>
+  <div class="tile-card">
+    <img class="svg-tile" src="resource-tiles/timber_b_scattered_pines.svg" style="width:35px;height:35px">
+    <label>B</label>
+  </div>
+  <div class="tile-card">
+    <img class="svg-tile" src="resource-tiles/timber_c_mixed_forest.svg" style="width:35px;height:35px">
+    <label>C</label>
+  </div>
+  <div class="tile-card">
+    <img class="svg-tile" src="resource-tiles/timber_d_old_growth.svg" style="width:35px;height:35px">
+    <label>D</label>
+  </div>
+</div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<div class="section">
+<h2>2. Resource Tiles — Stone</h2>
+<p class="desc">Goal: read as quarry/rock outcrop, not just gray-tinted ground. Current tile is noise + 2 small rectangles.</p>
+
+<h3>Current (baseline)</h3>
+<div class="tile-row">
+  <div class="tile-card">
+    <div class="preview-cell cell-current-stone"></div>
+    <label>Current — noise + rects</label>
+  </div>
+</div>
+
+<h3>Options</h3>
+<div class="tile-row">
+  <div class="tile-card">
+    <img class="svg-tile" src="resource-tiles/stone_a_quarry_blocks.svg">
+    <label>A — Quarry blocks (cut faces + ledges)</label>
+  </div>
+  <div class="tile-card">
+    <img class="svg-tile" src="resource-tiles/stone_b_boulder_field.svg">
+    <label>B — Boulder field (scattered boulders)</label>
+  </div>
+  <div class="tile-card">
+    <img class="svg-tile" src="resource-tiles/stone_c_cliff_face.svg">
+    <label>C — Cliff face (horizontal strata)</label>
+  </div>
+  <div class="tile-card">
+    <img class="svg-tile" src="resource-tiles/stone_d_rubble_pit.svg">
+    <label>D — Rubble pit (open quarry)</label>
+  </div>
+</div>
+
+<h3>At game scale (~35px)</h3>
+<div class="tile-row">
+  <div class="tile-card">
+    <img class="svg-tile" src="resource-tiles/stone_a_quarry_blocks.svg" style="width:35px;height:35px">
+    <label>A</label>
+  </div>
+  <div class="tile-card">
+    <img class="svg-tile" src="resource-tiles/stone_b_boulder_field.svg" style="width:35px;height:35px">
+    <label>B</label>
+  </div>
+  <div class="tile-card">
+    <img class="svg-tile" src="resource-tiles/stone_c_cliff_face.svg" style="width:35px;height:35px">
+    <label>C</label>
+  </div>
+  <div class="tile-card">
+    <img class="svg-tile" src="resource-tiles/stone_d_rubble_pit.svg" style="width:35px;height:35px">
+    <label>D</label>
+  </div>
+</div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<div class="section">
+<h2>3. Resource Tiles — Grain</h2>
+<p class="desc">Goal: read as farmable field / grain area. Current tile is noise + 2 thin vertical lines.</p>
+
+<h3>Current (baseline)</h3>
+<div class="tile-row">
+  <div class="tile-card">
+    <div class="preview-cell cell-current-grain"></div>
+    <label>Current — noise + lines</label>
+  </div>
+</div>
+
+<h3>Options</h3>
+<div class="tile-row">
+  <div class="tile-card">
+    <img class="svg-tile" src="resource-tiles/grain_a_wheat_rows.svg">
+    <label>A — Wheat rows (stalks in furrows)</label>
+  </div>
+  <div class="tile-card">
+    <img class="svg-tile" src="resource-tiles/grain_b_golden_field.svg">
+    <label>B — Golden field (wavy wind movement)</label>
+  </div>
+  <div class="tile-card">
+    <img class="svg-tile" src="resource-tiles/grain_c_plowed_earth.svg">
+    <label>C — Plowed earth (furrows + sprouts)</label>
+  </div>
+  <div class="tile-card">
+    <img class="svg-tile" src="resource-tiles/grain_d_harvest_ready.svg">
+    <label>D — Harvest ready (dense tall grain)</label>
+  </div>
+</div>
+
+<h3>At game scale (~35px)</h3>
+<div class="tile-row">
+  <div class="tile-card">
+    <img class="svg-tile" src="resource-tiles/grain_a_wheat_rows.svg" style="width:35px;height:35px">
+    <label>A</label>
+  </div>
+  <div class="tile-card">
+    <img class="svg-tile" src="resource-tiles/grain_b_golden_field.svg" style="width:35px;height:35px">
+    <label>B</label>
+  </div>
+  <div class="tile-card">
+    <img class="svg-tile" src="resource-tiles/grain_c_plowed_earth.svg" style="width:35px;height:35px">
+    <label>C</label>
+  </div>
+  <div class="tile-card">
+    <img class="svg-tile" src="resource-tiles/grain_d_harvest_ready.svg" style="width:35px;height:35px">
+    <label>D</label>
+  </div>
+</div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<div class="section">
+<h2>4. Resource Tiles — Clay</h2>
+<p class="desc">Goal: read as clay/earth deposit. Current tile is noise + 1 faint ellipse.</p>
+
+<h3>Current (baseline)</h3>
+<div class="tile-row">
+  <div class="tile-card">
+    <div class="preview-cell cell-current-clay"></div>
+    <label>Current — noise + ellipse</label>
+  </div>
+</div>
+
+<h3>Options</h3>
+<div class="tile-row">
+  <div class="tile-card">
+    <img class="svg-tile" src="resource-tiles/clay_a_wet_deposit.svg">
+    <label>A — Wet deposit (river-bank clay mounds)</label>
+  </div>
+  <div class="tile-card">
+    <img class="svg-tile" src="resource-tiles/clay_b_terracotta_earth.svg">
+    <label>B — Terracotta earth (exposed seams)</label>
+  </div>
+  <div class="tile-card">
+    <img class="svg-tile" src="resource-tiles/clay_c_cracked_flats.svg">
+    <label>C — Cracked flats (dried mud cracks)</label>
+  </div>
+  <div class="tile-card">
+    <img class="svg-tile" src="resource-tiles/clay_d_dig_site.svg">
+    <label>D — Dig site (excavated clay pit)</label>
+  </div>
+</div>
+
+<h3>At game scale (~35px)</h3>
+<div class="tile-row">
+  <div class="tile-card">
+    <img class="svg-tile" src="resource-tiles/clay_a_wet_deposit.svg" style="width:35px;height:35px">
+    <label>A</label>
+  </div>
+  <div class="tile-card">
+    <img class="svg-tile" src="resource-tiles/clay_b_terracotta_earth.svg" style="width:35px;height:35px">
+    <label>B</label>
+  </div>
+  <div class="tile-card">
+    <img class="svg-tile" src="resource-tiles/clay_c_cracked_flats.svg" style="width:35px;height:35px">
+    <label>C</label>
+  </div>
+  <div class="tile-card">
+    <img class="svg-tile" src="resource-tiles/clay_d_dig_site.svg" style="width:35px;height:35px">
+    <label>D</label>
+  </div>
+</div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<div class="section">
+<h2>5. Road Styles</h2>
+<p class="desc">Goal: primitive / ancient / theme-appropriate instead of modern highway. Current road is solid gray #525558 with yellow centerline marks.</p>
+
+<h3>Current (baseline)</h3>
+<div class="tile-row">
+  <div class="tile-card">
+    <div class="preview-cell cell-current-road"></div>
+    <label>Current — gray asphalt-like</label>
+  </div>
+</div>
+
+<h3>Options</h3>
+<div class="tile-row">
+  <div class="tile-card">
+    <img class="svg-tile" src="roads/road_a_dirt_path.svg">
+    <label>A — Dirt path (worn earth + grass edges)</label>
+  </div>
+  <div class="tile-card">
+    <img class="svg-tile" src="roads/road_b_cobblestone.svg">
+    <label>B — Cobblestone (fitted irregular stones)</label>
+  </div>
+  <div class="tile-card">
+    <img class="svg-tile" src="roads/road_c_packed_gravel.svg">
+    <label>C — Packed gravel (crushed stone + ruts)</label>
+  </div>
+  <div class="tile-card">
+    <img class="svg-tile" src="roads/road_d_flagstone.svg">
+    <label>D — Flagstone (large flat slab layout)</label>
+  </div>
+  <div class="tile-card">
+    <img class="svg-tile" src="roads/road_e_sandy_track.svg">
+    <label>E — Sandy track (desert path + footprints)</label>
+  </div>
+</div>
+
+<h3>At game scale (~35px)</h3>
+<div class="tile-row">
+  <div class="tile-card">
+    <img class="svg-tile" src="roads/road_a_dirt_path.svg" style="width:35px;height:35px">
+    <label>A</label>
+  </div>
+  <div class="tile-card">
+    <img class="svg-tile" src="roads/road_b_cobblestone.svg" style="width:35px;height:35px">
+    <label>B</label>
+  </div>
+  <div class="tile-card">
+    <img class="svg-tile" src="roads/road_c_packed_gravel.svg" style="width:35px;height:35px">
+    <label>C</label>
+  </div>
+  <div class="tile-card">
+    <img class="svg-tile" src="roads/road_d_flagstone.svg" style="width:35px;height:35px">
+    <label>D</label>
+  </div>
+  <div class="tile-card">
+    <img class="svg-tile" src="roads/road_e_sandy_track.svg" style="width:35px;height:35px">
+    <label>E</label>
+  </div>
+</div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<div class="section">
+<h2>6. Walker Styles — Job Identity</h2>
+<p class="desc">CSS-only walker variants. Each uses the game's head (::before) + body (::after) anatomy at 2.5x scale for review. Colors tuned to match industry palette from ART_DIRECTION.md.</p>
+
+<h3>Citizen / Resident</h3>
+<div class="walker-row">
+  <div class="walker-card">
+    <div class="walker-stage"><div class="wk-preview wk-citizen-a"></div></div>
+    <label>A — Brown tunic (current t0)</label>
+  </div>
+  <div class="walker-card">
+    <div class="walker-stage"><div class="wk-preview wk-citizen-b"></div></div>
+    <label>B — Light linen</label>
+  </div>
+  <div class="walker-card">
+    <div class="walker-stage"><div class="wk-preview wk-citizen-c"></div></div>
+    <label>C — Off-white + sash</label>
+  </div>
+</div>
+
+<h3>Timber Worker <span class="swatch" style="background:#3a7a4a"></span></h3>
+<div class="walker-row">
+  <div class="walker-card">
+    <div class="walker-stage"><div class="wk-preview wk-timber-a"></div></div>
+    <label>A — Forest green tunic</label>
+  </div>
+  <div class="walker-card">
+    <div class="walker-stage"><div class="wk-preview wk-timber-b"></div></div>
+    <label>B — Brown-green + bark vest</label>
+  </div>
+  <div class="walker-card">
+    <div class="walker-stage"><div class="wk-preview wk-timber-c"></div></div>
+    <label>C — Earth brown + green cap</label>
+  </div>
+</div>
+
+<h3>Sawmill Worker <span class="swatch" style="background:#7a5a2a"></span></h3>
+<div class="walker-row">
+  <div class="walker-card">
+    <div class="walker-stage"><div class="wk-preview wk-sawmill-a"></div></div>
+    <label>A — Warm brown apron</label>
+  </div>
+  <div class="walker-card">
+    <div class="walker-stage"><div class="wk-preview wk-sawmill-b"></div></div>
+    <label>B — Tan + sawdust shoulders</label>
+  </div>
+  <div class="walker-card">
+    <div class="walker-stage"><div class="wk-preview wk-sawmill-c"></div></div>
+    <label>C — Dark work clothes</label>
+  </div>
+</div>
+
+<h3>Stone Worker <span class="swatch" style="background:#5a5a7a"></span></h3>
+<div class="walker-row">
+  <div class="walker-card">
+    <div class="walker-stage"><div class="wk-preview wk-stone-a"></div></div>
+    <label>A — Blue-gray dusty tunic</label>
+  </div>
+  <div class="walker-card">
+    <div class="walker-stage"><div class="wk-preview wk-stone-b"></div></div>
+    <label>B — Dark slate + dust glow</label>
+  </div>
+  <div class="walker-card">
+    <div class="walker-stage"><div class="wk-preview wk-stone-c"></div></div>
+    <label>C — Gray-brown smock</label>
+  </div>
+</div>
+
+<h3>Mason Worker <span class="swatch" style="background:#7a4a3a"></span></h3>
+<div class="walker-row">
+  <div class="walker-card">
+    <div class="walker-stage"><div class="wk-preview wk-mason-a"></div></div>
+    <label>A — Terracotta garment</label>
+  </div>
+  <div class="walker-card">
+    <div class="walker-stage"><div class="wk-preview wk-mason-b"></div></div>
+    <label>B — Gray + red accent</label>
+  </div>
+  <div class="walker-card">
+    <div class="walker-stage"><div class="wk-preview wk-mason-c"></div></div>
+    <label>C — Ochre apron</label>
+  </div>
+</div>
+
+<h3>Clay Worker <span class="swatch" style="background:#a06040"></span></h3>
+<div class="walker-row">
+  <div class="walker-card">
+    <div class="walker-stage"><div class="wk-preview wk-clay-a"></div></div>
+    <label>A — Mud-stained brown</label>
+  </div>
+  <div class="walker-card">
+    <div class="walker-stage"><div class="wk-preview wk-clay-b"></div></div>
+    <label>B — Terracotta + clay smear</label>
+  </div>
+</div>
+
+<h3>Grain / Farm Worker <span class="swatch" style="background:#c4a035"></span></h3>
+<div class="walker-row">
+  <div class="walker-card">
+    <div class="walker-stage"><div class="wk-preview wk-grain-a"></div></div>
+    <label>A — Straw-colored tunic</label>
+  </div>
+  <div class="walker-card">
+    <div class="walker-stage"><div class="wk-preview wk-grain-b"></div></div>
+    <label>B — Sun-bleached + straw hat</label>
+  </div>
+</div>
+
+<h3>Fisher <span class="swatch" style="background:#4a7a8a"></span></h3>
+<div class="walker-row">
+  <div class="walker-card">
+    <div class="walker-stage"><div class="wk-preview wk-fisher-a"></div></div>
+    <label>A — Sea-blue tunic</label>
+  </div>
+  <div class="walker-card">
+    <div class="walker-stage"><div class="wk-preview wk-fisher-b"></div></div>
+    <label>B — Weathered blue-gray</label>
+  </div>
+</div>
+
+<h3>Brewer <span class="swatch" style="background:#9a6a2a"></span></h3>
+<div class="walker-row">
+  <div class="walker-card">
+    <div class="walker-stage"><div class="wk-preview wk-brewer-a"></div></div>
+    <label>A — Amber-brown apron</label>
+  </div>
+  <div class="walker-card">
+    <div class="walker-stage"><div class="wk-preview wk-brewer-b"></div></div>
+    <label>B — Dark + copper accents</label>
+  </div>
+</div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<div class="section">
+<h2>7. All Walkers Side-by-Side (Job Differentiation Test)</h2>
+<p class="desc">Can you tell them apart at a glance? All walker types next to each other on a road background.</p>
+<div class="walker-row" style="background: #2a2a28; padding: 16px; border-radius: 6px; gap: 16px;">
+  <div style="text-align:center"><div class="wk-preview wk-citizen-a"></div><div style="font-size:0.6rem;color:#6a7a8a;margin-top:20px">Citizen</div></div>
+  <div style="text-align:center"><div class="wk-preview wk-timber-a"></div><div style="font-size:0.6rem;color:#6a7a8a;margin-top:20px">Timber</div></div>
+  <div style="text-align:center"><div class="wk-preview wk-sawmill-a"></div><div style="font-size:0.6rem;color:#6a7a8a;margin-top:20px">Sawmill</div></div>
+  <div style="text-align:center"><div class="wk-preview wk-stone-a"></div><div style="font-size:0.6rem;color:#6a7a8a;margin-top:20px">Stone</div></div>
+  <div style="text-align:center"><div class="wk-preview wk-mason-a"></div><div style="font-size:0.6rem;color:#6a7a8a;margin-top:20px">Mason</div></div>
+  <div style="text-align:center"><div class="wk-preview wk-clay-a"></div><div style="font-size:0.6rem;color:#6a7a8a;margin-top:20px">Clay</div></div>
+  <div style="text-align:center"><div class="wk-preview wk-grain-a"></div><div style="font-size:0.6rem;color:#6a7a8a;margin-top:20px">Grain</div></div>
+  <div style="text-align:center"><div class="wk-preview wk-fisher-a"></div><div style="font-size:0.6rem;color:#6a7a8a;margin-top:20px">Fisher</div></div>
+  <div style="text-align:center"><div class="wk-preview wk-brewer-a"></div><div style="font-size:0.6rem;color:#6a7a8a;margin-top:20px">Brewer</div></div>
+</div>
+</div>
+
+</body>
+</html>

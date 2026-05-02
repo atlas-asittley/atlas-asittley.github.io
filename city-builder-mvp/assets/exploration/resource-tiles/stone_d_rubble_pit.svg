@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="34" height="34" viewBox="0 0 34 34">
+  <!-- Stone D: Rubble pit - open quarry pit with scattered cut blocks -->
+  <rect width="34" height="34" fill="#202030"/>
+  <filter id="sn"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" seed="30"/></filter>
+  <rect width="34" height="34" filter="url(#sn)" opacity="0.2"/>
+  <!-- Pit depression (darker center) -->
+  <ellipse cx="17" cy="17" rx="12" ry="10" fill="#181828" opacity="0.4"/>
+  <!-- Cut stone blocks scattered around rim -->
+  <rect x="2" y="4" width="5" height="4" rx="0.5" fill="#3e3e54" opacity="0.5" transform="rotate(-5 4 6)"/>
+  <rect x="24" y="2" width="6" height="4" rx="0.5" fill="#3a3a50" opacity="0.45" transform="rotate(8 27 4)"/>
+  <rect x="26" y="26" width="5" height="3.5" rx="0.5" fill="#3e3e54" opacity="0.5" transform="rotate(-3 28 28)"/>
+  <rect x="1" y="24" width="6" height="4" rx="0.5" fill="#3a3a50" opacity="0.45"/>
+  <!-- Rubble in pit -->
+  <rect x="10" y="14" width="3" height="2" rx="0.3" fill="#343448" opacity="0.4"/>
+  <rect x="18" y="16" width="4" height="2.5" rx="0.3" fill="#343448" opacity="0.35"/>
+  <rect x="13" y="20" width="3.5" height="2" rx="0.3" fill="#343448" opacity="0.35"/>
+  <!-- Pit shadow edge -->
+  <path d="M5,10 Q17,6 29,10" fill="none" stroke="#444460" stroke-width="0.6" opacity="0.3"/>
+  <path d="M5,24 Q17,28 29,24" fill="none" stroke="#1a1a28" stroke-width="0.6" opacity="0.3"/>
+</svg>

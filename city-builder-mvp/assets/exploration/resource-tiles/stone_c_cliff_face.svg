@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="34" height="34" viewBox="0 0 34 34">
+  <!-- Stone C: Cliff face - layered horizontal strata with exposed rock -->
+  <rect width="34" height="34" fill="#242434"/>
+  <filter id="sn"><feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="2" seed="22"/></filter>
+  <rect width="34" height="34" filter="url(#sn)" opacity="0.2"/>
+  <!-- Horizontal strata layers -->
+  <rect x="0" y="0" width="34" height="7" fill="#2e2e40" opacity="0.5"/>
+  <rect x="0" y="9" width="34" height="6" fill="#333348" opacity="0.45"/>
+  <rect x="0" y="17" width="34" height="8" fill="#2a2a3c" opacity="0.5"/>
+  <rect x="0" y="27" width="34" height="7" fill="#303046" opacity="0.45"/>
+  <!-- Cracks between layers -->
+  <line x1="0" y1="7" x2="34" y2="7.5" stroke="#18182a" stroke-width="0.8" opacity="0.5"/>
+  <line x1="0" y1="15" x2="34" y2="15.5" stroke="#18182a" stroke-width="0.6" opacity="0.45"/>
+  <line x1="0" y1="25" x2="34" y2="24.5" stroke="#18182a" stroke-width="0.7" opacity="0.5"/>
+  <!-- Vertical fractures -->
+  <line x1="12" y1="0" x2="11" y2="15" stroke="#1a1a2a" stroke-width="0.4" opacity="0.3"/>
+  <line x1="24" y1="9" x2="25" y2="34" stroke="#1a1a2a" stroke-width="0.4" opacity="0.3"/>
+  <!-- Exposed face highlight -->
+  <rect x="3" y="10" width="8" height="4" rx="0.5" fill="#4a4a64" opacity="0.25"/>
+  <rect x="18" y="18" width="10" height="5" rx="0.5" fill="#4a4a64" opacity="0.2"/>
+</svg>

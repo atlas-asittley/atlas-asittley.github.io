@@ -1,0 +1,229 @@
+/* ═══════════════════════════════════════════════════════════
+   Walker Style Exploration — CSS-only job-identity variants
+
+   Base walker anatomy (from game):
+     ::before = head (6×6 circle)
+     ::after  = body (8×8 rounded rect)
+
+   Each variant set offers 2 sub-options (a/b) for the body
+   color scheme, plus optional accessories via box-shadow.
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── Shared walker base (matches game) ─────────────────── */
+.wk-preview {
+  position: relative;
+  width: 10px;
+  height: 14px;
+  display: inline-block;
+  animation: walker-bob 0.7s ease-in-out infinite alternate,
+             walker-waddle 0.55s ease-in-out infinite;
+}
+.wk-preview::before {
+  content: '';
+  position: absolute;
+  left: 2px; top: 0;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: #d8c3a0;
+  box-shadow: 0 0 0 1px rgba(10,12,18,0.18);
+}
+.wk-preview::after {
+  content: '';
+  position: absolute;
+  left: 1px; top: 5px;
+  width: 8px; height: 8px;
+  border-radius: 3px 3px 2px 2px;
+  box-shadow: 0 0 0 1px rgba(10,12,18,0.16);
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   CITIZEN / HOUSE WALKER (existing tier-based, new options)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+/* Citizen A: Simple brown tunic (current t0 baseline) */
+.wk-citizen-a::after {
+  background: linear-gradient(180deg, #7b624d 0%, #5e4a3a 100%);
+}
+
+/* Citizen B: Lighter linen tunic, more Mediterranean */
+.wk-citizen-b::after {
+  background: linear-gradient(180deg, #a09070 0%, #7a6a50 100%);
+}
+
+/* Citizen C: Off-white with earth-tone sash */
+.wk-citizen-c::after {
+  background: linear-gradient(180deg, #b0a890 0%, #8a8068 100%);
+  box-shadow: 0 0 0 1px rgba(10,12,18,0.16),
+              inset 0 3px 0 1px rgba(140,90,40,0.35);
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   TIMBER WORKER — forest green tones, "woodsman" feel
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+/* Timber A: Deep forest green tunic */
+.wk-timber-a::after {
+  background: linear-gradient(180deg, #4a6a3a 0%, #3a5228 100%);
+}
+
+/* Timber B: Brown-green with bark-brown vest accent */
+.wk-timber-b::after {
+  background: linear-gradient(180deg, #5a6840 0%, #3e4a2a 100%);
+  box-shadow: 0 0 0 1px rgba(10,12,18,0.16),
+              inset 0 2px 0 1px rgba(90,60,30,0.4);
+}
+
+/* Timber C: Earthy brown with green cap */
+.wk-timber-c::before {
+  background: #d8c3a0;
+  box-shadow: 0 0 0 1px rgba(10,12,18,0.18),
+              0 -2px 0 0 #4a6a3a;
+}
+.wk-timber-c::after {
+  background: linear-gradient(180deg, #6a5a38 0%, #4a3e28 100%);
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   SAWMILL WORKER — wood-brown tones, "carpenter" feel
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+/* Sawmill A: Warm brown apron look */
+.wk-sawmill-a::after {
+  background: linear-gradient(180deg, #8a6a40 0%, #6a4a28 100%);
+}
+
+/* Sawmill B: Tan with sawdust-dusted shoulders */
+.wk-sawmill-b::after {
+  background: linear-gradient(180deg, #7a6040 0%, #5a4228 100%);
+  box-shadow: 0 0 0 1px rgba(10,12,18,0.16),
+              0 -1px 0 1px rgba(200,180,140,0.3);
+}
+
+/* Sawmill C: Darker work clothes, rolled sleeves feel */
+.wk-sawmill-c::after {
+  background: linear-gradient(180deg, #6a5030 0%, #4a3820 100%);
+  border-radius: 2px 2px 3px 3px;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   STONE WORKER — blue-gray tones, "quarryman" feel
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+/* Stone A: Blue-gray dusty tunic */
+.wk-stone-a::after {
+  background: linear-gradient(180deg, #6a6a80 0%, #4a4a60 100%);
+}
+
+/* Stone B: Darker slate with stone-dust highlights */
+.wk-stone-b::after {
+  background: linear-gradient(180deg, #5a5a70 0%, #3a3a50 100%);
+  box-shadow: 0 0 0 1px rgba(10,12,18,0.16),
+              0 0 2px 0 rgba(160,160,190,0.2);
+}
+
+/* Stone C: Gray-brown work smock */
+.wk-stone-c::after {
+  background: linear-gradient(180deg, #6a6058 0%, #4a4238 100%);
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   MASON WORKER — brick-red/terracotta tones
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+/* Mason A: Terracotta-red work garment */
+.wk-mason-a::after {
+  background: linear-gradient(180deg, #8a5040 0%, #6a3828 100%);
+}
+
+/* Mason B: Brick-dusted gray with red accent */
+.wk-mason-b::after {
+  background: linear-gradient(180deg, #7a6058 0%, #5a4038 100%);
+  box-shadow: 0 0 0 1px rgba(10,12,18,0.16),
+              inset 0 3px 0 1px rgba(160,60,30,0.3);
+}
+
+/* Mason C: Ochre work apron */
+.wk-mason-c::after {
+  background: linear-gradient(180deg, #9a7050 0%, #7a5030 100%);
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   CLAY WORKER — terracotta/mud tones
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+/* Clay A: Mud-stained brown */
+.wk-clay-a::after {
+  background: linear-gradient(180deg, #7a5838 0%, #5a3e20 100%);
+}
+
+/* Clay B: Terracotta-dusted with wet clay smear */
+.wk-clay-b::after {
+  background: linear-gradient(180deg, #8a6040 0%, #604028 100%);
+  box-shadow: 0 0 0 1px rgba(10,12,18,0.16),
+              inset 0 -2px 0 1px rgba(120,70,40,0.4);
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   GRAIN / FARM WORKER — gold/tan/straw tones
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+/* Grain A: Straw-colored tunic */
+.wk-grain-a::after {
+  background: linear-gradient(180deg, #a09048 0%, #807030 100%);
+}
+
+/* Grain B: Sun-bleached linen with straw hat */
+.wk-grain-b::before {
+  background: #d8c3a0;
+  box-shadow: 0 0 0 1px rgba(10,12,18,0.18),
+              0 -2px 0 0 #b0a040;
+}
+.wk-grain-b::after {
+  background: linear-gradient(180deg, #908050 0%, #706030 100%);
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   FISHER — teal/blue tones
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+/* Fisher A: Sea-blue tunic */
+.wk-fisher-a::after {
+  background: linear-gradient(180deg, #4a7080 0%, #3a5868 100%);
+}
+
+/* Fisher B: Weathered blue-gray */
+.wk-fisher-b::after {
+  background: linear-gradient(180deg, #5a7a80 0%, #3a5a60 100%);
+  box-shadow: 0 0 0 1px rgba(10,12,18,0.16),
+              inset 0 2px 0 1px rgba(90,110,120,0.35);
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   BREWER — amber/copper tones
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+/* Brewer A: Amber-brown apron */
+.wk-brewer-a::after {
+  background: linear-gradient(180deg, #8a6030 0%, #6a4020 100%);
+}
+
+/* Brewer B: Darker with copper accents */
+.wk-brewer-b::after {
+  background: linear-gradient(180deg, #6a4a28 0%, #4a3218 100%);
+  box-shadow: 0 0 0 1px rgba(10,12,18,0.16),
+              inset 0 3px 0 1px rgba(180,120,40,0.3);
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   Animations (shared with game)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+@keyframes walker-bob {
+  from { margin-top: -1px; }
+  to { margin-top: 1px; }
+}
+@keyframes walker-waddle {
+  0%   { transform: rotate(-3deg); }
+  50%  { transform: rotate(3deg); }
+  100% { transform: rotate(-3deg); }
+}

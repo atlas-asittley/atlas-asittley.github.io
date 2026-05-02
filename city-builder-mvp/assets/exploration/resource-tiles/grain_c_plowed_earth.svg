@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="34" height="34" viewBox="0 0 34 34">
+  <!-- Grain C: Plowed earth - farmable soil with visible furrows and sprouting -->
+  <rect width="34" height="34" fill="#2a2418"/>
+  <filter id="gn"><feTurbulence type="fractalNoise" baseFrequency="0.7" numOctaves="2" seed="35"/></filter>
+  <rect width="34" height="34" filter="url(#gn)" opacity="0.22"/>
+  <!-- Plowed furrow lines -->
+  <g stroke="#1e1a10" stroke-width="1.2" opacity="0.35">
+    <line x1="0" y1="4.5" x2="34" y2="4.5"/>
+    <line x1="0" y1="11" x2="34" y2="11"/>
+    <line x1="0" y1="17.5" x2="34" y2="17.5"/>
+    <line x1="0" y1="24" x2="34" y2="24"/>
+    <line x1="0" y1="30.5" x2="34" y2="30.5"/>
+  </g>
+  <!-- Soil ridges (lighter tops) -->
+  <g fill="#3a3220" opacity="0.25">
+    <rect x="0" y="2" width="34" height="2" rx="0.5"/>
+    <rect x="0" y="8.5" width="34" height="2" rx="0.5"/>
+    <rect x="0" y="15" width="34" height="2" rx="0.5"/>
+    <rect x="0" y="21.5" width="34" height="2" rx="0.5"/>
+    <rect x="0" y="28" width="34" height="2" rx="0.5"/>
+  </g>
+  <!-- Young grain sprouts -->
+  <g stroke="#6a8030" stroke-width="0.5" opacity="0.4">
+    <line x1="5" y1="4" x2="5" y2="1"/>
+    <line x1="12" y1="4" x2="12" y2="1.5"/>
+    <line x1="22" y1="10.5" x2="22" y2="7.5"/>
+    <line x1="29" y1="10.5" x2="29" y2="8"/>
+    <line x1="8" y1="17" x2="8" y2="14"/>
+    <line x1="18" y1="17" x2="18" y2="14.5"/>
+    <line x1="26" y1="23.5" x2="26" y2="20.5"/>
+    <line x1="15" y1="30" x2="15" y2="27"/>
+  </g>
+</svg>

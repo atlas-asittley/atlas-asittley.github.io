@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="34" height="34" viewBox="0 0 34 34">
+  <!-- Clay B: Terracotta earth - rich red-brown earth with exposed clay seams -->
+  <rect width="34" height="34" fill="#2c2018"/>
+  <filter id="cn"><feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="2" seed="38"/></filter>
+  <rect width="34" height="34" filter="url(#cn)" opacity="0.22"/>
+  <!-- Terracotta wash -->
+  <rect width="34" height="34" fill="#703020" opacity="0.1"/>
+  <!-- Exposed clay seams (horizontal bands) -->
+  <rect x="0" y="10" width="34" height="4" rx="1" fill="#704838" opacity="0.3"/>
+  <rect x="0" y="22" width="34" height="3.5" rx="1" fill="#684030" opacity="0.28"/>
+  <!-- Clay chunks -->
+  <ellipse cx="8" cy="6" rx="4" ry="2.5" fill="#704838" opacity="0.3"/>
+  <ellipse cx="24" cy="16" rx="3.5" ry="2" fill="#684030" opacity="0.28"/>
+  <ellipse cx="14" cy="30" rx="5" ry="2.5" fill="#704838" opacity="0.25"/>
+  <!-- Surface crackle -->
+  <g stroke="#4a2818" stroke-width="0.3" opacity="0.35">
+    <path d="M0,6 Q10,4 20,7 Q30,10 34,8" fill="none"/>
+    <path d="M0,18 Q12,16 22,19 Q32,22 34,20" fill="none"/>
+    <path d="M0,28 Q8,26 16,29 Q24,32 34,28" fill="none"/>
+  </g>
+</svg>

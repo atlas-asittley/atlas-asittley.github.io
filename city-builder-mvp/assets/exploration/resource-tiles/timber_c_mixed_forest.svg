@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="34" height="34" viewBox="0 0 34 34">
+  <!-- Timber C: Mixed forest - round and pointed trees mixed -->
+  <rect width="34" height="34" fill="#182a1e"/>
+  <filter id="tn"><feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="2" seed="19"/></filter>
+  <rect width="34" height="34" filter="url(#tn)" opacity="0.22"/>
+  <!-- Round deciduous crowns -->
+  <circle cx="6" cy="8" r="5" fill="#264a30" opacity="0.65"/>
+  <circle cx="26" cy="24" r="5.5" fill="#224228" opacity="0.6"/>
+  <!-- Pointed evergreens -->
+  <polygon points="20,3 24,11 16,11" fill="#1e3a24" opacity="0.7"/>
+  <polygon points="10,19 14,27 6,27" fill="#1e3a24" opacity="0.65"/>
+  <polygon points="30,12 33,18 27,18" fill="#1e3a24" opacity="0.55"/>
+  <!-- Shadow depth -->
+  <circle cx="6" cy="10" r="4" fill="#0a1a0e" opacity="0.2"/>
+  <circle cx="26" cy="26" r="4" fill="#0a1a0e" opacity="0.15"/>
+  <!-- Light catches -->
+  <circle cx="5" cy="6" r="1.5" fill="#3a6840" opacity="0.35"/>
+  <circle cx="19" cy="4" r="1.2" fill="#3a6840" opacity="0.3"/>
+</svg>

@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="34" height="34" viewBox="0 0 34 34">
+  <!-- Road E: Sandy track - sand/dust path with worn edges, desert feel -->
+  <rect width="34" height="34" fill="#223322"/>
+  <!-- Sandy base -->
+  <rect x="5" y="0" width="24" height="34" fill="#4a4230" opacity="0.6"/>
+  <!-- Worn center -->
+  <rect x="10" y="0" width="14" height="34" fill="#5a5038" opacity="0.4"/>
+  <filter id="sdn"><feTurbulence type="fractalNoise" baseFrequency="1.5" numOctaves="2" seed="75"/></filter>
+  <rect width="34" height="34" filter="url(#sdn)" opacity="0.15"/>
+  <!-- Soft edge blending -->
+  <rect x="4" y="0" width="3" height="34" fill="#344028" opacity="0.3"/>
+  <rect x="27" y="0" width="3" height="34" fill="#344028" opacity="0.3"/>
+  <!-- Footprint suggestions (faint ovals) -->
+  <g fill="#3a3428" opacity="0.2">
+    <ellipse cx="15" cy="6" rx="2" ry="3"/>
+    <ellipse cx="19" cy="14" rx="2" ry="3"/>
+    <ellipse cx="14" cy="22" rx="2" ry="3"/>
+    <ellipse cx="18" cy="30" rx="2" ry="3"/>
+  </g>
+  <!-- Scattered sand grains -->
+  <g fill="#6a6248" opacity="0.3">
+    <circle cx="8" cy="4" r="0.4"/>
+    <circle cx="26" cy="10" r="0.5"/>
+    <circle cx="12" cy="18" r="0.4"/>
+    <circle cx="24" cy="26" r="0.5"/>
+    <circle cx="7" cy="30" r="0.4"/>
+  </g>
+</svg>
