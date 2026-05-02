@@ -118,7 +118,10 @@ export function renderBuildPanel() {
 function selectBuildingType(key) {
   state.selectedBuildType = key;
   var bt = state.buildingTypes[key];
-  document.getElementById('placement-text').textContent = 'Tap a tile to place ' + bt.name;
+  var text = bt.category === 'road'
+    ? 'Drag to paint roads, or tap to place one'
+    : 'Tap a tile to place ' + bt.name;
+  document.getElementById('placement-text').textContent = text;
   document.getElementById('placement-bar').classList.add('active');
   renderMap();
   renderBuildPanel();

@@ -1,8 +1,8 @@
 // ── Game entry, data loading, and production loop ──
 import { sb } from './config.js';
-import { state, computeTraderUnlocks, computeLaborAllocation } from './state.js';
+import { state, computeTraderUnlocks, computeLaborAllocation, computeGridBounds } from './state.js';
 import { showScreen, showToast, capitalize } from './ui.js';
-import { renderMap, initMapEvents } from './map.js';
+import { renderMap, initMapEvents, expandMapIfNeeded } from './map.js';
 import { renderBuildPanel, renderInventory, renderTradePanel, initTabs, checkAllTraderVisits } from './panels.js';
 import { subscribeRealtime } from './realtime.js';
 import { startWalkers, stopWalkers } from './walkers.js';
@@ -127,6 +127,7 @@ function loadGameData() {
     state.tiles.forEach(function (t) { state.tileMap[t.x + ',' + t.y] = t; });
 
     state.allBuildings = results[3].data || [];
+    computeGridBounds();
 
     // Load all trader prices indexed by trader_key then resource_key
     state.allTraderPrices = {};
@@ -224,6 +225,8 @@ export function enterGame() {
     startProdLoop();
     // Start walker system (visual walkers on roads)
     startWalkers();
+    // Check if map needs expansion based on existing buildings near edges
+    expandMapIfNeeded();
     // Lazy visit resolution: check if any trader visits are due
     checkAllTraderVisits();
   }).catch(function (err) {

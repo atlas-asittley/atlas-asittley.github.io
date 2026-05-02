@@ -166,11 +166,11 @@ export function renderWalkers() {
   var grid = document.getElementById('map-grid');
   if (!layer || !grid) return;
 
-  // Get actual cell size from the grid
-  // 15 columns with 1px gaps => cellSize = (gridWidth - 14px gap) / 15
+  // Get actual cell size from the grid (dynamic column count)
+  var cols = state.gridCols || 15;
   var gridW = grid.offsetWidth;
   if (gridW === 0) return; // not laid out yet
-  var cellSize = (gridW - 14) / 15;
+  var cellSize = (gridW - (cols - 1)) / cols;
   var gap = 1;
 
   // Remove excess DOM elements
@@ -191,9 +191,11 @@ export function renderWalkers() {
       walkerEls[i] = el;
     }
 
-    // Calculate pixel position within the grid
-    var left = w.x * (cellSize + gap) + cellSize * 0.5;
-    var top = w.y * (cellSize + gap) + cellSize * 0.5;
+    // Calculate pixel position within the grid (offset by grid origin)
+    var gx = w.x - (state.gridMinX || 0);
+    var gy = w.y - (state.gridMinY || 0);
+    var left = gx * (cellSize + gap) + cellSize * 0.5;
+    var top = gy * (cellSize + gap) + cellSize * 0.5;
     // Fade out as walker nears end of life
     var lifeRatio = 1 - (w.steps / WALKER_MAX_STEPS);
     var opacity = Math.min(1, lifeRatio * 2);

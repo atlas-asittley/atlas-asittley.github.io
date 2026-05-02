@@ -70,7 +70,7 @@ body {
 .map-zoom-label { min-width: 44px; text-align: center; font-size: 0.72rem; color: #7a8a9e; font-weight: 700; }
 
 /* ── Map grid ──────────────────────────────────────── */
-#map-grid { display: grid; grid-template-columns: repeat(15, 1fr); gap: 1px; width: 520px; margin: 0 auto; background: #0e1418; }
+#map-grid { display: grid; gap: 1px; width: 520px; margin: 0 auto; background: #0e1418; }
 .cell { aspect-ratio: 1; background: #1a2332; border-radius: 2px; display: flex; align-items: center; justify-content: center; cursor: pointer; position: relative; user-select: none; transition: box-shadow 0.15s, filter 0.15s; }
 .cell:hover { filter: brightness(1.18); }
 .cell.res-timber { background: linear-gradient(135deg, #1a2e22 0%, #162818 100%); }
@@ -80,6 +80,8 @@ body {
 .cell.city-center { background: linear-gradient(135deg, #2e2240 0%, #221a30 100%); cursor: default; box-shadow: inset 0 0 0 1px #5a4a6a, inset 0 0 8px rgba(120,80,180,0.15); }
 .cell.valid-placement { box-shadow: inset 0 0 0 2px #5ec49e; cursor: crosshair; }
 .cell.valid-placement:hover { background: rgba(94,196,158,0.15); }
+.cell.empty-cell { background: transparent; cursor: default; pointer-events: none; }
+.cell.drag-preview { background: rgba(40, 36, 26, 0.7) !important; box-shadow: inset 0 0 0 2px rgba(212, 170, 80, 0.6); cursor: crosshair; }
 .res-dot { width: 6px; height: 6px; border-radius: 50%; animation: res-dot-pulse 3s ease-in-out infinite; }
 .res-timber .res-dot { background: radial-gradient(circle, #7ed4ae 0%, #3a8a5a 100%); box-shadow: 0 0 3px rgba(94,196,158,0.3); }
 .res-stone .res-dot { background: radial-gradient(circle, #aaaacc 0%, #6a6a88 100%); box-shadow: 0 0 3px rgba(136,136,170,0.3); }
