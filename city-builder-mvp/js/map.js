@@ -19,6 +19,7 @@ var MAP_MAX_ZOOM = 3;
 var MAP_ZOOM_STEP = 0.25;
 var pinchStartDistance = null;
 var pinchStartZoom = 1;
+var pinchStartCenter = null;
 var pinchSuppressClickUntil = 0;
 
 export function isPlacementValid(btKey, tile) {
@@ -62,11 +63,45 @@ function setMapZoom(nextZoom) {
   applyMapZoom();
 }
 
+function setMapZoomAtPoint(nextZoom, clientX, clientY) {
+  var viewport = document.getElementById('map-viewport');
+  var grid = document.getElementById('map-grid');
+  if (!viewport || !grid) {
+    setMapZoom(nextZoom);
+    return;
+  }
+
+  var oldZoom = state.mapZoom;
+  var clamped = Math.max(MAP_MIN_ZOOM, Math.min(MAP_MAX_ZOOM, nextZoom));
+  var newZoom = Math.round(clamped * 100) / 100;
+  if (newZoom === oldZoom) return;
+
+  var rect = viewport.getBoundingClientRect();
+  var localX = clientX - rect.left + viewport.scrollLeft;
+  var localY = clientY - rect.top + viewport.scrollTop;
+  var worldX = localX / oldZoom;
+  var worldY = localY / oldZoom;
+
+  state.mapZoom = newZoom;
+  applyMapZoom();
+
+  viewport.scrollLeft = Math.max(0, worldX * newZoom - (clientX - rect.left));
+  viewport.scrollTop = Math.max(0, worldY * newZoom - (clientY - rect.top));
+}
+
 function touchDistance(touches) {
   if (!touches || touches.length < 2) return 0;
   var dx = touches[0].clientX - touches[1].clientX;
   var dy = touches[0].clientY - touches[1].clientY;
   return Math.sqrt(dx * dx + dy * dy);
+}
+
+function touchCenter(touches) {
+  if (!touches || touches.length < 2) return null;
+  return {
+    x: (touches[0].clientX + touches[1].clientX) / 2,
+    y: (touches[0].clientY + touches[1].clientY) / 2
+  };
 }
 
 export function renderMap() {
@@ -254,18 +289,25 @@ export function initMapEvents() {
   });
 
   document.getElementById('placement-cancel').addEventListener('click', cancelPlacement);
+  var viewport = document.getElementById('map-viewport');
   document.getElementById('zoom-in').addEventListener('click', function () {
-    setMapZoom(state.mapZoom + MAP_ZOOM_STEP);
+    var rect = viewport.getBoundingClientRect();
+    setMapZoomAtPoint(state.mapZoom + MAP_ZOOM_STEP, rect.left + rect.width / 2, rect.top + rect.height / 2);
   });
   document.getElementById('zoom-out').addEventListener('click', function () {
-    setMapZoom(state.mapZoom - MAP_ZOOM_STEP);
+    var rect = viewport.getBoundingClientRect();
+    setMapZoomAtPoint(state.mapZoom - MAP_ZOOM_STEP, rect.left + rect.width / 2, rect.top + rect.height / 2);
+  });
+  document.getElementById('zoom-reset').addEventListener('click', function () {
+    var rect = viewport.getBoundingClientRect();
+    setMapZoomAtPoint(1, rect.left + rect.width / 2, rect.top + rect.height / 2);
   });
 
-  var viewport = document.getElementById('map-viewport');
   viewport.addEventListener('touchstart', function (e) {
     if (e.touches.length === 2) {
       pinchStartDistance = touchDistance(e.touches);
       pinchStartZoom = state.mapZoom;
+      pinchStartCenter = touchCenter(e.touches);
       pinchSuppressClickUntil = Date.now() + 400;
     }
   }, { passive: true });
@@ -273,9 +315,10 @@ export function initMapEvents() {
   viewport.addEventListener('touchmove', function (e) {
     if (e.touches.length !== 2 || !pinchStartDistance) return;
     var nextDistance = touchDistance(e.touches);
-    if (!nextDistance) return;
+    var center = touchCenter(e.touches) || pinchStartCenter;
+    if (!nextDistance || !center) return;
     e.preventDefault();
-    setMapZoom(pinchStartZoom * (nextDistance / pinchStartDistance));
+    setMapZoomAtPoint(pinchStartZoom * (nextDistance / pinchStartDistance), center.x, center.y);
     pinchSuppressClickUntil = Date.now() + 400;
   }, { passive: false });
 
@@ -283,6 +326,7 @@ export function initMapEvents() {
     if (e.touches.length < 2) {
       pinchStartDistance = null;
       pinchStartZoom = state.mapZoom;
+      pinchStartCenter = null;
     }
     pinchSuppressClickUntil = Date.now() + 250;
   });
