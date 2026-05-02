@@ -210,10 +210,24 @@ export function enterGame() {
     expandMapIfNeeded();
     // Lazy visit resolution: check if any trader visits are due
     checkAllTraderVisits();
+    // One-time tap hint for new players
+    showTapHintOnce();
   }).catch(function (err) {
     console.error('Game load failed:', err);
     showToast('Failed to load game data', 'error');
   });
+}
+
+// Show a one-time hint that buildings are tappable (only on first session)
+function showTapHintOnce() {
+  var key = 'city_tap_hint_shown';
+  try {
+    if (localStorage.getItem(key)) return;
+    localStorage.setItem(key, '1');
+  } catch (e) { return; }
+  setTimeout(function () {
+    showToast('Tap any building or citizen to inspect it', 'info');
+  }, 2500);
 }
 
 // Wire up map and tab events once
