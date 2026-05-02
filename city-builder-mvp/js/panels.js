@@ -1,7 +1,7 @@
 // ── Build, Inventory, and Trade panels ──
 import { sb } from './config.js';
 import { state, computeTraderUnlocks } from './state.js';
-import { showToast } from './ui.js';
+import { showToast, updateMoney } from './ui.js';
 import { BLDG_LABELS, renderMap } from './map.js';
 
 function resourceName(key) {
@@ -667,7 +667,7 @@ export function checkAllTraderVisits() {
         if (totalEarned === 0 && totalSpent === 0) msg += ' No trades this round.';
         showToast(msg, 'success');
       }
-      document.getElementById('g-money').textContent = '$' + state.profile.money;
+      updateMoney();
       renderInventory();
       renderTradePanel();
       state.visitChecked = true;
@@ -751,7 +751,7 @@ function blackMarketTrade(resourceKey, quantity, direction, btn) {
       });
     }
 
-    document.getElementById('g-money').textContent = '$' + state.profile.money;
+    updateMoney();
 
     var bmKey = 'bm-' + direction + '-' + resourceKey;
     state.blackMarketAmounts[bmKey] = 0;

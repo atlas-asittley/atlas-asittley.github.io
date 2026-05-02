@@ -1,7 +1,7 @@
 // ── Map rendering, placement logic, drag-to-paint roads, and map expansion ──
 import { sb } from './config.js';
-import { state, computeLaborAllocation, computeGridBounds } from './state.js';
-import { showToast } from './ui.js';
+import { state, CITY_CENTER_X, CITY_CENTER_Y, computeLaborAllocation, computeGridBounds } from './state.js';
+import { showToast, updateMoney, updateWorkers } from './ui.js';
 import { renderBuildPanel } from './panels.js';
 import { rebuildRoadSet, renderWalkers, snapWalkersToZoom } from './walkers.js';
 import { openInspector } from './inspector.js';
@@ -62,7 +62,7 @@ function isRoadBuilding(building) {
 }
 
 function isRoadOrCenter(x, y, buildingAt) {
-  if (x === 7 && y === 7) return true;
+  if (x === CITY_CENTER_X && y === CITY_CENTER_Y) return true;
   return isRoadBuilding(buildingAt[x + ',' + y]);
 }
 
@@ -75,22 +75,35 @@ function roadNeighborClasses(x, y, buildingAt) {
   return classes;
 }
 
+// Cached road tile set for O(1) connectivity lookups during placement/drag
+var roadTileSet = {};
+
+function rebuildPlacementRoadSet() {
+  roadTileSet = {};
+  state.allBuildings.forEach(function (b) {
+    var bt = state.buildingTypes[b.building_type_key];
+    if (bt && bt.category === 'road' && b.status === 'active') {
+      roadTileSet[b.x + ',' + b.y] = true;
+    }
+  });
+}
+
 function isRoadPlacementConnected(tile, pendingSet) {
   if (!tile) return false;
+  var x = tile.x, y = tile.y;
   // Adjacent to city center
-  if ((Math.abs(tile.x - 7) + Math.abs(tile.y - 7)) === 1) return true;
-  // Adjacent to existing road
-  var connected = state.allBuildings.some(function (b) {
-    return isRoadBuilding(b)
-      && Math.abs(b.x - tile.x) + Math.abs(b.y - tile.y) === 1;
-  });
-  if (connected) return true;
+  if ((Math.abs(x - CITY_CENTER_X) + Math.abs(y - CITY_CENTER_Y)) === 1) return true;
+  // Adjacent to existing road (O(1) set lookup)
+  if (roadTileSet[(x - 1) + ',' + y] || roadTileSet[(x + 1) + ',' + y]
+    || roadTileSet[x + ',' + (y - 1)] || roadTileSet[x + ',' + (y + 1)]) {
+    return true;
+  }
   // Adjacent to pending drag road
   if (pendingSet) {
-    return !!(pendingSet[(tile.x - 1) + ',' + tile.y]
-      || pendingSet[(tile.x + 1) + ',' + tile.y]
-      || pendingSet[tile.x + ',' + (tile.y - 1)]
-      || pendingSet[tile.x + ',' + (tile.y + 1)]);
+    return !!(pendingSet[(x - 1) + ',' + y]
+      || pendingSet[(x + 1) + ',' + y]
+      || pendingSet[x + ',' + (y - 1)]
+      || pendingSet[x + ',' + (y + 1)]);
   }
   return false;
 }
@@ -158,6 +171,7 @@ function touchCenter(touches) {
 
 export function renderMap() {
   var grid = document.getElementById('map-grid');
+  rebuildPlacementRoadSet();
   var buildingAt = {};
   state.allBuildings.forEach(function (b) { buildingAt[b.x + ',' + b.y] = b; });
 
@@ -176,7 +190,7 @@ export function renderMap() {
         continue;
       }
 
-      if (x === 7 && y === 7) {
+      if (x === CITY_CENTER_X && y === CITY_CENTER_Y) {
         classes.push('city-center');
       } else if (tile.resource_node_key) {
         classes.push('res-' + tile.resource_node_key);
@@ -239,13 +253,13 @@ export function renderMap() {
           var bldgClasses = 'bldg ' + btk + housingTierClass + (mine ? ' mine' : '') + (isUnstaffed ? ' unstaffed' : '') + (isDisconnected ? ' disconnected' : '') + (isProducing ? ' producing' : '');
           html += '<div class="' + bldgClasses + '" title="' + titleText + '">' + label + '</div>';
         }
-      } else if (x === 7 && y === 7) {
+      } else if (x === CITY_CENTER_X && y === CITY_CENTER_Y) {
         // Show road connectors from city center to adjacent roads
         var hqRoadDirs = [];
-        if (isRoadBuilding(buildingAt['7,6'])) hqRoadDirs.push('north');
-        if (isRoadBuilding(buildingAt['7,8'])) hqRoadDirs.push('south');
-        if (isRoadBuilding(buildingAt['8,7'])) hqRoadDirs.push('east');
-        if (isRoadBuilding(buildingAt['6,7'])) hqRoadDirs.push('west');
+        if (isRoadBuilding(buildingAt[CITY_CENTER_X + ',' + (CITY_CENTER_Y - 1)])) hqRoadDirs.push('north');
+        if (isRoadBuilding(buildingAt[CITY_CENTER_X + ',' + (CITY_CENTER_Y + 1)])) hqRoadDirs.push('south');
+        if (isRoadBuilding(buildingAt[(CITY_CENTER_X + 1) + ',' + CITY_CENTER_Y])) hqRoadDirs.push('east');
+        if (isRoadBuilding(buildingAt[(CITY_CENTER_X - 1) + ',' + CITY_CENTER_Y])) hqRoadDirs.push('west');
         if (hqRoadDirs.length) {
           var hqClasses = 'road-surface hq-road road-' + hqRoadDirs.join(' road-');
           html += '<div class="' + hqClasses + '">';
@@ -278,18 +292,6 @@ export function cancelPlacement() {
   renderBuildPanel();
 }
 
-function updateMoney() {
-  document.getElementById('g-money').textContent = '$' + state.profile.money;
-}
-
-function updateWorkers() {
-  var li = state.laborInfo;
-  var el = document.getElementById('g-workers');
-  el.textContent = li.workersUsed + '/' + li.workerSupply;
-  el.className = 'v ' + (li.laborShortage ? 'shortage' : 'workers');
-  var badge = document.getElementById('g-labor-badge');
-  if (badge) badge.style.display = li.laborShortage ? 'inline' : 'none';
-}
 
 function reloadMapData() {
   return Promise.all([
@@ -473,7 +475,12 @@ function executeDragPlacements() {
 
 // ── Map expansion ──
 
+// Guard: prevent concurrent expansion calls from racing
+var expandInProgress = false;
+
 export function expandMapIfNeeded() {
+  if (expandInProgress) return;
+
   var expandLeft = false, expandRight = false, expandUp = false, expandDown = false;
 
   state.allBuildings.forEach(function (b) {
@@ -506,21 +513,33 @@ export function expandMapIfNeeded() {
 
   if (newTiles.length === 0) return;
 
+  expandInProgress = true;
+
+  function addLocalFallbackTiles() {
+    newTiles.forEach(function (t) {
+      // Skip if tile was already added (e.g. by another player's expansion)
+      if (state.tileMap[t.x + ',' + t.y]) return;
+      t.id = 'local-' + t.x + '-' + t.y;
+      // Mark local-only tiles as unbuildable — they have no server-side ID for RPC
+      t.buildable = false;
+      state.tiles.push(t);
+      state.tileMap[t.x + ',' + t.y] = t;
+    });
+    computeGridBounds();
+    renderMap();
+  }
+
   sb.from('map_tiles').insert(newTiles).select('*').then(function (r) {
+    expandInProgress = false;
     if (r.error) {
-      // DB insert failed (RLS or other); fall back to client-only expansion
       console.warn('Map expansion DB insert failed:', r.error.message);
-      newTiles.forEach(function (t) {
-        t.id = 'local-' + t.x + '-' + t.y;
-        state.tiles.push(t);
-        state.tileMap[t.x + ',' + t.y] = t;
-      });
-      computeGridBounds();
-      renderMap();
+      addLocalFallbackTiles();
       return;
     }
     if (r.data) {
       r.data.forEach(function (t) {
+        // Deduplicate: skip if already present (race with another client)
+        if (state.tileMap[t.x + ',' + t.y]) return;
         state.tiles.push(t);
         state.tileMap[t.x + ',' + t.y] = t;
       });
@@ -529,15 +548,9 @@ export function expandMapIfNeeded() {
     renderMap();
     showToast('New land discovered!', 'info');
   }).catch(function (err) {
+    expandInProgress = false;
     console.warn('Map expansion error:', err);
-    // Client-only fallback
-    newTiles.forEach(function (t) {
-      t.id = 'local-' + t.x + '-' + t.y;
-      state.tiles.push(t);
-      state.tileMap[t.x + ',' + t.y] = t;
-    });
-    computeGridBounds();
-    renderMap();
+    addLocalFallbackTiles();
   });
 }
 

@@ -1,33 +1,13 @@
 // ── Game entry, data loading, and production loop ──
 import { sb } from './config.js';
 import { state, computeTraderUnlocks, computeLaborAllocation, computeGridBounds } from './state.js';
-import { showScreen, showToast, capitalize } from './ui.js';
+import { showScreen, showToast, capitalize, updateMoney, updateWorkers } from './ui.js';
 import { renderMap, initMapEvents, expandMapIfNeeded } from './map.js';
 import { renderBuildPanel, renderInventory, renderTradePanel, initTabs, checkAllTraderVisits } from './panels.js';
 import { subscribeRealtime } from './realtime.js';
 import { startWalkers, stopWalkers } from './walkers.js';
 import { initInspector } from './inspector.js';
 
-export function updateMoney() {
-  document.getElementById('g-money').textContent = '$' + state.profile.money;
-}
-
-export function updateWorkers() {
-  var li = state.laborInfo;
-  var el = document.getElementById('g-workers');
-  el.textContent = li.workersUsed + '/' + li.workerSupply;
-  el.className = 'v ' + (li.laborShortage ? 'shortage' : 'workers');
-  el.title = li.laborShortage
-    ? 'Labor shortage! ' + li.workersNeeded + ' needed, only ' + li.workerSupply + ' available'
-    : li.workersIdle > 0
-      ? li.workersIdle + ' workers idle'
-      : 'All workers employed';
-  // Update shortage badge
-  var badge = document.getElementById('g-labor-badge');
-  if (badge) {
-    badge.style.display = li.laborShortage ? 'inline' : 'none';
-  }
-}
 
 function processProduction() {
   return sb.rpc('process_production').then(function (r) {
