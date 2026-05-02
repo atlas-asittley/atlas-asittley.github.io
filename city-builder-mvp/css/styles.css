@@ -377,17 +377,19 @@ body {
 /* ── Walker overlay ─────────────────────────────────── */
 #walker-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2; }
 #walker-layer.no-transition .walker-dot { transition: none !important; }
-.walker-dot { position: absolute; width: 10px; height: 14px; --wk-scale: 1; transform: translate(-50%, -50%) scale(var(--wk-scale)); transition: left 1.35s ease-in-out, top 1.35s ease-in-out; animation: walker-bob 0.7s ease-in-out infinite alternate, walker-waddle 0.55s ease-in-out infinite; cursor: pointer; }
+.walker-dot { position: absolute; width: 10px; height: 14px; --wk-scale: 1; transform: translate(-50%, -50%) scale(var(--wk-scale)); transition: left 1.35s ease-in-out, top 1.35s ease-in-out; animation: walker-bob 0.7s ease-in-out infinite alternate, walker-waddle 0.55s ease-in-out infinite; cursor: pointer; background-size: contain; background-repeat: no-repeat; background-position: center; }
 .walker-dot:hover { filter: brightness(1.5) drop-shadow(0 0 3px rgba(255,255,255,0.4)); transform: translate(-50%, -50%) scale(calc(var(--wk-scale) * 1.3)); }
-.walker-dot::before { content: ''; position: absolute; left: 2px; top: 0; width: 6px; height: 6px; border-radius: 50%; background: #d8c3a0; box-shadow: 0 0 0 1px rgba(10,12,18,0.18); }
-.walker-dot::after { content: ''; position: absolute; left: 1px; top: 5px; width: 8px; height: 8px; border-radius: 3px 3px 2px 2px; background: #7a6756; box-shadow: 0 0 0 1px rgba(10,12,18,0.16); }
-.walker-dot.walker-tier-0::after { background: linear-gradient(180deg, #7b624d 0%, #5e4a3a 100%); }
-.walker-dot.walker-tier-1::after { background: linear-gradient(180deg, #8e8262 0%, #6f7b52 100%); }
-.walker-dot.walker-tier-2::after { background: linear-gradient(180deg, #8a7a6a 0%, #6a5a48 100%); }
-.walker-dot.walker-tier-3::after { background: linear-gradient(180deg, #7080a0 0%, #506080 100%); }
-.walker-dot.walker-tier-4::after { background: linear-gradient(180deg, #a08060 0%, #806040 100%); }
-.walker-dot.walker-tier-5::after { background: linear-gradient(180deg, #c0a060 0%, #a08040 100%); }
-.walker-dot.walker-tier-4::before, .walker-dot.walker-tier-5::before { background: #f0e0c0; }
+.walker-dot::before, .walker-dot::after { content: none; }
+/* ── Citizen: olive body, plain round head ── */
+.walker-dot.walker-citizen { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 14'%3E%3Ccircle cx='5' cy='3' r='2.5' fill='%23d8c3a0'/%3E%3Ccircle cx='5' cy='3' r='2.5' fill='none' stroke='%230a0c12' stroke-width='0.3' opacity='0.18'/%3E%3Crect x='2' y='5.5' width='6' height='7.5' rx='2' fill='%238e8262'/%3E%3Crect x='2' y='5.5' width='6' height='7.5' rx='2' fill='none' stroke='%230a0c12' stroke-width='0.3' opacity='0.16'/%3E%3C/svg%3E"); }
+/* ── Timber: brown body, axe over shoulder ── */
+.walker-dot.walker-timber { width: 13px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 13 14'%3E%3Ccircle cx='5' cy='3' r='2.5' fill='%23d8c3a0'/%3E%3Ccircle cx='5' cy='3' r='2.5' fill='none' stroke='%230a0c12' stroke-width='0.3' opacity='0.18'/%3E%3Crect x='2' y='5.5' width='6' height='7.5' rx='2' fill='%237a6756'/%3E%3Crect x='2' y='5.5' width='6' height='7.5' rx='2' fill='none' stroke='%230a0c12' stroke-width='0.3' opacity='0.16'/%3E%3Cline x1='7.5' y1='7' x2='10' y2='2' stroke='%23503018' stroke-width='0.9' stroke-linecap='round'/%3E%3Cpath d='M9.2 1 L11.5 1.8 L10.8 3.8 L9 3Z' fill='%23889'/%3E%3C/svg%3E"); }
+/* ── Sawmill: warm brown body, plank across shoulders ── */
+.walker-dot.walker-sawmill { width: 12px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 14'%3E%3Ccircle cx='6' cy='3' r='2.5' fill='%23d8c3a0'/%3E%3Ccircle cx='6' cy='3' r='2.5' fill='none' stroke='%230a0c12' stroke-width='0.3' opacity='0.18'/%3E%3Crect x='3' y='5.5' width='6' height='7.5' rx='2' fill='%238a7a6a'/%3E%3Crect x='3' y='5.5' width='6' height='7.5' rx='2' fill='none' stroke='%230a0c12' stroke-width='0.3' opacity='0.16'/%3E%3Crect x='0.5' y='5.2' width='11' height='1.6' rx='0.4' fill='%23c4a050' stroke='%23a08030' stroke-width='0.3'/%3E%3C/svg%3E"); }
+/* ── Stone: gray body, cap on head ── */
+.walker-dot.walker-stone { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 14'%3E%3Ccircle cx='5' cy='3.5' r='2.5' fill='%23d8c3a0'/%3E%3Ccircle cx='5' cy='3.5' r='2.5' fill='none' stroke='%230a0c12' stroke-width='0.3' opacity='0.18'/%3E%3Cpath d='M2.2 3 Q5 0.4 7.8 3Z' fill='%23585868'/%3E%3Crect x='2' y='6' width='6' height='7' rx='2' fill='%23707080'/%3E%3Crect x='2' y='6' width='6' height='7' rx='2' fill='none' stroke='%230a0c12' stroke-width='0.3' opacity='0.16'/%3E%3C/svg%3E"); }
+/* ── Grain: green body, wide straw hat ── */
+.walker-dot.walker-grain { width: 12px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 14'%3E%3Ccircle cx='6' cy='4' r='2.3' fill='%23d8c3a0'/%3E%3Cellipse cx='6' cy='2.8' rx='5' ry='1.4' fill='%23c8b060'/%3E%3Cellipse cx='6' cy='2.2' rx='3.2' ry='2' fill='%23d4be68'/%3E%3Crect x='3' y='6.2' width='6' height='7' rx='2' fill='%23607840'/%3E%3Crect x='3' y='6.2' width='6' height='7' rx='2' fill='none' stroke='%230a0c12' stroke-width='0.3' opacity='0.16'/%3E%3C/svg%3E"); }
 @keyframes walker-bob {
   from { margin-top: -1px; }
   to { margin-top: 1px; }
