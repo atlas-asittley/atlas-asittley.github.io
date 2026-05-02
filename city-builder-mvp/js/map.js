@@ -44,12 +44,17 @@ function isRoadBuilding(building) {
   return !!(bt && bt.category === 'road');
 }
 
+function isRoadOrCenter(x, y, buildingAt) {
+  if (x === 7 && y === 7) return true; // city center connects to roads
+  return isRoadBuilding(buildingAt[x + ',' + y]);
+}
+
 function roadNeighborClasses(x, y, buildingAt) {
   var classes = [];
-  if (isRoadBuilding(buildingAt[x + ',' + (y - 1)])) classes.push('north');
-  if (isRoadBuilding(buildingAt[x + ',' + (y + 1)])) classes.push('south');
-  if (isRoadBuilding(buildingAt[(x + 1) + ',' + y])) classes.push('east');
-  if (isRoadBuilding(buildingAt[(x - 1) + ',' + y])) classes.push('west');
+  if (isRoadOrCenter(x, y - 1, buildingAt)) classes.push('north');
+  if (isRoadOrCenter(x, y + 1, buildingAt)) classes.push('south');
+  if (isRoadOrCenter(x + 1, y, buildingAt)) classes.push('east');
+  if (isRoadOrCenter(x - 1, y, buildingAt)) classes.push('west');
   return classes;
 }
 
