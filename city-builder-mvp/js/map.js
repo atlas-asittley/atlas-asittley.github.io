@@ -34,6 +34,7 @@ var pinchStartDistance = null;
 var pinchStartZoom = 1;
 var pinchStartCenter = null;
 var pinchSuppressClickUntil = 0;
+var pinchGestureActive = false;
 
 // Drag-to-paint state (roads only)
 var dragState = {
@@ -755,6 +756,7 @@ export function initMapEvents() {
   viewport.addEventListener('touchstart', function (e) {
     if (e.touches.length === 2) {
       if (dragState.active) clearDragState();
+      pinchGestureActive = true;
       pinchStartDistance = touchDistance(e.touches);
       pinchStartZoom = state.mapZoom;
       pinchStartCenter = touchCenter(e.touches);
@@ -777,7 +779,8 @@ export function initMapEvents() {
       pinchStartDistance = null;
       pinchStartZoom = state.mapZoom;
       pinchStartCenter = null;
+      if (pinchGestureActive) pinchSuppressClickUntil = Date.now() + 250;
+      pinchGestureActive = false;
     }
-    pinchSuppressClickUntil = Date.now() + 250;
   });
 }

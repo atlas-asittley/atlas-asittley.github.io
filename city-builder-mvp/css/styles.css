@@ -132,8 +132,8 @@ body {
 }
 .bldg { width: 100%; height: 100%; border-radius: 2px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0; color: transparent; line-height: 1; background-size: contain; background-repeat: no-repeat; background-position: center; position: relative; transition: filter 0.3s, box-shadow 0.2s; z-index: 1; cursor: pointer; }
 .bldg:hover { filter: brightness(1.15) !important; }
-.bldg.mine { box-shadow: 0 0 0 1.5px #4fa3e0; }
-.bldg.mine:hover { box-shadow: 0 0 0 1.5px #4fa3e0, 0 0 6px rgba(79,163,224,0.5); }
+.bldg.mine { box-shadow: inset 0 0 0 1px rgba(79,163,224,0.35); }
+.bldg.mine:hover { box-shadow: inset 0 0 0 1px rgba(79,163,224,0.45); }
 /* ── Sprite buildings (tier 1-2 timber/stone + housing) ── */
 .bldg.timber_camp { background-image: url('../assets/sprites/timber_camp.png'); background-color: transparent; filter: drop-shadow(0 1px 1px rgba(0,0,0,0.3)); }
 .bldg.sawmill { background-image: url('../assets/sprites/sawmill.png'); background-color: transparent; filter: drop-shadow(0 1px 1px rgba(0,0,0,0.3)); }
@@ -216,7 +216,7 @@ body {
 /* ── Building activity state: producing ── */
 /* Base: no generic glow — activity shown by per-type visual cues */
 .bldg.producing { box-shadow: none; }
-.bldg.producing.mine { box-shadow: 0 0 0 1.5px #4fa3e0; }
+.bldg.producing.mine { box-shadow: inset 0 0 0 1px rgba(79,163,224,0.35); }
 .bldg.producing::after { content: none; }
 /* ── Activity keyframes ── */
 @keyframes act-smoke {
