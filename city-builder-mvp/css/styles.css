@@ -162,16 +162,41 @@ body {
 .bldg.house.house-t0 { background-image: url('../assets/sprites/house_t0.png'); background-color: transparent; border: none; }
 .bldg.house.house-t1 { background-image: url('../assets/sprites/house_t1.png'); background-color: transparent; }
 /* ── Building activity state: producing ── */
-.bldg.producing { animation: bldg-produce 2.5s ease-in-out infinite; }
-.bldg.producing.mine { box-shadow: 0 0 0 1.5px #4fa3e0, 0 0 4px rgba(94,196,158,0.3); }
+.bldg.producing {
+  animation: bldg-produce 2s ease-in-out infinite;
+  box-shadow: 0 0 6px 1px rgba(255,185,50,0.45), 0 0 2px rgba(255,220,100,0.3);
+}
+.bldg.producing.mine {
+  box-shadow: 0 0 0 1.5px #4fa3e0, 0 0 6px 1px rgba(255,185,50,0.5), 0 0 12px 2px rgba(255,160,40,0.2);
+}
+/* Animated interior-light flicker overlay */
+.bldg.producing::after {
+  content: '';
+  position: absolute;
+  inset: 15% 15% 10% 15%;
+  border-radius: 2px;
+  background: radial-gradient(ellipse at 30% 50%, rgba(255,200,80,0.35) 0%, transparent 60%),
+              radial-gradient(ellipse at 70% 40%, rgba(255,180,60,0.25) 0%, transparent 55%);
+  animation: activity-flicker 1.2s ease-in-out infinite alternate;
+  pointer-events: none;
+  z-index: 2;
+  mix-blend-mode: screen;
+}
 @keyframes bldg-produce {
-  0%, 100% { filter: drop-shadow(0 1px 1px rgba(0,0,0,0.3)) brightness(1); }
-  50% { filter: drop-shadow(0 1px 2px rgba(94,196,158,0.25)) brightness(1.08); }
+  0%, 100% { filter: drop-shadow(0 1px 3px rgba(255,170,40,0.35)) brightness(1.05); transform: scale(1); }
+  50% { filter: drop-shadow(0 2px 5px rgba(255,170,40,0.55)) brightness(1.18); transform: scale(1.03); }
+}
+@keyframes activity-flicker {
+  0% { opacity: 0.5; background-position: 0% 50%; }
+  25% { opacity: 0.85; }
+  50% { opacity: 0.4; background-position: 50% 30%; }
+  75% { opacity: 0.9; }
+  100% { opacity: 0.6; background-position: 100% 60%; }
 }
 /* SVG sprite buildings use same activity glow as PNG sprites */
 .bldg.grain_farm.producing, .bldg.mill.producing, .bldg.bakery.producing,
 .bldg.clay_pit.producing, .bldg.pottery_kiln.producing,
-.bldg.woodcarver.producing, .bldg.sculptor.producing { animation: bldg-produce 2.5s ease-in-out infinite; }
+.bldg.woodcarver.producing, .bldg.sculptor.producing { animation: bldg-produce 2s ease-in-out infinite; }
 /* ── Unstaffed / disconnected ── */
 .bldg.unstaffed { opacity: 0.35; animation: none; }
 .bldg.unstaffed::after { content: '!'; position: absolute; top: -2px; right: -2px; font-size: 6px; color: #f06060; font-weight: 700; z-index: 1; }
