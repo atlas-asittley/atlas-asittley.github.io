@@ -88,7 +88,7 @@ function spawnWalker(building) {
     prevDir: start.dir,   // direction we moved to get here (from building)
     steps: 0,
     sourceId: building.id,
-    hue: 190 + Math.floor(Math.random() * 40) // slight color variation
+    sourceTier: building.housing_tier !== undefined ? building.housing_tier : 1
   });
 }
 
@@ -156,9 +156,9 @@ function walkerTick() {
 }
 
 // ── Rendering ──
-// Walkers are rendered as absolutely-positioned dots in a walker-layer div
-// that overlays the map grid. DOM elements are reused so CSS transitions
-// animate movement smoothly between ticks.
+// Walkers are rendered as absolutely-positioned sprite elements in a
+// walker-layer div that overlays the map grid. DOM elements are reused so
+// CSS transitions animate movement smoothly between ticks.
 var walkerEls = [];  // parallel to walkers array; holds DOM elements
 
 export function renderWalkers() {
@@ -198,10 +198,10 @@ export function renderWalkers() {
     var lifeRatio = 1 - (w.steps / WALKER_MAX_STEPS);
     var opacity = Math.min(1, lifeRatio * 2);
 
+    el.className = 'walker-dot walker-tier-' + (w.sourceTier || 1);
     el.style.left = left.toFixed(1) + 'px';
     el.style.top = top.toFixed(1) + 'px';
     el.style.opacity = opacity.toFixed(2);
-    el.style.background = 'hsl(' + w.hue + ',55%,65%)';
   }
 }
 
