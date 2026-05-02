@@ -13,6 +13,10 @@ export var BLDG_LABELS = {
 
 // Housing tier label overrides (keyed by tier number)
 var HOUSING_TIER_LABELS = { 0: 'S', 1: 'H' };
+var MAP_BASE_SIZE = 520;
+var MAP_MIN_ZOOM = 0.75;
+var MAP_MAX_ZOOM = 2;
+var MAP_ZOOM_STEP = 0.25;
 
 export function isPlacementValid(btKey, tile) {
   var bt = state.buildingTypes[btKey];
@@ -39,6 +43,20 @@ function roadNeighborClasses(x, y, buildingAt) {
   if (isRoadBuilding(buildingAt[(x + 1) + ',' + y])) classes.push('east');
   if (isRoadBuilding(buildingAt[(x - 1) + ',' + y])) classes.push('west');
   return classes;
+}
+
+export function applyMapZoom() {
+  var grid = document.getElementById('map-grid');
+  var label = document.getElementById('zoom-label');
+  if (!grid) return;
+  grid.style.width = Math.round(MAP_BASE_SIZE * state.mapZoom) + 'px';
+  if (label) label.textContent = Math.round(state.mapZoom * 100) + '%';
+}
+
+function setMapZoom(nextZoom) {
+  var clamped = Math.max(MAP_MIN_ZOOM, Math.min(MAP_MAX_ZOOM, nextZoom));
+  state.mapZoom = Math.round(clamped * 100) / 100;
+  applyMapZoom();
 }
 
 export function renderMap() {
@@ -130,6 +148,7 @@ export function renderMap() {
     }
   }
   grid.innerHTML = html;
+  applyMapZoom();
 }
 
 export function cancelPlacement() {
@@ -224,4 +243,10 @@ export function initMapEvents() {
   });
 
   document.getElementById('placement-cancel').addEventListener('click', cancelPlacement);
+  document.getElementById('zoom-in').addEventListener('click', function () {
+    setMapZoom(state.mapZoom + MAP_ZOOM_STEP);
+  });
+  document.getElementById('zoom-out').addEventListener('click', function () {
+    setMapZoom(state.mapZoom - MAP_ZOOM_STEP);
+  });
 }

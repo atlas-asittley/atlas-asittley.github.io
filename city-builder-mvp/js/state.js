@@ -38,7 +38,9 @@ export var state = {
   roadAccessIds: {},     // building id -> true if has road access
   noRoadAccessIds: {},   // building id -> true if requires road but lacks access
   // Housing evolution tier config (loaded from DB)
-  housingTierConfig: {}  // tier -> { name, label, workers, needs_road }
+  housingTierConfig: {},  // tier -> { name, label, workers, needs_road }
+  // Client-side map zoom state
+  mapZoom: 1
 };
 
 // ── Roads: compute which buildings have road access ──

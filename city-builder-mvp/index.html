@@ -98,7 +98,14 @@
   </div>
   <div class="game-body">
     <div class="map-area">
-      <div id="map-grid"></div>
+      <div class="map-controls">
+        <button class="map-zoom-btn" id="zoom-out" type="button">−</button>
+        <span class="map-zoom-label" id="zoom-label">100%</span>
+        <button class="map-zoom-btn" id="zoom-in" type="button">+</button>
+      </div>
+      <div class="map-viewport" id="map-viewport">
+        <div id="map-grid"></div>
+      </div>
     </div>
     <div class="bottom-panel">
       <div class="tab-bar">
