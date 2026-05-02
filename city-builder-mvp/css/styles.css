@@ -70,46 +70,76 @@ body {
 .map-zoom-label { min-width: 44px; text-align: center; font-size: 0.72rem; color: #7a8a9e; font-weight: 700; }
 
 /* ── Map grid ──────────────────────────────────────── */
-#map-grid { display: grid; grid-template-columns: repeat(15, 1fr); gap: 1px; width: 520px; margin: 0 auto; background: #111820; }
-.cell { aspect-ratio: 1; background: #1a2332; border-radius: 2px; display: flex; align-items: center; justify-content: center; cursor: pointer; position: relative; user-select: none; transition: box-shadow 0.15s; }
-.cell:hover { filter: brightness(1.15); }
-.cell.res-timber { background: #1a2e22; }
-.cell.res-stone { background: #252530; }
-.cell.res-grain { background: #2e2a1a; }
-.cell.res-clay { background: #2a2020; }
-.cell.city-center { background: #2a1e35; cursor: default; box-shadow: inset 0 0 0 1px #4a3a5a; }
+#map-grid { display: grid; grid-template-columns: repeat(15, 1fr); gap: 1px; width: 520px; margin: 0 auto; background: #0e1418; }
+.cell { aspect-ratio: 1; background: #1a2332; border-radius: 2px; display: flex; align-items: center; justify-content: center; cursor: pointer; position: relative; user-select: none; transition: box-shadow 0.15s, filter 0.15s; }
+.cell:hover { filter: brightness(1.18); }
+.cell.res-timber { background: linear-gradient(135deg, #1a2e22 0%, #162818 100%); }
+.cell.res-stone { background: linear-gradient(135deg, #252530 0%, #202028 100%); }
+.cell.res-grain { background: linear-gradient(135deg, #2e2a1a 0%, #282416 100%); }
+.cell.res-clay { background: linear-gradient(135deg, #2a2020 0%, #241a1a 100%); }
+.cell.city-center { background: linear-gradient(135deg, #2e2240 0%, #221a30 100%); cursor: default; box-shadow: inset 0 0 0 1px #5a4a6a, inset 0 0 8px rgba(120,80,180,0.15); }
 .cell.valid-placement { box-shadow: inset 0 0 0 2px #5ec49e; cursor: crosshair; }
 .cell.valid-placement:hover { background: rgba(94,196,158,0.15); }
-.res-dot { width: 5px; height: 5px; border-radius: 50%; }
-.res-timber .res-dot { background: #5ec49e; }
-.res-stone .res-dot { background: #8888aa; }
-.res-grain .res-dot { background: #e6c65a; }
-.res-clay .res-dot { background: #c47a5a; }
-.bldg { width: 100%; height: 100%; border-radius: 2px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0; color: transparent; line-height: 1; background-size: contain; background-repeat: no-repeat; background-position: center; position: relative; }
+.res-dot { width: 6px; height: 6px; border-radius: 50%; animation: res-dot-pulse 3s ease-in-out infinite; }
+.res-timber .res-dot { background: radial-gradient(circle, #7ed4ae 0%, #3a8a5a 100%); box-shadow: 0 0 3px rgba(94,196,158,0.3); }
+.res-stone .res-dot { background: radial-gradient(circle, #aaaacc 0%, #6a6a88 100%); box-shadow: 0 0 3px rgba(136,136,170,0.3); }
+.res-grain .res-dot { background: radial-gradient(circle, #f0d870 0%, #c0a040 100%); box-shadow: 0 0 3px rgba(230,198,90,0.3); }
+.res-clay .res-dot { background: radial-gradient(circle, #d89a7a 0%, #a06040 100%); box-shadow: 0 0 3px rgba(196,122,90,0.3); }
+@keyframes res-dot-pulse {
+  0%, 100% { opacity: 0.7; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.15); }
+}
+.bldg { width: 100%; height: 100%; border-radius: 2px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0; color: transparent; line-height: 1; background-size: contain; background-repeat: no-repeat; background-position: center; position: relative; transition: filter 0.3s; }
 .bldg.mine { box-shadow: 0 0 0 1.5px #4fa3e0; }
-.bldg.timber_camp { background-image: url('../assets/sprites/timber_camp.png'); background-color: transparent; }
-.bldg.sawmill { background-image: url('../assets/sprites/sawmill.png'); background-color: transparent; }
-.bldg.stone_quarry { background-image: url('../assets/sprites/stone_quarry.png'); background-color: transparent; }
-.bldg.mason_workshop { background-image: url('../assets/sprites/mason_workshop.png'); background-color: transparent; }
-.bldg.grain_farm { background: #5a7a3a; font-size: 8px; color: #fff; }
-.bldg.mill { background: #6a5a4a; font-size: 8px; color: #fff; }
-.bldg.clay_pit { background: #8a5a3a; font-size: 8px; color: #fff; }
-.bldg.pottery_kiln { background: #7a4a4a; font-size: 8px; color: #fff; }
-.bldg.bakery { background: #8a7a3a; font-size: 8px; color: #fff; }
-.bldg.woodcarver { background: #5a6a3a; font-size: 8px; color: #fff; }
-.bldg.sculptor { background: #6a5a7a; font-size: 8px; color: #fff; }
-.bldg.house { background-image: url('../assets/sprites/house_t1.png'); background-color: transparent; }
+/* ── Sprite buildings (tier 1-2 timber/stone + housing) ── */
+.bldg.timber_camp { background-image: url('../assets/sprites/timber_camp.png'); background-color: transparent; filter: drop-shadow(0 1px 1px rgba(0,0,0,0.3)); }
+.bldg.sawmill { background-image: url('../assets/sprites/sawmill.png'); background-color: transparent; filter: drop-shadow(0 1px 1px rgba(0,0,0,0.3)); }
+.bldg.stone_quarry { background-image: url('../assets/sprites/stone_quarry.png'); background-color: transparent; filter: drop-shadow(0 1px 1px rgba(0,0,0,0.3)); }
+.bldg.mason_workshop { background-image: url('../assets/sprites/mason_workshop.png'); background-color: transparent; filter: drop-shadow(0 1px 1px rgba(0,0,0,0.3)); }
+/* ── Placeholder buildings (grain chain) ── */
+.bldg.grain_farm { background: linear-gradient(135deg, #6a8a3a 0%, #4a6a2a 100%); font-size: 8px; color: #d0e8a0; text-shadow: 0 1px 1px rgba(0,0,0,0.4); box-shadow: inset 0 -2px 3px rgba(0,0,0,0.2), inset 0 1px 1px rgba(255,255,255,0.1); }
+.bldg.grain_farm::before { content: ''; position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%); width: 60%; height: 2px; background: #e6c65a; border-radius: 1px; opacity: 0.6; }
+.bldg.mill { background: linear-gradient(135deg, #7a6a4a 0%, #5a4a3a 100%); font-size: 8px; color: #d8c8a0; text-shadow: 0 1px 1px rgba(0,0,0,0.4); box-shadow: inset 0 -2px 3px rgba(0,0,0,0.2), inset 0 1px 1px rgba(255,255,255,0.1); }
+.bldg.mill::before { content: ''; position: absolute; top: 2px; right: 2px; width: 5px; height: 5px; border: 1px solid #a09070; border-radius: 50%; opacity: 0.7; }
+.bldg.bakery { background: linear-gradient(135deg, #9a8a3a 0%, #7a6a2a 100%); font-size: 8px; color: #f0e0a0; text-shadow: 0 1px 1px rgba(0,0,0,0.4); box-shadow: inset 0 -2px 3px rgba(0,0,0,0.2), inset 0 1px 1px rgba(255,255,255,0.1); }
+.bldg.bakery::before { content: ''; position: absolute; top: 1px; left: 50%; transform: translateX(-50%); width: 4px; height: 3px; background: #c0a060; border-radius: 50% 50% 0 0; opacity: 0.7; }
+/* ── Placeholder buildings (clay chain) ── */
+.bldg.clay_pit { background: linear-gradient(135deg, #9a6a3a 0%, #7a4a2a 100%); font-size: 8px; color: #e8c8a0; text-shadow: 0 1px 1px rgba(0,0,0,0.4); box-shadow: inset 0 -2px 3px rgba(0,0,0,0.2), inset 0 1px 1px rgba(255,255,255,0.1); }
+.bldg.clay_pit::before { content: ''; position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%); width: 50%; height: 3px; background: #c47a5a; border-radius: 2px; opacity: 0.5; }
+.bldg.pottery_kiln { background: linear-gradient(135deg, #8a5a4a 0%, #6a3a3a 100%); font-size: 8px; color: #e0b0a0; text-shadow: 0 1px 1px rgba(0,0,0,0.4); box-shadow: inset 0 -2px 3px rgba(0,0,0,0.2), inset 0 1px 1px rgba(255,255,255,0.1); }
+.bldg.pottery_kiln::before { content: ''; position: absolute; top: 1px; left: 50%; transform: translateX(-50%); width: 3px; height: 4px; background: rgba(255,140,60,0.5); border-radius: 50%; filter: blur(1px); }
+/* ── Placeholder buildings (tier 3) ── */
+.bldg.woodcarver { background: linear-gradient(135deg, #6a7a3a 0%, #4a5a2a 100%); font-size: 8px; color: #c8d8a0; text-shadow: 0 1px 1px rgba(0,0,0,0.4); box-shadow: inset 0 -2px 3px rgba(0,0,0,0.2), inset 0 1px 1px rgba(255,255,255,0.1); }
+.bldg.sculptor { background: linear-gradient(135deg, #7a6a8a 0%, #5a4a6a 100%); font-size: 8px; color: #d0c0e0; text-shadow: 0 1px 1px rgba(0,0,0,0.4); box-shadow: inset 0 -2px 3px rgba(0,0,0,0.2), inset 0 1px 1px rgba(255,255,255,0.1); }
+/* ── Housing sprites ── */
+.bldg.house { background-image: url('../assets/sprites/house_t1.png'); background-color: transparent; filter: drop-shadow(0 1px 1px rgba(0,0,0,0.3)); }
 /* Housing evolution tiers */
 .bldg.house.house-t0 { background-image: url('../assets/sprites/house_t0.png'); background-color: transparent; border: none; }
 .bldg.house.house-t1 { background-image: url('../assets/sprites/house_t1.png'); background-color: transparent; }
+/* ── Building activity state: producing ── */
+.bldg.producing { animation: bldg-produce 2.5s ease-in-out infinite; }
+.bldg.producing.mine { box-shadow: 0 0 0 1.5px #4fa3e0, 0 0 4px rgba(94,196,158,0.3); }
+@keyframes bldg-produce {
+  0%, 100% { filter: drop-shadow(0 1px 1px rgba(0,0,0,0.3)) brightness(1); }
+  50% { filter: drop-shadow(0 1px 2px rgba(94,196,158,0.25)) brightness(1.08); }
+}
+/* Placeholder buildings use box-shadow for activity glow instead of drop-shadow */
+.bldg.grain_farm.producing, .bldg.mill.producing, .bldg.bakery.producing,
+.bldg.clay_pit.producing, .bldg.pottery_kiln.producing,
+.bldg.woodcarver.producing, .bldg.sculptor.producing { animation: bldg-produce-placeholder 2.5s ease-in-out infinite; }
+@keyframes bldg-produce-placeholder {
+  0%, 100% { filter: brightness(1); box-shadow: inset 0 -2px 3px rgba(0,0,0,0.2), inset 0 1px 1px rgba(255,255,255,0.1); }
+  50% { filter: brightness(1.12); box-shadow: inset 0 -2px 3px rgba(0,0,0,0.2), inset 0 1px 1px rgba(255,255,255,0.1), 0 0 5px rgba(94,196,158,0.25); }
+}
+/* ── Unstaffed / disconnected ── */
 .bldg.unstaffed { opacity: 0.35; animation: none; }
 .bldg.unstaffed::after { content: '!'; position: absolute; top: -2px; right: -2px; font-size: 6px; color: #f06060; font-weight: 700; z-index: 1; }
 /* ── Road tiles ──────────────────────────────────────── */
-.cell.road-tile { background: #252218; }
+.cell.road-tile { background: #28241a; }
 .road-surface { width: 100%; height: 100%; position: relative; }
 .road-surface.mine { box-shadow: inset 0 0 0 1px rgba(79,163,224,0.25); }
-.road-center, .road-conn { position: absolute; display: block; background: #a08050; }
-.road-center { width: 50%; height: 50%; left: 25%; top: 25%; }
+.road-center, .road-conn { position: absolute; display: block; background: linear-gradient(135deg, #b09060 0%, #907040 100%); }
+.road-center { width: 50%; height: 50%; left: 25%; top: 25%; border-radius: 1px; }
 .road-conn { display: none; }
 .road-surface.road-north .road-conn.north,
 .road-surface.road-south .road-conn.south,
@@ -130,7 +160,7 @@ body {
 /* ── Disconnected buildings (no road access) ─────────── */
 .bldg.disconnected { opacity: 0.4; }
 .bldg.disconnected::after { content: ''; position: absolute; top: -3px; right: -3px; width: 7px; height: 7px; background: #d4a040; border-radius: 50%; border: 1px solid #0b0f14; }
-.hq-label { font-size: 7px; color: #b0a0c0; font-weight: 700; letter-spacing: 0.08em; text-shadow: 0 1px 2px rgba(0,0,0,0.5); position: relative; z-index: 1; }
+.hq-label { font-size: 7px; color: #d0c0e8; font-weight: 700; letter-spacing: 0.12em; text-shadow: 0 0 4px rgba(160,120,220,0.4), 0 1px 2px rgba(0,0,0,0.5); position: relative; z-index: 1; }
 .road-surface.hq-road .road-conn { background: #8a7050; }
 /* ── Walker overlay ─────────────────────────────────── */
 #walker-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2; }

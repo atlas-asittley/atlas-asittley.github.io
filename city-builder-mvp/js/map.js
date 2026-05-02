@@ -199,9 +199,10 @@ export function renderMap() {
           }
           var isUnstaffed = mine && state.laborInfo.unstaffedIds[building.id];
           var isDisconnected = mine && state.noRoadAccessIds[building.id];
+          var isProducing = !isUnstaffed && !isDisconnected && buildingBt.category !== 'housing' && buildingBt.category !== 'road';
           if (isDisconnected) titleText += ' (no road)';
           else if (isUnstaffed) titleText += ' (unstaffed)';
-          var bldgClasses = 'bldg ' + btk + housingTierClass + (mine ? ' mine' : '') + (isUnstaffed ? ' unstaffed' : '') + (isDisconnected ? ' disconnected' : '');
+          var bldgClasses = 'bldg ' + btk + housingTierClass + (mine ? ' mine' : '') + (isUnstaffed ? ' unstaffed' : '') + (isDisconnected ? ' disconnected' : '') + (isProducing ? ' producing' : '');
           html += '<div class="' + bldgClasses + '" title="' + titleText + '">' + label + '</div>';
         }
       } else if (x === 7 && y === 7) {
