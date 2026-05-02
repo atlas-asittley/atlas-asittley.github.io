@@ -69,9 +69,9 @@ export function renderBuildPanel() {
     } else if (bt.category === 'housing') {
       desc = 'Starts as Shanty (2 workers). Upgrades to Mud Hut (6 workers) with road access.';
     } else if (bt.category === 'extractor') {
-      desc = 'Extracts ' + resourceName(bt.output_resource_key) + ' from resource tiles';
+      desc = 'Produces ' + bt.output_rate + ' ' + resourceName(bt.output_resource_key).toLowerCase() + '/min';
     } else {
-      desc = 'Converts ' + resourceName(bt.input_resource_key) + ' into ' + resourceName(bt.output_resource_key) + ' (requires road access)';
+      desc = bt.input_rate + ' ' + resourceName(bt.input_resource_key).toLowerCase() + ' \u2192 ' + bt.output_rate + ' ' + resourceName(bt.output_resource_key).toLowerCase() + '/min (road required)';
     }
 
     var costStr;
