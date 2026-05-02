@@ -319,6 +319,29 @@ body {
 /* ── Version badge ─────────────────────────────────── */
 .version-badge { position: fixed; bottom: 4px; right: 6px; font-size: 0.62rem; color: #4a5a6e; font-family: monospace; z-index: 300; pointer-events: none; user-select: none; }
 
+/* ── Building Inspector ───────────────────────────── */
+.inspector-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 150; display: none; align-items: flex-end; justify-content: center; }
+.inspector-overlay.active { display: flex; }
+.inspector-panel { width: 100%; max-width: 400px; max-height: 70vh; background: #131a24; border: 1px solid #1e2a3a; border-radius: 14px 14px 0 0; padding: 0; display: flex; flex-direction: column; overflow: hidden; animation: insp-slide-up 0.2s ease-out; }
+@keyframes insp-slide-up { from { transform: translateY(40px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+.inspector-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px 10px; border-bottom: 1px solid #1e2a3a; }
+.inspector-title { font-weight: 700; font-size: 1rem; }
+.inspector-close { width: 30px; height: 30px; border: none; background: #1a2332; color: #7a8a9e; border-radius: 50%; font-size: 1.2rem; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.inspector-close:hover { background: #2a3342; color: #e0e6ed; }
+.inspector-body { padding: 12px 16px; overflow-y: auto; flex: 1; }
+.insp-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #1a2332; }
+.insp-row:last-child { border-bottom: none; }
+.insp-label { font-size: 0.78rem; color: #7a8a9e; }
+.insp-value { font-size: 0.85rem; font-weight: 600; }
+.insp-value.insp-good { color: #5ec49e; }
+.insp-value.insp-bad { color: #f06060; }
+.insp-value.insp-warn { color: #e6c65a; }
+.inspector-actions { padding: 12px 16px 16px; border-top: 1px solid #1e2a3a; }
+.btn-demolish { width: 100%; padding: 11px; border: none; border-radius: 8px; background: #3b1a1a; color: #f06060; font-weight: 600; font-size: 0.85rem; cursor: pointer; transition: background 0.2s, color 0.2s; }
+.btn-demolish:hover { background: #4a2020; }
+.btn-demolish.confirm { background: #f06060; color: #fff; }
+.btn-demolish:disabled { opacity: 0.5; cursor: default; }
+
 /* ── Responsive ────────────────────────────────────── */
 @media (max-width: 420px) {
   .topbar-left { gap: 6px; }
