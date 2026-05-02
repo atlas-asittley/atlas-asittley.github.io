@@ -63,6 +63,7 @@ body {
 .map-area { flex: 1; position: relative; padding: 8px; min-height: 0; }
 .map-viewport { width: 100%; height: 100%; overflow: auto; min-height: 0; padding-top: 34px; touch-action: pan-x pan-y; }
 .map-canvas { position: relative; display: inline-block; margin: 44px 40px 40px; }
+.map-canvas::after { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; z-index: 1; box-shadow: inset 0 0 30px 8px rgba(8,12,6,0.55), inset 0 0 80px 20px rgba(8,12,6,0.25); border-radius: 4px; }
 .map-controls { position: absolute; top: 8px; right: 8px; z-index: 3; display: flex; align-items: center; gap: 6px; background: rgba(11, 15, 20, 0.9); border: 1px solid #1e2a3a; border-radius: 999px; padding: 4px 6px; }
 .map-zoom-btn, .map-reset-btn { height: 28px; border: none; border-radius: 999px; background: #1a2332; color: #e0e6ed; cursor: pointer; }
 .map-zoom-btn { width: 28px; font-size: 1rem; font-weight: 700; }
@@ -70,13 +71,27 @@ body {
 .map-zoom-label { min-width: 44px; text-align: center; font-size: 0.72rem; color: #7a8a9e; font-weight: 700; }
 
 /* ── Map grid ──────────────────────────────────────── */
-#map-grid { display: grid; grid-template-columns: repeat(15, 1fr); gap: 1px; width: 520px; margin: 0 auto; background: #0e1418; }
-.cell { aspect-ratio: 1; background: #1a2332; border-radius: 2px; display: flex; align-items: center; justify-content: center; cursor: pointer; position: relative; user-select: none; transition: box-shadow 0.15s, filter 0.15s; }
+#map-grid { display: grid; grid-template-columns: repeat(15, 1fr); gap: 1px; width: 520px; margin: 0 auto; background: #10130e; position: relative; }
+.cell { aspect-ratio: 1; background: #1a2218; border-radius: 2px; display: flex; align-items: center; justify-content: center; cursor: pointer; position: relative; user-select: none; transition: box-shadow 0.15s, filter 0.15s; box-shadow: inset 0 0 0 0.5px rgba(0,0,0,0.12); }
 .cell:hover { filter: brightness(1.18); }
-.cell.res-timber { background: linear-gradient(135deg, #1a2e22 0%, #162818 100%); }
-.cell.res-stone { background: linear-gradient(135deg, #252530 0%, #202028 100%); }
-.cell.res-grain { background: linear-gradient(135deg, #2e2a1a 0%, #282416 100%); }
-.cell.res-clay { background: linear-gradient(135deg, #2a2020 0%, #241a1a 100%); }
+/* Terrain variation — organic ground feel */
+.cell:nth-child(3n+1) { background-color: #1c2519; }
+.cell:nth-child(5n+2) { background-color: #18201a; }
+.cell:nth-child(7n+4) { background-color: #1b2417; }
+.cell:nth-child(11n+6) { background-color: #1d261b; }
+.cell:nth-child(13n+9) { background-color: #171f18; }
+/* Edge cells — fade toward wilderness */
+.cell:nth-child(-n+15), .cell:nth-child(n+211) { filter: brightness(0.82); }
+.cell:nth-child(15n+1), .cell:nth-child(15n) { filter: brightness(0.85); }
+.cell:nth-child(-n+15):nth-child(15n+1), .cell:nth-child(-n+15):nth-child(15n),
+.cell:nth-child(n+211):nth-child(15n+1), .cell:nth-child(n+211):nth-child(15n) { filter: brightness(0.72); }
+.cell:nth-child(-n+15):hover, .cell:nth-child(n+211):hover,
+.cell:nth-child(15n+1):hover, .cell:nth-child(15n):hover { filter: brightness(1.05); }
+/* Resource tiles */
+.cell.res-timber { background: linear-gradient(160deg, #1a2e22 0%, #16281a 50%, #1a3020 100%); box-shadow: inset 0 0 6px rgba(60,120,70,0.08), inset 0 0 0 0.5px rgba(0,0,0,0.15); }
+.cell.res-stone { background: linear-gradient(145deg, #252530 0%, #202028 50%, #282838 100%); box-shadow: inset 0 0 6px rgba(100,100,140,0.08), inset 0 0 0 0.5px rgba(0,0,0,0.15); }
+.cell.res-grain { background: linear-gradient(155deg, #2e2a1a 0%, #28241a 50%, #302c18 100%); box-shadow: inset 0 0 6px rgba(180,150,60,0.06), inset 0 0 0 0.5px rgba(0,0,0,0.15); }
+.cell.res-clay { background: linear-gradient(140deg, #2a2020 0%, #28201c 50%, #2c2220 100%); box-shadow: inset 0 0 6px rgba(160,80,60,0.06), inset 0 0 0 0.5px rgba(0,0,0,0.15); }
 .cell.city-center { background: linear-gradient(135deg, #2e2240 0%, #221a30 100%); cursor: default; box-shadow: inset 0 0 0 1px #5a4a6a, inset 0 0 8px rgba(120,80,180,0.15); }
 .cell.valid-placement { box-shadow: inset 0 0 0 2px #5ec49e; cursor: crosshair; }
 .cell.valid-placement:hover { background: rgba(94,196,158,0.15); }
@@ -97,20 +112,89 @@ body {
 .bldg.stone_quarry { background-image: url('../assets/sprites/stone_quarry.png'); background-color: transparent; filter: drop-shadow(0 1px 1px rgba(0,0,0,0.3)); }
 .bldg.mason_workshop { background-image: url('../assets/sprites/mason_workshop.png'); background-color: transparent; filter: drop-shadow(0 1px 1px rgba(0,0,0,0.3)); }
 /* ── Placeholder buildings (grain chain) ── */
-.bldg.grain_farm { background: linear-gradient(135deg, #6a8a3a 0%, #4a6a2a 100%); font-size: 8px; color: #d0e8a0; text-shadow: 0 1px 1px rgba(0,0,0,0.4); box-shadow: inset 0 -2px 3px rgba(0,0,0,0.2), inset 0 1px 1px rgba(255,255,255,0.1); }
-.bldg.grain_farm::before { content: ''; position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%); width: 60%; height: 2px; background: #e6c65a; border-radius: 1px; opacity: 0.6; }
-.bldg.mill { background: linear-gradient(135deg, #7a6a4a 0%, #5a4a3a 100%); font-size: 8px; color: #d8c8a0; text-shadow: 0 1px 1px rgba(0,0,0,0.4); box-shadow: inset 0 -2px 3px rgba(0,0,0,0.2), inset 0 1px 1px rgba(255,255,255,0.1); }
-.bldg.mill::before { content: ''; position: absolute; top: 2px; right: 2px; width: 5px; height: 5px; border: 1px solid #a09070; border-radius: 50%; opacity: 0.7; }
-.bldg.bakery { background: linear-gradient(135deg, #9a8a3a 0%, #7a6a2a 100%); font-size: 8px; color: #f0e0a0; text-shadow: 0 1px 1px rgba(0,0,0,0.4); box-shadow: inset 0 -2px 3px rgba(0,0,0,0.2), inset 0 1px 1px rgba(255,255,255,0.1); }
-.bldg.bakery::before { content: ''; position: absolute; top: 1px; left: 50%; transform: translateX(-50%); width: 4px; height: 3px; background: #c0a060; border-radius: 50% 50% 0 0; opacity: 0.7; }
+.bldg.grain_farm {
+  background:
+    repeating-linear-gradient(0deg, rgba(90,120,40,0.4) 0px, rgba(90,120,40,0.4) 2px, rgba(70,100,30,0.3) 2px, rgba(70,100,30,0.3) 5px),
+    linear-gradient(180deg, #5a7a2a 0%, #4a6a22 60%, #3a5a1a 100%);
+  border-radius: 2px;
+  box-shadow: inset 0 -3px 4px rgba(0,0,0,0.3), inset 0 1px 2px rgba(200,220,100,0.08), 0 1px 2px rgba(0,0,0,0.3);
+}
+.bldg.grain_farm::before {
+  content: ''; position: absolute; bottom: 3px; left: 15%; right: 15%; height: 2px;
+  background: #d4b440; border-radius: 1px; opacity: 0.7;
+  box-shadow: 0 -4px 0 0 rgba(180,160,40,0.35), 0 -8px 0 0 rgba(180,160,40,0.2);
+}
+.bldg.mill {
+  background:
+    linear-gradient(180deg, #5a4a35 0%, #4a3a2a 15%, #6a5a40 16%, #5a4a35 50%, #4a3a28 100%);
+  border-radius: 1px 1px 2px 2px;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.2), inset 0 -2px 4px rgba(0,0,0,0.35), inset 0 8px 3px -6px rgba(120,100,70,0.25), 0 1px 2px rgba(0,0,0,0.4);
+}
+.bldg.mill::before {
+  content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  width: 8px; height: 8px; border: 1.5px solid #a09070; border-radius: 50%;
+  background: radial-gradient(circle, #8a7a60 0%, #6a5a40 100%);
+  box-shadow: 0 0 3px rgba(160,140,100,0.25);
+}
+.bldg.bakery {
+  background:
+    linear-gradient(180deg, #7a6a30 0%, #8a7a38 20%, #7a6a30 50%, #6a5a28 100%);
+  border-radius: 3px 3px 2px 2px;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.2), inset 0 -2px 3px rgba(0,0,0,0.3), inset 0 3px 3px -1px rgba(255,220,120,0.12), 0 1px 2px rgba(0,0,0,0.4);
+}
+.bldg.bakery::before {
+  content: ''; position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+  width: 12px; height: 5px;
+  background: radial-gradient(ellipse, #a08040 0%, #7a6530 100%);
+  border-radius: 6px 6px 0 0;
+  box-shadow: 0 -1px 4px rgba(200,160,60,0.25), inset 0 -1px 2px rgba(0,0,0,0.3);
+}
 /* ── Placeholder buildings (clay chain) ── */
-.bldg.clay_pit { background: linear-gradient(135deg, #9a6a3a 0%, #7a4a2a 100%); font-size: 8px; color: #e8c8a0; text-shadow: 0 1px 1px rgba(0,0,0,0.4); box-shadow: inset 0 -2px 3px rgba(0,0,0,0.2), inset 0 1px 1px rgba(255,255,255,0.1); }
-.bldg.clay_pit::before { content: ''; position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%); width: 50%; height: 3px; background: #c47a5a; border-radius: 2px; opacity: 0.5; }
-.bldg.pottery_kiln { background: linear-gradient(135deg, #8a5a4a 0%, #6a3a3a 100%); font-size: 8px; color: #e0b0a0; text-shadow: 0 1px 1px rgba(0,0,0,0.4); box-shadow: inset 0 -2px 3px rgba(0,0,0,0.2), inset 0 1px 1px rgba(255,255,255,0.1); }
-.bldg.pottery_kiln::before { content: ''; position: absolute; top: 1px; left: 50%; transform: translateX(-50%); width: 3px; height: 4px; background: rgba(255,140,60,0.5); border-radius: 50%; filter: blur(1px); }
+.bldg.clay_pit {
+  background: radial-gradient(ellipse at 50% 60%, #8a5a35 0%, #6a4025 45%, #5a3520 100%);
+  border-radius: 4px;
+  box-shadow: inset 0 2px 5px rgba(0,0,0,0.45), inset 0 -1px 2px rgba(180,120,80,0.15), 0 1px 2px rgba(0,0,0,0.3);
+}
+.bldg.clay_pit::before {
+  content: ''; position: absolute; bottom: 4px; left: 20%; right: 20%; height: 4px;
+  background: linear-gradient(90deg, #b07050 0%, #c47a5a 50%, #b07050 100%);
+  border-radius: 50%; opacity: 0.65;
+  box-shadow: 0 0 3px rgba(196,122,90,0.3);
+}
+.bldg.pottery_kiln {
+  background: radial-gradient(ellipse at 50% 65%, #7a4a3a 0%, #5a3530 55%, #4a2a28 100%);
+  border-radius: 50% 50% 6px 6px;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.15), inset 0 -3px 5px rgba(0,0,0,0.35), inset 0 3px 4px -1px rgba(160,100,70,0.18), 0 1px 3px rgba(0,0,0,0.4);
+}
+.bldg.pottery_kiln::before {
+  content: ''; position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%);
+  width: 6px; height: 5px;
+  background: radial-gradient(ellipse, rgba(255,160,60,0.7) 0%, rgba(200,100,30,0.2) 100%);
+  border-radius: 3px 3px 1px 1px;
+  box-shadow: 0 0 5px rgba(255,140,60,0.4), 0 -1px 3px rgba(255,180,80,0.2);
+}
 /* ── Placeholder buildings (tier 3) ── */
-.bldg.woodcarver { background: linear-gradient(135deg, #6a7a3a 0%, #4a5a2a 100%); font-size: 8px; color: #c8d8a0; text-shadow: 0 1px 1px rgba(0,0,0,0.4); box-shadow: inset 0 -2px 3px rgba(0,0,0,0.2), inset 0 1px 1px rgba(255,255,255,0.1); }
-.bldg.sculptor { background: linear-gradient(135deg, #7a6a8a 0%, #5a4a6a 100%); font-size: 8px; color: #d0c0e0; text-shadow: 0 1px 1px rgba(0,0,0,0.4); box-shadow: inset 0 -2px 3px rgba(0,0,0,0.2), inset 0 1px 1px rgba(255,255,255,0.1); }
+.bldg.woodcarver {
+  background: linear-gradient(180deg, #4a5a25 0%, #3e4e20 15%, #5a6a30 16%, #4a5a28 50%, #3a4a20 100%);
+  border-radius: 2px;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.2), inset 0 -2px 4px rgba(0,0,0,0.3), inset 0 2px 2px -1px rgba(120,140,60,0.12), 0 1px 2px rgba(0,0,0,0.35);
+}
+.bldg.woodcarver::before {
+  content: ''; position: absolute; bottom: 2px; left: 25%; width: 50%; height: 2px;
+  background: #8a7a50; border-radius: 1px;
+  box-shadow: 0 -4px 0 0 rgba(100,90,50,0.35);
+}
+.bldg.sculptor {
+  background: linear-gradient(180deg, #5a4a6a 0%, #4e4060 15%, #6a5a7a 16%, #5a4a6a 50%, #4a3a5a 100%);
+  border-radius: 2px;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.2), inset 0 -2px 4px rgba(0,0,0,0.3), inset 0 2px 2px -1px rgba(140,120,170,0.12), 0 1px 2px rgba(0,0,0,0.35);
+}
+.bldg.sculptor::before {
+  content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  width: 7px; height: 7px;
+  background: linear-gradient(135deg, #9a8aaa 0%, #7a6a8a 100%);
+  border-radius: 1px; box-shadow: 0 0 2px rgba(160,140,190,0.3);
+}
 /* ── Housing sprites ── */
 .bldg.house { background-image: url('../assets/sprites/house_t1.png'); background-color: transparent; filter: drop-shadow(0 1px 1px rgba(0,0,0,0.3)); }
 /* Housing evolution tiers */
@@ -123,19 +207,19 @@ body {
   0%, 100% { filter: drop-shadow(0 1px 1px rgba(0,0,0,0.3)) brightness(1); }
   50% { filter: drop-shadow(0 1px 2px rgba(94,196,158,0.25)) brightness(1.08); }
 }
-/* Placeholder buildings use box-shadow for activity glow instead of drop-shadow */
+/* Placeholder buildings use drop-shadow for activity glow */
 .bldg.grain_farm.producing, .bldg.mill.producing, .bldg.bakery.producing,
 .bldg.clay_pit.producing, .bldg.pottery_kiln.producing,
 .bldg.woodcarver.producing, .bldg.sculptor.producing { animation: bldg-produce-placeholder 2.5s ease-in-out infinite; }
 @keyframes bldg-produce-placeholder {
-  0%, 100% { filter: brightness(1); box-shadow: inset 0 -2px 3px rgba(0,0,0,0.2), inset 0 1px 1px rgba(255,255,255,0.1); }
-  50% { filter: brightness(1.12); box-shadow: inset 0 -2px 3px rgba(0,0,0,0.2), inset 0 1px 1px rgba(255,255,255,0.1), 0 0 5px rgba(94,196,158,0.25); }
+  0%, 100% { filter: brightness(1) drop-shadow(0 1px 1px rgba(0,0,0,0.3)); }
+  50% { filter: brightness(1.12) drop-shadow(0 1px 3px rgba(94,196,158,0.3)); }
 }
 /* ── Unstaffed / disconnected ── */
 .bldg.unstaffed { opacity: 0.35; animation: none; }
 .bldg.unstaffed::after { content: '!'; position: absolute; top: -2px; right: -2px; font-size: 6px; color: #f06060; font-weight: 700; z-index: 1; }
 /* ── Road tiles ──────────────────────────────────────── */
-.cell.road-tile { background: #28241a; }
+.cell.road-tile { background: #26221a; box-shadow: none; }
 .road-surface { width: 100%; height: 100%; position: relative; }
 .road-surface.mine { box-shadow: inset 0 0 0 1px rgba(79,163,224,0.25); }
 .road-center, .road-conn { position: absolute; display: block; background-image: url('../assets/sprites/road.png'); background-size: 250%; }
