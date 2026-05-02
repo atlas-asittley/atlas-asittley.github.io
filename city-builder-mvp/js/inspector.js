@@ -423,23 +423,38 @@ export function openWalkerInspector(walkerInfo) {
   var bodyEl = document.getElementById('inspector-body');
   var actionsEl = document.getElementById('inspector-actions');
 
-  titleEl.textContent = 'Citizen';
+  var jobTitles = { citizen: 'Citizen', timber: 'Timber Worker', sawmill: 'Sawmill Worker', stone: 'Stone Worker', grain: 'Grain Worker' };
+  var jobType = walkerInfo.sourceType || 'citizen';
+  titleEl.textContent = jobTitles[jobType] || 'Citizen';
 
-  var walkerTierLabels = { 0: 'Shanty dweller', 1: 'Villager', 2: 'Cottage resident', 3: 'Townhouse resident', 4: 'Villa resident', 5: 'Manor estate resident' };
-  var tierLabel = walkerTierLabels[walkerInfo.sourceTier] || 'Citizen';
+  var typeLabel;
+  if (jobType === 'citizen') {
+    var walkerTierLabels = { 0: 'Shanty dweller', 1: 'Villager', 2: 'Cottage resident', 3: 'Townhouse resident', 4: 'Villa resident', 5: 'Manor estate resident' };
+    typeLabel = walkerTierLabels[walkerInfo.sourceTier] || 'Citizen';
+  } else {
+    typeLabel = jobTitles[jobType] || 'Worker';
+  }
   var stepsLeft = walkerInfo.maxSteps - walkerInfo.steps;
-  var activity = stepsLeft > 4 ? 'Strolling' : 'Heading home';
+  var jobActivities = {
+    citizen: stepsLeft > 4 ? 'Strolling' : 'Heading home',
+    timber: stepsLeft > 4 ? 'Hauling timber' : 'Returning to camp',
+    sawmill: stepsLeft > 4 ? 'Carrying planks' : 'Returning to mill',
+    stone: stepsLeft > 4 ? 'Hauling stone' : 'Returning to quarry',
+    grain: stepsLeft > 4 ? 'Delivering grain' : 'Returning to farm'
+  };
+  var activity = jobActivities[jobType] || (stepsLeft > 4 ? 'Working' : 'Heading back');
 
   var html = '';
-  html += '<div class="insp-row"><span class="insp-label">Type</span><span class="insp-value">' + tierLabel + '</span></div>';
+  html += '<div class="insp-row"><span class="insp-label">Type</span><span class="insp-value">' + typeLabel + '</span></div>';
   html += '<div class="insp-row"><span class="insp-label">Activity</span><span class="insp-value">' + activity + '</span></div>';
-  html += '<div class="insp-row"><span class="insp-label">Home</span><span class="insp-value">' + walkerInfo.sourceName + '</span></div>';
+  var originLabel = jobType === 'citizen' ? 'Home' : 'Workplace';
+  html += '<div class="insp-row"><span class="insp-label">' + originLabel + '</span><span class="insp-value">' + walkerInfo.sourceName + '</span></div>';
   if (walkerInfo.sourceX !== null) {
-    html += '<div class="insp-row"><span class="insp-label">Home location</span><span class="insp-value">(' + walkerInfo.sourceX + ', ' + walkerInfo.sourceY + ')</span></div>';
+    html += '<div class="insp-row"><span class="insp-label">' + originLabel + ' location</span><span class="insp-value">(' + walkerInfo.sourceX + ', ' + walkerInfo.sourceY + ')</span></div>';
   }
   html += '<div class="insp-row"><span class="insp-label">Position</span><span class="insp-value">(' + walkerInfo.x + ', ' + walkerInfo.y + ')</span></div>';
   html += '<div class="insp-row"><span class="insp-label">Steps</span><span class="insp-value">' + walkerInfo.steps + ' / ' + walkerInfo.maxSteps + '</span></div>';
-  html += '<div class="insp-hint">Citizens wander from their homes along roads. They are purely cosmetic and don\'t affect production.</div>';
+  html += '<div class="insp-hint">Walkers wander along roads from their buildings. They are purely cosmetic and don\'t affect production.</div>';
 
   bodyEl.innerHTML = html;
   actionsEl.innerHTML = '';

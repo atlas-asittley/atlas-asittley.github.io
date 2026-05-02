@@ -10,6 +10,27 @@ var WALKER_MAX_COUNT = 12;      // global cap (mobile-safe)
 var WALKER_SPAWN_CHANCE = 0.12; // per eligible housing per tick
 var WALKER_SPAWN_COOLDOWN = 8;  // min ticks between spawns from same building
 
+// ── Job type mapping: building_type_key -> walker visual category ──
+var WALKER_JOB_MAP = {
+  'timber_camp': 'timber',
+  'sawmill': 'sawmill',
+  'woodcarver': 'sawmill',
+  'stone_quarry': 'stone',
+  'mason_workshop': 'stone',
+  'sculptor': 'stone',
+  'grain_farm': 'grain',
+  'mill': 'grain',
+  'bakery': 'grain',
+  'clay_pit': 'stone',
+  'pottery_kiln': 'stone'
+};
+
+function getWalkerJob(building) {
+  var bt = state.buildingTypes[building.building_type_key];
+  if (bt && bt.category === 'housing') return 'citizen';
+  return WALKER_JOB_MAP[building.building_type_key] || 'citizen';
+}
+
 // ── Walker state ──
 var walkers = [];                // active walker objects
 var walkerTickTimer = null;
@@ -57,16 +78,24 @@ function roadNeighbors(x, y) {
 }
 
 // ── Find eligible spawn buildings ──
-// Housing with road access that belongs to the current player
+// Housing and staffed production buildings with road access
 function getSpawnBuildings() {
   if (!state.currentUser) return [];
   return state.allBuildings.filter(function (b) {
-    var bt = state.buildingTypes[b.building_type_key];
-    if (!bt || bt.category !== 'housing') return false;
     if (b.player_id !== state.currentUser.id) return false;
     if (b.status !== 'active') return false;
-    // Must have an adjacent road tile to spawn onto
-    return roadNeighbors(b.x, b.y).length > 0;
+    var bt = state.buildingTypes[b.building_type_key];
+    if (!bt) return false;
+    // Housing spawns citizen walkers
+    if (bt.category === 'housing') {
+      return roadNeighbors(b.x, b.y).length > 0;
+    }
+    // Production buildings spawn job walkers when staffed
+    if (WALKER_JOB_MAP[b.building_type_key]) {
+      if (state.laborInfo.unstaffedIds[b.id]) return false;
+      return roadNeighbors(b.x, b.y).length > 0;
+    }
+    return false;
   });
 }
 
@@ -88,7 +117,8 @@ function spawnWalker(building) {
     prevDir: start.dir,   // direction we moved to get here (from building)
     steps: 0,
     sourceId: building.id,
-    sourceTier: building.housing_tier !== undefined ? building.housing_tier : 1
+    sourceTier: building.housing_tier !== undefined ? building.housing_tier : 1,
+    sourceType: getWalkerJob(building)
   });
 }
 
@@ -199,7 +229,7 @@ export function renderWalkers() {
     var gy = w.y - (state.gridMinY || 0);
     var left = gx * (cellSize + gap) + cellSize * 0.5;
     var top = gy * (cellSize + gap) + cellSize * 0.5;
-    el.className = 'walker-dot walker-tier-' + (w.sourceTier || 1);
+    el.className = 'walker-dot walker-' + (w.sourceType || 'citizen');
     el.style.left = left.toFixed(1) + 'px';
     el.style.top = top.toFixed(1) + 'px';
     el.style.opacity = '1';
@@ -247,23 +277,25 @@ function preseedWalkers() {
   }
 
   for (var i = 0; i < target; i++) {
-    // 60% chance to start near housing, 40% chance at a random road tile
-    var startX, startY, dir, tier;
+    // 60% chance to start near a spawn building, 40% at a random road tile
+    var startX, startY, dir, tier, job;
     if (housingRoads.length > 0 && Math.random() < 0.6) {
       var pick = housingRoads[Math.floor(Math.random() * housingRoads.length)];
       startX = pick.tile.x;
       startY = pick.tile.y;
       dir = pick.tile.dir;
       tier = pick.building.housing_tier !== undefined ? pick.building.housing_tier : 1;
+      job = getWalkerJob(pick.building);
     } else {
       var key = roadKeys[Math.floor(Math.random() * roadKeys.length)];
       var parts = key.split(',');
       startX = parseInt(parts[0], 10);
       startY = parseInt(parts[1], 10);
       dir = DIRS[Math.floor(Math.random() * DIRS.length)];
-      // Pick tier from a random spawner
+      // Pick from a random spawner
       var rb = spawners[Math.floor(Math.random() * spawners.length)];
       tier = rb.housing_tier !== undefined ? rb.housing_tier : 1;
+      job = getWalkerJob(rb);
     }
 
     // Walk the walker a few random steps along roads so it's mid-journey
@@ -289,7 +321,8 @@ function preseedWalkers() {
       prevDir: cd,
       steps: walkSteps,
       sourceId: null,
-      sourceTier: tier
+      sourceTier: tier,
+      sourceType: job
     });
   }
 
@@ -350,6 +383,7 @@ export function getWalkerAt(index) {
     steps: w.steps,
     maxSteps: WALKER_MAX_STEPS,
     sourceTier: w.sourceTier,
+    sourceType: w.sourceType || 'citizen',
     sourceName: tierCfg ? tierCfg.name : (sourceBt ? sourceBt.name : 'Housing'),
     sourceX: source ? source.x : null,
     sourceY: source ? source.y : null
