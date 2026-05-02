@@ -16,7 +16,7 @@ export var BLDG_LABELS = {
 };
 
 // Housing tier label overrides (keyed by tier number)
-var HOUSING_TIER_LABELS = { 0: 'S', 1: 'H' };
+var HOUSING_TIER_LABELS = { 0: 'S', 1: 'H', 2: 'C', 3: 'T', 4: 'V', 5: 'M' };
 var CELL_BASE_SIZE = 520 / 15;  // px per cell at 1x zoom (original 520px / 15 cols)
 var MAP_MIN_ZOOM = 0.5;
 var MAP_MAX_ZOOM = 3;
