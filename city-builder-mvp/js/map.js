@@ -16,8 +16,13 @@ export var BLDG_LABELS = {
 };
 
 // Housing tier label overrides (keyed by tier number)
-var HOUSING_TIER_LABELS = { 0: 'S', 1: 'H' };
+var HOUSING_TIER_LABELS = { 0: 'S', 1: 'H', 2: 'C', 3: 'V', 4: 'M' };
 var CELL_BASE_SIZE = 520 / 15;  // px per cell at 1x zoom (original 520px / 15 cols)
+
+// Deterministic hash for per-tile visual variation (grass details, noise seeds)
+function tileHash(x, y) {
+  return ((x * 2654435761 + y * 2246822519) >>> 0);
+}
 var MAP_MIN_ZOOM = 0.5;
 var MAP_MAX_ZOOM = 3;
 var MAP_ZOOM_STEP = 0.25;
@@ -226,6 +231,14 @@ export function renderMap() {
         classes.push('city-center');
       } else if (tile.resource_node_key) {
         classes.push('res-' + tile.resource_node_key);
+      } else {
+        // Grass detail variations for plain ground tiles
+        var h = tileHash(x, y);
+        classes.push('nv' + (h & 3));          // noise seed variant (0-3)
+        if (!building) {
+          var dv = (h >>> 2) & 15;             // decoration variant (0-15)
+          if (dv < 8) classes.push('gv' + dv); // ~50% of tiles get a decoration
+        }
       }
 
       // Add road-tile class to cell if building is a road
