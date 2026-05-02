@@ -40,8 +40,32 @@ export var state = {
   // Housing evolution tier config (loaded from DB)
   housingTierConfig: {},  // tier -> { name, label, workers, needs_road }
   // Client-side map zoom state
-  mapZoom: 1
+  mapZoom: 1,
+  // Dynamic grid bounds (computed from tiles)
+  gridMinX: 0,
+  gridMinY: 0,
+  gridMaxX: 14,
+  gridMaxY: 14,
+  gridCols: 15,
+  gridRows: 15
 };
+
+// ── Grid bounds: compute dynamic grid size from tiles ──
+export function computeGridBounds() {
+  var minX = 0, minY = 0, maxX = 14, maxY = 14;
+  state.tiles.forEach(function (t) {
+    if (t.x < minX) minX = t.x;
+    if (t.y < minY) minY = t.y;
+    if (t.x > maxX) maxX = t.x;
+    if (t.y > maxY) maxY = t.y;
+  });
+  state.gridMinX = minX;
+  state.gridMinY = minY;
+  state.gridMaxX = maxX;
+  state.gridMaxY = maxY;
+  state.gridCols = maxX - minX + 1;
+  state.gridRows = maxY - minY + 1;
+}
 
 // ── Roads: compute which buildings have road access ──
 // A building has road access if any orthogonal neighbor has a road building.

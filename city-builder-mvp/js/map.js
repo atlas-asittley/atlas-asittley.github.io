@@ -1,6 +1,6 @@
-// ── Map rendering and placement logic ──
+// ── Map rendering, placement logic, drag-to-paint roads, and map expansion ──
 import { sb } from './config.js';
-import { state, computeLaborAllocation } from './state.js';
+import { state, computeLaborAllocation, computeGridBounds } from './state.js';
 import { showToast } from './ui.js';
 import { renderBuildPanel } from './panels.js';
 import { rebuildRoadSet, renderWalkers, snapWalkersToZoom } from './walkers.js';
@@ -17,14 +17,28 @@ export var BLDG_LABELS = {
 
 // Housing tier label overrides (keyed by tier number)
 var HOUSING_TIER_LABELS = { 0: 'S', 1: 'H' };
-var MAP_BASE_SIZE = 520;
+var CELL_BASE_SIZE = 520 / 15;  // px per cell at 1x zoom (original 520px / 15 cols)
 var MAP_MIN_ZOOM = 0.5;
 var MAP_MAX_ZOOM = 3;
 var MAP_ZOOM_STEP = 0.25;
+var EXPAND_THRESHOLD = 2;  // tiles from edge to trigger expansion
+var EXPAND_AMOUNT = 5;     // tiles added per expansion direction
+
+// Pinch zoom state
 var pinchStartDistance = null;
 var pinchStartZoom = 1;
 var pinchStartCenter = null;
 var pinchSuppressClickUntil = 0;
+
+// Drag-to-paint state (roads only)
+var dragState = {
+  active: false,
+  planned: [],      // [{x, y, tileId}, ...]
+  plannedSet: {},   // "x,y" -> true
+  suppressClick: 0  // timestamp: suppress click events until this time
+};
+
+// ── Placement validation ──
 
 export function isPlacementValid(btKey, tile) {
   var bt = state.buildingTypes[btKey];
@@ -36,7 +50,7 @@ export function isPlacementValid(btKey, tile) {
     return tile.resource_node_key === bt.output_resource_key;
   }
   if (bt.category === 'road') {
-    return isRoadPlacementConnected(tile);
+    return isRoadPlacementConnected(tile, null);
   }
   return true;
 }
@@ -48,7 +62,7 @@ function isRoadBuilding(building) {
 }
 
 function isRoadOrCenter(x, y, buildingAt) {
-  if (x === 7 && y === 7) return true; // city center connects to roads
+  if (x === 7 && y === 7) return true;
   return isRoadBuilding(buildingAt[x + ',' + y]);
 }
 
@@ -61,23 +75,35 @@ function roadNeighborClasses(x, y, buildingAt) {
   return classes;
 }
 
-function isRoadPlacementConnected(tile) {
+function isRoadPlacementConnected(tile, pendingSet) {
   if (!tile) return false;
+  // Adjacent to city center
   if ((Math.abs(tile.x - 7) + Math.abs(tile.y - 7)) === 1) return true;
-
-  return state.allBuildings.some(function (b) {
+  // Adjacent to existing road
+  var connected = state.allBuildings.some(function (b) {
     return isRoadBuilding(b)
       && Math.abs(b.x - tile.x) + Math.abs(b.y - tile.y) === 1;
   });
+  if (connected) return true;
+  // Adjacent to pending drag road
+  if (pendingSet) {
+    return !!(pendingSet[(tile.x - 1) + ',' + tile.y]
+      || pendingSet[(tile.x + 1) + ',' + tile.y]
+      || pendingSet[tile.x + ',' + (tile.y - 1)]
+      || pendingSet[tile.x + ',' + (tile.y + 1)]);
+  }
+  return false;
 }
+
+// ── Zoom ──
 
 export function applyMapZoom() {
   var grid = document.getElementById('map-grid');
   var label = document.getElementById('zoom-label');
   if (!grid) return;
-  grid.style.width = Math.round(MAP_BASE_SIZE * state.mapZoom) + 'px';
+  var mapWidth = Math.round(CELL_BASE_SIZE * state.gridCols * state.mapZoom);
+  grid.style.width = mapWidth + 'px';
   if (label) label.textContent = Math.round(state.mapZoom * 100) + '%';
-  // Immediately reposition walkers to match new grid scale (no transition)
   snapWalkersToZoom();
 }
 
@@ -128,20 +154,25 @@ function touchCenter(touches) {
   };
 }
 
+// ── Map rendering ──
+
 export function renderMap() {
   var grid = document.getElementById('map-grid');
   var buildingAt = {};
   state.allBuildings.forEach(function (b) { buildingAt[b.x + ',' + b.y] = b; });
 
+  // Dynamic grid columns based on current bounds
+  grid.style.gridTemplateColumns = 'repeat(' + state.gridCols + ', 1fr)';
+
   var html = '';
-  for (var y = 0; y < 15; y++) {
-    for (var x = 0; x < 15; x++) {
+  for (var y = state.gridMinY; y <= state.gridMaxY; y++) {
+    for (var x = state.gridMinX; x <= state.gridMaxX; x++) {
       var tile = state.tileMap[x + ',' + y];
       var building = buildingAt[x + ',' + y];
       var classes = ['cell'];
 
       if (!tile) {
-        html += '<div class="cell" data-x="' + x + '" data-y="' + y + '"></div>';
+        html += '<div class="cell empty-cell" data-x="' + x + '" data-y="' + y + '"></div>';
         continue;
       }
 
@@ -237,8 +268,11 @@ export function renderMap() {
   renderWalkers();
 }
 
+// ── Placement ──
+
 export function cancelPlacement() {
   state.selectedBuildType = null;
+  clearDragState();
   document.getElementById('placement-bar').classList.remove('active');
   renderMap();
   renderBuildPanel();
@@ -255,6 +289,22 @@ function updateWorkers() {
   el.className = 'v ' + (li.laborShortage ? 'shortage' : 'workers');
   var badge = document.getElementById('g-labor-badge');
   if (badge) badge.style.display = li.laborShortage ? 'inline' : 'none';
+}
+
+function reloadMapData() {
+  return Promise.all([
+    sb.from('buildings').select('*, player_profiles(display_name, color_hex)'),
+    sb.from('map_tiles').select('*').order('y', { ascending: true }).order('x', { ascending: true })
+  ]).then(function (results) {
+    state.allBuildings = results[0].data || [];
+    state.tiles = results[1].data || [];
+    state.tileMap = {};
+    state.tiles.forEach(function (t) { state.tileMap[t.x + ',' + t.y] = t; });
+    computeGridBounds();
+    computeLaborAllocation();
+    renderMap();
+    renderBuildPanel();
+  });
 }
 
 function placeBuilding(tileId, btKey) {
@@ -277,7 +327,6 @@ function placeBuilding(tileId, btKey) {
       state.profile.workers_used = data.workers_used;
       state.profile.worker_capacity = data.worker_capacity;
 
-      // Update labor info from placement response
       if (data.workers_needed !== undefined) {
         state.laborInfo.workerSupply = data.worker_capacity;
         state.laborInfo.workersNeeded = data.workers_needed;
@@ -294,17 +343,8 @@ function placeBuilding(tileId, btKey) {
       showToast(msg, data.labor_shortage ? 'info' : 'success');
       cancelPlacement();
 
-      Promise.all([
-        sb.from('buildings').select('*, player_profiles(display_name, color_hex)'),
-        sb.from('map_tiles').select('*').order('y', { ascending: true }).order('x', { ascending: true })
-      ]).then(function (results) {
-        state.allBuildings = results[0].data || [];
-        state.tiles = results[1].data || [];
-        state.tileMap = {};
-        state.tiles.forEach(function (t) { state.tileMap[t.x + ',' + t.y] = t; });
-        computeLaborAllocation();
-        renderMap();
-        renderBuildPanel();
+      reloadMapData().then(function () {
+        expandMapIfNeeded();
       });
     })
     .catch(function (err) {
@@ -312,11 +352,209 @@ function placeBuilding(tileId, btKey) {
     });
 }
 
+// ── Drag-to-paint roads ──
+
+function clearDragState() {
+  document.querySelectorAll('.drag-preview').forEach(function (el) {
+    el.classList.remove('drag-preview');
+  });
+  dragState.active = false;
+  dragState.planned = [];
+  dragState.plannedSet = {};
+}
+
+function getCellFromPoint(clientX, clientY) {
+  var el = document.elementFromPoint(clientX, clientY);
+  if (!el) return null;
+  return el.closest('.cell');
+}
+
+function isSelectedBuildRoad() {
+  if (!state.selectedBuildType) return false;
+  var bt = state.buildingTypes[state.selectedBuildType];
+  return bt && bt.category === 'road';
+}
+
+function tryAddDragTile(cell) {
+  if (!cell) return false;
+  var x = parseInt(cell.dataset.x);
+  var y = parseInt(cell.dataset.y);
+  var key = x + ',' + y;
+
+  // Already planned
+  if (dragState.plannedSet[key]) return false;
+
+  var tile = state.tileMap[key];
+  if (!tile || !tile.buildable || tile.occupied_building_id) return false;
+
+  // Must connect to road network (including pending tiles)
+  if (!isRoadPlacementConnected(tile, dragState.plannedSet)) return false;
+
+  // Must be adjacent to last planned tile (continuous path), or be the first tile
+  if (dragState.planned.length > 0) {
+    var last = dragState.planned[dragState.planned.length - 1];
+    if (Math.abs(last.x - x) + Math.abs(last.y - y) !== 1) return false;
+  }
+
+  dragState.planned.push({ x: x, y: y, tileId: tile.id });
+  dragState.plannedSet[key] = true;
+  cell.classList.add('drag-preview');
+  return true;
+}
+
+function executeDragPlacements() {
+  var tiles = dragState.planned.slice();
+  clearDragState();
+
+  if (tiles.length === 0) return;
+
+  // Single tile: use normal placement flow (cancels placement mode)
+  if (tiles.length === 1) {
+    placeBuilding(tiles[0].tileId, state.selectedBuildType);
+    return;
+  }
+
+  var btKey = state.selectedBuildType;
+  var bt = state.buildingTypes[btKey];
+  if (!bt) return;
+
+  // Check affordability
+  var affordable = Math.floor(state.profile.money / bt.build_cost);
+  if (affordable === 0) {
+    showToast('Not enough money', 'error');
+    return;
+  }
+  if (affordable < tiles.length) {
+    tiles = tiles.slice(0, affordable);
+    showToast('Can only afford ' + affordable + ' road' + (affordable > 1 ? 's' : ''), 'info');
+  }
+
+  showToast('Placing ' + tiles.length + ' roads...', '');
+
+  // Chain placement RPCs sequentially
+  var chain = Promise.resolve();
+  var placed = 0;
+  tiles.forEach(function (t) {
+    chain = chain.then(function () {
+      return sb.rpc('place_building', { p_tile_id: t.tileId, p_building_type_key: btKey })
+        .then(function (r) {
+          if (r.error) throw new Error(r.error.message);
+          placed++;
+          var data = r.data;
+          state.profile.money = data.money;
+          state.profile.workers_used = data.workers_used;
+          state.profile.worker_capacity = data.worker_capacity;
+          if (data.workers_needed !== undefined) {
+            state.laborInfo.workerSupply = data.worker_capacity;
+            state.laborInfo.workersNeeded = data.workers_needed;
+            state.laborInfo.workersUsed = data.workers_used;
+            state.laborInfo.workersIdle = Math.max(0, data.worker_capacity - data.workers_needed);
+            state.laborInfo.laborShortage = !!data.labor_shortage;
+          }
+        });
+    });
+  });
+
+  chain.then(function () {
+    updateMoney();
+    updateWorkers();
+    if (placed > 0) {
+      showToast(placed + ' road' + (placed > 1 ? 's' : '') + ' placed!', 'success');
+    }
+    // Reload data but keep placement mode active for continued painting
+    return reloadMapData();
+  }).then(function () {
+    expandMapIfNeeded();
+  }).catch(function (err) {
+    showToast(err.message || 'Some placements failed', 'error');
+    reloadMapData();
+  });
+}
+
+// ── Map expansion ──
+
+export function expandMapIfNeeded() {
+  var expandLeft = false, expandRight = false, expandUp = false, expandDown = false;
+
+  state.allBuildings.forEach(function (b) {
+    if (b.x <= state.gridMinX + EXPAND_THRESHOLD) expandLeft = true;
+    if (b.x >= state.gridMaxX - EXPAND_THRESHOLD) expandRight = true;
+    if (b.y <= state.gridMinY + EXPAND_THRESHOLD) expandUp = true;
+    if (b.y >= state.gridMaxY - EXPAND_THRESHOLD) expandDown = true;
+  });
+
+  if (!expandLeft && !expandRight && !expandUp && !expandDown) return;
+
+  var newMinX = expandLeft ? state.gridMinX - EXPAND_AMOUNT : state.gridMinX;
+  var newMaxX = expandRight ? state.gridMaxX + EXPAND_AMOUNT : state.gridMaxX;
+  var newMinY = expandUp ? state.gridMinY - EXPAND_AMOUNT : state.gridMinY;
+  var newMaxY = expandDown ? state.gridMaxY + EXPAND_AMOUNT : state.gridMaxY;
+
+  var newTiles = [];
+  for (var y = newMinY; y <= newMaxY; y++) {
+    for (var x = newMinX; x <= newMaxX; x++) {
+      if (state.tileMap[x + ',' + y]) continue;
+      newTiles.push({
+        x: x, y: y,
+        terrain_type: 'ground',
+        resource_node_key: null,
+        buildable: true,
+        occupied_building_id: null
+      });
+    }
+  }
+
+  if (newTiles.length === 0) return;
+
+  sb.from('map_tiles').insert(newTiles).select('*').then(function (r) {
+    if (r.error) {
+      // DB insert failed (RLS or other); fall back to client-only expansion
+      console.warn('Map expansion DB insert failed:', r.error.message);
+      newTiles.forEach(function (t) {
+        t.id = 'local-' + t.x + '-' + t.y;
+        state.tiles.push(t);
+        state.tileMap[t.x + ',' + t.y] = t;
+      });
+      computeGridBounds();
+      renderMap();
+      return;
+    }
+    if (r.data) {
+      r.data.forEach(function (t) {
+        state.tiles.push(t);
+        state.tileMap[t.x + ',' + t.y] = t;
+      });
+    }
+    computeGridBounds();
+    renderMap();
+    showToast('New land discovered!', 'info');
+  }).catch(function (err) {
+    console.warn('Map expansion error:', err);
+    // Client-only fallback
+    newTiles.forEach(function (t) {
+      t.id = 'local-' + t.x + '-' + t.y;
+      state.tiles.push(t);
+      state.tileMap[t.x + ',' + t.y] = t;
+    });
+    computeGridBounds();
+    renderMap();
+  });
+}
+
+// ── Events ──
+
 export function initMapEvents() {
-  document.getElementById('map-grid').addEventListener('click', function (e) {
+  var grid = document.getElementById('map-grid');
+  var viewport = document.getElementById('map-viewport');
+
+  // Single-click placement for non-road buildings
+  grid.addEventListener('click', function (e) {
     if (Date.now() < pinchSuppressClickUntil) return;
+    if (Date.now() < dragState.suppressClick) return;
     var cell = e.target.closest('.cell');
     if (!cell) return;
+    // Roads use drag system exclusively; other build types still support tap/click placement.
+    if (state.selectedBuildType && isSelectedBuildRoad()) return;
 
     var x = parseInt(cell.dataset.x);
     var y = parseInt(cell.dataset.y);
@@ -343,8 +581,74 @@ export function initMapEvents() {
     }
   });
 
+  // ── Drag-to-paint: mouse events ──
+
+  grid.addEventListener('mousedown', function (e) {
+    if (e.button !== 0) return;
+    if (!isSelectedBuildRoad()) return;
+    e.preventDefault();
+    clearDragState();
+    dragState.active = true;
+    var cell = e.target.closest('.cell');
+    if (cell) tryAddDragTile(cell);
+  });
+
+  document.addEventListener('mousemove', function (e) {
+    if (!dragState.active) return;
+    var cell = getCellFromPoint(e.clientX, e.clientY);
+    if (cell) tryAddDragTile(cell);
+  });
+
+  document.addEventListener('mouseup', function () {
+    if (!dragState.active) return;
+    dragState.active = false;
+    dragState.suppressClick = Date.now() + 200;
+    executeDragPlacements();
+  });
+
+  // ── Drag-to-paint: touch events (single finger) ──
+
+  grid.addEventListener('touchstart', function (e) {
+    if (e.touches.length !== 1) {
+      // Multi-touch: cancel any drag, let pinch zoom handle it
+      if (dragState.active) clearDragState();
+      return;
+    }
+    if (!isSelectedBuildRoad()) return;
+    clearDragState();
+    dragState.active = true;
+    var touch = e.touches[0];
+    var cell = getCellFromPoint(touch.clientX, touch.clientY);
+    if (cell) tryAddDragTile(cell);
+  }, { passive: true });
+
+  grid.addEventListener('touchmove', function (e) {
+    if (!dragState.active) return;
+    if (e.touches.length !== 1) {
+      clearDragState();
+      return;
+    }
+    var touch = e.touches[0];
+    var cell = getCellFromPoint(touch.clientX, touch.clientY);
+    if (cell) {
+      tryAddDragTile(cell);
+      // Prevent viewport scroll while drag-painting
+      if (dragState.planned.length > 0) e.preventDefault();
+    }
+  }, { passive: false });
+
+  grid.addEventListener('touchend', function () {
+    if (!dragState.active) return;
+    dragState.active = false;
+    dragState.suppressClick = Date.now() + 300;
+    pinchSuppressClickUntil = Date.now() + 300;
+    executeDragPlacements();
+  });
+
+  // ── Cancel button ──
   document.getElementById('placement-cancel').addEventListener('click', cancelPlacement);
-  var viewport = document.getElementById('map-viewport');
+
+  // ── Zoom controls ──
   document.getElementById('zoom-in').addEventListener('click', function () {
     var rect = viewport.getBoundingClientRect();
     setMapZoomAtPoint(state.mapZoom + MAP_ZOOM_STEP, rect.left + rect.width / 2, rect.top + rect.height / 2);
@@ -358,8 +662,10 @@ export function initMapEvents() {
     setMapZoomAtPoint(1, rect.left + rect.width / 2, rect.top + rect.height / 2);
   });
 
+  // ── Pinch zoom ──
   viewport.addEventListener('touchstart', function (e) {
     if (e.touches.length === 2) {
+      if (dragState.active) clearDragState();
       pinchStartDistance = touchDistance(e.touches);
       pinchStartZoom = state.mapZoom;
       pinchStartCenter = touchCenter(e.touches);
