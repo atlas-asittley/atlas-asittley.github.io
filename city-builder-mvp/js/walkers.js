@@ -199,14 +199,10 @@ export function renderWalkers() {
     var gy = w.y - (state.gridMinY || 0);
     var left = gx * (cellSize + gap) + cellSize * 0.5;
     var top = gy * (cellSize + gap) + cellSize * 0.5;
-    // Fade out as walker nears end of life
-    var lifeRatio = 1 - (w.steps / WALKER_MAX_STEPS);
-    var opacity = Math.min(1, lifeRatio * 2);
-
     el.className = 'walker-dot walker-tier-' + (w.sourceTier || 1);
     el.style.left = left.toFixed(1) + 'px';
     el.style.top = top.toFixed(1) + 'px';
-    el.style.opacity = opacity.toFixed(2);
+    el.style.opacity = '1';
     el.style.setProperty('--wk-scale', (state.mapZoom || 1).toFixed(3));
   }
 }
