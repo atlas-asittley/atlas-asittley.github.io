@@ -135,36 +135,25 @@ body {
 .bldg.unstaffed { opacity: 0.35; animation: none; }
 .bldg.unstaffed::after { content: '!'; position: absolute; top: -2px; right: -2px; font-size: 6px; color: #f06060; font-weight: 700; z-index: 1; }
 /* ── Road tiles ──────────────────────────────────────── */
-.cell.road-tile { background: linear-gradient(135deg, #2a2518 0%, #22200e 50%, #28241a 100%); }
-.road-surface {
-  width: 100%; height: 100%; position: relative;
-  background-image: url('../assets/sprites/road.png');
-  background-size: 140%;
-  background-position: center;
-  clip-path: var(--road-clip);
-  filter: drop-shadow(0 1px 1px rgba(0,0,0,0.6));
-}
-.road-surface.mine {
-  filter: drop-shadow(0 0 1.5px #4fa3e0) drop-shadow(0 1px 1px rgba(0,0,0,0.5));
-}
-/* Subtle edge darkening along road borders */
-.road-surface::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  clip-path: var(--road-clip);
-  box-shadow: inset 0 0 2px 1px rgba(40, 30, 15, 0.5);
-  pointer-events: none;
-  z-index: 1;
-}
+.cell.road-tile { background: #28241a; }
+.road-surface { width: 100%; height: 100%; position: relative; }
+.road-surface.mine { box-shadow: inset 0 0 0 1px rgba(79,163,224,0.25); }
+.road-center, .road-conn { position: absolute; display: block; background-image: url('../assets/sprites/road.png'); background-size: 250%; }
+.road-center { width: 50%; height: 50%; left: 25%; top: 25%; background-position: center; }
+.road-conn { display: none; }
+.road-surface.road-north .road-conn.north,
+.road-surface.road-south .road-conn.south,
+.road-surface.road-east .road-conn.east,
+.road-surface.road-west .road-conn.west { display: block; }
+.road-conn.north { left: 25%; top: 0; width: 50%; height: 50%; background-position: center top; }
+.road-conn.south { left: 25%; bottom: 0; width: 50%; height: 50%; background-position: center bottom; }
+.road-conn.east  { right: 0; top: 25%; width: 50%; height: 50%; background-position: right center; }
+.road-conn.west  { left: 0; top: 25%; width: 50%; height: 50%; background-position: left center; }
 /* ── Disconnected buildings (no road access) ─────────── */
 .bldg.disconnected { opacity: 0.4; }
 .bldg.disconnected::after { content: ''; position: absolute; top: -3px; right: -3px; width: 7px; height: 7px; background: #d4a040; border-radius: 50%; border: 1px solid #0b0f14; }
 .hq-label { font-size: 7px; color: #d0c0e8; font-weight: 700; letter-spacing: 0.12em; text-shadow: 0 0 4px rgba(160,120,220,0.4), 0 1px 2px rgba(0,0,0,0.5); position: relative; z-index: 1; }
-.road-surface.hq-road {
-  opacity: 0.5;
-  filter: drop-shadow(0 1px 1px rgba(0,0,0,0.3));
-}
+.road-surface.hq-road .road-conn { opacity: 0.5; }
 /* ── Walker overlay ─────────────────────────────────── */
 #walker-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2; }
 .walker-dot { position: absolute; width: 10px; height: 14px; transform: translate(-50%, -50%); transition: left 1.35s ease-in-out, top 1.35s ease-in-out, opacity 0.45s; animation: walker-bob 0.7s ease-in-out infinite alternate, walker-waddle 0.55s ease-in-out infinite; }

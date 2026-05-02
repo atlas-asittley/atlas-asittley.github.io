@@ -51,28 +51,13 @@ function isRoadOrCenter(x, y, buildingAt) {
   return isRoadBuilding(buildingAt[x + ',' + y]);
 }
 
-function computeRoadClipPath(n, s, e, w) {
-  // Build a cross/plus polygon from cardinal connections.
-  // 12-vertex cross, collapsing arms that aren't connected.
-  var pts = [
-    [25, n ? 0 : 25], [75, n ? 0 : 25],
-    [75, 25],          [e ? 100 : 75, 25],
-    [e ? 100 : 75, 75],[75, 75],
-    [75, s ? 100 : 75],[25, s ? 100 : 75],
-    [25, 75],          [w ? 0 : 25, 75],
-    [w ? 0 : 25, 25],  [25, 25]
-  ];
-  // Remove duplicate consecutive points
-  var clean = [pts[0]];
-  for (var i = 1; i < pts.length; i++) {
-    if (pts[i][0] !== clean[clean.length - 1][0] || pts[i][1] !== clean[clean.length - 1][1]) {
-      clean.push(pts[i]);
-    }
-  }
-  if (clean.length > 1 && clean[clean.length - 1][0] === clean[0][0] && clean[clean.length - 1][1] === clean[0][1]) {
-    clean.pop();
-  }
-  return 'polygon(' + clean.map(function(p) { return p[0] + '% ' + p[1] + '%'; }).join(', ') + ')';
+function roadNeighborClasses(x, y, buildingAt) {
+  var classes = [];
+  if (isRoadOrCenter(x, y - 1, buildingAt)) classes.push('north');
+  if (isRoadOrCenter(x, y + 1, buildingAt)) classes.push('south');
+  if (isRoadOrCenter(x + 1, y, buildingAt)) classes.push('east');
+  if (isRoadOrCenter(x - 1, y, buildingAt)) classes.push('west');
+  return classes;
 }
 
 function isRoadPlacementConnected(tile) {
@@ -179,18 +164,18 @@ export function renderMap() {
         var mine = building.player_id === state.currentUser.id;
         var btk = building.building_type_key;
 
-        // Roads render as sprite-textured surface with directional clip-path
+        // Roads render as textured surface with connector spans
         if (buildingBt && buildingBt.category === 'road') {
-          var rn = isRoadOrCenter(x, y - 1, buildingAt);
-          var rs = isRoadOrCenter(x, y + 1, buildingAt);
-          var re = isRoadOrCenter(x + 1, y, buildingAt);
-          var rw = isRoadOrCenter(x - 1, y, buildingAt);
-          var clipPath = computeRoadClipPath(rn, rs, re, rw);
-          // Per-tile texture offset for visual variety
-          var bgX = ((x * 37 + y * 13) % 80) + 10;
-          var bgY = ((y * 41 + x * 7) % 80) + 10;
+          var roadDirs = roadNeighborClasses(x, y, buildingAt);
           var roadClasses = 'road-surface' + (mine ? ' mine' : '');
-          html += '<div class="' + roadClasses + '" style="--road-clip:' + clipPath + ';background-position:' + bgX + '% ' + bgY + '%"></div>';
+          if (roadDirs.length) roadClasses += ' road-' + roadDirs.join(' road-');
+          html += '<div class="' + roadClasses + '">';
+          html += '<span class="road-center"></span>';
+          html += '<span class="road-conn north"></span>';
+          html += '<span class="road-conn south"></span>';
+          html += '<span class="road-conn east"></span>';
+          html += '<span class="road-conn west"></span>';
+          html += '</div>';
         } else {
           var label = BLDG_LABELS[btk] || '?';
           var titleText = (buildingBt ? buildingBt.name : btk);
@@ -228,12 +213,11 @@ export function renderMap() {
         if (isRoadBuilding(buildingAt['8,7'])) hqRoadDirs.push('east');
         if (isRoadBuilding(buildingAt['6,7'])) hqRoadDirs.push('west');
         if (hqRoadDirs.length) {
-          var hn = hqRoadDirs.indexOf('north') >= 0;
-          var hs = hqRoadDirs.indexOf('south') >= 0;
-          var he = hqRoadDirs.indexOf('east') >= 0;
-          var hw = hqRoadDirs.indexOf('west') >= 0;
-          var hqClip = computeRoadClipPath(hn, hs, he, hw);
-          html += '<div class="road-surface hq-road" style="--road-clip:' + hqClip + ';background-position:50% 50%"></div>';
+          var hqClasses = 'road-surface hq-road road-' + hqRoadDirs.join(' road-');
+          html += '<div class="' + hqClasses + '">';
+          html += '<span class="road-conn north"></span><span class="road-conn south"></span>';
+          html += '<span class="road-conn east"></span><span class="road-conn west"></span>';
+          html += '</div>';
         }
         html += '<span class="hq-label">HQ</span>';
       } else if (tile.resource_node_key) {
