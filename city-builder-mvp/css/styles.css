@@ -62,6 +62,7 @@ body {
 .game-body { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
 .map-area { flex: 1; position: relative; padding: 8px; min-height: 0; }
 .map-viewport { width: 100%; height: 100%; overflow: auto; min-height: 0; padding-top: 34px; touch-action: pan-x pan-y; }
+.map-canvas { position: relative; display: inline-block; margin: 44px 40px 40px; }
 .map-controls { position: absolute; top: 8px; right: 8px; z-index: 3; display: flex; align-items: center; gap: 6px; background: rgba(11, 15, 20, 0.9); border: 1px solid #1e2a3a; border-radius: 999px; padding: 4px 6px; }
 .map-zoom-btn, .map-reset-btn { height: 28px; border: none; border-radius: 999px; background: #1a2332; color: #e0e6ed; cursor: pointer; }
 .map-zoom-btn { width: 28px; font-size: 1rem; font-weight: 700; }
@@ -271,6 +272,7 @@ body {
   .topbar-left { gap: 6px; }
   .topbar-title { font-size: 0.9rem; }
   .stat { font-size: 0.72rem; }
+  .map-canvas { margin: 40px 28px 28px; }
   .map-controls { top: 6px; right: 6px; }
   .map-zoom-btn, .map-reset-btn { height: 26px; }
   .map-zoom-btn { width: 26px; }
