@@ -60,12 +60,23 @@ export function isPlacementValid(btKey, tile) {
   if (!isMyTile(tile)) return false;
 
   if (bt.category === 'extractor') {
-    return tile.resource_node_key === bt.output_resource_key;
+    // M2: extractors place on any road-adjacent tile in the district.
+    // Server BFS finds and claims the nearest matching unclaimed
+    // resource tile after placement. The on-tile resource rule is gone.
+    return isRoadAdjacent(tile);
   }
   if (bt.category === 'road') {
     return isRoadPlacementConnected(tile, null);
   }
   return true;
+}
+
+function isRoadAdjacent(tile) {
+  var x = tile.x, y = tile.y;
+  return !!(roadTileSet[(x - 1) + ',' + y]
+    || roadTileSet[(x + 1) + ',' + y]
+    || roadTileSet[x + ',' + (y - 1)]
+    || roadTileSet[x + ',' + (y + 1)]);
 }
 
 function isRoadBuilding(building) {
