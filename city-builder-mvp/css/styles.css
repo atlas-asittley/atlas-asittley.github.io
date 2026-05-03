@@ -212,7 +212,6 @@ body {
 .bldg.sculptor::before { display: none; }
 /* ── Housing sprites ── */
 .bldg.house {
-  --house-sprite: url('../assets/sprites/house_t1.png');
   background: none;
   overflow: visible;
   z-index: 7;
