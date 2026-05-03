@@ -154,7 +154,18 @@ body {
 .bldg.mine:hover { box-shadow: none; }
 /* ── Sprite buildings (tier 1-2 timber/stone + housing) ── */
 .bldg.timber_camp { background-image: url('../assets/sprites/timber_camp.png'); background-color: transparent; filter: drop-shadow(0 1px 1px rgba(0,0,0,0.3)); }
-.bldg.sawmill { background-image: url('../assets/sprites/sawmill.png'); background-color: transparent; filter: drop-shadow(0 1px 1px rgba(0,0,0,0.3)); }
+.bldg.sawmill {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E %3Cdefs%3E  %3ClinearGradient id='swi' x1='0' y1='0' x2='0' y2='1'%3E   %3Cstop offset='0' stop-color='%237a6048'/%3E   %3Cstop offset='1' stop-color='%23503828'/%3E  %3C/linearGradient%3E  %3ClinearGradient id='sri' x1='0' y1='0' x2='0' y2='1'%3E   %3Cstop offset='0' stop-color='%234a3020'/%3E   %3Cstop offset='1' stop-color='%232a1810'/%3E  %3C/linearGradient%3E %3C/defs%3E %3Crect x='5' y='15' width='22' height='14' rx='1' fill='url(%23swi)' stroke='%231a0e08' stroke-width='0.4' stroke-opacity='0.45'/%3E %3Cpolygon points='16,5 3,15 29,15' fill='url(%23sri)' stroke='%231a0e08' stroke-width='0.4' stroke-opacity='0.45'/%3E %3Cline x1='16' y1='5' x2='29' y2='15' stroke='%23604028' stroke-width='0.4' opacity='0.4'/%3E %3Crect x='11' y='17' width='10' height='12' rx='0.6' fill='%230e0805'/%3E %3Crect x='23' y='25' width='7' height='1.5' rx='0.3' fill='%23a08868' stroke='%23604028' stroke-width='0.3' stroke-opacity='0.45'/%3E %3Crect x='23' y='26.7' width='7' height='1.5' rx='0.3' fill='%23907858' stroke='%23604028' stroke-width='0.3' stroke-opacity='0.45'/%3E %3Crect x='23' y='28.4' width='7' height='1' rx='0.3' fill='%23806848' stroke='%23604028' stroke-width='0.3' stroke-opacity='0.45'/%3E %3Cellipse cx='3' cy='27' rx='2.5' ry='1.5' fill='%23604828' stroke='%231a0e08' stroke-width='0.3' stroke-opacity='0.5'/%3E %3Cellipse cx='3' cy='27' rx='1' ry='1.2' fill='%233a2818'/%3E%3C/svg%3E");
+  background-color: transparent; background-size: contain; background-repeat: no-repeat; background-position: center;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.4));
+}
+.bldg.sawmill::before {
+  content: ''; position: absolute;
+  left: 32%; top: 52%; width: 36%; height: 36%;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E %3Ccircle cx='8' cy='8' r='6' fill='%23807040' stroke='%235a4830' stroke-width='0.6'/%3E %3Cg stroke='%235a4830' stroke-width='0.7' stroke-linecap='round'%3E  %3Cline x1='8' y1='1' x2='8' y2='3'/%3E  %3Cline x1='8' y1='13' x2='8' y2='15'/%3E  %3Cline x1='1' y1='8' x2='3' y2='8'/%3E  %3Cline x1='13' y1='8' x2='15' y2='8'/%3E  %3Cline x1='3' y1='3' x2='4.5' y2='4.5'/%3E  %3Cline x1='12' y1='12' x2='13' y2='13'/%3E  %3Cline x1='3' y1='13' x2='4.5' y2='11.5'/%3E  %3Cline x1='12' y1='3' x2='13' y2='4'/%3E %3C/g%3E %3Ccircle cx='8' cy='8' r='1' fill='%233a2818'/%3E%3C/svg%3E");
+  background-size: contain; background-repeat: no-repeat; background-position: center;
+  pointer-events: none; z-index: 3;
+}
 .bldg.stone_quarry { background-image: url('../assets/sprites/stone_quarry.png'); background-color: transparent; filter: drop-shadow(0 1px 1px rgba(0,0,0,0.3)); }
 .bldg.mason_workshop { background-image: url('../assets/sprites/mason_workshop.png'); background-color: transparent; filter: drop-shadow(0 1px 1px rgba(0,0,0,0.3)); }
 /* ── Sprite buildings (grain chain) ── */
@@ -342,23 +353,22 @@ body {
   will-change: transform;
   pointer-events: none; z-index: 3;
 }
-/* ── Spinning saw + worker: sawmill ── */
+/* ── Sawmill activity: warm building + spinning saw + bobbing worker ── */
+.bldg.sawmill.producing {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E %3Cdefs%3E  %3ClinearGradient id='swa' x1='0' y1='0' x2='0' y2='1'%3E   %3Cstop offset='0' stop-color='%23a8855e'/%3E   %3Cstop offset='1' stop-color='%23704830'/%3E  %3C/linearGradient%3E  %3ClinearGradient id='sra' x1='0' y1='0' x2='0' y2='1'%3E   %3Cstop offset='0' stop-color='%23604028'/%3E   %3Cstop offset='1' stop-color='%233a2410'/%3E  %3C/linearGradient%3E  %3CradialGradient id='sgw' cx='50%25' cy='55%25' r='65%25'%3E   %3Cstop offset='0' stop-color='%23ffb060' stop-opacity='0.95'/%3E   %3Cstop offset='0.5' stop-color='%23c06028' stop-opacity='0.65'/%3E   %3Cstop offset='1' stop-color='%233a1a08' stop-opacity='1'/%3E  %3C/radialGradient%3E %3C/defs%3E %3Crect x='5' y='15' width='22' height='14' rx='1' fill='url(%23swa)' stroke='%231a0e08' stroke-width='0.4' stroke-opacity='0.45'/%3E %3Cpolygon points='16,5 3,15 29,15' fill='url(%23sra)' stroke='%231a0e08' stroke-width='0.4' stroke-opacity='0.45'/%3E %3Cline x1='16' y1='5' x2='29' y2='15' stroke='%23806040' stroke-width='0.4' opacity='0.5'/%3E %3Crect x='11' y='17' width='10' height='12' rx='0.6' fill='url(%23sgw)'/%3E %3Ccircle cx='8.5' cy='18.5' r='1.6' fill='%23ffd060' opacity='0.35'/%3E %3Ccircle cx='8.5' cy='18.5' r='0.9' fill='%23ffe080'/%3E %3Crect x='23' y='24' width='7' height='1.5' rx='0.3' fill='%23e0c090' stroke='%23806040' stroke-width='0.3' stroke-opacity='0.45'/%3E %3Crect x='23' y='25.7' width='7' height='1.5' rx='0.3' fill='%23d0b080' stroke='%23806040' stroke-width='0.3' stroke-opacity='0.45'/%3E %3Crect x='23' y='27.4' width='7' height='1.5' rx='0.3' fill='%23c0a070' stroke='%23806040' stroke-width='0.3' stroke-opacity='0.45'/%3E %3Crect x='23' y='29.1' width='7' height='0.8' rx='0.3' fill='%23b09060' stroke='%23806040' stroke-width='0.3' stroke-opacity='0.45'/%3E %3Cellipse cx='3' cy='27' rx='2.5' ry='1.5' fill='%23806848' stroke='%231a0e08' stroke-width='0.3' stroke-opacity='0.5'/%3E %3Cellipse cx='3' cy='27' rx='1' ry='1.2' fill='%23604828'/%3E %3Cg fill='%23d4b870' opacity='0.85'%3E  %3Ccircle cx='14' cy='28.6' r='0.45'/%3E  %3Ccircle cx='15.5' cy='28.8' r='0.35'/%3E  %3Ccircle cx='17' cy='28.6' r='0.45'/%3E  %3Ccircle cx='12.8' cy='28.85' r='0.35'/%3E  %3Ccircle cx='18.2' cy='28.85' r='0.35'/%3E %3C/g%3E%3C/svg%3E");
+}
 .bldg.sawmill.producing::before {
-  content: ''; position: absolute;
-  left: 0; bottom: 5%; width: 28%; height: 40%;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 13'%3E%3Ccircle cx='4' cy='2.5' r='2.5' fill='%23d8c3a0'/%3E%3Crect x='1' y='5' width='6' height='7' rx='2' fill='%237a6756'/%3E%3C/svg%3E");
-  background-size: contain; background-repeat: no-repeat; background-position: bottom center;
-  animation: act-bob 0.85s ease-in-out infinite;
-  pointer-events: none; z-index: 3;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E %3Ccircle cx='8' cy='8' r='6' fill='%23e8c050' stroke='%23a08030' stroke-width='0.6'/%3E %3Cg stroke='%23a08030' stroke-width='0.7' stroke-linecap='round'%3E  %3Cline x1='8' y1='1' x2='8' y2='3'/%3E  %3Cline x1='8' y1='13' x2='8' y2='15'/%3E  %3Cline x1='1' y1='8' x2='3' y2='8'/%3E  %3Cline x1='13' y1='8' x2='15' y2='8'/%3E  %3Cline x1='3' y1='3' x2='4.5' y2='4.5'/%3E  %3Cline x1='12' y1='12' x2='13' y2='13'/%3E  %3Cline x1='3' y1='13' x2='4.5' y2='11.5'/%3E  %3Cline x1='12' y1='3' x2='13' y2='4'/%3E %3C/g%3E %3Ccircle cx='8' cy='8' r='1' fill='%23604030'/%3E%3C/svg%3E");
+  animation: act-spin 0.6s linear infinite;
+  will-change: transform;
 }
 .bldg.sawmill.producing::after {
   content: ''; position: absolute;
-  right: 8%; top: 18%; width: 30%; height: 30%;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Ccircle cx='6' cy='6' r='5' fill='none' stroke='%23808080' stroke-width='0.8'/%3E%3Ccircle cx='6' cy='6' r='1.5' fill='%23666'/%3E%3Cg stroke='%23909090' stroke-width='0.7'%3E%3Cline x1='6' y1='0.5' x2='6' y2='3'/%3E%3Cline x1='6' y1='9' x2='6' y2='11.5'/%3E%3Cline x1='0.5' y1='6' x2='3' y2='6'/%3E%3Cline x1='9' y1='6' x2='11.5' y2='6'/%3E%3C/g%3E%3C/svg%3E");
-  background-size: contain; background-repeat: no-repeat; background-position: center;
-  animation: act-spin 1s linear infinite;
-  will-change: transform;
-  pointer-events: none; z-index: 3;
+  left: 22%; bottom: 8%; width: 22%; height: 38%;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 13'%3E%3Ccircle cx='4' cy='2.5' r='2.5' fill='%23d8c3a0'/%3E%3Crect x='1' y='5' width='6' height='7' rx='2' fill='%237a6756'/%3E%3C/svg%3E");
+  background-size: contain; background-repeat: no-repeat; background-position: bottom center;
+  animation: act-bob 0.85s ease-in-out infinite;
+  pointer-events: none; z-index: 4;
 }
 /* ── Unstaffed / disconnected ── */
 .bldg.unstaffed { opacity: 0.35; animation: none; }
