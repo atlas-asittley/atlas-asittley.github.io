@@ -229,7 +229,15 @@ export function renderWalkers() {
     var gy = w.y - (state.gridMinY || 0);
     var left = gx * (cellSize + gap) + cellSize * 0.5;
     var top = gy * (cellSize + gap) + cellSize * 0.5;
-    el.className = 'walker-dot walker-' + (w.sourceType || 'citizen');
+    // Direction class for facing/pose: flip sprite for west, front view for N/S
+    var dirClass = '';
+    if (w.prevDir) {
+      if (w.prevDir.dx > 0) dirClass = ' dir-e';
+      else if (w.prevDir.dx < 0) dirClass = ' dir-w';
+      else if (w.prevDir.dy < 0) dirClass = ' dir-n';
+      else if (w.prevDir.dy > 0) dirClass = ' dir-s';
+    }
+    el.className = 'walker-dot walker-' + (w.sourceType || 'citizen') + dirClass;
     el.style.left = left.toFixed(1) + 'px';
     el.style.top = top.toFixed(1) + 'px';
     el.style.opacity = '1';
