@@ -360,6 +360,13 @@ DECLARE
   v_road_adjacent boolean;
   v_path record;
 BEGIN
+  -- Initialize v_path so the RETURN's CASE expression can read its fields
+  -- even when this is a non-extractor placement (no BFS performed).
+  SELECT NULL::integer AS target_x,
+         NULL::integer AS target_y,
+         NULL::integer AS path_length
+  INTO v_path;
+
   SELECT * INTO v_bt FROM public.building_types
   WHERE key = p_building_type_key AND is_active;
   IF NOT FOUND THEN RAISE EXCEPTION 'Unknown building type'; END IF;
