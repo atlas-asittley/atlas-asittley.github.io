@@ -34,6 +34,18 @@ export function showToast(msg, type) {
 // ── Topbar state display ──
 export function updateMoney() {
   document.getElementById('g-money').textContent = '$' + state.profile.money;
+  // Also refresh district chunk count and the expand button cost (M1)
+  var chunksOwned = state.profile.chunks_owned || 1;
+  var chunksEl = document.getElementById('g-chunks');
+  if (chunksEl) chunksEl.textContent = chunksOwned;
+  var expandBtn = document.getElementById('g-expand-district');
+  if (expandBtn) {
+    var nextCost = 500 * chunksOwned * chunksOwned;
+    var canAfford = (state.profile.money || 0) >= nextCost;
+    expandBtn.title = 'Buy the next chunk for $' + nextCost + (canAfford ? '' : ' (insufficient funds)');
+    expandBtn.disabled = !canAfford;
+    expandBtn.classList.toggle('disabled', !canAfford);
+  }
 }
 
 export function updateWorkers() {

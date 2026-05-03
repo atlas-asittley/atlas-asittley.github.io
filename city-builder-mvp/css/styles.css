@@ -45,6 +45,10 @@ body {
 #screen-game { background: #0b0f14; }
 .topbar { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; background: #131a24; border-bottom: 1px solid #1e2a3a; flex-shrink: 0; }
 .topbar-left { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.topbar-right { display: flex; align-items: center; gap: 6px; }
+#g-expand-district { background: linear-gradient(180deg, #2a3848 0%, #1f2a36 100%); color: #e6c65a; border-color: #3a4a5e; font-weight: 600; }
+#g-expand-district:hover:not(.disabled) { background: linear-gradient(180deg, #324050 0%, #28323e 100%); border-color: #4a5a70; }
+#g-expand-district.disabled { opacity: 0.45; cursor: not-allowed; color: #7a8a9e; }
 .topbar-title { font-weight: 700; font-size: 1rem; }
 .stat { font-size: 0.78rem; color: #7a8a9e; }
 .stat .v { font-weight: 700; }
@@ -70,6 +74,19 @@ body {
 .cell { aspect-ratio: 1; background: #223322; border-radius: 0; display: flex; align-items: center; justify-content: center; cursor: pointer; position: relative; overflow: visible; user-select: none; transition: box-shadow 0.15s, filter 0.15s; box-shadow: none; }
 .cell.has-house { z-index: 6; }
 .cell:hover { filter: brightness(1.08); }
+
+/* ── M1: District ownership shading ─────────────────── */
+/* Default cells are wilderness. Player's own tiles: full color (no overlay).
+   Other players' tiles: tinted slightly cool. Wilderness: heavily desaturated
+   so the eye reads the player's own footprint clearly. */
+.cell.wilderness { filter: brightness(0.55) saturate(0.4); cursor: not-allowed; }
+.cell.wilderness:hover { filter: brightness(0.65) saturate(0.4); }
+.cell.owned-other { filter: brightness(0.85) saturate(0.7) hue-rotate(-12deg); cursor: not-allowed; }
+.cell.owned-other:hover { filter: brightness(0.9) saturate(0.75) hue-rotate(-12deg); }
+/* Subtle outline at district boundaries: a tile is on the boundary if any
+   adjacent tile has a different owner. Skip the heavy implementation for v1
+   and just mark the cell edge for own-mine tiles for now. */
+.cell.owned-mine { /* full color, no overlay */ }
 /* Base terrain is intentionally uniform so the eye reads continuous ground instead of patchwork tiles. */
 .cell::before { content: ''; position: absolute; inset: 0; opacity: 0.12; pointer-events: none; z-index: 0;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='34' height='34'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' seed='42'/%3E%3C/filter%3E%3Crect width='34' height='34' filter='url(%23n)' opacity='0.35'/%3E%3C/svg%3E");

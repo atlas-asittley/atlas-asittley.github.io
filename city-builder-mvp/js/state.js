@@ -1,6 +1,30 @@
 // ── Constants ──
+// Legacy default city center used as a fallback when the player's profile
+// hasn't been loaded yet (or pre-M1 schemas). After M1, the authoritative
+// home coords are state.profile.home_x / home_y, set when the player's
+// first chunk is allocated.
 export var CITY_CENTER_X = 7;
 export var CITY_CENTER_Y = 7;
+
+// Player's home (city-center) coordinates. Falls back to legacy (7,7) if the
+// profile hasn't been loaded yet.
+export function getHomeX() {
+  return (state.profile && state.profile.home_x !== null && state.profile.home_x !== undefined)
+    ? state.profile.home_x : CITY_CENTER_X;
+}
+export function getHomeY() {
+  return (state.profile && state.profile.home_y !== null && state.profile.home_y !== undefined)
+    ? state.profile.home_y : CITY_CENTER_Y;
+}
+
+// Tile ownership predicates. Useful for UI gating before the server check.
+export function isMyTile(tile) {
+  if (!tile || !state.currentUser) return false;
+  return tile.owner_player_id === state.currentUser.id;
+}
+export function isWildernessTile(tile) {
+  return !!tile && (tile.owner_player_id === null || tile.owner_player_id === undefined);
+}
 
 // ── Shared mutable game state ──
 export var state = {

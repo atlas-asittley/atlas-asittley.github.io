@@ -2,7 +2,7 @@
 import { sb } from './config.js';
 import { state, computeTraderUnlocks, computeLaborAllocation, computeGridBounds } from './state.js';
 import { showScreen, showToast, capitalize, updateMoney, updateWorkers } from './ui.js';
-import { renderMap, initMapEvents, expandMapIfNeeded } from './map.js';
+import { renderMap, initMapEvents, expandDistrict } from './map.js';
 import { renderBuildPanel, renderInventory, renderTradePanel, initTabs, initPanelCollapse, checkAllTraderVisits } from './panels.js';
 import { subscribeRealtime } from './realtime.js';
 import { startWalkers, stopWalkers } from './walkers.js';
@@ -206,8 +206,11 @@ export function enterGame() {
     startProdLoop();
     // Start walker system (visual walkers on roads)
     startWalkers();
-    // Check if map needs expansion based on existing buildings near edges
-    expandMapIfNeeded();
+    // Wire up expand-district button (M1)
+    var expandBtn = document.getElementById('g-expand-district');
+    if (expandBtn) {
+      expandBtn.onclick = function () { expandDistrict(); };
+    }
     // Lazy visit resolution: check if any trader visits are due
     checkAllTraderVisits();
     // One-time tap hint for new players

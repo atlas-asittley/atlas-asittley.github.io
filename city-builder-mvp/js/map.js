@@ -1,6 +1,6 @@
 // ── Map rendering, placement logic, drag-to-paint roads, and map expansion ──
 import { sb } from './config.js';
-import { state, CITY_CENTER_X, CITY_CENTER_Y, computeLaborAllocation, computeGridBounds } from './state.js';
+import { state, CITY_CENTER_X, CITY_CENTER_Y, getHomeX, getHomeY, isMyTile, isWildernessTile, computeLaborAllocation, computeGridBounds } from './state.js';
 import { showToast, updateMoney, updateWorkers } from './ui.js';
 import { renderBuildPanel } from './panels.js';
 import { rebuildRoadSet, renderWalkers, snapWalkersToZoom } from './walkers.js';
@@ -55,6 +55,10 @@ export function isPlacementValid(btKey, tile) {
   if (!tile.buildable) return false;
   if (tile.occupied_building_id) return false;
 
+  // M1: District ownership check. Only build on your own tiles.
+  // (Server enforces this too — this is for click feedback.)
+  if (!isMyTile(tile)) return false;
+
   if (bt.category === 'extractor') {
     return tile.resource_node_key === bt.output_resource_key;
   }
@@ -71,7 +75,7 @@ function isRoadBuilding(building) {
 }
 
 function isRoadOrCenter(x, y, buildingAt) {
-  if (x === CITY_CENTER_X && y === CITY_CENTER_Y) return true;
+  if (x === getHomeX() && y === getHomeY()) return true;
   return isRoadBuilding(buildingAt[x + ',' + y]);
 }
 
@@ -291,8 +295,8 @@ function rebuildPlacementRoadSet() {
 function isRoadPlacementConnected(tile, pendingSet) {
   if (!tile) return false;
   var x = tile.x, y = tile.y;
-  // Adjacent to city center
-  if ((Math.abs(x - CITY_CENTER_X) + Math.abs(y - CITY_CENTER_Y)) === 1) return true;
+  // Adjacent to player's home (city center of their first chunk)
+  if ((Math.abs(x - getHomeX()) + Math.abs(y - getHomeY())) === 1) return true;
   // Adjacent to existing road (O(1) set lookup)
   if (roadTileSet[(x - 1) + ',' + y] || roadTileSet[(x + 1) + ',' + y]
     || roadTileSet[x + ',' + (y - 1)] || roadTileSet[x + ',' + (y + 1)]) {
@@ -390,7 +394,16 @@ export function renderMap() {
         continue;
       }
 
-      if (x === CITY_CENTER_X && y === CITY_CENTER_Y) {
+      // M1: District-ownership shading for the cell
+      if (isMyTile(tile)) {
+        classes.push('owned-mine');
+      } else if (isWildernessTile(tile)) {
+        classes.push('wilderness');
+      } else {
+        classes.push('owned-other');
+      }
+
+      if (x === getHomeX() && y === getHomeY() && isMyTile(tile)) {
         classes.push('city-center');
       } else if (tile.resource_node_key) {
         classes.push('res-' + tile.resource_node_key);
@@ -457,12 +470,13 @@ export function renderMap() {
           var bldgClasses = 'bldg ' + btk + housingTierClass + (mine ? ' mine' : '') + (isUnstaffed ? ' unstaffed' : '') + (isDisconnected ? ' disconnected' : '') + (isProducing ? ' producing' : '');
           html += '<div class="' + bldgClasses + '" title="' + titleText + '">' + label + '</div>';
         }
-      } else if (x === CITY_CENTER_X && y === CITY_CENTER_Y) {
+      } else if (x === getHomeX() && y === getHomeY() && isMyTile(tile)) {
         // Show road surface from city center toward adjacent roads
-        var hqN = isRoadBuilding(buildingAt[CITY_CENTER_X + ',' + (CITY_CENTER_Y - 1)]);
-        var hqS = isRoadBuilding(buildingAt[CITY_CENTER_X + ',' + (CITY_CENTER_Y + 1)]);
-        var hqE = isRoadBuilding(buildingAt[(CITY_CENTER_X + 1) + ',' + CITY_CENTER_Y]);
-        var hqW = isRoadBuilding(buildingAt[(CITY_CENTER_X - 1) + ',' + CITY_CENTER_Y]);
+        var hx = getHomeX(), hy = getHomeY();
+        var hqN = isRoadBuilding(buildingAt[hx + ',' + (hy - 1)]);
+        var hqS = isRoadBuilding(buildingAt[hx + ',' + (hy + 1)]);
+        var hqE = isRoadBuilding(buildingAt[(hx + 1) + ',' + hy]);
+        var hqW = isRoadBuilding(buildingAt[(hx - 1) + ',' + hy]);
         if (hqN || hqS || hqE || hqW) {
           html += '<div class="road-surface hq-road">' + getRoadTileSVG(hqN, hqS, hqE, hqW) + '</div>';
         }
@@ -544,9 +558,7 @@ function placeBuilding(tileId, btKey) {
       showToast(msg, data.labor_shortage ? 'info' : 'success');
       cancelPlacement();
 
-      reloadMapData().then(function () {
-        expandMapIfNeeded();
-      });
+      reloadMapData();
     })
     .catch(function (err) {
       showToast(err.message || 'Placement failed', 'error');
@@ -703,92 +715,44 @@ function executeDragPlacements() {
     }
     // Reload data but keep placement mode active for continued painting
     return reloadMapData();
-  }).then(function () {
-    expandMapIfNeeded();
   }).catch(function (err) {
     showToast(err.message || 'Some placements failed', 'error');
     reloadMapData();
   });
 }
 
-// ── Map expansion ──
-
-// Guard: prevent concurrent expansion calls from racing
-var expandInProgress = false;
+// ── District expansion (M1) ──
+// Replaces the old auto-grow-when-near-edge behavior. A player explicitly
+// buys the next chunk via the expand_district RPC, paying base × chunks_owned².
 
 export function expandMapIfNeeded() {
-  if (expandInProgress) return;
+  // No-op since M1: districts no longer auto-grow. Use expandDistrict() instead.
+}
 
-  var expandLeft = false, expandRight = false, expandUp = false, expandDown = false;
-
-  state.allBuildings.forEach(function (b) {
-    if (b.x <= state.gridMinX + EXPAND_THRESHOLD) expandLeft = true;
-    if (b.x >= state.gridMaxX - EXPAND_THRESHOLD) expandRight = true;
-    if (b.y <= state.gridMinY + EXPAND_THRESHOLD) expandUp = true;
-    if (b.y >= state.gridMaxY - EXPAND_THRESHOLD) expandDown = true;
-  });
-
-  if (!expandLeft && !expandRight && !expandUp && !expandDown) return;
-
-  var newMinX = expandLeft ? state.gridMinX - EXPAND_AMOUNT : state.gridMinX;
-  var newMaxX = expandRight ? state.gridMaxX + EXPAND_AMOUNT : state.gridMaxX;
-  var newMinY = expandUp ? state.gridMinY - EXPAND_AMOUNT : state.gridMinY;
-  var newMaxY = expandDown ? state.gridMaxY + EXPAND_AMOUNT : state.gridMaxY;
-
-  var newTiles = [];
-  for (var y = newMinY; y <= newMaxY; y++) {
-    for (var x = newMinX; x <= newMaxX; x++) {
-      if (state.tileMap[x + ',' + y]) continue;
-      newTiles.push({
-        x: x, y: y,
-        terrain_type: 'ground',
-        resource_node_key: null,
-        buildable: true,
-        occupied_building_id: null
-      });
-    }
+export function expandDistrict() {
+  if (!state.profile) return Promise.resolve(null);
+  var chunksOwned = state.profile.chunks_owned || 1;
+  var cost = 500 * chunksOwned * chunksOwned;
+  if ((state.profile.money || 0) < cost) {
+    showToast('Need $' + cost + ' to expand district', 'error');
+    return Promise.resolve(null);
   }
-
-  if (newTiles.length === 0) return;
-
-  expandInProgress = true;
-
-  function addLocalFallbackTiles() {
-    newTiles.forEach(function (t) {
-      // Skip if tile was already added (e.g. by another player's expansion)
-      if (state.tileMap[t.x + ',' + t.y]) return;
-      t.id = 'local-' + t.x + '-' + t.y;
-      // Mark local-only tiles as unbuildable — they have no server-side ID for RPC
-      t.buildable = false;
-      state.tiles.push(t);
-      state.tileMap[t.x + ',' + t.y] = t;
-    });
-    computeGridBounds();
-    renderMap();
+  if (!confirm('Buy a new 15×15 chunk for $' + cost + '?')) {
+    return Promise.resolve(null);
   }
-
-  sb.from('map_tiles').insert(newTiles).select('*').then(function (r) {
-    expandInProgress = false;
+  return sb.rpc('expand_district').then(function (r) {
     if (r.error) {
-      console.warn('Map expansion DB insert failed:', r.error.message);
-      addLocalFallbackTiles();
-      return;
+      showToast('Expand failed: ' + r.error.message, 'error');
+      return null;
     }
-    if (r.data) {
-      r.data.forEach(function (t) {
-        // Deduplicate: skip if already present (race with another client)
-        if (state.tileMap[t.x + ',' + t.y]) return;
-        state.tiles.push(t);
-        state.tileMap[t.x + ',' + t.y] = t;
-      });
-    }
-    computeGridBounds();
-    renderMap();
-    showToast('New land discovered!', 'info');
+    var data = r.data;
+    state.profile.money = data.money;
+    state.profile.chunks_owned = data.chunks_owned;
+    updateMoney();
+    showToast('District expanded! +1 chunk at (' + data.chunk_x + ', ' + data.chunk_y + ')', 'success');
+    return reloadMapData();
   }).catch(function (err) {
-    expandInProgress = false;
-    console.warn('Map expansion error:', err);
-    addLocalFallbackTiles();
+    showToast('Expand failed: ' + (err.message || err), 'error');
   });
 }
 
