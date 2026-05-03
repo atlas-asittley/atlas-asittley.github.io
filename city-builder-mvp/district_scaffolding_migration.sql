@@ -77,9 +77,13 @@ DECLARE
   v_x integer;
   v_y integer;
 BEGIN
-  -- Origin first
+  -- Origin first.
+  -- Note: column references must be table-qualified (dc.chunk_x) because the
+  -- OUT parameters of this function are also named chunk_x/chunk_y, which
+  -- would otherwise cause "column reference is ambiguous" errors.
   IF NOT EXISTS (
-    SELECT 1 FROM public.district_chunks WHERE chunk_x = 0 AND chunk_y = 0
+    SELECT 1 FROM public.district_chunks dc
+    WHERE dc.chunk_x = 0 AND dc.chunk_y = 0
   ) THEN
     chunk_x := 0; chunk_y := 0;
     RETURN NEXT;
@@ -93,8 +97,8 @@ BEGIN
         -- Only cells on the ring (not interior, those were checked at smaller radii)
         IF ABS(v_x) = v_radius OR ABS(v_y) = v_radius THEN
           IF NOT EXISTS (
-            SELECT 1 FROM public.district_chunks
-            WHERE chunk_x = v_x AND chunk_y = v_y
+            SELECT 1 FROM public.district_chunks dc
+            WHERE dc.chunk_x = v_x AND dc.chunk_y = v_y
           ) THEN
             chunk_x := v_x; chunk_y := v_y;
             RETURN NEXT;
