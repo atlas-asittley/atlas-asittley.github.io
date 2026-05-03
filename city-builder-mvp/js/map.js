@@ -3,7 +3,7 @@ import { sb } from './config.js';
 import { state, CITY_CENTER_X, CITY_CENTER_Y, getHomeX, getHomeY, isMyTile, isWildernessTile, computeLaborAllocation, computeGridBounds } from './state.js';
 import { showToast, updateMoney, updateWorkers } from './ui.js';
 import { renderBuildPanel } from './panels.js';
-import { rebuildRoadSet, renderWalkers, snapWalkersToZoom } from './walkers.js';
+import { rebuildRoadSet, renderWalkers, snapWalkersToZoom, syncCollectorWalkers } from './walkers.js';
 import { openInspector } from './inspector.js';
 
 export var BLDG_LABELS = {
@@ -490,8 +490,9 @@ export function renderMap() {
   }
   grid.innerHTML = html;
   applyMapZoom();
-  // Sync walker system with new road layout
+  // Sync walker system with new road + extractor layout
   rebuildRoadSet();
+  syncCollectorWalkers();
   renderWalkers();
 }
 

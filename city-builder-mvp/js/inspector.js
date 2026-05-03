@@ -183,6 +183,9 @@ function renderInspector() {
 
     // Production status with explanation
     if (bt.category === 'extractor' || bt.category === 'processor') {
+      // M2: extractor with no path = idle (different from unstaffed)
+      var isExtractorWithoutPath = bt.category === 'extractor'
+        && (b.path_length === null || b.path_length === undefined);
       var isDisconnected = bt.category === 'processor' && state.noRoadAccessIds[b.id];
       var isUnstaffed = !!state.laborInfo.unstaffedIds[b.id];
       var statusText, statusClass;
@@ -190,7 +193,10 @@ function renderInspector() {
         statusText = 'Blocked';
         statusClass = 'insp-bad';
       } else if (isUnstaffed) {
-        statusText = 'Idle';
+        statusText = 'Idle (no workers)';
+        statusClass = 'insp-warn';
+      } else if (isExtractorWithoutPath) {
+        statusText = 'Idle (no path)';
         statusClass = 'insp-warn';
       } else {
         statusText = 'Producing';
@@ -202,6 +208,23 @@ function renderInspector() {
         html += '<div class="insp-hint">Cannot produce without road access. Goods can\'t reach the trade network.</div>';
       } else if (isUnstaffed) {
         html += '<div class="insp-hint">No workers assigned. This building is idle and not producing.</div>';
+      } else if (isExtractorWithoutPath) {
+        html += '<div class="insp-hint">No reachable resource tile. Build roads toward an unclaimed ' + (bt.output_resource_key || 'resource') + ' tile to start collecting.</div>';
+      }
+    }
+
+    // M2: extractor target + path + effective rate
+    if (bt.category === 'extractor' && b.target_x !== null && b.target_x !== undefined) {
+      var canonical = 4;
+      var pathLen = b.path_length || 1;
+      var pathFactor = Math.min(1, canonical / Math.max(pathLen, 1));
+      var effectiveRate = (bt.output_rate * pathFactor).toFixed(2);
+      var resName = (state.resources[bt.output_resource_key] && state.resources[bt.output_resource_key].name) || bt.output_resource_key;
+      html += '<div class="insp-row"><span class="insp-label">Target</span><span class="insp-value">(' + b.target_x + ', ' + b.target_y + ')</span></div>';
+      html += '<div class="insp-row"><span class="insp-label">Path</span><span class="insp-value">' + pathLen + ' tile' + (pathLen === 1 ? '' : 's') + '</span></div>';
+      html += '<div class="insp-row"><span class="insp-label">Rate</span><span class="insp-value">' + effectiveRate + ' ' + resName.toLowerCase() + '/min</span></div>';
+      if (pathLen > canonical) {
+        html += '<div class="insp-hint insp-hint-muted">Shorter paths produce faster. ' + canonical + '-tile path = full rate.</div>';
       }
     }
 
