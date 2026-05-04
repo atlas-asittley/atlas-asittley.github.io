@@ -19,7 +19,8 @@ export var BLDG_LABELS = {
   iron_mine: 'IM', smelter: 'SL', toolmaker: 'TK', tile_maker: 'TI',
   winery: 'WN', smokehouse: 'SH', cannery: 'CN',
   foresters_office: 'FO', foreman_office: 'FrO', clay_master_hut: 'CMH', mine_office: 'MO',
-  apiary: 'AP', hatchery: 'HT', compost_heap: 'CH', irrigation_channel: 'IC'
+  apiary: 'AP', hatchery: 'HT', compost_heap: 'CH', irrigation_channel: 'IC',
+  distillery: 'DT', curing_house: 'CHo', spicery: 'SP', brewery: 'BR'
 };
 
 // Housing tier label overrides (keyed by tier number)

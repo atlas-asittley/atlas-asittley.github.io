@@ -118,6 +118,7 @@ Today's resources:
 - **Raw food**: berries, fish, vegetables, grain (each is the paired food for one industry)
 - **Processed (tier-2)**: lumber, brick, pottery, flour, iron_ingot, wine, smoked_fish, preserves
 - **Processed (tier-3)**: bread, furniture, statuary, tools, tiles
+- **Luxuries (tier-3 food)**: spirits, caviar, spices, ale (one per industry; high-value trade goods)
 
 Industry trees (symmetric shape — every industry has the same depth, just with different resources):
 
@@ -129,6 +130,9 @@ Industry trees (symmetric shape — every industry has the same depth, just with
 | **T1 food** | Orchard → berries | Fishing Pier → fish | Garden → vegetables | Grain Farm → grain |
 | **T2 food** | Winery → wine | Smokehouse → smoked_fish | Cannery → preserves | Mill → flour |
 | **T3 food** | — | — | — | Bakery → bread |
+| **T3 luxury** | Distillery → spirits | Curing House → caviar | Spicery → spices | Brewery → ale |
+| **Resource booster** | Forester's Office | Foreman's Office | Clay Master's Hut | Mine Office |
+| **Food booster** | Apiary | Hatchery | Compost Heap | Irrigation Channel |
 
 Foods (`is_food = true`): grain, flour, bread, berries, fish, vegetables, wine, smoked_fish, preserves. Any of these in inventory satisfies the housing food gate. Future tier-specialized gates (e.g., "Townhouse needs grain specifically") would add per-resource booleans to `housing_tier_config`.
 
