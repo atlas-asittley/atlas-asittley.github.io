@@ -7,11 +7,51 @@ import { state } from './state.js';
 var WALKER_MOVE_MS = 1400;        // tile-to-tile travel time (also CSS transition duration)
 var WALKER_SPAWN_TICK_MS = 1400;  // spawn-logic tick interval
 var WALKER_MAX_STEPS = 14;        // ambient walkers: despawn after this many steps
-var WALKER_MAX_COUNT = 7;         // global cap on ambient walkers (lower = less crowd)
-var WALKER_SPAWN_CHANCE = 0.22;   // per eligible housing per tick
-var WALKER_SPAWN_COOLDOWN = 6;    // min ticks between spawns from same building
+var WALKER_BASE_COUNT = 8;        // baseline cap before any buildings
+var WALKER_PER_BUILDING = 0.6;    // additional cap slots per eligible spawn building
+var WALKER_HARD_CAP = 80;         // absolute ceiling so very large cities stay performant
+var WALKER_SPAWN_CHANCE = 0.20;   // per eligible building per tick
+var WALKER_SPAWN_COOLDOWN = 5;    // min ticks between spawns from same building
 // M2: collector walker pause at the resource end
 var COLLECTOR_PAUSE_MS = 1500;
+
+// Compute the dynamic ambient cap from current spawn-eligible count.
+function getMaxAmbient(spawnerCount) {
+  return Math.min(
+    WALKER_HARD_CAP,
+    Math.floor(WALKER_BASE_COUNT + spawnerCount * WALKER_PER_BUILDING)
+  );
+}
+
+// ── Persona system: visual variants picked at spawn time ──
+// Personas only apply to citizen (housing-spawned) walkers — the
+// job-specific walkers (timber/stone/grain/etc.) keep their fixed look.
+// Each persona is a (variant class, optional overlay class, scale tweak)
+// triple. Weights sum to ~100 for readability.
+var PERSONAS = [
+  { weight: 38, variant: null,             overlay: null },          // unadorned adult
+  { weight: 12, variant: null,             overlay: 'has-hat' },     // hatted adult
+  { weight: 11, variant: 'walker-child',   overlay: null },          // child
+  { weight: 4,  variant: 'walker-child',   overlay: 'has-hat' },     // hatted child
+  { weight: 8,  variant: 'walker-elder',   overlay: 'has-cane' },    // elder + cane
+  { weight: 9,  variant: 'walker-couple',  overlay: null },          // couple (paired sprite)
+  { weight: 6,  variant: null,             overlay: 'has-pet' },     // walking the dog
+  { weight: 5,  variant: null,             overlay: 'has-pack' },    // merchant / carrier
+  { weight: 4,  variant: null,             overlay: 'has-cape' },    // caped
+  { weight: 3,  variant: null,             overlay: 'has-umbrella' } // umbrella
+];
+
+function pickPersona() {
+  var total = 0;
+  for (var i = 0; i < PERSONAS.length; i++) total += PERSONAS[i].weight;
+  var r = Math.random() * total;
+  var acc = 0;
+  for (var j = 0; j < PERSONAS.length; j++) {
+    acc += PERSONAS[j].weight;
+    if (r < acc) return PERSONAS[j];
+  }
+  return PERSONAS[0];
+}
 
 // ── Job type mapping: building_type_key -> walker visual category ──
 var WALKER_JOB_MAP = {
@@ -256,15 +296,29 @@ function ensureWalkerEl(w) {
   // Mostly cheap CSS-var noise so individuals read as distinct without
   // authoring 2-3 sprite variants per type. Picks are decided once at
   // spawn and then preserved with the walker.
+  //
+  // Citizen walkers (from housing) also pick a persona — child / elder
+  // / couple / merchant / pet-owner / etc. — so a busy city's road
+  // network reads as a population, not just identical bodies.
   if (w.scale === undefined) {
     w.scale = (0.85 + Math.random() * 0.30).toFixed(2);   // 0.85..1.15
     w.hue   = Math.floor(Math.random() * 36 - 18);        // ±18°
     w.bobMs = (600 + Math.random() * 240).toFixed(0);     // 0.6..0.84s bob period
     w.wadMs = (480 + Math.random() * 200).toFixed(0);     // 0.48..0.68s waddle period
-    w.hat   = (w.mode === 'ambient' && Math.random() < 0.18); // ~1 in 5 wears a hat
+    w.persona = (w.mode === 'ambient' && w.sourceType === 'citizen')
+      ? pickPersona() : null;
+    if (w.persona && w.persona.variant === 'walker-child') {
+      w.scale = (parseFloat(w.scale) * 0.65).toFixed(2);   // children are smaller
+      w.bobMs = (parseInt(w.bobMs, 10) * 0.85).toFixed(0); // and bouncier
+    }
+    if (w.persona && w.persona.variant === 'walker-elder') {
+      w.bobMs = (parseInt(w.bobMs, 10) * 1.4).toFixed(0);  // elders move slower
+      w.wadMs = (parseInt(w.wadMs, 10) * 1.35).toFixed(0);
+    }
   }
   var classes = ['walker-dot', 'walker-' + (w.sourceType || 'citizen')];
-  if (w.hat) classes.push('has-hat');
+  if (w.persona && w.persona.variant) classes.push(w.persona.variant);
+  if (w.persona && w.persona.overlay) classes.push(w.persona.overlay);
   el.className = classes.join(' ');
   el.style.pointerEvents = 'auto';
   el.style.setProperty('--wk-scale', w.scale);
@@ -328,9 +382,15 @@ function spawnTick() {
   for (var i = 0; i < walkers.length; i++) {
     if (walkers[i].mode === 'ambient') ambientCount++;
   }
-  if (ambientCount < WALKER_MAX_COUNT) {
-    var spawners = getSpawnBuildings();
-    for (var j = 0; j < spawners.length && ambientCount < WALKER_MAX_COUNT; j++) {
+  var spawners = getSpawnBuildings();
+  var maxAmbient = getMaxAmbient(spawners.length);
+  if (ambientCount < maxAmbient) {
+    // Shuffle so we don't always favor the first buildings in iteration order.
+    for (var s = spawners.length - 1; s > 0; s--) {
+      var swap = Math.floor(Math.random() * (s + 1));
+      var tmp = spawners[s]; spawners[s] = spawners[swap]; spawners[swap] = tmp;
+    }
+    for (var j = 0; j < spawners.length && ambientCount < maxAmbient; j++) {
       var b = spawners[j];
       if (spawnCooldowns[b.id]) continue;
       if (Math.random() < WALKER_SPAWN_CHANCE) {

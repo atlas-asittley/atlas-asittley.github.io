@@ -55,8 +55,12 @@ def _setup_tier5_ready_house(cur, make_player, place, clear_resources, starting_
     cur.execute("UPDATE public.player_profiles SET money = 50000 WHERE id = %s", (str(p['id']),))
     hx, hy = p['home_x'], p['home_y']
     place('well', hx + 2, hy + 1)
-    place('school', hx - 2, hy + 1)
-    place('temple', hx + 3, hy - 1)
+    # School (2x2) and temple (2x2) — anchors chosen so each footprint
+    # stays off the highway cross (y=hy, x=hx), the anchor has a road
+    # neighbor for service staffing, and Manhattan distance from the
+    # house at (hx+1, hy+2) is within range (school ≤5, temple ≤6).
+    place('school', hx - 2, hy + 1)   # covers (hx-2..hx-1, hy+1..hy+2)
+    place('temple', hx + 3, hy + 1)   # covers (hx+3..hx+4, hy+1..hy+2)
     house_id = place('house', hx + 1, hy + 2)['building_id']
     cur.execute("UPDATE public.buildings SET housing_tier = %s WHERE id = %s",
                 (starting_tier, house_id))

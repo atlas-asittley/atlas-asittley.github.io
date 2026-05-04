@@ -68,30 +68,26 @@ var dragCostEl = null;
 export function isPlacementValid(btKey, tile) {
   var bt = state.buildingTypes[btKey];
   if (!bt) return false;
-  if (!tile.buildable) return false;
-  if (tile.occupied_building_id) return false;
-  // Resource tiles: by default no building goes on top (clear it first).
-  // Exception: food extractors must be placed on their matching food tile
-  // (bt.placement_resource_node_key === tile.resource_node_key). Server
-  // enforces both via a BEFORE INSERT trigger; this is for click feedback.
-  if (tile.resource_node_key) {
-    if (bt.placement_resource_node_key
-        && bt.placement_resource_node_key === tile.resource_node_key) {
-      // allowed; fall through to remaining checks
-    } else {
-      return false;
+  // Multi-tile buildings: the click target is the anchor (top-left).
+  // Every tile in the w×h footprint must satisfy the same per-tile rules.
+  var fw = bt.footprint_w || 1;
+  var fh = bt.footprint_h || 1;
+  for (var dx = 0; dx < fw; dx++) {
+    for (var dy = 0; dy < fh; dy++) {
+      var t = state.tileMap[(tile.x + dx) + ',' + (tile.y + dy)];
+      if (!t) return false;
+      if (!t.buildable) return false;
+      if (t.occupied_building_id) return false;
+      if (t.resource_node_key) {
+        if (!(bt.placement_resource_node_key && bt.placement_resource_node_key === t.resource_node_key)) {
+          return false;
+        }
+      }
+      if (!isMyTile(t)) return false;
     }
   }
 
-  // M1: District ownership check. Only build on your own tiles.
-  // (Server enforces this too — this is for click feedback.)
-  if (!isMyTile(tile)) return false;
-
   if (bt.category === 'extractor') {
-    // Extractors can be placed on any owned, buildable, unoccupied tile.
-    // The walker uses weighted Dijkstra (roads cost 1, off-road cost 3)
-    // to reach the nearest unclaimed matching resource tile, so neither
-    // road-adjacency nor on-tile resources are required at placement.
     return true;
   }
   if (bt.category === 'road') {
@@ -426,8 +422,14 @@ function touchCenter(touches) {
 export function renderMap() {
   var grid = document.getElementById('map-grid');
   rebuildPlacementRoadSet();
+  // buildingAt: anchor (top-left) tile of each building. For multi-tile
+  // buildings only the anchor renders the .bldg sprite; interior tiles
+  // are detected via tile.occupied_building_id and render no sprite.
   var buildingAt = {};
   state.allBuildings.forEach(function (b) { buildingAt[b.x + ',' + b.y] = b; });
+  // buildingById: lookup so an interior tile can still find its parent building.
+  var buildingById = {};
+  state.allBuildings.forEach(function (b) { buildingById[b.id] = b; });
 
   // Dynamic grid columns based on current bounds
   grid.style.gridTemplateColumns = 'repeat(' + state.gridCols + ', 1fr)';
@@ -479,13 +481,19 @@ export function renderMap() {
         }
       }
 
+      // A tile can be the interior of a multi-tile building — same
+      // visual treatment as an occupied tile, but no .bldg renders here
+      // (the anchor's .bldg covers it via absolute positioning).
+      var interiorBuilding = (!building && tile.occupied_building_id)
+        ? buildingById[tile.occupied_building_id] : null;
+
       if (tile.resource_node_key) {
         classes.push('res-' + tile.resource_node_key);
       } else {
         // Grass detail variations for plain ground tiles
         var h = tileHash(x, y);
         classes.push('nv' + (h & 3));          // noise seed variant (0-3)
-        if (!building) {
+        if (!building && !interiorBuilding) {
           var dv = (h >>> 2) & 15;             // decoration variant (0-15)
           if (dv < 8) classes.push('gv' + dv); // ~50% of tiles get a decoration
         }
@@ -504,7 +512,15 @@ export function renderMap() {
         classes.push('valid-placement');
       }
 
-      html += '<div class="' + classes.join(' ') + '" data-x="' + x + '" data-y="' + y + '" data-tile-id="' + tile.id + '">';
+      // Interior tiles of a multi-tile building inherit the anchor's
+      // class for click handling — clicking them opens the inspector
+      // for the parent building.
+      var dataAnchor = '';
+      if (interiorBuilding) {
+        classes.push('multi-tile-interior');
+        dataAnchor = ' data-anchor-x="' + interiorBuilding.x + '" data-anchor-y="' + interiorBuilding.y + '"';
+      }
+      html += '<div class="' + classes.join(' ') + '" data-x="' + x + '" data-y="' + y + '" data-tile-id="' + tile.id + '"' + dataAnchor + '>';
 
       if (building) {
         var mine = building.player_id === state.currentUser.id;
@@ -543,7 +559,10 @@ export function renderMap() {
           if (isPaused) titleText += ' (paused)';
           else if (isDisconnected) titleText += ' (no road)';
           else if (isUnstaffed) titleText += ' (unstaffed)';
-          var bldgClasses = 'bldg ' + btk + housingTierClass + (mine ? ' mine' : '') + (isPaused ? ' paused' : '') + (isUnstaffed ? ' unstaffed' : '') + (isDisconnected ? ' disconnected' : '') + (isProducing ? ' producing' : '');
+          var fw = (buildingBt && buildingBt.footprint_w) || 1;
+          var fh = (buildingBt && buildingBt.footprint_h) || 1;
+          var footprintClass = (fw !== 1 || fh !== 1) ? ' footprint-' + fw + 'x' + fh : '';
+          var bldgClasses = 'bldg ' + btk + housingTierClass + footprintClass + (mine ? ' mine' : '') + (isPaused ? ' paused' : '') + (isUnstaffed ? ' unstaffed' : '') + (isDisconnected ? ' disconnected' : '') + (isProducing ? ' producing' : '');
           var pausedBadge = isPaused ? '<span class="paused-overlay">⏸</span>' : '';
           html += '<div class="' + bldgClasses + '" title="' + titleText + '">' + label + pausedBadge + '</div>';
         }
@@ -893,8 +912,16 @@ export function initMapEvents() {
 
     // Always check for existing building first — tapping a building opens the inspector
     // even in placement mode. This makes inspect/demolish discoverable.
+    // For multi-tile buildings, tapping ANY footprint tile opens the inspector
+    // (via the data-anchor-x/y on interior cells, or via direct (x,y) match on
+    // the anchor cell).
+    var ax = x, ay = y;
+    if (cell.dataset.anchorX !== undefined && cell.dataset.anchorX !== '') {
+      ax = parseInt(cell.dataset.anchorX);
+      ay = parseInt(cell.dataset.anchorY);
+    }
     var building = state.allBuildings.find(function (b) {
-      return b.x === x && b.y === y;
+      return b.x === ax && b.y === ay;
     });
     if (building) {
       openInspector(building);

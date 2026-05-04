@@ -87,9 +87,11 @@ def test_brewery_competes_with_bakery_for_flour(make_player, place, cur, clear_r
     cur.execute("UPDATE public.building_types SET worker_cost = 2 WHERE key IN ('brewery', 'bakery')")
     hx, hy = p['home_x'], p['home_y']
     place('road', hx + 1, hy + 1)
-    place('road', hx + 2, hy + 1)
+    place('road', hx + 3, hy + 1)
+    # Brewery is 2x1 (covers hx+1..hx+2, hy+2). Place bakery at hx+3 so
+    # the two footprints don't collide.
     place('brewery', hx + 1, hy + 2)
-    place('bakery',  hx + 2, hy + 2)
+    place('bakery',  hx + 3, hy + 2)
     cur.execute("""INSERT INTO public.inventories (player_id, resource_key, quantity)
                    VALUES (%s, 'flour', 10.0)
                    ON CONFLICT (player_id, resource_key) DO UPDATE SET quantity = 10.0""",
