@@ -61,6 +61,14 @@ export function initAuthEvents() {
     sb.rpc('choose_industry', { p_display_name: name, p_industry_key: selectedIndustry })
       .then(function (r) {
         if (r.error) {
+          // FK violation on player_profiles_id_fkey means the JWT references
+          // an auth.users row that no longer exists (account was deleted
+          // server-side). Sign out so the next reload starts clean.
+          if (r.error.message && r.error.message.indexOf('player_profiles_id_fkey') !== -1) {
+            showError(errEl, 'This session points to a deleted account. Signing you out — please register again.');
+            sb.auth.signOut().then(function () { showScreen('screen-welcome'); });
+            return;
+          }
           showError(errEl, r.error.message);
           btn.disabled = false;
           btn.textContent = 'Start Building';
