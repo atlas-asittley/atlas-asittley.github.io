@@ -221,7 +221,7 @@ export function computeLaborAllocation() {
 
   var workerSupply = 5 + housingWorkers; // base 5 + housing
 
-  // Get worker-consuming buildings sorted by creation date (oldest first).
+  // Get worker-consuming buildings sorted by priority DESC, then created_at ASC.
   // Mirrors the server's staffing loop in process_production:
   //   extractors always eligible; processors / tax / services only with road access.
   var prodBuildings = myBuildings.filter(function (b) {
@@ -233,6 +233,9 @@ export function computeLaborAllocation() {
     }
     return false;
   }).sort(function (a, b) {
+    var pa = a.staffing_priority !== undefined ? a.staffing_priority : 1;
+    var pb = b.staffing_priority !== undefined ? b.staffing_priority : 1;
+    if (pa !== pb) return pb - pa;  // higher priority first
     return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
   });
 

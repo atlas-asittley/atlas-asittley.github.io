@@ -768,6 +768,24 @@ body.inspector-open .map-canvas { margin-bottom: calc(50vh + 28px); }
 .insp-issue-label { font-size: 0.82rem; font-weight: 600; color: #f0a0a0; line-height: 1.25; }
 .insp-issue-warn .insp-issue-label { color: #e6c65a; }
 .insp-issue-hint { font-size: 0.72rem; color: #8a9aae; line-height: 1.4; padding-top: 1px; }
+/* ── Inspector controls: priority pills + pause toggle ─────── */
+.insp-controls { display: flex; flex-direction: column; gap: 8px; padding: 8px 0 12px; border-bottom: 1px solid #1e2a3a; margin-bottom: 8px; }
+.insp-priority-row { display: flex; align-items: center; gap: 8px; }
+.insp-priority-row .insp-label { flex: 0 0 auto; font-size: 0.78rem; color: #7a8a9e; }
+.insp-priority-pills { display: flex; gap: 4px; flex: 1 1 auto; }
+.insp-priority-pill { flex: 1 1 auto; padding: 6px 0; text-align: center; font-size: 0.74rem; font-weight: 600; color: #7a8a9e; background: #131a26; border: 1px solid #1e2a3a; border-radius: 4px; cursor: pointer; transition: background 0.15s, color 0.15s, border-color 0.15s; user-select: none; }
+.insp-priority-pill:hover { background: #1a2230; color: #c4d3e6; }
+.insp-priority-pill.selected { background: #2a3a52; color: #e6c65a; border-color: #4a6088; }
+.insp-priority-pill.selected.low    { color: #b0b0b0; border-color: #4a4a4a; background: #2a2a30; }
+.insp-priority-pill.selected.high   { color: #f0c460; border-color: #6a5028; background: #3a2c18; }
+.insp-pause-btn { padding: 8px 12px; font-size: 0.82rem; font-weight: 600; background: #1e2a3a; color: #c4d3e6; border: 1px solid #2a3a52; border-radius: 4px; cursor: pointer; transition: background 0.15s, color 0.15s; }
+.insp-pause-btn:hover { background: #253348; color: #e6c65a; }
+.insp-pause-btn.is-paused { background: #2c2418; color: #f0a040; border-color: #6a4818; }
+.insp-pause-btn.is-paused:hover { background: #3a2e20; }
+/* ── Map: paused buildings ─────────────────────────────────── */
+.bldg.paused { opacity: 0.4; filter: grayscale(0.7) !important; animation: none !important; }
+.bldg.paused::before, .bldg.paused::after { display: none !important; }
+.bldg.paused-overlay { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 14px; color: #f0c460; text-shadow: 0 0 3px #000, 0 0 2px #000; pointer-events: none; z-index: 4; }
 .demolish-info { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; padding: 0 2px; }
 .demolish-refund { font-size: 0.78rem; color: #5ec49e; font-weight: 600; }
 .demolish-warning { font-size: 0.72rem; color: #e6c65a; font-weight: 600; }

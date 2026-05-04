@@ -520,13 +520,16 @@ export function renderMap() {
           if (!mine && building.player_profiles) {
             titleText += ' (' + building.player_profiles.display_name + ')';
           }
-          var isUnstaffed = mine && state.laborInfo.unstaffedIds[building.id];
-          var isDisconnected = mine && state.noRoadAccessIds[building.id];
-          var isProducing = !isUnstaffed && !isDisconnected && buildingBt.category !== 'housing' && buildingBt.category !== 'road';
-          if (isDisconnected) titleText += ' (no road)';
+          var isPaused = building.status === 'paused';
+          var isUnstaffed = mine && !isPaused && state.laborInfo.unstaffedIds[building.id];
+          var isDisconnected = mine && !isPaused && state.noRoadAccessIds[building.id];
+          var isProducing = !isPaused && !isUnstaffed && !isDisconnected && buildingBt.category !== 'housing' && buildingBt.category !== 'road';
+          if (isPaused) titleText += ' (paused)';
+          else if (isDisconnected) titleText += ' (no road)';
           else if (isUnstaffed) titleText += ' (unstaffed)';
-          var bldgClasses = 'bldg ' + btk + housingTierClass + (mine ? ' mine' : '') + (isUnstaffed ? ' unstaffed' : '') + (isDisconnected ? ' disconnected' : '') + (isProducing ? ' producing' : '');
-          html += '<div class="' + bldgClasses + '" title="' + titleText + '">' + label + '</div>';
+          var bldgClasses = 'bldg ' + btk + housingTierClass + (mine ? ' mine' : '') + (isPaused ? ' paused' : '') + (isUnstaffed ? ' unstaffed' : '') + (isDisconnected ? ' disconnected' : '') + (isProducing ? ' producing' : '');
+          var pausedBadge = isPaused ? '<span class="paused-overlay">⏸</span>' : '';
+          html += '<div class="' + bldgClasses + '" title="' + titleText + '">' + label + pausedBadge + '</div>';
         }
       } else if (tile.resource_node_key) {
         html += '<div class="res-dot"></div>';

@@ -330,6 +330,9 @@ function describeUpgradeBlocker(key) {
 function computeBuildingIssues(b, bt) {
   if (b.player_id !== state.currentUser.id) return [];
   if (bt.category === 'road') return [];
+  // Paused is intentional; nothing operational to report. Status row
+  // will show "Paused" and the controls section gives the resume button.
+  if (b.status === 'paused') return [];
   var issues = [];
 
   // Road access
@@ -448,7 +451,10 @@ function renderInspector() {
   if (mine && bt.category !== 'road') {
     var issues = computeBuildingIssues(b, bt);
     var statusClass, statusText;
-    if (issues.length === 0) {
+    if (b.status === 'paused') {
+      statusClass = 'insp-warn';
+      statusText = 'Paused';
+    } else if (issues.length === 0) {
       statusClass = 'insp-good';
       statusText = bt.category === 'housing' ? 'Producing workers' : 'Operational';
     } else {
@@ -589,6 +595,30 @@ function renderInspector() {
     var depCount = bt.category === 'road' ? countDependentBuildings(b) : 0;
     var actHtml = '';
 
+    // Priority + pause controls (skip for roads — they don't consume
+    // workers and don't have meaningful priority; pausing roads is
+    // possible via the schema but the UX implications haven't been
+    // designed, so omit for now).
+    var consumesWorkers = bt.category === 'extractor' || bt.category === 'processor'
+      || bt.category === 'service' || bt.category === 'tax';
+    if (consumesWorkers || bt.category === 'housing') {
+      actHtml += '<div class="insp-controls">';
+      if (consumesWorkers) {
+        var pri = b.staffing_priority !== undefined ? b.staffing_priority : 1;
+        actHtml += '<div class="insp-priority-row">';
+        actHtml += '<span class="insp-label">Priority</span>';
+        actHtml += '<div class="insp-priority-pills">';
+        actHtml += '<div class="insp-priority-pill low' + (pri === 0 ? ' selected' : '') + '" data-priority="0">Low</div>';
+        actHtml += '<div class="insp-priority-pill normal' + (pri === 1 ? ' selected' : '') + '" data-priority="1">Normal</div>';
+        actHtml += '<div class="insp-priority-pill high' + (pri === 2 ? ' selected' : '') + '" data-priority="2">High</div>';
+        actHtml += '</div></div>';
+      }
+      var paused = b.status === 'paused';
+      actHtml += '<button class="insp-pause-btn' + (paused ? ' is-paused' : '') + '" id="btn-pause">'
+        + (paused ? '▶ Resume' : '⏸ Pause') + '</button>';
+      actHtml += '</div>';
+    }
+
     // Demolish info line
     actHtml += '<div class="demolish-info">';
     actHtml += '<span class="demolish-refund">Refund: $' + refund + '</span>';
@@ -600,12 +630,52 @@ function renderInspector() {
     actHtml += '<button class="btn-demolish' + (depCount > 0 ? ' btn-demolish-caution' : '') + '" id="btn-demolish">Demolish</button>';
     actionsEl.innerHTML = actHtml;
 
+    actionsEl.querySelectorAll('.insp-priority-pill').forEach(function (pill) {
+      pill.addEventListener('click', function () {
+        setBuildingPriority(b, parseInt(pill.dataset.priority, 10));
+      });
+    });
+    var pauseBtn = document.getElementById('btn-pause');
+    if (pauseBtn) {
+      pauseBtn.addEventListener('click', function () {
+        toggleBuildingPaused(b);
+      });
+    }
+
     document.getElementById('btn-demolish').addEventListener('click', function () {
       confirmDemolish(b);
     });
   } else {
     actionsEl.innerHTML = '';
   }
+}
+
+function setBuildingPriority(building, priority) {
+  if (building.staffing_priority === priority) return;
+  sb.rpc('set_building_priority', { p_building_id: building.id, p_priority: priority })
+    .then(function (r) {
+      if (r.error) { showToast(r.error.message, 'error'); return; }
+      // Mutate in place + re-render. Realtime will refresh other clients.
+      building.staffing_priority = priority;
+      computeLaborAllocation();
+      renderInspector();
+      renderMap();
+      updateWorkers();
+    });
+}
+
+function toggleBuildingPaused(building) {
+  var nextPaused = building.status !== 'paused';
+  sb.rpc('set_building_paused', { p_building_id: building.id, p_paused: nextPaused })
+    .then(function (r) {
+      if (r.error) { showToast(r.error.message, 'error'); return; }
+      building.status = nextPaused ? 'paused' : 'active';
+      computeLaborAllocation();
+      renderInspector();
+      renderMap();
+      renderInventory();
+      updateWorkers();
+    });
 }
 
 function confirmDemolish(building) {
