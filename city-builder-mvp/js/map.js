@@ -557,7 +557,26 @@ export function renderMap() {
           var isPaused = building.status === 'paused';
           var isUnstaffed = mine && !isPaused && state.laborInfo.unstaffedIds[building.id];
           var isDisconnected = mine && !isPaused && state.noRoadAccessIds[building.id];
-          var isProducing = !isPaused && !isUnstaffed && !isDisconnected && buildingBt.category !== 'housing' && buildingBt.category !== 'road';
+          // Buildings only animate when they're actually doing their job:
+          // staffed, road-connected, not paused, AND (for input-consuming
+          // buildings like processors / services) every required input is
+          // in stock. Roads and housing don't carry the producing class —
+          // both have other indicators (road glow / housing tier).
+          var hasInputs = true;
+          if (mine && (buildingBt.input_resource_key || buildingBt.input_resource_key_2)) {
+            if (buildingBt.input_resource_key
+                && (state.inventory[buildingBt.input_resource_key] || 0) <= 0) hasInputs = false;
+            if (buildingBt.input_resource_key_2
+                && (state.inventory[buildingBt.input_resource_key_2] || 0) <= 0) hasInputs = false;
+          }
+          var isFunctionalCategory = buildingBt.category === 'extractor'
+            || buildingBt.category === 'food_extractor'
+            || buildingBt.category === 'processor'
+            || buildingBt.category === 'service'
+            || buildingBt.category === 'tax'
+            || buildingBt.category === 'booster';
+          var isProducing = !isPaused && !isUnstaffed && !isDisconnected
+            && hasInputs && isFunctionalCategory;
           if (isPaused) titleText += ' (paused)';
           else if (isDisconnected) titleText += ' (no road)';
           else if (isUnstaffed) titleText += ' (unstaffed)';
