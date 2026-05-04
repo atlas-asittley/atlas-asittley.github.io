@@ -478,7 +478,7 @@ BEGIN
   -- Curving highways: horizontal walks (0,7) → (14,7) and vertical walks
   -- (7,0) → (7,14). The four edge endpoints are fixed so chunks always
   -- match across borders; in between, the path can drift up to ±3 tiles
-  -- off the centerline before being forced back. mark_highway_tile()
+  -- off the centerline before being forced back. place_pre_road()
   -- updates one cell at a time and clears any resource cluster that
   -- happened to seed onto the path.
   DECLARE
@@ -491,7 +491,7 @@ BEGIN
     -- Horizontal pass
     v_axis_pos := 0;
     v_cur_off := 0;
-    PERFORM public.mark_highway_tile(p_player_id, v_x_start + 0, v_y_start + 7);
+    PERFORM public.place_pre_road(p_player_id, v_x_start + 0, v_y_start + 7);
     WHILE v_axis_pos < 14 LOOP
       v_steps_left := 14 - v_axis_pos;
       v_can_drift := abs(v_cur_off) + 1 < v_steps_left;
@@ -507,30 +507,30 @@ BEGIN
           v_drift_dir := -v_drift_dir;
         END IF;
         v_cur_off := v_cur_off + v_drift_dir;
-        PERFORM public.mark_highway_tile(p_player_id,
+        PERFORM public.place_pre_road(p_player_id,
           v_x_start + v_axis_pos, v_y_start + 7 + v_cur_off);
       ELSE
         IF NOT v_can_drift AND v_cur_off != 0 THEN
           v_cur_off := v_cur_off - sign(v_cur_off);
-          PERFORM public.mark_highway_tile(p_player_id,
+          PERFORM public.place_pre_road(p_player_id,
             v_x_start + v_axis_pos, v_y_start + 7 + v_cur_off);
         ELSE
           v_axis_pos := v_axis_pos + 1;
-          PERFORM public.mark_highway_tile(p_player_id,
+          PERFORM public.place_pre_road(p_player_id,
             v_x_start + v_axis_pos, v_y_start + 7 + v_cur_off);
         END IF;
       END IF;
     END LOOP;
     WHILE v_cur_off != 0 LOOP
       v_cur_off := v_cur_off - sign(v_cur_off);
-      PERFORM public.mark_highway_tile(p_player_id,
+      PERFORM public.place_pre_road(p_player_id,
         v_x_start + 14, v_y_start + 7 + v_cur_off);
     END LOOP;
 
     -- Vertical pass (transposed)
     v_axis_pos := 0;
     v_cur_off := 0;
-    PERFORM public.mark_highway_tile(p_player_id, v_x_start + 7, v_y_start + 0);
+    PERFORM public.place_pre_road(p_player_id, v_x_start + 7, v_y_start + 0);
     WHILE v_axis_pos < 14 LOOP
       v_steps_left := 14 - v_axis_pos;
       v_can_drift := abs(v_cur_off) + 1 < v_steps_left;
@@ -546,23 +546,23 @@ BEGIN
           v_drift_dir := -v_drift_dir;
         END IF;
         v_cur_off := v_cur_off + v_drift_dir;
-        PERFORM public.mark_highway_tile(p_player_id,
+        PERFORM public.place_pre_road(p_player_id,
           v_x_start + 7 + v_cur_off, v_y_start + v_axis_pos);
       ELSE
         IF NOT v_can_drift AND v_cur_off != 0 THEN
           v_cur_off := v_cur_off - sign(v_cur_off);
-          PERFORM public.mark_highway_tile(p_player_id,
+          PERFORM public.place_pre_road(p_player_id,
             v_x_start + 7 + v_cur_off, v_y_start + v_axis_pos);
         ELSE
           v_axis_pos := v_axis_pos + 1;
-          PERFORM public.mark_highway_tile(p_player_id,
+          PERFORM public.place_pre_road(p_player_id,
             v_x_start + 7 + v_cur_off, v_y_start + v_axis_pos);
         END IF;
       END IF;
     END LOOP;
     WHILE v_cur_off != 0 LOOP
       v_cur_off := v_cur_off - sign(v_cur_off);
-      PERFORM public.mark_highway_tile(p_player_id,
+      PERFORM public.place_pre_road(p_player_id,
         v_x_start + 7 + v_cur_off, v_y_start + 14);
     END LOOP;
   END;
@@ -724,50 +724,53 @@ END;
 $function$
 
 
--- demolish_highway_tile: lets a player remove a highway tile in their
--- own district. Converts the tile back to plain ground; recompute_extractor_paths
--- runs to re-target any of the player's extractors whose path may have
--- routed through the demolished cell.
-CREATE OR REPLACE FUNCTION public.demolish_highway_tile(p_tile_id uuid)
-RETURNS json
+-- reset_player(uuid): idempotent wipe of a player's game state. Used
+-- by the in-app "Reset" button — the auth.users row is preserved so
+-- the player can immediately re-pick an industry without re-logging
+-- in. choose_industry recreates the profile + starter chunk fresh.
+CREATE OR REPLACE FUNCTION public.reset_player(p_player_id uuid)
+RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
 AS $function$
-DECLARE
-  v_uid uuid := auth.uid();
-  v_tile record;
 BEGIN
-  SELECT * INTO v_tile FROM public.map_tiles WHERE id = p_tile_id FOR UPDATE;
-  IF NOT FOUND THEN RAISE EXCEPTION 'Tile not found'; END IF;
-  IF v_tile.owner_player_id IS NULL OR v_tile.owner_player_id <> v_uid THEN
-    RAISE EXCEPTION 'Cannot demolish a highway tile you do not own';
-  END IF;
-  IF v_tile.terrain_type <> 'highway' THEN
-    RAISE EXCEPTION 'Tile is not a highway tile';
-  END IF;
-  UPDATE public.map_tiles
-  SET terrain_type = 'ground', buildable = true
-  WHERE id = p_tile_id;
-  PERFORM public.recompute_extractor_paths(v_uid);
-  RETURN json_build_object('tile_id', p_tile_id, 'x', v_tile.x, 'y', v_tile.y);
+  DELETE FROM public.buildings WHERE player_id = p_player_id;
+  DELETE FROM public.map_tiles WHERE owner_player_id = p_player_id;
+  DELETE FROM public.district_chunks WHERE owner_player_id = p_player_id;
+  DELETE FROM public.inventories WHERE player_id = p_player_id;
+  DELETE FROM public.player_profiles WHERE id = p_player_id;
 END;
 $function$;
 
 
--- Helper for allocate_district_chunk's curving-highway pass: stamp one
--- highway tile on an owned ground tile. Idempotent; clears any resource
--- cluster that happened to seed onto the path.
-CREATE OR REPLACE FUNCTION public.mark_highway_tile(
+-- Pre-placed road helper. Used by allocate_district_chunk to lay down
+-- the curving "highway" network at chunk allocation.
+-- Insert a pre-placed road building owned by p_player_id at (p_x, p_y).
+-- Used by allocate_district_chunk to lay down the curving "highway" road
+-- network at chunk allocation. Idempotent — skips occupied tiles. Clears
+-- any random resource cluster that landed on the path so the
+-- reject_build_on_resource trigger doesn't fire.
+CREATE OR REPLACE FUNCTION public.place_pre_road(
   p_player_id uuid, p_x integer, p_y integer
 ) RETURNS void
-LANGUAGE sql
+LANGUAGE plpgsql
 AS $function$
-  UPDATE public.map_tiles
-  SET terrain_type = 'highway',
-      buildable = false,
-      resource_node_key = NULL
-  WHERE owner_player_id = p_player_id
-    AND x = p_x AND y = p_y;
+DECLARE
+  v_tile record;
+  v_bid uuid;
+BEGIN
+  SELECT * INTO v_tile FROM public.map_tiles
+  WHERE x = p_x AND y = p_y AND owner_player_id = p_player_id;
+  IF NOT FOUND THEN RETURN; END IF;
+  IF v_tile.occupied_building_id IS NOT NULL THEN RETURN; END IF;
+  IF v_tile.resource_node_key IS NOT NULL THEN
+    UPDATE public.map_tiles SET resource_node_key = NULL WHERE id = v_tile.id;
+  END IF;
+  INSERT INTO public.buildings (player_id, building_type_key, tile_id, x, y)
+  VALUES (p_player_id, 'road', v_tile.id, p_x, p_y)
+  RETURNING id INTO v_bid;
+  UPDATE public.map_tiles SET occupied_building_id = v_bid WHERE id = v_tile.id;
+END;
 $function$;
 
 
@@ -1094,7 +1097,6 @@ DECLARE
   v_neighbor_cost integer;
   v_existing_dist integer;
   v_is_road boolean;
-  v_is_highway boolean;
   v_neighbor_walkable boolean;
   v_is_resource boolean;
   v_dx int[] := ARRAY[-1, 1, 0, 0];
@@ -1147,44 +1149,33 @@ BEGIN
       END IF;
     END IF;
 
-    -- Expand 4 neighbors. Walkable at cost 1 if highway tile (any owner,
-    -- shared infrastructure) or player-owned road. Off-road = owned by
-    -- player + no building on it, cost 3.
+    -- Expand 4 neighbors. Walkable at cost 1 if a player-owned road
+    -- (which includes the curving pre-placed network) sits on the tile;
+    -- off-road = owned by player + no building, cost 3.
     FOR v_i IN 1..4 LOOP
       v_neighbor_x := v_cur_x + v_dx[v_i];
       v_neighbor_y := v_cur_y + v_dy[v_i];
       v_neighbor_key := v_neighbor_x || ',' || v_neighbor_y;
 
       SELECT EXISTS (
-        SELECT 1 FROM public.map_tiles mt
-        WHERE mt.x = v_neighbor_x AND mt.y = v_neighbor_y
-          AND mt.terrain_type = 'highway'
-      ) INTO v_is_highway;
+        SELECT 1 FROM public.buildings b
+        JOIN public.building_types bt ON bt.key = b.building_type_key
+        WHERE b.x = v_neighbor_x AND b.y = v_neighbor_y
+          AND bt.category = 'road' AND b.status = 'active'
+          AND b.player_id = p_player_id
+      ) INTO v_is_road;
 
-      IF v_is_highway THEN
+      IF v_is_road THEN
         v_neighbor_cost := v_road_cost;
         v_neighbor_walkable := true;
       ELSE
         SELECT EXISTS (
-          SELECT 1 FROM public.buildings b
-          JOIN public.building_types bt ON bt.key = b.building_type_key
-          WHERE b.x = v_neighbor_x AND b.y = v_neighbor_y
-            AND bt.category = 'road' AND b.status = 'active'
-            AND b.player_id = p_player_id
-        ) INTO v_is_road;
-
-        IF v_is_road THEN
-          v_neighbor_cost := v_road_cost;
-          v_neighbor_walkable := true;
-        ELSE
-          SELECT EXISTS (
-            SELECT 1 FROM public.map_tiles mt
-            WHERE mt.x = v_neighbor_x AND mt.y = v_neighbor_y
-              AND mt.owner_player_id = p_player_id
-              AND mt.occupied_building_id IS NULL
-          ) INTO v_neighbor_walkable;
-          v_neighbor_cost := v_offroad_cost;
-        END IF;
+          SELECT 1 FROM public.map_tiles mt
+          WHERE mt.x = v_neighbor_x AND mt.y = v_neighbor_y
+            AND mt.owner_player_id = p_player_id
+            AND mt.occupied_building_id IS NULL
+        ) INTO v_neighbor_walkable;
+        v_neighbor_cost := v_offroad_cost;
       END IF;
 
       IF NOT v_neighbor_walkable THEN CONTINUE; END IF;
@@ -1386,16 +1377,7 @@ BEGIN
   -- just slower (off-road steps cost more, so production scales down).
 
   IF v_bt.category = 'road' THEN
-    SELECT (
-      EXISTS (
-        SELECT 1 FROM public.map_tiles mt
-        WHERE mt.terrain_type = 'highway'
-          AND ((mt.x = v_tile.x - 1 AND mt.y = v_tile.y)
-               OR (mt.x = v_tile.x + 1 AND mt.y = v_tile.y)
-               OR (mt.x = v_tile.x AND mt.y = v_tile.y - 1)
-               OR (mt.x = v_tile.x AND mt.y = v_tile.y + 1))
-      )
-      OR EXISTS (
+    SELECT EXISTS (
         SELECT 1
         FROM public.buildings b2
         JOIN public.building_types bt2 ON bt2.key = b2.building_type_key
@@ -1408,10 +1390,9 @@ BEGIN
             OR (b2.x = v_tile.x AND b2.y = v_tile.y - 1)
             OR (b2.x = v_tile.x AND b2.y = v_tile.y + 1)
           )
-      )
     ) INTO v_road_connected;
     IF NOT v_road_connected THEN
-      RAISE EXCEPTION 'Roads must connect to the highway or another of your roads';
+      RAISE EXCEPTION 'Roads must connect to another of your roads';
     END IF;
   END IF;
 
@@ -2208,7 +2189,6 @@ DECLARE
   v_neighbor_cost integer;
   v_existing_dist integer;
   v_is_road boolean;
-  v_is_highway boolean;
   v_neighbor_walkable boolean;
   v_dx int[] := ARRAY[-1, 1, 0, 0];
   v_dy int[] := ARRAY[0, 0, -1, 1];
@@ -2243,35 +2223,24 @@ BEGIN
       v_neighbor_key := v_neighbor_x || ',' || v_neighbor_y;
 
       SELECT EXISTS (
-        SELECT 1 FROM public.map_tiles mt
-        WHERE mt.x = v_neighbor_x AND mt.y = v_neighbor_y
-          AND mt.terrain_type = 'highway'
-      ) INTO v_is_highway;
+        SELECT 1 FROM public.buildings b
+        JOIN public.building_types bt ON bt.key = b.building_type_key
+        WHERE b.x = v_neighbor_x AND b.y = v_neighbor_y
+          AND bt.category = 'road' AND b.status = 'active'
+          AND b.player_id = p_player_id
+      ) INTO v_is_road;
 
-      IF v_is_highway THEN
+      IF v_is_road THEN
         v_neighbor_cost := v_road_cost;
         v_neighbor_walkable := true;
       ELSE
         SELECT EXISTS (
-          SELECT 1 FROM public.buildings b
-          JOIN public.building_types bt ON bt.key = b.building_type_key
-          WHERE b.x = v_neighbor_x AND b.y = v_neighbor_y
-            AND bt.category = 'road' AND b.status = 'active'
-            AND b.player_id = p_player_id
-        ) INTO v_is_road;
-
-        IF v_is_road THEN
-          v_neighbor_cost := v_road_cost;
-          v_neighbor_walkable := true;
-        ELSE
-          SELECT EXISTS (
-            SELECT 1 FROM public.map_tiles mt
-            WHERE mt.x = v_neighbor_x AND mt.y = v_neighbor_y
-              AND mt.owner_player_id = p_player_id
-              AND (mt.occupied_building_id IS NULL OR (mt.x = p_tx AND mt.y = p_ty))
-          ) INTO v_neighbor_walkable;
-          v_neighbor_cost := v_offroad_cost;
-        END IF;
+          SELECT 1 FROM public.map_tiles mt
+          WHERE mt.x = v_neighbor_x AND mt.y = v_neighbor_y
+            AND mt.owner_player_id = p_player_id
+            AND (mt.occupied_building_id IS NULL OR (mt.x = p_tx AND mt.y = p_ty))
+        ) INTO v_neighbor_walkable;
+        v_neighbor_cost := v_offroad_cost;
       END IF;
 
       IF NOT v_neighbor_walkable THEN CONTINUE; END IF;
@@ -2319,7 +2288,7 @@ GRANT EXECUTE ON FUNCTION public.allocate_district_chunk(p_player_id uuid, p_chu
 GRANT EXECUTE ON FUNCTION public.black_market_trade(p_resource_key text, p_quantity integer, p_direction text) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.choose_industry(p_display_name text, p_industry_key text) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.clear_resource_tile(uuid) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.demolish_highway_tile(uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.reset_player(uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.complete_onboarding(p_display_name text, p_specialization_key text) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.expand_district(integer, integer) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.expansion_candidates(uuid) TO authenticated;
