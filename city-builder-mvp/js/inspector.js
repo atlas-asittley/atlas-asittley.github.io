@@ -460,7 +460,6 @@ function renderInspector() {
       });
       html += '</div>';
     }
-  }
 
     // Factual worker cost (extractor / processor / service / tax)
     if (bt.category === 'extractor' || bt.category === 'processor'
