@@ -78,28 +78,45 @@ Buildings with `industry_key = 'common'` (housing, roads, future civic) are buil
 
 Buildings are stored in `buildings`; their catalog is `building_types`. Categories:
 
-- **`extractor`** (tier 1) — collects raw resources from map tiles. New mechanic; see [Resource collection](#resource-collection).
-- **`processor`** (tier 2) — consumes one resource from inventory, produces another. Examples: sawmill (timber → planks), mill (grain → flour).
-- **`artisan`** (tier 3) — higher-tier processor. Examples: woodcarver, sculptor, bakery.
-- **`housing`** — provides workers, evolves through tiers t0–t5. `industry_key = 'common'`.
-- **`road`** — connectivity infrastructure. Walkers move on roads. Required for production-building access. `industry_key = 'common'`.
-- **`specialty`** *(future)* — cross-resource civic buildings. Not yet defined.
+- **`extractor`** (tier 1) — collects raw resources from map tiles via collector walkers. See [Resource collection](#resource-collection).
+- **`processor`** (tier 2) — consumes one resource from inventory, produces another. Examples: sawmill (timber → lumber), mill (grain → flour). Tier-3 processors (woodcarver, sculptor, bakery) live in this same category — they're just deeper in the chain.
+- **`housing`** — provides workers, evolves through tiers t0–t5 with prerequisites; see [Housing evolution](#housing-evolution). `industry_key = 'common'`.
+- **`road`** — connectivity infrastructure. Walkers move on roads. Required for staffing of processor / service / tax / housing-tier-1+ buildings. `industry_key = 'common'`.
+- **`service`** — citizen-job buildings that consume resources to provide an effect. All require road access to staff and must be staffed AND fed (all inputs available for the elapsed window) to "operate". Examples: well (gates housing tier 1+ within 4), tavern (consumes bread+pottery for a worker bonus), bathhouse (consumes brick+clay, blocks housing devolve in 4 tiles), school (consumes lumber+flour, gates Townhouse within 5), temple (consumes statuary+brick, gates Villa within 6). `industry_key = 'common'`.
+- **`tax`** — credits money to the player when staffed. Currently just Tax Office ($10/min, 10 workers, road-required). `industry_key = 'common'`.
 
 Each building has:
 - `(x, y)` position
 - `player_id` — owner
-- `status` — `active`, `inactive`, `idle` (M2: extractor with no path), `unstaffed`, `disconnected`, etc.
-- `created_at` — used for worker allocation order
+- `status` — `active`, `inactive`, `paused`, etc.
+- `created_at` — used for worker allocation order (oldest first)
 
-M2 additions to `buildings` (extractors only):
+Extractor-only fields:
 - `target_x`, `target_y` — coordinates of the claimed resource tile
 - `path_length` — number of road tiles between the extractor's adjacent road and the road tile next to the target
+
+`building_types` columns:
+- `category`, `tier`, `industry_key`, `build_cost`, `worker_cost`
+- `input_resource_key`, `input_rate` — primary input (processor + service)
+- `input_resource_key_2`, `input_rate_2` — second input for multi-input services (tavern, bathhouse, school, temple). Cheaper than a join table at current scale; switch to join table only if a 3-input building shows up.
+- `output_resource_key`, `output_rate` — production output OR (for tax/service) the magnitude of the side-effect (e.g., tavern's `output_rate=10` is the worker-capacity bonus)
+- `workers_provided` — used by housing tiers
 
 ---
 
 ## Resources
 
-Stored in the `resources` catalog table; per-player counts in `inventories`. Each resource has `industry_key` linking it to its native industry. A `kind` field distinguishes raw resources (output of extractors) from processed goods (output of processors).
+Stored in the `resources` catalog table; per-player counts in `inventories`. Each resource row carries:
+- `industry_key` — links a resource to its native industry
+- `kind` — `raw` (extractor output) or `processed` (processor output)
+- `is_food` — used by the housing food gate (see [Housing evolution](#housing-evolution))
+
+Today's resources:
+- **Raw**: timber, stone, clay, grain
+- **Processed (tier-2)**: lumber, brick, pottery, flour
+- **Processed (tier-3)**: bread, furniture, statuary
+
+Foods today (`is_food = true`): grain, flour, bread. The food-pairing item (see TODO) will add berries/fish/vegetables, each marked `is_food = true` so they auto-satisfy the housing food gate without further code change.
 
 A player can produce **only their primary resource** directly via extractors. To get any other resource, they must trade (NPC or player-to-player).
 
@@ -113,16 +130,21 @@ This is the new mechanic introduced in M2.
 Extractors can be placed on any tile in the player's district that is:
 - Buildable (terrain allows building)
 - Owned by the player
-- Road-adjacent (orthogonally next to at least one road tile)
 - Not currently occupied by another building
+- Not on a resource tile (clear the resource first via `clear_resource_tile`)
 
-There is **no requirement** that the tile contain a resource node. (Old rule: extractor had to be placed *on* a resource tile. That rule is removed in M2.)
+Extractors do **not** require road-adjacency. The walker pathing handles off-road movement (see below).
 
-### Pathfinding (server-side BFS)
-On placement, the server runs BFS over the player's road graph (active road buildings within their district). The BFS finds the shortest path from a road tile adjacent to the extractor to a road tile orthogonally adjacent to an **unclaimed** resource tile of the player's primary resource type.
+### Pathfinding (server-side weighted Dijkstra)
+On placement, the server runs weighted Dijkstra to find the nearest **unclaimed** resource tile of the player's primary resource type. Edge costs:
+- Road tile (any owner): cost 1
+- Off-road buildable tile: cost 3
+- Resource tile / unbuildable terrain: blocked
+
+This means walkers strongly prefer roads but will cut across grass when the road detour is too long. `path_length` records the resulting weighted distance.
 
 - If found: server records `target_x`, `target_y`, `path_length` on the building. Marks the resource tile via `claimed_by_building_id = building.id`.
-- If not found: building goes `idle`. Will auto-retry whenever roads change or the district expands.
+- If not found: extractor stays placed but produces nothing. Will auto-retry whenever roads change or the district expands.
 
 ### Re-targeting (hybrid sticky)
 An extractor keeps its claimed tile **until the path becomes invalid** (e.g., a road on the path is demolished, breaking connectivity). When that happens:
@@ -190,6 +212,32 @@ Two modes coexist:
 
 ---
 
+## Housing evolution
+
+Houses begin as Tier 0 (Shanty) and evolve up through Tier 5 (Manor Estate) when their prerequisites are met for at least `upgrade_secs` (per-tier; see `housing_tier_config`). They devolve when prerequisites lapse for at least `devolve_secs`. Both checks are per-house and run inside `process_production`.
+
+| Tier | Name | Workers | Needs road | Needs well | Needs food | Needs school | Needs temple |
+|---|---|---|---|---|---|---|---|
+| 0 | Shanty | 2 | — | — | — | — | — |
+| 1 | Mud Hut | 6 | ✓ | ✓ | ✓ | — | — |
+| 2 | Cottage | 10 | ✓ | ✓ | ✓ | — | — |
+| 3 | Townhouse | 16 | ✓ | ✓ | ✓ | ✓ | — |
+| 4 | Villa | 24 | ✓ | ✓ | ✓ | ✓ | ✓ |
+| 5 | Manor Estate | 34 | ✓ | ✓ | ✓ | ✓ | ✓ |
+
+Per-prereq mechanics:
+- **Road**: any orthogonal neighbor is an active road building. Highways count.
+- **Well**: any active well within Manhattan distance 4. Wells don't need to be staffed or fed for this gate — placement is enough.
+- **Food**: any resource flagged `is_food = true` has quantity > 0 in inventory. Presence-only check today; consumption-per-tick is planned once the food-pairing item lands so non-grain industries have a local food source.
+- **School**: any school within Manhattan distance 5 that is currently *operating* — staffed AND has both inputs (lumber + flour) available for the elapsed window. Built but unfed schools don't gate.
+- **Temple**: any temple within distance 6 that is operating (statuary + brick).
+
+Devolve override: an *operating bathhouse* (consumes brick + clay) within distance 4 blocks devolve regardless of which prereq lapsed. Useful as a buffer against a temporary food / road / service interruption.
+
+Tier 0 (Shanty) is the subsistence floor — no road, well, or food needed. A player without trade access can always run a Shanty for 2 workers, so progression is throttled but never fully blocked.
+
+---
+
 ## Trading
 
 ### NPC traders (working)
@@ -249,16 +297,17 @@ The trust model: **the server is the source of truth**. The client never submits
 
 | Table | Purpose |
 |---|---|
-| `player_profiles` | One row per player: industry, money, workers, display name |
-| `map_tiles` | Per-tile data: position, terrain, resource node, **owner (M1)**, **claim (M2)** |
-| `buildings` | Placed buildings: position, type, owner, status, **target + path_length (M2)** |
-| `building_types` | Catalog of buildable types: industry, category, costs, rates |
-| `resources` | Catalog of resource types: name, industry, kind |
+| `player_profiles` | One row per player: industry, money, workers, display name, home anchor |
+| `map_tiles` | Per-tile data: position, terrain, resource node, owner, extractor claim |
+| `buildings` | Placed buildings: position, type, owner, status, target + path_length (extractors), housing_tier (housing) |
+| `building_types` | Catalog of buildable types: industry, category, costs, rates, **two-input columns for multi-input services** |
+| `resources` | Catalog: name, industry, kind, **`is_food` flag for the housing food gate** |
+| `housing_tier_config` | Per-tier name/labels/worker count + prereq booleans (`needs_road`, `needs_well`, `needs_food`, `needs_school`, `needs_temple`) + upgrade/devolve timings |
 | `inventories` | Per-player resource counts |
-| `traders`, `trader_prices`, `trade_transactions` | NPC trade plumbing |
-| `trade_policies`, `trader_visits` | Trade automation |
+| `traders`, `trader_prices`, `trader_visits` | NPC trade plumbing |
+| `trade_policies` | Per-resource sell-surplus / buy-to-reserve automation |
 
-Migrations live in `city-builder-mvp/*.sql`. M1/M2 will add new migration files.
+Migrations live in `city-builder-mvp/migration_patches/*.sql` and apply chronologically. `baseline_schema.sql` is a snapshot that drifts behind the migrations; for fresh deploys, run baseline + every migration in order.
 
 ---
 
@@ -269,23 +318,33 @@ These are the dials that affect game feel. Defaults shown.
 | Knob | Default | Where |
 |---|---|---|
 | Chunk size | 15×15 | District allocation RPC |
-| Resource density per new chunk | ~8% | Chunk generator |
+| Resource clusters per new chunk | 4 random-walk blobs (~30 tiles) | `cluster_resources_in_chunks.sql` |
+| Highway: horizontal strip y-offset | 7 | `allocate_district_chunk` |
+| Highway: vertical strip x-offset | 7 | `allocate_district_chunk` |
 | Canonical path length (full rate) | 4 tiles | `process_production` |
 | Walker step duration | 1.4s | `WALKER_MOVE_MS` in `walkers.js` |
-| Walker pause at resource | 1.5s | M2 collector walker |
+| Walker pause at resource | 1.5s | collector walker |
+| Walker max ambient count | 7 | `WALKER_MAX_COUNT` in `walkers.js` |
 | Production tick interval | 30s | `game.js` setInterval |
-| NPC trader visit interval | 10 min | `traders.visit_interval_minutes` |
-| Trader visit capacity | 20 goods | `traders.visit_capacity` |
-| Base workers per player | 5 | `choose_industry` |
-| Workers per house | 6 | `building_types.workers_provided` |
-| Expansion cost | `base × chunks_owned²` | `expand_district` |
+| NPC trader visit interval | 10–18 min (per trader) | `traders.visit_interval_minutes` |
+| Trader visit capacity | 14–26 (per trader) | `traders.visit_capacity` |
+| Base workers per player | 5 | constant in `process_production` |
+| Workers per house | 2/6/10/16/24/34 by tier | `housing_tier_config.workers` |
+| Extractor / processor worker_cost | 10 | `building_types.worker_cost` |
+| Service worker_cost | well 3, tavern/bathhouse 5, school/temple 10 | `building_types.worker_cost` |
+| Tax Office revenue | $10/min when staffed | Tax building's `output_rate` |
+| Tavern worker bonus | +10 capacity when fed | Tavern's `output_rate` |
+| Well housing range | 4 tiles | `has_well_access` |
+| School housing range | 5 tiles | `process_production` housing eval |
+| Temple housing range | 6 tiles | `process_production` housing eval |
+| Bathhouse devolve-block range | 4 tiles | `process_production` housing eval |
+| Expansion cost | `500 × chunks_owned²` | `expand_district` |
 
 ---
 
 ## Glossary
 
 - **Ambient walker** — a cosmetic walker spawned by housing or staffed production. Random-walks. No game state.
-- **Artisan** — tier-3 processor (woodcarver, sculptor, bakery).
 - **Canonical path length** — 4 tiles. The path length at which an extractor produces at full rate.
 - **Chunk** — a 15×15 block of tiles allocated as a unit. Districts are made of chunks.
 - **Claim** — the link from an extractor to its target resource tile. Stored as `map_tiles.claimed_by_building_id`.
@@ -293,25 +352,29 @@ These are the dials that affect game feel. Defaults shown.
 - **District** — the set of tiles owned by a player. Computed from `map_tiles.owner_player_id`.
 - **Effective rate** — the actual production rate of an extractor: `output_rate × min(1, 4/path_length)`.
 - **Extractor** — tier-1 building that collects raw resources from a map tile via a collector walker.
+- **Food** — any resource flagged `is_food = true`. Today: grain, flour, bread. Required to be present in inventory for housing tier 1+.
 - **Industry** — a player's specialization. Maps 1:1 to a primary resource. Currently `timber | stone | grain | clay`.
+- **Operating service** — a service building that is currently staffed AND has all inputs available for the elapsed window. Tracked as an in-memory `v_operating_services` array each tick of `process_production`. The school/temple/bathhouse housing-tier checks query against this set; merely placing the building isn't enough.
 - **Path length** — the number of road tiles between an extractor's adjacent road tile and the road tile orthogonally adjacent to its claimed resource tile.
 - **Primary resource** — the resource type a player can extract directly.
-- **Processor** — tier-2 building that transforms one resource into another (sawmill, mill, mason workshop, pottery kiln).
+- **Processor** — building category for any input → output transform. Includes both tier-2 (sawmill, mill, mason workshop, pottery kiln) and tier-3 (woodcarver, sculptor, bakery) chain steps.
+- **Service** — building category for citizen-job buildings (well, tavern, bathhouse, school, temple). Each consumes inputs and provides an effect when staffed AND fed.
 - **Specialty resource** — any resource not native to the player's industry. Acquired via trade.
+- **Subsistence floor** — Tier 0 Shanty. Always available, no prerequisites; protects players without trade access from being fully blocked on housing.
+- **Tax building** — building category for revenue-generating buildings. Currently just Tax Office.
 - **Wilderness** — a tile with `owner_player_id = NULL`. Visible but not buildable.
 
 ---
 
 ## Future / out of scope
 
-These are explicit non-goals for the current milestones, listed so they don't get conflated with planned work.
+These are explicit non-goals for the current milestones, listed so they don't get conflated with planned work. Items that *are* planned live in `TODO.md`.
 
-- **Specialty buildings** — cross-resource civic structures. Not yet designed.
 - **Player-to-player trade** — schema exists, untested. Deferred until multiple real players are using the game.
 - **Resource depletion or regeneration** — resources are infinite; tiles are never consumed.
 - **Multiplayer presence indicators** — no "active now" markers, no chat.
 - **Combat / conflict** — non-goal. Districts cannot be contested or invaded.
-- **Path visualization on hover** — possible future polish, not in M2.
+- **Path visualization on hover** — possible future polish.
 - **Pipeline of multiple walkers per extractor** — one walker per extractor for v1; richer animations later if desired.
 - **Adaptive re-targeting** — current rule is sticky. Adaptive (auto-swap to closer tile when roads change) is a future tuning option.
 
@@ -319,7 +382,7 @@ These are explicit non-goals for the current milestones, listed so they don't ge
 
 ## Document conventions
 
-This doc describes the **target state** after milestones M1 (district scaffolding) and M2 (distance-based collection) ship. Where current code differs, the difference is called out inline. Future AI sessions or new contributors should treat this as the spec; if reality drifts from it, update the doc rather than the other way around.
+This doc describes the **target state** of the game's mechanics. M1 (district scaffolding) and M2 (distance-based collection) are shipped. Subsequent additions — services, tax, multi-input feeding, housing prereq stack, food gate — are also shipped. Where current code differs from this doc, treat the doc as authoritative and update reality, OR update the doc if the code's behavior is the right one. Don't let the two drift.
 
 When mechanics change, update:
 1. This document (`GAME_DESIGN.md`)

@@ -7,11 +7,9 @@ import { enterGame, stopProdLoop } from './game.js';
 var selectedIndustry = null;
 
 export function checkProfileAndRoute(user) {
-  console.log('[load] checkProfileAndRoute for', user.id);
   state.currentUser = user;
   sb.from('player_profiles').select('*').eq('id', user.id).maybeSingle()
     .then(function (r) {
-      console.log('[load] checkProfileAndRoute: query returned. error?', !!r.error, 'has profile?', !!r.data);
       if (r.error) {
         console.warn('Profile check error:', r.error.message);
         enterIndustrySelect();
@@ -24,10 +22,7 @@ export function checkProfileAndRoute(user) {
         enterIndustrySelect();
       }
     })
-    .catch(function (err) {
-      console.error('[load] checkProfileAndRoute threw:', err);
-      enterIndustrySelect();
-    });
+    .catch(function () { enterIndustrySelect(); });
 }
 
 function enterIndustrySelect() {

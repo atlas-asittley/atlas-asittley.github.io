@@ -56,17 +56,14 @@ initAuthEvents();
 initGameEvents();
 
 // Restore session on load
-console.log('[load] main.js: getting session');
 sb.auth.getSession().then(function (r) {
   var session = r.data && r.data.session;
-  console.log('[load] main.js: session resolved, has user:', !!(session && session.user));
   if (session && session.user) {
     checkProfileAndRoute(session.user);
   } else {
     showScreen('screen-welcome');
   }
-}).catch(function (err) {
-  console.error('[load] main.js: getSession threw:', err);
+}).catch(function () {
   showScreen('screen-welcome');
 });
 
