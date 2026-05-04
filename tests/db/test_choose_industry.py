@@ -37,9 +37,11 @@ def test_total_tiles_in_chunk_is_225(make_player, cur):
     assert cur.fetchone()[0] == 225
 
 
-@pytest.mark.parametrize("industry", ['timber', 'stone', 'grain', 'clay'])
+@pytest.mark.parametrize("industry", ['timber', 'stone', 'iron', 'clay'])
 def test_accepts_all_four_industries(make_player, industry):
-    """Regression: choose_industry used to only accept ('timber', 'stone')."""
+    """Regression: choose_industry used to only accept ('timber', 'stone').
+    Then accepted ('timber', 'stone', 'grain', 'clay'). Then grain was
+    reclassified as a food only, replaced by iron as the 4th industry."""
     p = make_player(industry=industry)
     assert p['industry_key'] == industry
 
@@ -47,6 +49,12 @@ def test_accepts_all_four_industries(make_player, industry):
 def test_rejects_unknown_industry(make_player):
     with pytest.raises(psycopg2.errors.RaiseException):
         make_player(industry='nonsense')
+
+
+def test_rejects_legacy_grain_industry(make_player):
+    """Grain was an industry option pre-2026-05; now it's a food only."""
+    with pytest.raises(psycopg2.errors.RaiseException):
+        make_player(industry='grain')
 
 
 def test_rejects_short_display_name(make_player):

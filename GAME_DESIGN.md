@@ -113,10 +113,19 @@ Stored in the `resources` catalog table; per-player counts in `inventories`. Eac
 - `is_food` — used by the housing food gate (see [Housing evolution](#housing-evolution))
 
 Today's resources:
-- **Raw industry**: timber, stone, clay, grain
-- **Raw food**: berries, fish, vegetables (from paired food extractors; grain doubles as both raw industry and food)
+- **Raw industry**: timber, stone, clay, iron
+- **Raw food**: berries, fish, vegetables, grain (each is the paired food for one industry)
 - **Processed (tier-2)**: lumber, brick, pottery, flour
 - **Processed (tier-3)**: bread, furniture, statuary
+
+Industry → paired food extractor:
+
+| Industry | Industry resource | Paired food | Food extractor |
+|---|---|---|---|
+| timber | timber | berries | Orchard |
+| stone | stone | fish | Fishing Pier |
+| clay | clay | vegetables | Garden |
+| iron | iron | grain | Grain Farm (flat-rate `food_extractor`) |
 
 Foods (`is_food = true`): grain, flour, bread, berries, fish, vegetables. Any of these in inventory satisfies the housing food gate. Future tier-specialized gates (e.g., "Townhouse needs grain specifically") would add per-resource booleans to `housing_tier_config`.
 
@@ -355,7 +364,7 @@ These are the dials that affect game feel. Defaults shown.
 - **Effective rate** — the actual production rate of an extractor: `output_rate × min(1, 4/path_length)`.
 - **Extractor** — tier-1 building that collects raw resources from a map tile via a collector walker.
 - **Food** — any resource flagged `is_food = true`. Today: grain, flour, bread. Required to be present in inventory for housing tier 1+.
-- **Industry** — a player's specialization. Maps 1:1 to a primary resource. Currently `timber | stone | grain | clay`.
+- **Industry** — a player's specialization. Maps 1:1 to a primary resource. Currently `timber | stone | iron | clay`.
 - **Operating service** — a service building that is currently staffed AND has all inputs available for the elapsed window. Tracked as an in-memory `v_operating_services` array each tick of `process_production`. The school/temple/bathhouse housing-tier checks query against this set; merely placing the building isn't enough.
 - **Path length** — the number of road tiles between an extractor's adjacent road tile and the road tile orthogonally adjacent to its claimed resource tile.
 - **Primary resource** — the resource type a player can extract directly.

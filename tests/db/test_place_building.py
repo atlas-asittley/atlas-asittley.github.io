@@ -111,7 +111,7 @@ def test_industry_mismatch_rejected(make_player, place, clear_resources):
 
 def test_common_buildings_allowed_for_any_industry(make_player, place, clear_resources):
     """Housing and roads are 'common' — buildable by any industry."""
-    for industry in ['timber', 'stone', 'grain', 'clay']:
+    for industry in ['timber', 'stone', 'iron', 'clay']:
         p = make_player(industry=industry)
         clear_resources(p['id'])
         hx, hy = p['home_x'], p['home_y']
