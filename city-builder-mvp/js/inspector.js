@@ -228,28 +228,6 @@ function reloadAfterTileChange() {
   });
 }
 
-// ── Helper: get staffing priority position for a building ──
-function getStaffingPosition(building) {
-  var myBuildings = state.allBuildings.filter(function (b) {
-    return b.player_id === state.currentUser.id;
-  });
-  var prodBuildings = myBuildings.filter(function (b) {
-    var bt = state.buildingTypes[b.building_type_key];
-    if (!bt || b.status !== 'active') return false;
-    if (bt.category === 'extractor') return true;
-    if (bt.category === 'processor') return !!state.roadAccessIds[b.id];
-    return false;
-  }).sort(function (a, b) {
-    return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-  });
-
-  var pos = -1;
-  for (var i = 0; i < prodBuildings.length; i++) {
-    if (prodBuildings[i].id === building.id) { pos = i + 1; break; }
-  }
-  return { position: pos, total: prodBuildings.length };
-}
-
 // ── Helper: count buildings that would lose road access if a road is demolished ──
 function countDependentBuildings(building) {
   var bt = state.buildingTypes[building.building_type_key];
@@ -274,6 +252,94 @@ function countDependentBuildings(building) {
     }
   });
   return count;
+}
+
+// ── Issues: consolidated list of reasons this building isn't operational ──
+// Returns an array of { label, hint, severity } where severity is 'bad'
+// (blocks operation entirely) or 'warn' (idle but recoverable). Empty
+// array means the building is fully operational.
+function computeBuildingIssues(b, bt) {
+  if (b.player_id !== state.currentUser.id) return [];
+  if (bt.category === 'road') return [];
+  var issues = [];
+
+  // Road access
+  var needsRoad = false;
+  if (bt.category === 'processor' || bt.category === 'service' || bt.category === 'tax') {
+    needsRoad = true;
+  } else if (bt.category === 'housing') {
+    var tier0 = b.housing_tier !== undefined ? b.housing_tier : 1;
+    var tierCfg0 = state.housingTierConfig[tier0];
+    if (tierCfg0 && tierCfg0.needs_road) needsRoad = true;
+  }
+  if (needsRoad && !state.roadAccessIds[b.id]) {
+    if (bt.category === 'housing') {
+      issues.push({
+        severity: 'bad',
+        label: 'No road access',
+        hint: 'This house contributes 0 workers and won\'t evolve until a road touches it.'
+      });
+    } else {
+      issues.push({
+        severity: 'bad',
+        label: 'No road access',
+        hint: 'Place a road on a tile orthogonally adjacent to this building.'
+      });
+    }
+  }
+
+  // Worker staffing — only flag if the building consumes workers AND is
+  // unstaffed (computeLaborAllocation already accounts for road access).
+  var consumesWorkers = bt.category === 'extractor' || bt.category === 'processor'
+    || bt.category === 'service' || bt.category === 'tax';
+  if (consumesWorkers && state.laborInfo.unstaffedIds[b.id]) {
+    var li = state.laborInfo;
+    var hint = 'Needs ' + bt.worker_cost + ' worker' + (bt.worker_cost > 1 ? 's' : '')
+      + '. Pool is ' + li.workerSupply + ', used ' + li.workersUsed + '. '
+      + 'Older buildings staff first — build or upgrade housing to add capacity.';
+    issues.push({ severity: 'bad', label: 'Not staffed', hint: hint });
+  }
+
+  // Extractor path
+  if (bt.category === 'extractor'
+      && (b.path_length === null || b.path_length === undefined)) {
+    var resKey = bt.output_resource_key || 'resource';
+    var resName = state.resources[resKey] ? state.resources[resKey].name.toLowerCase() : resKey;
+    issues.push({
+      severity: 'warn',
+      label: 'No reachable resource',
+      hint: 'No unclaimed ' + resName + ' tile is reachable. Clear obstructions or place roads toward one.'
+    });
+  }
+
+  // Input stock — only relevant if otherwise operational (staffed + on
+  // road). An unstaffed building is already "broken"; missing inputs
+  // would be the next thing to fix.
+  if (!state.laborInfo.unstaffedIds[b.id] && (bt.category === 'extractor' ? false : !needsRoad || state.roadAccessIds[b.id])) {
+    var inputs = [];
+    if (bt.category === 'processor' && bt.input_resource_key && bt.input_rate > 0) {
+      inputs.push(bt.input_resource_key);
+    } else if (bt.category === 'service') {
+      if (bt.input_resource_key && bt.input_rate > 0) inputs.push(bt.input_resource_key);
+      if (bt.input_resource_key_2 && bt.input_rate_2 > 0) inputs.push(bt.input_resource_key_2);
+    }
+    inputs.forEach(function (key) {
+      var stock = state.inventory[key] || 0;
+      if (stock <= 0) {
+        var nm = state.resources[key] ? state.resources[key].name : key;
+        var idleHint = bt.category === 'service'
+          ? 'Service is idle until ' + nm.toLowerCase() + ' is restocked.'
+          : 'Production has stalled until ' + nm.toLowerCase() + ' is restocked.';
+        issues.push({
+          severity: 'warn',
+          label: 'No ' + nm.toLowerCase() + ' in stock',
+          hint: idleHint + ' Produce it locally or trade for it.'
+        });
+      }
+    });
+  }
+
+  return issues;
 }
 
 function renderInspector() {
@@ -309,97 +375,39 @@ function renderInspector() {
     html += '<div class="insp-row"><span class="insp-label">Owner</span><span class="insp-value">' + b.player_profiles.display_name + '</span></div>';
   }
 
-  // Status indicators (only for own buildings)
+  // Status + Issues (only for own buildings, not roads)
   if (mine && bt.category !== 'road') {
-    // Road connectivity
-    if (bt.category === 'processor') {
-      var hasRoad = !!state.roadAccessIds[b.id];
-      var roadClass = hasRoad ? 'insp-good' : 'insp-bad';
-      var roadText = hasRoad ? 'Connected' : 'No road access';
-      html += '<div class="insp-row"><span class="insp-label">Road</span><span class="insp-value ' + roadClass + '">' + roadText + '</span></div>';
-      if (!hasRoad) {
-        html += '<div class="insp-hint">Place a road next to this building to enable production and trade.</div>';
-      }
-    } else if (bt.category === 'housing') {
-      var tier = b.housing_tier !== undefined ? b.housing_tier : 1;
-      var tierCfg = state.housingTierConfig[tier];
-      if (tierCfg && tierCfg.needs_road) {
-        var hasRoad = !!state.roadAccessIds[b.id];
-        var roadClass = hasRoad ? 'insp-good' : 'insp-bad';
-        var roadText = hasRoad ? 'Connected' : 'No road access';
-        html += '<div class="insp-row"><span class="insp-label">Road</span><span class="insp-value ' + roadClass + '">' + roadText + '</span></div>';
-        if (!hasRoad) {
-          html += '<div class="insp-hint">Connect a road to provide workers. Currently contributing 0 workers.</div>';
-        }
-      }
+    var issues = computeBuildingIssues(b, bt);
+    var statusClass, statusText;
+    if (issues.length === 0) {
+      statusClass = 'insp-good';
+      statusText = bt.category === 'housing' ? 'Producing workers' : 'Operational';
+    } else {
+      var anyBad = issues.some(function (i) { return i.severity === 'bad'; });
+      statusClass = anyBad ? 'insp-bad' : 'insp-warn';
+      statusText = issues.length === 1 ? '1 issue' : (issues.length + ' issues');
     }
+    html += '<div class="insp-row"><span class="insp-label">Status</span><span class="insp-value ' + statusClass + '">' + statusText + '</span></div>';
 
-    // Staffing (production buildings only)
-    if (bt.category === 'extractor' || bt.category === 'processor') {
-      var isStaffed = !!state.laborInfo.staffedIds[b.id];
-      var staffClass = isStaffed ? 'insp-good' : 'insp-bad';
-      var staffText = isStaffed ? 'Staffed (' + bt.worker_cost + ' worker' + (bt.worker_cost > 1 ? 's' : '') + ')' : 'Unstaffed (needs ' + bt.worker_cost + ')';
-      html += '<div class="insp-row"><span class="insp-label">Workers</span><span class="insp-value ' + staffClass + '">' + staffText + '</span></div>';
-
-      // Staffing priority explanation
-      var staffPos = getStaffingPosition(b);
-      if (staffPos.position > 0) {
-        var priorityNote = 'Priority #' + staffPos.position + ' of ' + staffPos.total;
-        if (!isStaffed) {
-          var workersAvail = state.laborInfo.workerSupply;
-          var workersNeededBefore = 0;
-          var myBuildings = state.allBuildings.filter(function (bb) { return bb.player_id === state.currentUser.id; });
-          var prodBuildings = myBuildings.filter(function (bb) {
-            var bbt = state.buildingTypes[bb.building_type_key];
-            if (!bbt || bb.status !== 'active') return false;
-            if (bbt.category === 'extractor') return true;
-            if (bbt.category === 'processor') return !!state.roadAccessIds[bb.id];
-            return false;
-          }).sort(function (a, c) {
-            return new Date(a.created_at).getTime() - new Date(c.created_at).getTime();
-          });
-          for (var i = 0; i < prodBuildings.length; i++) {
-            if (prodBuildings[i].id === b.id) break;
-            workersNeededBefore += (state.buildingTypes[prodBuildings[i].building_type_key].worker_cost || 1);
-          }
-          var shortfall = (workersNeededBefore + bt.worker_cost) - workersAvail;
-          priorityNote += ' — need ' + shortfall + ' more worker' + (shortfall > 1 ? 's' : '');
-          html += '<div class="insp-hint">' + priorityNote + '. Oldest buildings are staffed first. Build housing to add workers.</div>';
-        } else {
-          html += '<div class="insp-hint insp-hint-muted">' + priorityNote + ' — oldest first</div>';
-        }
-      }
+    if (issues.length > 0) {
+      html += '<div class="insp-section">Issues</div><div class="insp-issues">';
+      issues.forEach(function (iss) {
+        var cls = iss.severity === 'warn' ? 'insp-issue insp-issue-warn' : 'insp-issue';
+        html += '<div class="' + cls + '">';
+        html += '<span class="insp-issue-bullet">●</span>';
+        html += '<div class="insp-issue-body"><div class="insp-issue-label">' + iss.label + '</div>';
+        if (iss.hint) html += '<div class="insp-issue-hint">' + iss.hint + '</div>';
+        html += '</div></div>';
+      });
+      html += '</div>';
     }
+  }
 
-    // Production status with explanation
-    if (bt.category === 'extractor' || bt.category === 'processor') {
-      // M2: extractor with no path = idle (different from unstaffed)
-      var isExtractorWithoutPath = bt.category === 'extractor'
-        && (b.path_length === null || b.path_length === undefined);
-      var isDisconnected = bt.category === 'processor' && state.noRoadAccessIds[b.id];
-      var isUnstaffed = !!state.laborInfo.unstaffedIds[b.id];
-      var statusText, statusClass;
-      if (isDisconnected) {
-        statusText = 'Blocked';
-        statusClass = 'insp-bad';
-      } else if (isUnstaffed) {
-        statusText = 'Idle (no workers)';
-        statusClass = 'insp-warn';
-      } else if (isExtractorWithoutPath) {
-        statusText = 'Idle (no path)';
-        statusClass = 'insp-warn';
-      } else {
-        statusText = 'Producing';
-        statusClass = 'insp-good';
-      }
-      html += '<div class="insp-row"><span class="insp-label">Status</span><span class="insp-value ' + statusClass + '">' + statusText + '</span></div>';
-
-      if (isDisconnected) {
-        html += '<div class="insp-hint">Cannot produce without road access. Goods can\'t reach the trade network.</div>';
-      } else if (isUnstaffed) {
-        html += '<div class="insp-hint">No workers assigned. This building is idle and not producing.</div>';
-      } else if (isExtractorWithoutPath) {
-        html += '<div class="insp-hint">No reachable resource tile. Build roads toward an unclaimed ' + (bt.output_resource_key || 'resource') + ' tile to start collecting.</div>';
+    // Factual worker cost (extractor / processor / service / tax)
+    if (bt.category === 'extractor' || bt.category === 'processor'
+        || bt.category === 'service' || bt.category === 'tax') {
+      if (bt.worker_cost > 0) {
+        html += '<div class="insp-row"><span class="insp-label">Workers</span><span class="insp-value">' + bt.worker_cost + ' required</span></div>';
       }
     }
 
@@ -423,13 +431,8 @@ function renderInspector() {
       var tier = b.housing_tier !== undefined ? b.housing_tier : 1;
       var tierCfg = state.housingTierConfig[tier];
       var workers = tierCfg ? tierCfg.workers : (bt.workers_provided || 0);
-      var providing = true;
-      if (tierCfg && tierCfg.needs_road && !state.roadAccessIds[b.id]) {
-        providing = false;
-      }
-      var wClass = providing ? 'insp-good' : 'insp-bad';
-      var wText = providing ? '+' + workers + ' workers' : '+0 (needs road)';
-      html += '<div class="insp-row"><span class="insp-label">Provides</span><span class="insp-value ' + wClass + '">' + wText + '</span></div>';
+      var providing = !(tierCfg && tierCfg.needs_road && !state.roadAccessIds[b.id]);
+      html += '<div class="insp-row"><span class="insp-label">Provides</span><span class="insp-value">' + (providing ? '+' + workers : '+0 / +' + workers) + ' workers</span></div>';
 
       // Housing evolution / progression feedback
       var nextTierCfg = state.housingTierConfig[tier + 1];
@@ -473,11 +476,7 @@ function renderInspector() {
     } else if (bt.category === 'processor') {
       if (bt.input_resource_key) {
         var inName = state.resources[bt.input_resource_key] ? state.resources[bt.input_resource_key].name : bt.input_resource_key;
-        var inStock = state.inventory[bt.input_resource_key] || 0;
         html += '<div class="insp-row"><span class="insp-label">Input</span><span class="insp-value">' + bt.input_rate + ' ' + inName + '/min</span></div>';
-        if (inStock === 0 && !state.laborInfo.unstaffedIds[b.id] && !state.noRoadAccessIds[b.id]) {
-          html += '<div class="insp-hint insp-hint-muted">No ' + inName + ' in stock — production will stall when supply runs out.</div>';
-        }
       }
       if (bt.output_resource_key) {
         var outName = state.resources[bt.output_resource_key] ? state.resources[bt.output_resource_key].name : bt.output_resource_key;
@@ -494,11 +493,7 @@ function renderInspector() {
       }
       inputs.forEach(function (inp, i) {
         var nm = state.resources[inp.key] ? state.resources[inp.key].name : inp.key;
-        var stock = state.inventory[inp.key] || 0;
         html += '<div class="insp-row"><span class="insp-label">' + (i === 0 ? 'Input' : 'Input 2') + '</span><span class="insp-value">' + inp.rate + ' ' + nm + '/min</span></div>';
-        if (stock === 0 && !state.laborInfo.unstaffedIds[b.id] && !state.noRoadAccessIds[b.id]) {
-          html += '<div class="insp-hint insp-hint-muted">No ' + nm + ' in stock — service idle until supply returns.</div>';
-        }
       });
     }
   }

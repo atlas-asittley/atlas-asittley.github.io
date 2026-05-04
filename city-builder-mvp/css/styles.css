@@ -759,6 +759,15 @@ body.inspector-open .map-canvas { margin-bottom: calc(50vh + 28px); }
 .insp-hint.insp-hint-muted { color: #5a6a7e; font-style: italic; }
 .insp-evolution-bar { height: 3px; background: #1e2a3a; border-radius: 2px; margin: 4px 0 8px; overflow: hidden; }
 .insp-evolution-bar .insp-evolution-fill { height: 100%; background: linear-gradient(90deg, #5ec49e, #4fa3e0); border-radius: 2px; transition: width 0.5s; }
+.insp-section { font-size: 0.7rem; font-weight: 600; color: #7a8a9e; text-transform: uppercase; letter-spacing: 0.04em; padding: 10px 0 4px; }
+.insp-issues { padding: 4px 0 6px; }
+.insp-issue { display: flex; gap: 6px; align-items: flex-start; padding: 4px 0; }
+.insp-issue-bullet { color: #f06060; font-size: 0.85rem; line-height: 1.2; flex: 0 0 auto; }
+.insp-issue-warn .insp-issue-bullet { color: #e6c65a; }
+.insp-issue-body { flex: 1 1 auto; }
+.insp-issue-label { font-size: 0.82rem; font-weight: 600; color: #f0a0a0; line-height: 1.25; }
+.insp-issue-warn .insp-issue-label { color: #e6c65a; }
+.insp-issue-hint { font-size: 0.72rem; color: #8a9aae; line-height: 1.4; padding-top: 1px; }
 .demolish-info { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; padding: 0 2px; }
 .demolish-refund { font-size: 0.78rem; color: #5ec49e; font-weight: 600; }
 .demolish-warning { font-size: 0.72rem; color: #e6c65a; font-weight: 600; }

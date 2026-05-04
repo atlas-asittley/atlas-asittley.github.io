@@ -146,9 +146,10 @@ export function computeRoadAccess() {
     // Roads themselves and extractors don't need road access
     if (bt.category === 'road' || bt.category === 'extractor') return;
 
-    // Processors always require road access.
+    // Processors / services / tax always require road access.
     // Housing requires road access only if tier config says so (tier 0 shanties don't).
-    if (bt.category === 'processor' || bt.category === 'housing') {
+    if (bt.category === 'processor' || bt.category === 'housing'
+        || bt.category === 'service' || bt.category === 'tax') {
       // Check if this housing tier actually needs road
       if (bt.category === 'housing') {
         var tier = b.housing_tier !== undefined ? b.housing_tier : 1;
