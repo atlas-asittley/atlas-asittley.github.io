@@ -12,7 +12,8 @@ export var BLDG_LABELS = {
   grain_farm: 'GF', mill: 'ML',
   clay_pit: 'CP', pottery_kiln: 'PK',
   bakery: 'BK', woodcarver: 'WC', sculptor: 'SC',
-  house: 'H', road: 'R'
+  house: 'H', road: 'R',
+  well: 'W', tax_man: 'TX'
 };
 
 // Housing tier label overrides (keyed by tier number)

@@ -1,0 +1,102 @@
+"""Tests for the well precondition + tax revenue building."""
+import pytest
+import psycopg2
+
+
+def test_well_required_for_tier_1_evolution(make_player, place, cur, clear_resources):
+    """Without a well in range, a shanty should NOT upgrade to mud hut even
+    if it has road access and elapsed time. With a well, it should."""
+    p = make_player()
+    clear_resources(p['id'])
+    hx, hy = p['home_x'], p['home_y']
+    place('road', hx + 1, hy + 1)
+    house_id = place('house', hx + 1, hy + 2)['building_id']
+    cur.execute(
+        "UPDATE public.buildings SET last_processed_at = now() - interval '120 seconds' WHERE id = %s",
+        (house_id,),
+    )
+    cur.execute("SELECT public.process_production()")
+    cur.execute("SELECT housing_tier FROM public.buildings WHERE id = %s", (house_id,))
+    assert cur.fetchone()[0] == 0, "house upgraded to tier 1 without a well in range"
+
+    # Now drop a well within range and re-run.
+    place('well', hx + 2, hy + 2)
+    cur.execute(
+        "UPDATE public.buildings SET last_processed_at = now() - interval '120 seconds' WHERE id = %s",
+        (house_id,),
+    )
+    cur.execute("SELECT public.process_production()")
+    cur.execute("SELECT housing_tier FROM public.buildings WHERE id = %s", (house_id,))
+    assert cur.fetchone()[0] == 1, "house failed to upgrade with a well in range"
+
+
+def test_well_too_far_does_not_count(make_player, place, cur, clear_resources):
+    """Manhattan distance > 4 means a well is out of range."""
+    p = make_player()
+    clear_resources(p['id'])
+    hx, hy = p['home_x'], p['home_y']
+    place('road', hx + 1, hy + 1)
+    place('well', hx + 6, hy + 6)  # Manhattan distance 5+5 = 10 from house
+    house_id = place('house', hx + 1, hy + 2)['building_id']
+    cur.execute(
+        "UPDATE public.buildings SET last_processed_at = now() - interval '120 seconds' WHERE id = %s",
+        (house_id,),
+    )
+    cur.execute("SELECT public.process_production()")
+    cur.execute("SELECT housing_tier FROM public.buildings WHERE id = %s", (house_id,))
+    assert cur.fetchone()[0] == 0, "out-of-range well should not enable upgrade"
+
+
+def test_tax_man_credits_money_when_staffed(make_player, place, cur, clear_resources):
+    """Staffed tax_man should add money to the player's profile after a tick.
+    We need ≥10 workers to staff it; a tier-2 cottage covers that on its own."""
+    p = make_player()
+    clear_resources(p['id'])
+    hx, hy = p['home_x'], p['home_y']
+    place('road', hx + 1, hy + 1)
+    place('well', hx + 2, hy + 2)
+    house_id = place('house', hx + 1, hy + 2)['building_id']
+    # Force the house to tier 2 (cottage = 10 workers) so the tax_man can be staffed.
+    cur.execute("UPDATE public.buildings SET housing_tier = 2 WHERE id = %s", (house_id,))
+    cur.execute(
+        "UPDATE public.player_profiles SET money = 1000 WHERE id = %s",
+        (str(p['id']),),
+    )
+    place('tax_man', hx + 1, hy + 3)
+    # Backdate so process_production sees ~60 seconds of elapsed tax-collection.
+    cur.execute("""
+        UPDATE public.buildings SET last_processed_at = now() - interval '60 seconds'
+        WHERE player_id = %s
+    """, (str(p['id']),))
+    cur.execute("SELECT money FROM public.player_profiles WHERE id = %s", (str(p['id']),))
+    money_before = cur.fetchone()[0]
+    cur.execute("SELECT public.process_production()")
+    cur.execute("SELECT money FROM public.player_profiles WHERE id = %s", (str(p['id']),))
+    money_after = cur.fetchone()[0]
+    assert money_after > money_before, \
+        f"tax_man did not credit money (before={money_before}, after={money_after})"
+
+
+def test_tax_man_credits_nothing_when_unstaffed(make_player, place, cur, clear_resources):
+    """If worker supply isn't enough to staff the tax_man, no money is credited."""
+    p = make_player()
+    clear_resources(p['id'])
+    hx, hy = p['home_x'], p['home_y']
+    place('road', hx + 1, hy + 1)
+    # Force worker_capacity well below the tax_man's worker_cost (10).
+    cur.execute(
+        "UPDATE public.player_profiles SET worker_capacity = 0, money = 1000 WHERE id = %s",
+        (str(p['id']),),
+    )
+    place('tax_man', hx + 1, hy + 2)
+    cur.execute("""
+        UPDATE public.buildings SET last_processed_at = now() - interval '60 seconds'
+        WHERE player_id = %s
+    """, (str(p['id']),))
+    cur.execute("SELECT money FROM public.player_profiles WHERE id = %s", (str(p['id']),))
+    money_before = cur.fetchone()[0]
+    cur.execute("SELECT public.process_production()")
+    cur.execute("SELECT money FROM public.player_profiles WHERE id = %s", (str(p['id']),))
+    money_after = cur.fetchone()[0]
+    assert money_after == money_before, \
+        "unstaffed tax_man should not generate money"

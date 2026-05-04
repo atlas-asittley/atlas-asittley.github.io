@@ -191,6 +191,12 @@ body.inspector-open .map-canvas { margin-bottom: calc(50vh + 28px); }
   50% { opacity: 1; transform: scale(1.15); }
 }
 .bldg { width: 100%; height: 100%; border-radius: 0; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0; color: transparent; line-height: 1; background-size: contain; background-repeat: no-repeat; background-position: center; position: relative; transition: filter 0.2s, box-shadow 0.2s; z-index: 1; cursor: pointer; filter: none !important; box-shadow: none; }
+
+/* Well + Tax Office: placeholder solid-color tiles with visible labels.
+   No bespoke SVG art yet — just a readable square so the building is
+   spottable on the map. Polish later under the same kiln/mill recipe. */
+.bldg.well { background: linear-gradient(180deg, #4a6a8a 0%, #2a3a5a 100%); font-size: 0.65rem; color: #d8e8ff; }
+.bldg.tax_man { background: linear-gradient(180deg, #7a3a3a 0%, #4a2020 100%); font-size: 0.55rem; color: #ffd8c8; }
 .bldg:hover { filter: brightness(1.08) !important; }
 .bldg.mine { box-shadow: none; }
 .bldg.mine:hover { box-shadow: none; }

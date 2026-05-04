@@ -13,11 +13,13 @@ import psycopg2
 
 def test_housing_evolves_to_tier_1_with_road(make_player, place, cur, clear_resources):
     """Regression: shanty (tier 0) should upgrade to mud hut (tier 1)
-    after enough time has elapsed AND a road is adjacent."""
+    after enough time has elapsed AND a road is adjacent. Tier 1+ also
+    needs a well within Manhattan distance 4."""
     p = make_player()
     clear_resources(p['id'])
     hx, hy = p['home_x'], p['home_y']
     place('road', hx + 1, hy + 1)
+    place('well', hx + 2, hy + 2)
     house_id = place('house', hx + 1, hy + 2)['building_id']
 
     # Verify it started at tier 0
