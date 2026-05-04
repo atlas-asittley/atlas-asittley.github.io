@@ -363,7 +363,8 @@ function computeBuildingIssues(b, bt) {
   // Worker staffing — only flag if the building consumes workers AND is
   // unstaffed (computeLaborAllocation already accounts for road access).
   var consumesWorkers = bt.category === 'extractor' || bt.category === 'food_extractor'
-    || bt.category === 'processor' || bt.category === 'service' || bt.category === 'tax';
+    || bt.category === 'processor' || bt.category === 'service' || bt.category === 'tax'
+    || bt.category === 'booster';
   if (consumesWorkers && state.laborInfo.unstaffedIds[b.id]) {
     var li = state.laborInfo;
     var hint = 'Needs ' + bt.worker_cost + ' worker' + (bt.worker_cost > 1 ? 's' : '')
@@ -477,9 +478,10 @@ function renderInspector() {
       html += '</div>';
     }
 
-    // Factual worker cost (extractor / food_extractor / processor / service / tax)
+    // Factual worker cost (extractor / food_extractor / processor / service / tax / booster)
     if (bt.category === 'extractor' || bt.category === 'food_extractor'
-        || bt.category === 'processor' || bt.category === 'service' || bt.category === 'tax') {
+        || bt.category === 'processor' || bt.category === 'service' || bt.category === 'tax'
+        || bt.category === 'booster') {
       if (bt.worker_cost > 0) {
         html += '<div class="insp-row"><span class="insp-label">Workers</span><span class="insp-value">' + bt.worker_cost + ' required</span></div>';
       }
