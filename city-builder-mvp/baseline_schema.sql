@@ -475,17 +475,97 @@ BEGIN
     END LOOP;
   END LOOP;
 
-  -- Stamp highway: horizontal strip at y_offset = 7, vertical strip at
-  -- x_offset = 7. Unbuildable, no resource. Threads through every chunk
-  -- so districts are connected via shared road-cost infrastructure.
-  UPDATE public.map_tiles
-  SET terrain_type = 'highway',
-      buildable = false,
-      resource_node_key = NULL
-  WHERE owner_player_id = p_player_id
-    AND x >= v_x_start AND x < v_x_start + 15
-    AND y >= v_y_start AND y < v_y_start + 15
-    AND (x = v_x_start + 7 OR y = v_y_start + 7);
+  -- Curving highways: horizontal walks (0,7) → (14,7) and vertical walks
+  -- (7,0) → (7,14). The four edge endpoints are fixed so chunks always
+  -- match across borders; in between, the path can drift up to ±3 tiles
+  -- off the centerline before being forced back. mark_highway_tile()
+  -- updates one cell at a time and clears any resource cluster that
+  -- happened to seed onto the path.
+  DECLARE
+    v_axis_pos integer;
+    v_cur_off integer;
+    v_steps_left integer;
+    v_can_drift boolean;
+    v_drift_dir integer;
+  BEGIN
+    -- Horizontal pass
+    v_axis_pos := 0;
+    v_cur_off := 0;
+    PERFORM public.mark_highway_tile(p_player_id, v_x_start + 0, v_y_start + 7);
+    WHILE v_axis_pos < 14 LOOP
+      v_steps_left := 14 - v_axis_pos;
+      v_can_drift := abs(v_cur_off) + 1 < v_steps_left;
+      IF v_can_drift AND random() < 0.35 THEN
+        IF v_cur_off > 0 THEN
+          v_drift_dir := CASE WHEN random() < 0.65 THEN -1 ELSE 1 END;
+        ELSIF v_cur_off < 0 THEN
+          v_drift_dir := CASE WHEN random() < 0.65 THEN 1 ELSE -1 END;
+        ELSE
+          v_drift_dir := CASE WHEN random() < 0.5 THEN 1 ELSE -1 END;
+        END IF;
+        IF abs(v_cur_off + v_drift_dir) > 3 THEN
+          v_drift_dir := -v_drift_dir;
+        END IF;
+        v_cur_off := v_cur_off + v_drift_dir;
+        PERFORM public.mark_highway_tile(p_player_id,
+          v_x_start + v_axis_pos, v_y_start + 7 + v_cur_off);
+      ELSE
+        IF NOT v_can_drift AND v_cur_off != 0 THEN
+          v_cur_off := v_cur_off - sign(v_cur_off);
+          PERFORM public.mark_highway_tile(p_player_id,
+            v_x_start + v_axis_pos, v_y_start + 7 + v_cur_off);
+        ELSE
+          v_axis_pos := v_axis_pos + 1;
+          PERFORM public.mark_highway_tile(p_player_id,
+            v_x_start + v_axis_pos, v_y_start + 7 + v_cur_off);
+        END IF;
+      END IF;
+    END LOOP;
+    WHILE v_cur_off != 0 LOOP
+      v_cur_off := v_cur_off - sign(v_cur_off);
+      PERFORM public.mark_highway_tile(p_player_id,
+        v_x_start + 14, v_y_start + 7 + v_cur_off);
+    END LOOP;
+
+    -- Vertical pass (transposed)
+    v_axis_pos := 0;
+    v_cur_off := 0;
+    PERFORM public.mark_highway_tile(p_player_id, v_x_start + 7, v_y_start + 0);
+    WHILE v_axis_pos < 14 LOOP
+      v_steps_left := 14 - v_axis_pos;
+      v_can_drift := abs(v_cur_off) + 1 < v_steps_left;
+      IF v_can_drift AND random() < 0.35 THEN
+        IF v_cur_off > 0 THEN
+          v_drift_dir := CASE WHEN random() < 0.65 THEN -1 ELSE 1 END;
+        ELSIF v_cur_off < 0 THEN
+          v_drift_dir := CASE WHEN random() < 0.65 THEN 1 ELSE -1 END;
+        ELSE
+          v_drift_dir := CASE WHEN random() < 0.5 THEN 1 ELSE -1 END;
+        END IF;
+        IF abs(v_cur_off + v_drift_dir) > 3 THEN
+          v_drift_dir := -v_drift_dir;
+        END IF;
+        v_cur_off := v_cur_off + v_drift_dir;
+        PERFORM public.mark_highway_tile(p_player_id,
+          v_x_start + 7 + v_cur_off, v_y_start + v_axis_pos);
+      ELSE
+        IF NOT v_can_drift AND v_cur_off != 0 THEN
+          v_cur_off := v_cur_off - sign(v_cur_off);
+          PERFORM public.mark_highway_tile(p_player_id,
+            v_x_start + 7 + v_cur_off, v_y_start + v_axis_pos);
+        ELSE
+          v_axis_pos := v_axis_pos + 1;
+          PERFORM public.mark_highway_tile(p_player_id,
+            v_x_start + 7 + v_cur_off, v_y_start + v_axis_pos);
+        END IF;
+      END IF;
+    END LOOP;
+    WHILE v_cur_off != 0 LOOP
+      v_cur_off := v_cur_off - sign(v_cur_off);
+      PERFORM public.mark_highway_tile(p_player_id,
+        v_x_start + 7 + v_cur_off, v_y_start + 14);
+    END LOOP;
+  END;
 
   IF v_is_first_chunk THEN
     UPDATE public.player_profiles
@@ -642,6 +722,23 @@ BEGIN
   );
 END;
 $function$
+
+
+-- Helper for allocate_district_chunk's curving-highway pass: stamp one
+-- highway tile on an owned ground tile. Idempotent; clears any resource
+-- cluster that happened to seed onto the path.
+CREATE OR REPLACE FUNCTION public.mark_highway_tile(
+  p_player_id uuid, p_x integer, p_y integer
+) RETURNS void
+LANGUAGE sql
+AS $function$
+  UPDATE public.map_tiles
+  SET terrain_type = 'highway',
+      buildable = false,
+      resource_node_key = NULL
+  WHERE owner_player_id = p_player_id
+    AND x = p_x AND y = p_y;
+$function$;
 
 
 -- Trigger fn: reject inserting a building on a tile that still has a

@@ -118,17 +118,22 @@ export function computeGridBounds() {
 }
 
 // ── Roads: compute which buildings have road access ──
-// A building has road access if any orthogonal neighbor has a road building.
-// Uses allBuildings (all players' roads count).
+// A building has road access if any orthogonal neighbor is either a road
+// (any player's) or a highway tile (shared infrastructure).
 export function computeRoadAccess() {
   if (!state.currentUser) return;
 
-  // Build a set of all road tile coordinates
+  // Build a set of all road + highway tile coordinates
   var roadTiles = {};
   state.allBuildings.forEach(function (b) {
     var bt = state.buildingTypes[b.building_type_key];
     if (bt && bt.category === 'road' && b.status === 'active') {
       roadTiles[b.x + ',' + b.y] = true;
+    }
+  });
+  state.tiles.forEach(function (t) {
+    if (t.terrain_type === 'highway') {
+      roadTiles[t.x + ',' + t.y] = true;
     }
   });
 

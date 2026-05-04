@@ -72,12 +72,11 @@ def test_housing_devolves_without_road(make_player, place, cur, clear_resources)
     assert cur.fetchone()[0] == 0, "mud hut should devolve to shanty without road"
 
 
-def test_extractor_no_path_produces_nothing(make_player, place, cur):
+def test_extractor_no_path_produces_nothing(make_player, place, cur, clear_resources):
     """An idle extractor (path_length is NULL) should not credit any timber."""
     p = make_player(industry='timber')
+    clear_resources(p['id'])
     hx, hy = p['home_x'], p['home_y']
-    # Strip resources so BFS finds nothing
-    cur.execute("UPDATE public.map_tiles SET resource_node_key = NULL WHERE owner_player_id = %s", (str(p['id']),))
 
     place('road', hx + 1, hy + 1)
     place('timber_camp', hx + 1, hy + 2)

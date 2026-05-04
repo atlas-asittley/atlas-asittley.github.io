@@ -306,10 +306,18 @@ var roadTileSet = {};
 
 function rebuildPlacementRoadSet() {
   roadTileSet = {};
+  // Player roads count as roads.
   state.allBuildings.forEach(function (b) {
     var bt = state.buildingTypes[b.building_type_key];
     if (bt && bt.category === 'road' && b.status === 'active') {
       roadTileSet[b.x + ',' + b.y] = true;
+    }
+  });
+  // Highway tiles also count as roads — for road-adjacent placement
+  // and for road-access checks (housing evolution, processor input).
+  state.tiles.forEach(function (t) {
+    if (t.terrain_type === 'highway') {
+      roadTileSet[t.x + ',' + t.y] = true;
     }
   });
 }
@@ -317,14 +325,13 @@ function rebuildPlacementRoadSet() {
 function isRoadPlacementConnected(tile, pendingSet) {
   if (!tile) return false;
   var x = tile.x, y = tile.y;
-  // Adjacent to player's home (city center of their first chunk)
-  if ((Math.abs(x - getHomeX()) + Math.abs(y - getHomeY())) === 1) return true;
-  // Adjacent to existing road (O(1) set lookup)
+  // Adjacent to existing road or highway (O(1) set lookup —
+  // rebuildPlacementRoadSet folds highway tiles into roadTileSet).
   if (roadTileSet[(x - 1) + ',' + y] || roadTileSet[(x + 1) + ',' + y]
     || roadTileSet[x + ',' + (y - 1)] || roadTileSet[x + ',' + (y + 1)]) {
     return true;
   }
-  // Adjacent to pending drag road
+  // Adjacent to pending drag road (mid-drag continuation)
   if (pendingSet) {
     return !!(pendingSet[(x - 1) + ',' + y]
       || pendingSet[(x + 1) + ',' + y]

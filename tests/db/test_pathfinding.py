@@ -22,11 +22,27 @@ def _seed_resource(cur, player_id, x, y, key='timber'):
 
 
 def _clear_resources(cur, player_id):
-    """Strip random resource seeding so tests can place specific ones."""
+    """Strip random resource seeding AND flatten the highway to a straight
+    cross at (hx, *) and (*, hy) so tests can place at fixed offsets near
+    home without the random highway curve blocking buildable cells."""
+    cur.execute("SELECT home_x, home_y FROM public.player_profiles WHERE id = %s",
+                (str(player_id),))
+    hx, hy = cur.fetchone()
+    chunk_x = hx // 15 if hx >= 0 else (hx - 14) // 15
+    chunk_y = hy // 15 if hy >= 0 else (hy - 14) // 15
+    x_start, y_start = chunk_x * 15, chunk_y * 15
     cur.execute("""
         UPDATE public.map_tiles
-        SET resource_node_key = NULL,
+        SET terrain_type = CASE WHEN x = %s OR y = %s THEN 'highway' ELSE 'ground' END,
+            buildable = NOT (x = %s OR y = %s),
+            resource_node_key = NULL,
             claimed_by_building_id = NULL
+        WHERE owner_player_id = %s
+          AND x >= %s AND x < %s AND y >= %s AND y < %s
+    """, (hx, hy, hx, hy, str(player_id), x_start, x_start + 15, y_start, y_start + 15))
+    cur.execute("""
+        UPDATE public.map_tiles
+        SET resource_node_key = NULL, claimed_by_building_id = NULL
         WHERE owner_player_id = %s
     """, (str(player_id),))
 

@@ -141,8 +141,41 @@ def clear_resources(cur):
     """Wipe any random resource clusters from a player's district. Tests
     that build at known coordinates near home need this because the
     reject_build_on_resource trigger blocks building on a resource tile,
-    and clustering may seed a resource right where the test wants to build."""
+    and clustering may seed a resource right where the test wants to build.
+
+    Also flattens the highway to a straight cross at (hx, *) and (*, hy)
+    so the random curving highway doesn't run through the cells tests
+    want to build on. The on-grid layout for tests is therefore:
+      * Highway: y=hy (horizontal) and x=hx (vertical)
+      * Buildable: everything else owned by the player
+    """
     def _clear(player_id):
+        cur.execute("SELECT home_x, home_y FROM public.player_profiles WHERE id = %s",
+                    (str(player_id),))
+        row = cur.fetchone()
+        if not row or row[0] is None or row[1] is None:
+            cur.execute(
+                "UPDATE public.map_tiles SET resource_node_key = NULL WHERE owner_player_id = %s",
+                (str(player_id),),
+            )
+            return
+        hx, hy = row
+        chunk_x = hx // 15 if hx >= 0 else (hx - 14) // 15
+        chunk_y = hy // 15 if hy >= 0 else (hy - 14) // 15
+        x_start = chunk_x * 15
+        y_start = chunk_y * 15
+        # Flatten highway to a straight cross in the starter chunk.
+        cur.execute("""
+            UPDATE public.map_tiles
+            SET terrain_type = CASE WHEN x = %s OR y = %s THEN 'highway' ELSE 'ground' END,
+                buildable = NOT (x = %s OR y = %s),
+                resource_node_key = NULL
+            WHERE owner_player_id = %s
+              AND x >= %s AND x < %s
+              AND y >= %s AND y < %s
+        """, (hx, hy, hx, hy, str(player_id),
+              x_start, x_start + 15, y_start, y_start + 15))
+        # Clear resources outside the starter chunk too.
         cur.execute(
             "UPDATE public.map_tiles SET resource_node_key = NULL WHERE owner_player_id = %s",
             (str(player_id),),
