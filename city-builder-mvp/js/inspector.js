@@ -29,46 +29,71 @@ export function openInspector(building) {
   inspectedBuildingHolder.value = building;
   renderInspector();
   document.getElementById('inspector-overlay').classList.add('active');
+  // Add scroll-room below the map so a building at the bottom can be pushed
+  // up into view above the inspector. CSS handles the padding via this class.
+  document.body.classList.add('inspector-open');
   renderMap();  // re-render so map can highlight the inspected extractor's target
-  ensureInspectedTargetVisible(building);
+  ensureInspectionVisible(building);
 }
 
-// Scroll the map so the inspected extractor's target tile is visible in the
-// space ABOVE the inspector panel. No-op for non-extractor buildings or for
-// targets that are already in view.
-function ensureInspectedTargetVisible(building) {
-  if (building.target_x === null || building.target_x === undefined) return;
+// Scroll the map so BOTH the inspected building AND, if present, its target
+// resource tile are visible in the space above the inspector panel. If they
+// can't both fit, prioritize the building itself (the thing the player just
+// tapped). No-op when neither is on the map.
+function ensureInspectionVisible(building) {
   // Wait for the inspector's slide-up animation (~200ms) before measuring.
   setTimeout(function () {
-    var cell = document.querySelector(
-      '.cell[data-x="' + building.target_x + '"][data-y="' + building.target_y + '"]'
+    var bldgCell = document.querySelector(
+      '.cell[data-x="' + building.x + '"][data-y="' + building.y + '"]'
     );
+    var targetCell = (building.target_x !== null && building.target_x !== undefined)
+      ? document.querySelector(
+          '.cell[data-x="' + building.target_x + '"][data-y="' + building.target_y + '"]'
+        )
+      : null;
     var viewport = document.getElementById('map-viewport');
     var panel = document.getElementById('inspector-panel');
-    if (!cell || !viewport || !panel) return;
+    if (!bldgCell || !viewport || !panel) return;
 
-    var cellRect = cell.getBoundingClientRect();
+    var bRect = bldgCell.getBoundingClientRect();
+    var tRect = targetCell ? targetCell.getBoundingClientRect() : null;
     var panelRect = panel.getBoundingClientRect();
     var vpRect = viewport.getBoundingClientRect();
 
-    // Visible map = inside the viewport, above the inspector
     var visibleTop = vpRect.top;
     var visibleBottom = Math.min(vpRect.bottom, panelRect.top);
-    if (visibleBottom - visibleTop < 60) return; // not enough room either way
+    var visibleHeight = visibleBottom - visibleTop;
+    if (visibleHeight < 60) return;
 
-    // Already comfortably inside? Nothing to do.
-    var pad = 20;
-    if (cellRect.top >= visibleTop + pad
-        && cellRect.bottom <= visibleBottom - pad
-        && cellRect.left >= vpRect.left + pad
-        && cellRect.right <= vpRect.right - pad) {
-      return;
+    // Bounding box that covers both the building and its target
+    var bboxTop = bRect.top, bboxBottom = bRect.bottom;
+    var bboxLeft = bRect.left, bboxRight = bRect.right;
+    if (tRect) {
+      bboxTop = Math.min(bboxTop, tRect.top);
+      bboxBottom = Math.max(bboxBottom, tRect.bottom);
+      bboxLeft = Math.min(bboxLeft, tRect.left);
+      bboxRight = Math.max(bboxRight, tRect.right);
+    }
+    var bboxHeight = bboxBottom - bboxTop;
+
+    // If both fit comfortably in the visible area, center the bbox.
+    // If they don't, center on the building (priority: thing the player tapped).
+    var anchorCenterY, anchorCenterX;
+    if (bboxHeight + 30 <= visibleHeight) {
+      anchorCenterY = (bboxTop + bboxBottom) / 2;
+      anchorCenterX = (bboxLeft + bboxRight) / 2;
+    } else {
+      anchorCenterY = bRect.top + bRect.height / 2;
+      anchorCenterX = bRect.left + bRect.width / 2;
     }
 
-    var deltaY = (cellRect.top + cellRect.height / 2)
-               - (visibleTop + (visibleBottom - visibleTop) / 2);
-    var deltaX = (cellRect.left + cellRect.width / 2)
-               - (vpRect.left + vpRect.width / 2);
+    var visibleCenterY = visibleTop + visibleHeight / 2;
+    var visibleCenterX = vpRect.left + vpRect.width / 2;
+    var deltaY = anchorCenterY - visibleCenterY;
+    var deltaX = anchorCenterX - visibleCenterX;
+
+    // Skip the scroll if everything's already in a comfortable place
+    if (Math.abs(deltaY) < 8 && Math.abs(deltaX) < 8) return;
     viewport.scrollBy({ top: deltaY, left: deltaX, behavior: 'smooth' });
   }, 220);
 }
@@ -77,6 +102,7 @@ export function closeInspector() {
   inspectedBuilding = null;
   inspectedBuildingHolder.value = null;
   document.getElementById('inspector-overlay').classList.remove('active');
+  document.body.classList.remove('inspector-open');
   renderMap();  // re-render to clear the target highlight
 }
 
