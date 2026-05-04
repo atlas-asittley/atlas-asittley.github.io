@@ -8,6 +8,16 @@ visible without needing `git log`.
 
 ## Up next
 
+- [ ] **Higher worker requirements + hard staffing gate on production.**
+  - Extractors currently need ~2 workers each — way too low. Bump production buildings to something like 10 workers each (TBD per type, but in that ballpark).
+  - Production should be **all-or-nothing**: a building outputs zero until the full worker requirement is met. Today partial staffing still produces, which makes the worker economy too soft.
+  - Likely tuning needed: worker yield from housing tiers, expansion cost relative to staffing pressure, starting worker pool, etc. Will tighten the early-game loop noticeably — check that the player can still get a first extractor running.
+
+- [ ] **Walker variety: fewer of them, more visual variation.**
+  - Reduce overall walker count — current density makes the map feel busy and the individual pawns blur together.
+  - Add visual variation per walker type: 2–3 sprite variants per role (collector, ambient, etc.) picked deterministically per walker; small variation in size, maybe gait (slight bob/speed jitter). Goal is "this city has individuals" rather than "this city has clones."
+  - Extra flair to consider once variants exist: a hat or accessory on some, occasional carry-objects (basket, log) for collectors mid-trip.
+
 - [ ] **Wider zoom-out range as the map grows.**
   - The current `applyMapZoom` clamps zoom to a fixed minimum that was sized for a single 15×15 chunk. As districts expand, you can no longer fit the whole map in view. The minimum zoom should scale down with the player's actual map dimensions (gridCols × gridRows) so you can always see the full district at once if you want.
   - Cap is mostly cosmetic — at extreme zoom-out tiles get tiny — but it should at least cover "all my chunks fit on screen."
