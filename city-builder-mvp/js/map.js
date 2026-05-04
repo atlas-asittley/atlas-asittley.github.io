@@ -96,17 +96,22 @@ function isRoadBuilding(building) {
   return !!(bt && bt.category === 'road');
 }
 
-function isRoadOrCenter(x, y, buildingAt) {
-  if (x === getHomeX() && y === getHomeY()) return true;
+function isHighwayTile(x, y) {
+  var t = state.tileMap[x + ',' + y];
+  return !!(t && t.terrain_type === 'highway');
+}
+
+function isRoadOrHighway(x, y, buildingAt) {
+  if (isHighwayTile(x, y)) return true;
   return isRoadBuilding(buildingAt[x + ',' + y]);
 }
 
 function roadNeighborFlags(x, y, buildingAt) {
   return {
-    n: isRoadOrCenter(x, y - 1, buildingAt),
-    s: isRoadOrCenter(x, y + 1, buildingAt),
-    e: isRoadOrCenter(x + 1, y, buildingAt),
-    w: isRoadOrCenter(x - 1, y, buildingAt)
+    n: isRoadOrHighway(x, y - 1, buildingAt),
+    s: isRoadOrHighway(x, y + 1, buildingAt),
+    e: isRoadOrHighway(x + 1, y, buildingAt),
+    w: isRoadOrHighway(x - 1, y, buildingAt)
   };
 }
 
@@ -475,7 +480,10 @@ export function renderMap() {
       }
 
       if (tile.terrain_type === 'highway') {
-        classes.push('highway');
+        // Highways render as road tiles (same auto-tile sprite, same .road-tile
+        // background) so they look continuous with player roads. The terrain
+        // flag is only used server-side to mark them as shared infrastructure.
+        classes.push('road-tile');
       } else if (tile.resource_node_key) {
         classes.push('res-' + tile.resource_node_key);
       } else {
@@ -541,17 +549,12 @@ export function renderMap() {
           var bldgClasses = 'bldg ' + btk + housingTierClass + (mine ? ' mine' : '') + (isUnstaffed ? ' unstaffed' : '') + (isDisconnected ? ' disconnected' : '') + (isProducing ? ' producing' : '');
           html += '<div class="' + bldgClasses + '" title="' + titleText + '">' + label + '</div>';
         }
-      } else if (x === getHomeX() && y === getHomeY() && isMyTile(tile)) {
-        // Show road surface from city center toward adjacent roads
-        var hx = getHomeX(), hy = getHomeY();
-        var hqN = isRoadBuilding(buildingAt[hx + ',' + (hy - 1)]);
-        var hqS = isRoadBuilding(buildingAt[hx + ',' + (hy + 1)]);
-        var hqE = isRoadBuilding(buildingAt[(hx + 1) + ',' + hy]);
-        var hqW = isRoadBuilding(buildingAt[(hx - 1) + ',' + hy]);
-        if (hqN || hqS || hqE || hqW) {
-          html += '<div class="road-surface hq-road">' + getRoadTileSVG(hqN, hqS, hqE, hqW) + '</div>';
-        }
-        html += '<span class="hq-label">HQ</span>';
+      } else if (tile.terrain_type === 'highway') {
+        // Render the highway with the same auto-tiled road sprite the
+        // player roads use, so highway tiles read as part of the same
+        // road network visually.
+        var rfh = roadNeighborFlags(x, y, buildingAt);
+        html += '<div class="road-surface highway">' + getRoadTileSVG(rfh.n, rfh.s, rfh.e, rfh.w) + '</div>';
       } else if (tile.resource_node_key) {
         html += '<div class="res-dot"></div>';
       }
@@ -872,6 +875,20 @@ function promptClearResourceTile(tile) {
   });
 }
 
+function promptDemolishHighwayTile(tile) {
+  if (!confirm('Demolish this highway tile? You can rebuild a road here, but extractor paths and housing road-access through this cell will be lost until you do.')) return;
+  sb.rpc('demolish_highway_tile', { p_tile_id: tile.id }).then(function (r) {
+    if (r.error) {
+      showToast('Cannot demolish: ' + r.error.message, 'error');
+      return;
+    }
+    showToast('Highway tile demolished', 'success');
+    return reloadMapData();
+  }).catch(function (err) {
+    showToast('Demolish failed: ' + (err.message || err), 'error');
+  });
+}
+
 function selectExpansionChunk(cx, cy) {
   return sb.rpc('expand_district', { p_chunk_x: cx, p_chunk_y: cy }).then(function (r) {
     if (r.error) {
@@ -932,6 +949,15 @@ export function initMapEvents() {
     var tile = state.tileMap[x + ',' + y];
     if (tile && tile.resource_node_key && isMyTile(tile) && !state.selectedBuildType) {
       promptClearResourceTile(tile);
+      return;
+    }
+
+    // Highway tile in your own district (no selected build type) →
+    // offer to demolish. Player loses the shared road-cost connection
+    // through this cell, which is the user-level "at your own
+    // detriment" warning we put in the prompt.
+    if (tile && tile.terrain_type === 'highway' && isMyTile(tile) && !state.selectedBuildType) {
+      promptDemolishHighwayTile(tile);
       return;
     }
 

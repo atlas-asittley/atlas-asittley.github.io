@@ -724,6 +724,36 @@ END;
 $function$
 
 
+-- demolish_highway_tile: lets a player remove a highway tile in their
+-- own district. Converts the tile back to plain ground; recompute_extractor_paths
+-- runs to re-target any of the player's extractors whose path may have
+-- routed through the demolished cell.
+CREATE OR REPLACE FUNCTION public.demolish_highway_tile(p_tile_id uuid)
+RETURNS json
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $function$
+DECLARE
+  v_uid uuid := auth.uid();
+  v_tile record;
+BEGIN
+  SELECT * INTO v_tile FROM public.map_tiles WHERE id = p_tile_id FOR UPDATE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'Tile not found'; END IF;
+  IF v_tile.owner_player_id IS NULL OR v_tile.owner_player_id <> v_uid THEN
+    RAISE EXCEPTION 'Cannot demolish a highway tile you do not own';
+  END IF;
+  IF v_tile.terrain_type <> 'highway' THEN
+    RAISE EXCEPTION 'Tile is not a highway tile';
+  END IF;
+  UPDATE public.map_tiles
+  SET terrain_type = 'ground', buildable = true
+  WHERE id = p_tile_id;
+  PERFORM public.recompute_extractor_paths(v_uid);
+  RETURN json_build_object('tile_id', p_tile_id, 'x', v_tile.x, 'y', v_tile.y);
+END;
+$function$;
+
+
 -- Helper for allocate_district_chunk's curving-highway pass: stamp one
 -- highway tile on an owned ground tile. Idempotent; clears any resource
 -- cluster that happened to seed onto the path.
@@ -2302,6 +2332,7 @@ GRANT EXECUTE ON FUNCTION public.allocate_district_chunk(p_player_id uuid, p_chu
 GRANT EXECUTE ON FUNCTION public.black_market_trade(p_resource_key text, p_quantity integer, p_direction text) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.choose_industry(p_display_name text, p_industry_key text) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.clear_resource_tile(uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.demolish_highway_tile(uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.complete_onboarding(p_display_name text, p_specialization_key text) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.expand_district(integer, integer) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.expansion_candidates(uuid) TO authenticated;
