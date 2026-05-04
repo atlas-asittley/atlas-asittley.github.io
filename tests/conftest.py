@@ -164,18 +164,32 @@ def clear_resources(cur):
         chunk_y = hy // 15 if hy >= 0 else (hy - 14) // 15
         x_start = chunk_x * 15
         y_start = chunk_y * 15
-        # Flatten highway to a straight cross in the starter chunk.
+        # Wipe random pre-placed roads (curving path) and re-stamp a
+        # straight cross at (hx, *) and (*, hy) so tests have a
+        # predictable road layout.
+        cur.execute("""
+            DELETE FROM public.buildings b
+            USING public.building_types bt
+            WHERE b.building_type_key = bt.key
+              AND bt.category = 'road'
+              AND b.player_id = %s
+              AND b.x >= %s AND b.x < %s
+              AND b.y >= %s AND b.y < %s
+        """, (str(player_id), x_start, x_start + 15, y_start, y_start + 15))
         cur.execute("""
             UPDATE public.map_tiles
-            SET terrain_type = CASE WHEN x = %s OR y = %s THEN 'highway' ELSE 'ground' END,
-                buildable = NOT (x = %s OR y = %s),
-                resource_node_key = NULL
+            SET resource_node_key = NULL,
+                claimed_by_building_id = NULL
             WHERE owner_player_id = %s
-              AND x >= %s AND x < %s
-              AND y >= %s AND y < %s
-        """, (hx, hy, hx, hy, str(player_id),
-              x_start, x_start + 15, y_start, y_start + 15))
-        # Clear resources outside the starter chunk too.
+              AND x >= %s AND x < %s AND y >= %s AND y < %s
+        """, (str(player_id), x_start, x_start + 15, y_start, y_start + 15))
+        # Re-place straight-cross roads via the helper used by allocate_district_chunk.
+        for offset in range(15):
+            cur.execute("SELECT public.place_pre_road(%s, %s, %s)",
+                        (str(player_id), x_start + offset, hy))
+            cur.execute("SELECT public.place_pre_road(%s, %s, %s)",
+                        (str(player_id), hx, y_start + offset))
+        # Clear resources across all owned tiles.
         cur.execute(
             "UPDATE public.map_tiles SET resource_node_key = NULL WHERE owner_player_id = %s",
             (str(player_id),),

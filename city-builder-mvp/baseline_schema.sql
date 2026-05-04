@@ -1238,9 +1238,6 @@ END;
 $function$
 
 
--- A tile counts as having road access if an orthogonal neighbor is
--- either a player-owned road building OR a highway tile (shared
--- infrastructure threading every chunk).
 CREATE OR REPLACE FUNCTION public.has_road_access(p_x integer, p_y integer)
  RETURNS boolean
  LANGUAGE sql
@@ -1252,11 +1249,6 @@ AS $function$
     WHERE bt.category = 'road' AND b.status = 'active'
       AND ((b.x = p_x - 1 AND b.y = p_y) OR (b.x = p_x + 1 AND b.y = p_y)
            OR (b.x = p_x AND b.y = p_y - 1) OR (b.x = p_x AND b.y = p_y + 1))
-  ) OR EXISTS (
-    SELECT 1 FROM public.map_tiles mt
-    WHERE mt.terrain_type = 'highway'
-      AND ((mt.x = p_x - 1 AND mt.y = p_y) OR (mt.x = p_x + 1 AND mt.y = p_y)
-           OR (mt.x = p_x AND mt.y = p_y - 1) OR (mt.x = p_x AND mt.y = p_y + 1))
   );
 $function$
 
@@ -1273,11 +1265,6 @@ AS $function$
       AND b.player_id = p_player_id
       AND ((b.x = p_x - 1 AND b.y = p_y) OR (b.x = p_x + 1 AND b.y = p_y)
            OR (b.x = p_x AND b.y = p_y - 1) OR (b.x = p_x AND b.y = p_y + 1))
-  ) OR EXISTS (
-    SELECT 1 FROM public.map_tiles mt
-    WHERE mt.terrain_type = 'highway'
-      AND ((mt.x = p_x - 1 AND mt.y = p_y) OR (mt.x = p_x + 1 AND mt.y = p_y)
-           OR (mt.x = p_x AND mt.y = p_y - 1) OR (mt.x = p_x AND mt.y = p_y + 1))
   );
 $function$
 
