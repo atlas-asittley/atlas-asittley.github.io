@@ -83,9 +83,20 @@ For debugging and one-off queries, save your Supabase Session-pooler URL to `~/.
 
 The Session pooler URL is found in Supabase Dashboard → Settings → Database → Connection string → Session pooler. Direct connections (`db.[ref].supabase.co`) are IPv6-only on free tier and frequently fail.
 
+## Tests
+
+A pytest suite covers the database RPCs and RLS policies. Run with:
+
+```bash
+./tests/run.sh
+```
+
+Each test runs inside a transaction savepoint and rolls back, so the live database stays untouched. See `tests/README.md` for the philosophy and how to add tests after a bugfix.
+
 ## Where to find more
 
 - `GAME_DESIGN.md` — canonical mechanics reference (target state)
 - `city-builder-mvp/STRUCTURE.md` — file layout, module deps, deployment
 - `city-builder-mvp/graphics/ART_DIRECTION.md` — visual style for any new sprites
+- `tests/README.md` — what's tested, how to run, how to add tests
 - `archive/` — historical runbooks and shipped initiative plans, kept for context
