@@ -641,6 +641,7 @@ body {
 .insp-value.insp-bad { color: #f06060; }
 .insp-value.insp-warn { color: #e6c65a; }
 .inspector-actions { padding: 12px 16px 16px; border-top: 1px solid #1e2a3a; }
+.inspector-hint { font-size: 0.68rem; color: #5a6a7e; text-align: center; padding: 4px 0 8px; opacity: 0.8; letter-spacing: 0.04em; }
 .insp-hint { font-size: 0.72rem; color: #8a9aae; padding: 2px 0 8px; line-height: 1.4; }
 .insp-hint.insp-hint-muted { color: #5a6a7e; font-style: italic; }
 .insp-evolution-bar { height: 3px; background: #1e2a3a; border-radius: 2px; margin: 4px 0 8px; overflow: hidden; }

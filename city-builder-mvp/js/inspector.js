@@ -30,6 +30,47 @@ export function openInspector(building) {
   renderInspector();
   document.getElementById('inspector-overlay').classList.add('active');
   renderMap();  // re-render so map can highlight the inspected extractor's target
+  ensureInspectedTargetVisible(building);
+}
+
+// Scroll the map so the inspected extractor's target tile is visible in the
+// space ABOVE the inspector panel. No-op for non-extractor buildings or for
+// targets that are already in view.
+function ensureInspectedTargetVisible(building) {
+  if (building.target_x === null || building.target_x === undefined) return;
+  // Wait for the inspector's slide-up animation (~200ms) before measuring.
+  setTimeout(function () {
+    var cell = document.querySelector(
+      '.cell[data-x="' + building.target_x + '"][data-y="' + building.target_y + '"]'
+    );
+    var viewport = document.getElementById('map-viewport');
+    var panel = document.getElementById('inspector-panel');
+    if (!cell || !viewport || !panel) return;
+
+    var cellRect = cell.getBoundingClientRect();
+    var panelRect = panel.getBoundingClientRect();
+    var vpRect = viewport.getBoundingClientRect();
+
+    // Visible map = inside the viewport, above the inspector
+    var visibleTop = vpRect.top;
+    var visibleBottom = Math.min(vpRect.bottom, panelRect.top);
+    if (visibleBottom - visibleTop < 60) return; // not enough room either way
+
+    // Already comfortably inside? Nothing to do.
+    var pad = 20;
+    if (cellRect.top >= visibleTop + pad
+        && cellRect.bottom <= visibleBottom - pad
+        && cellRect.left >= vpRect.left + pad
+        && cellRect.right <= vpRect.right - pad) {
+      return;
+    }
+
+    var deltaY = (cellRect.top + cellRect.height / 2)
+               - (visibleTop + (visibleBottom - visibleTop) / 2);
+    var deltaX = (cellRect.left + cellRect.width / 2)
+               - (vpRect.left + vpRect.width / 2);
+    viewport.scrollBy({ top: deltaY, left: deltaX, behavior: 'smooth' });
+  }, 220);
 }
 
 export function closeInspector() {
