@@ -129,11 +129,17 @@ BEGIN
 
     -- Check for a matching unclaimed resource tile orthogonally adjacent
     -- to this road tile. Tile must also be owned by the player.
+    -- A tile counts as a candidate only if it has the matching resource,
+    -- isn't already claimed, and has no building on it. The
+    -- occupied_building_id check prevents an extractor placed on top of
+    -- a resource tile (legal under M2 placement rules) from claiming
+    -- that same tile as its own target.
     SELECT mt.x, mt.y INTO target_x, target_y
     FROM public.map_tiles mt
     WHERE mt.owner_player_id = p_player_id
       AND mt.resource_node_key = v_resource_key
       AND mt.claimed_by_building_id IS NULL
+      AND mt.occupied_building_id IS NULL
       AND (
         (mt.x = v_rx - 1 AND mt.y = v_ry)
         OR (mt.x = v_rx + 1 AND mt.y = v_ry)

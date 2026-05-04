@@ -220,6 +220,8 @@ CREATE POLICY "buildings_insert_self" ON public.buildings FOR INSERT
   WITH CHECK (auth.uid() = player_id);
 CREATE POLICY "buildings_update_self" ON public.buildings FOR UPDATE
   USING (auth.uid() = player_id) WITH CHECK (auth.uid() = player_id);
+CREATE POLICY "buildings_delete_self" ON public.buildings FOR DELETE
+  USING (auth.uid() = player_id);
 
 -- Inventories: self only
 CREATE POLICY "inventories_select_self" ON public.inventories FOR SELECT
