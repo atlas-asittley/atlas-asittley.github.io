@@ -79,6 +79,7 @@ Buildings with `industry_key = 'common'` (housing, roads, future civic) are buil
 Buildings are stored in `buildings`; their catalog is `building_types`. Categories:
 
 - **`extractor`** (tier 1) — collects raw resources from map tiles via collector walkers. See [Resource collection](#resource-collection).
+- **`food_extractor`** (tier 1) — flat-rate food production. No resource tile claim, no path math, no walker. Each industry has a paired food extractor (timber → Orchard / berries, stone → Fishing Pier / fish, clay → Garden / vegetables; grain industry uses the existing `grain_farm`). Locked to its industry via `industry_key`. Output is flagged `is_food = true` so it auto-satisfies the housing food gate.
 - **`processor`** (tier 2) — consumes one resource from inventory, produces another. Examples: sawmill (timber → lumber), mill (grain → flour). Tier-3 processors (woodcarver, sculptor, bakery) live in this same category — they're just deeper in the chain.
 - **`housing`** — provides workers, evolves through tiers t0–t5 with prerequisites; see [Housing evolution](#housing-evolution). `industry_key = 'common'`.
 - **`road`** — connectivity infrastructure. Walkers move on roads. Required for staffing of processor / service / tax / housing-tier-1+ buildings. `industry_key = 'common'`.
@@ -112,11 +113,12 @@ Stored in the `resources` catalog table; per-player counts in `inventories`. Eac
 - `is_food` — used by the housing food gate (see [Housing evolution](#housing-evolution))
 
 Today's resources:
-- **Raw**: timber, stone, clay, grain
+- **Raw industry**: timber, stone, clay, grain
+- **Raw food**: berries, fish, vegetables (from paired food extractors; grain doubles as both raw industry and food)
 - **Processed (tier-2)**: lumber, brick, pottery, flour
 - **Processed (tier-3)**: bread, furniture, statuary
 
-Foods today (`is_food = true`): grain, flour, bread. The food-pairing item (see TODO) will add berries/fish/vegetables, each marked `is_food = true` so they auto-satisfy the housing food gate without further code change.
+Foods (`is_food = true`): grain, flour, bread, berries, fish, vegetables. Any of these in inventory satisfies the housing food gate. Future tier-specialized gates (e.g., "Townhouse needs grain specifically") would add per-resource booleans to `housing_tier_config`.
 
 A player can produce **only their primary resource** directly via extractors. To get any other resource, they must trade (NPC or player-to-player).
 

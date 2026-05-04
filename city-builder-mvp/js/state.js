@@ -143,8 +143,8 @@ export function computeRoadAccess() {
     var bt = state.buildingTypes[b.building_type_key];
     if (!bt) return;
 
-    // Roads themselves and extractors don't need road access
-    if (bt.category === 'road' || bt.category === 'extractor') return;
+    // Roads themselves and (food-)extractors don't need road access
+    if (bt.category === 'road' || bt.category === 'extractor' || bt.category === 'food_extractor') return;
 
     // Processors / services / tax always require road access.
     // Housing requires road access only if tier config says so (tier 0 shanties don't).
@@ -227,7 +227,7 @@ export function computeLaborAllocation() {
   var prodBuildings = myBuildings.filter(function (b) {
     var bt = state.buildingTypes[b.building_type_key];
     if (!bt || b.status !== 'active') return false;
-    if (bt.category === 'extractor') return true;
+    if (bt.category === 'extractor' || bt.category === 'food_extractor') return true;
     if (bt.category === 'processor' || bt.category === 'tax' || bt.category === 'service') {
       return !!state.roadAccessIds[b.id];
     }

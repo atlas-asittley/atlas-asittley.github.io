@@ -362,8 +362,8 @@ function computeBuildingIssues(b, bt) {
 
   // Worker staffing — only flag if the building consumes workers AND is
   // unstaffed (computeLaborAllocation already accounts for road access).
-  var consumesWorkers = bt.category === 'extractor' || bt.category === 'processor'
-    || bt.category === 'service' || bt.category === 'tax';
+  var consumesWorkers = bt.category === 'extractor' || bt.category === 'food_extractor'
+    || bt.category === 'processor' || bt.category === 'service' || bt.category === 'tax';
   if (consumesWorkers && state.laborInfo.unstaffedIds[b.id]) {
     var li = state.laborInfo;
     var hint = 'Needs ' + bt.worker_cost + ' worker' + (bt.worker_cost > 1 ? 's' : '')
@@ -477,9 +477,9 @@ function renderInspector() {
       html += '</div>';
     }
 
-    // Factual worker cost (extractor / processor / service / tax)
-    if (bt.category === 'extractor' || bt.category === 'processor'
-        || bt.category === 'service' || bt.category === 'tax') {
+    // Factual worker cost (extractor / food_extractor / processor / service / tax)
+    if (bt.category === 'extractor' || bt.category === 'food_extractor'
+        || bt.category === 'processor' || bt.category === 'service' || bt.category === 'tax') {
       if (bt.worker_cost > 0) {
         html += '<div class="insp-row"><span class="insp-label">Workers</span><span class="insp-value">' + bt.worker_cost + ' required</span></div>';
       }
@@ -549,7 +549,7 @@ function renderInspector() {
     }
 
     // Production I/O
-    if (bt.category === 'extractor' && bt.output_resource_key) {
+    if ((bt.category === 'extractor' || bt.category === 'food_extractor') && bt.output_resource_key) {
       var resName = state.resources[bt.output_resource_key] ? state.resources[bt.output_resource_key].name : bt.output_resource_key;
       html += '<div class="insp-row"><span class="insp-label">Output</span><span class="insp-value">' + bt.output_rate + ' ' + resName + '/min</span></div>';
       html += buildTradeValueRow(bt.output_resource_key, bt.output_rate);
