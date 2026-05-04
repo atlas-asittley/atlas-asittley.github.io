@@ -81,7 +81,7 @@ Buildings are stored in `buildings`; their catalog is `building_types`. Categori
 - **`extractor`** (tier 1) — collects raw resources from map tiles via collector walkers. See [Resource collection](#resource-collection).
 - **`food_extractor`** (tier 1) — flat-rate food production. No resource tile claim, no path math, no walker. Each industry has a paired food extractor (timber → Orchard / berries, stone → Fishing Pier / fish, clay → Garden / vegetables; iron uses the existing `grain_farm`). Locked to its industry via `industry_key`. Output is flagged `is_food = true` so it auto-satisfies the housing food gate.
 - **`booster`** (tier 1) — AOE production multiplier. No production of its own. Each industry has two: a *resource booster* (boosts adjacent T1 extractors) and a *food booster* (boosts adjacent food extractors). When staffed, applies `boost_multiplier` (default +25%) to matching buildings within Manhattan distance `boost_range` (default 2). Multiple boosters within range take the **MAX** multiplier — not stack. Same staffing semantics as extractors (no road needed). Locked to industry via `industry_key`; per-booster behavior is configured by `boost_target` ('extractor' or 'food_extractor').
-- **`processor`** (tier 2) — consumes one resource from inventory, produces another. Examples: sawmill (timber → lumber), mill (grain → flour). Tier-3 processors (woodcarver, sculptor, bakery) live in this same category — they're just deeper in the chain.
+- **`processor`** (tier 2+) — consumes resources from inventory, produces another. Supports a single input (legacy: e.g. sawmill timber → lumber) or two inputs (multi-input recipe gated by the scarcer input — output is proportional to `min(avail/need)` across the inputs and both inputs drain at that proportion). Tier-3 processors (woodcarver, sculptor, bakery, distillery, etc.) live in this same category — they're just deeper in the chain. Cross-converters (charcoal_kiln, lime_kiln, glassworks, nail_forge) are also processors that produce a unique support good per industry.
 - **`housing`** — provides workers, evolves through tiers t0–t5 with prerequisites; see [Housing evolution](#housing-evolution). `industry_key = 'common'`.
 - **`road`** — connectivity infrastructure. Walkers move on roads. Required for staffing of processor / service / tax / housing-tier-1+ buildings. `industry_key = 'common'`.
 - **`service`** — citizen-job buildings that consume resources to provide an effect. All require road access to staff and must be staffed AND fed (all inputs available for the elapsed window) to "operate". Examples: well (gates housing tier 1+ within 4), tavern (consumes bread+pottery for a worker bonus), bathhouse (consumes brick+clay, blocks housing devolve in 4 tiles), school (consumes lumber+flour, gates Townhouse within 5), temple (consumes statuary+brick, gates Villa within 6). `industry_key = 'common'`.
@@ -118,6 +118,7 @@ Today's resources:
 - **Raw food**: berries, fish, vegetables, grain (each is the paired food for one industry)
 - **Processed (tier-2)**: lumber, brick, pottery, flour, iron_ingot, wine, smoked_fish, preserves
 - **Processed (tier-3)**: bread, furniture, statuary, tools, tiles
+- **Cross-goods (tier-2 support)**: charcoal, lime, glass, nails (one per industry; tradeable, will be required by future cross-recipe T4 buildings)
 - **Luxuries (tier-3 food)**: spirits, caviar, spices, ale (one per industry; high-value trade goods)
 
 Industry trees (symmetric shape — every industry has the same depth, just with different resources):
@@ -133,6 +134,7 @@ Industry trees (symmetric shape — every industry has the same depth, just with
 | **T3 luxury** | Distillery → spirits | Curing House → caviar | Spicery → spices | Brewery → ale |
 | **Resource booster** | Forester's Office | Foreman's Office | Clay Master's Hut | Mine Office |
 | **Food booster** | Apiary | Hatchery | Compost Heap | Irrigation Channel |
+| **Cross-converter** | Charcoal Kiln → charcoal | Lime Kiln → lime | Glassworks → glass | Nail Forge → nails |
 
 Foods (`is_food = true`): grain, flour, bread, berries, fish, vegetables, wine, smoked_fish, preserves. Any of these in inventory satisfies the housing food gate. Future tier-specialized gates (e.g., "Townhouse needs grain specifically") would add per-resource booleans to `housing_tier_config`.
 
