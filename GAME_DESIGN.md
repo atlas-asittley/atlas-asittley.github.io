@@ -118,8 +118,9 @@ Today's resources:
 - **Raw food**: berries, fish, vegetables, grain (each is the paired food for one industry)
 - **Processed (tier-2)**: lumber, brick, pottery, flour, iron_ingot, wine, smoked_fish, preserves
 - **Processed (tier-3)**: bread, furniture, statuary, tools, tiles
-- **Cross-goods (tier-2 support)**: charcoal, lime, glass, nails (one per industry; tradeable, will be required by future cross-recipe T4 buildings)
+- **Cross-goods (tier-2 support)**: charcoal, lime, glass, nails (one per industry; required as the second input for the T4 cross-recipe buildings of a *different* industry)
 - **Luxuries (tier-3 food)**: spirits, caviar, spices, ale (one per industry; high-value trade goods)
+- **T4 cross-recipe outputs (tier-4 industrial luxuries)**: cabinets, monuments, mosaics, machinery (one per industry; non-food, top of the industrial tree)
 
 Industry trees (symmetric shape — every industry has the same depth, just with different resources):
 
@@ -135,6 +136,7 @@ Industry trees (symmetric shape — every industry has the same depth, just with
 | **Resource booster** | Forester's Office | Foreman's Office | Clay Master's Hut | Mine Office |
 | **Food booster** | Apiary | Hatchery | Compost Heap | Irrigation Channel |
 | **Cross-converter** | Charcoal Kiln → charcoal | Lime Kiln → lime | Glassworks → glass | Nail Forge → nails |
+| **T4 cross-recipe** | Cabinetmaker (furniture+lime → cabinets) | Architect (statuary+glass → monuments) | Mosaic Workshop (tiles+nails → mosaics) | Engineer's Workshop (tools+charcoal → machinery) |
 
 Foods (`is_food = true`): grain, flour, bread, berries, fish, vegetables, wine, smoked_fish, preserves. Any of these in inventory satisfies the housing food gate. Future tier-specialized gates (e.g., "Townhouse needs grain specifically") would add per-resource booleans to `housing_tier_config`.
 
