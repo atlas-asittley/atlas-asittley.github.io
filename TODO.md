@@ -11,10 +11,6 @@ after that, polish, then big design lifts last.
 
 ## Up next
 
-- [ ] **Wider zoom-out range as the map grows.**
-  - The current `applyMapZoom` clamps zoom to a fixed minimum that was sized for a single 15×15 chunk. As districts expand, you can no longer fit the whole map in view. The minimum zoom should scale down with the player's actual map dimensions (gridCols × gridRows) so you can always see the full district at once if you want.
-  - Cap is mostly cosmetic — at extreme zoom-out tiles get tiny — but it should at least cover "all my chunks fit on screen."
-
 - [ ] **Add a highway / shared road network connecting all districts. Also remove the city-center / HQ tile.**
   - A persistent road system the game owns (not any one player), running through every district so districts can talk to each other and players have somewhere to attach their first road segment.
   - Currently the only seed for road-building is the city center tile of the starter chunk (which Atlas wants to remove anyway).
@@ -47,3 +43,4 @@ after that, polish, then big design lifts last.
 
 - **2026-05-04** — District expansion: row-based starters + player-picked expansion. Each player reserves one row at signup; expansion candidates are unowned chunks orthogonally adjacent to the player's district excluding other players' reserved rows. Tap **+ Expand**, candidate chunks pulse gold, tap one to claim. Trapped state impossible because your own row's edges are always available.
 - **2026-05-04** — Resource tile rules: can't build on a resource tile (BEFORE INSERT trigger). Tap an owned resource tile to clear it (sets `resource_node_key = NULL`); then it's buildable. Free for now; demolish blocked if an extractor still targets the tile. Tests, including a `clear_resources` shared fixture for tests that build at known coords.
+- **2026-05-04** — Wider zoom-out as the map grows. New `computeMinZoom()` returns the smaller of `MAP_MIN_ZOOM` (0.5, the existing static floor for small maps) and the dynamic "fit the whole grid in the viewport" zoom. Hard floor at 0.05 so tiles don't disappear on very large districts.

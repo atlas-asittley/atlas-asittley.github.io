@@ -23,7 +23,13 @@ var CELL_BASE_SIZE = 520 / 15;  // px per cell at 1x zoom (original 520px / 15 c
 function tileHash(x, y) {
   return ((x * 2654435761 + y * 2246822519) >>> 0);
 }
+// MAP_MIN_ZOOM is a *cap* on the static minimum — used for small maps
+// that fit easily. As the district grows, the dynamic minimum (see
+// computeMinZoom) can drop below this so the whole map fits on screen.
+// MAP_MIN_ZOOM_FLOOR is the absolute lower bound — tiles past this start
+// to get unreadably small.
 var MAP_MIN_ZOOM = 0.5;
+var MAP_MIN_ZOOM_FLOOR = 0.05;
 var MAP_MAX_ZOOM = 3;
 var MAP_ZOOM_STEP = 0.25;
 var EXPAND_THRESHOLD = 2;  // tiles from edge to trigger expansion
@@ -330,6 +336,22 @@ function isRoadPlacementConnected(tile, pendingSet) {
 
 // ── Zoom ──
 
+// Dynamic minimum zoom: as the district grows the player should still be
+// able to fit the whole map in the viewport, so the floor drops with the
+// grid size. For small maps it stays at MAP_MIN_ZOOM (existing behavior).
+function computeMinZoom() {
+  var vp = document.getElementById('map-viewport');
+  if (!vp) return MAP_MIN_ZOOM;
+  var rect = vp.getBoundingClientRect();
+  if (rect.width <= 0 || rect.height <= 0) return MAP_MIN_ZOOM;
+  var fitW = rect.width / (CELL_BASE_SIZE * Math.max(1, state.gridCols));
+  var fitH = rect.height / (CELL_BASE_SIZE * Math.max(1, state.gridRows));
+  // Use 90% of fit so the player can still zoom out *past* "exactly fits"
+  // for a little visual buffer around the edges.
+  var fit = Math.min(fitW, fitH) * 0.9;
+  return Math.max(MAP_MIN_ZOOM_FLOOR, Math.min(MAP_MIN_ZOOM, fit));
+}
+
 export function applyMapZoom() {
   var grid = document.getElementById('map-grid');
   var label = document.getElementById('zoom-label');
@@ -341,7 +363,7 @@ export function applyMapZoom() {
 }
 
 function setMapZoom(nextZoom) {
-  var clamped = Math.max(MAP_MIN_ZOOM, Math.min(MAP_MAX_ZOOM, nextZoom));
+  var clamped = Math.max(computeMinZoom(), Math.min(MAP_MAX_ZOOM, nextZoom));
   state.mapZoom = Math.round(clamped * 100) / 100;
   applyMapZoom();
 }
@@ -355,7 +377,7 @@ function setMapZoomAtPoint(nextZoom, clientX, clientY) {
   }
 
   var oldZoom = state.mapZoom;
-  var clamped = Math.max(MAP_MIN_ZOOM, Math.min(MAP_MAX_ZOOM, nextZoom));
+  var clamped = Math.max(computeMinZoom(), Math.min(MAP_MAX_ZOOM, nextZoom));
   var newZoom = Math.round(clamped * 100) / 100;
   if (newZoom === oldZoom) return;
 
