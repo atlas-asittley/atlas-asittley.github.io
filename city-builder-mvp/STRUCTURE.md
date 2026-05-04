@@ -21,8 +21,9 @@ city-builder-mvp/
 │   ├── inspector.js        Building inspector overlay
 │   └── realtime.js         Supabase realtime subscription for multiplayer
 │
-├── *.sql                   Schema migrations (see "Migration order" below)
-├── migration_patches/      Small standalone bugfix SQLs (see folder README)
+├── baseline_schema.sql     Single canonical schema (run on fresh projects)
+├── migrations-archive/     Layered migrations that built up to baseline; reference only
+├── migration_patches/      Small standalone bugfix SQLs for in-place fixes
 ├── graphics/               Art direction, sprite plans, asset tracking
 │   └── archive/            Completed initiative plans (e.g. BUILDING_POLISH_PLAN)
 └── STRUCTURE.md            This file
@@ -39,17 +40,13 @@ citybuilder/
     └── M1_M2_deployment_runbook.md
 ```
 
-## Migration order
+## Schema deployment
 
-Run the `*.sql` files in `city-builder-mvp/` in this order on a fresh Supabase project. See `docs/ONBOARDING.md` for the full list and rationale.
+A **fresh Supabase project** runs only `baseline_schema.sql` once. That's the entire schema: tables, indexes, RLS, policies, functions, triggers, and catalog seed data, generated from the live production DB.
 
-1. `mvp_schema.sql`
-2. Trade phase: `phase2a_trade_migration.sql` → `phase2b_trade_partners_migration.sql` → `black_market_migration.sql`
-3. Housing + roads: `housing_labor_migration.sql` → `roads_migration.sql` → `housing_evolution_migration.sql` → `road_connectivity_rule_migration.sql`
-4. Resource chains: `grain_chain_migration.sql` → `clay_chain_migration.sql` → `tier3_chains_migration.sql` → `sculptor_migration.sql` → `housing_tiers_expansion.sql`
-5. District + collection: `district_scaffolding_migration.sql` (M1, destructive) → `resource_collection_migration.sql` (M2)
-6. Tuning: `worker_cost_tuning_migration.sql`
-7. Patches from `migration_patches/` (already merged into the canonical files above; only needed for in-place fixes on already-deployed DBs)
+The **existing live DB** was built from the layered migrations under `migrations-archive/`. Don't run `baseline_schema.sql` against it — that would `DROP SCHEMA public CASCADE` and wipe everything.
+
+When new features ship, new migration files land at `city-builder-mvp/*.sql` alongside the baseline and run on top of it. The first such migration after this consolidation will reset the layering trap by being a single file with a single redefinition.
 
 ## How to update the app version
 

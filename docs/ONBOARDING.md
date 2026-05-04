@@ -48,38 +48,25 @@ var SUPABASE_ANON_KEY = 'sb_publishable_...';
 
 The anon key is safe to expose; RLS policies enforce all access control. The service-role key must NEVER end up in client code.
 
-### 4. Run the migrations in order
+### 4. Run the baseline schema
 
-Open Supabase Dashboard → SQL Editor → New query. Paste each file's contents and run, **in this order**:
+Open Supabase Dashboard → SQL Editor → New query. Paste the contents of:
 
-1. `mvp_schema.sql`
-2. `phase2a_trade_migration.sql`
-3. `phase2b_trade_partners_migration.sql`
-4. `black_market_migration.sql`
-5. `housing_labor_migration.sql`
-6. `roads_migration.sql`
-7. `housing_evolution_migration.sql`
-8. `road_connectivity_rule_migration.sql`
-9. `grain_chain_migration.sql`
-10. `clay_chain_migration.sql`
-11. `tier3_chains_migration.sql`
-12. `sculptor_migration.sql`
-13. `housing_tiers_expansion.sql`
-14. `district_scaffolding_migration.sql` *(M1 — destructive: wipes existing tiles/buildings; safe on a fresh project)*
-15. `resource_collection_migration.sql` *(M2)*
-16. `worker_cost_tuning_migration.sql`
+```
+city-builder-mvp/baseline_schema.sql
+```
 
-Then run any patches from `migration_patches/` (these are small fixes for bugs found post-deployment; harmless to apply on top of fresh migrations):
+Run it. That's the entire schema — tables, indexes, RLS policies, all functions, triggers, the full catalog of resources / building types / traders / housing tier configs / NPC trade partners. About 2,000 lines, runs in a few seconds.
 
-- `migration_patches/fix_buildings_delete_policy.sql`
-- `migration_patches/fix_place_building_vpath.sql`
-- `migration_patches/fix_verify_extractor_path.sql`
+> **Why one big file?** Earlier the schema lived in 16 layered migration files where `place_building` was redefined 8 times across them. That created real maintenance debt and silent bugs (e.g. an `upgrade_secs` typo introduced during a rewrite). We collapsed everything into one canonical baseline generated from the live DB. The historical migration files are kept under `city-builder-mvp/migrations-archive/` for reference and as a fallback if the baseline ever fails.
 
-> **Mobile note:** Supabase's SQL editor on mobile sometimes silently truncates large pastes. If a function ends up missing from `pg_proc`, paste the relevant `migration_patches/fix_*.sql` standalone.
+> **Mobile note:** Supabase's SQL editor on mobile occasionally truncates large pastes. If you see "function not found" errors after running the baseline, paste the affected function's definition again as a standalone query. The patches under `city-builder-mvp/migration_patches/` are small standalone copies of the most-frequently-truncated functions for exactly this case.
 
-> **Why so many migrations?** Historical: features shipped incrementally. There is a known maintenance debt — `place_building` is rewritten across 8 files. A future "consolidated baseline" pass will collapse this. For now, run them in order.
+### 5. Apply any post-baseline migrations
 
-### 5. Sign in and start playing
+When new features ship, additional migration files will land at `city-builder-mvp/*.sql` alongside the baseline. Run them in chronological order on top of the baseline. (As of this writing there are none — the baseline is current.)
+
+### 6. Sign in and start playing
 
 Go back to the local server tab. Sign up with email/password. Pick an industry (timber, stone, grain, or clay). You'll be allocated a 15×15 starting district at the origin, with ~18 randomly-scattered resource tiles of your industry.
 
