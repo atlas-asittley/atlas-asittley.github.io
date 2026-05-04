@@ -17,10 +17,11 @@ after that, polish, then big design lifts last.
   - Likely pairings to discuss: timber → berries (orchard), stone → fish (fishing pier), clay → vegetables (garden), <new fourth> → grain (farm).
 
 - [ ] **Happiness system: citizens immigrate when happy, emigrate when unhappy.**
-  - Per-player happiness rating that scales worker supply (or housing growth rate, TBD).
-  - Inputs to figure out: housing tier, road access, nearby services (well, market), tax pressure, density, etc.
-  - Affects: population growth speed, possibly housing evolution, possibly extractor/processor productivity.
-  - Design discussion needed before any code lands.
+  - **Concept:** a per-player happiness rating (likely 0–100, an average across all citizens) that drives the *rate* at which citizens enter or leave the city — i.e. shifts the worker pool over time, not all-at-once.
+  - **Mechanism (sketch):** at each tick, compute happiness, then nudge worker pool: positive nudge if happy, negative if unhappy. Over enough time, a happy city grows past its housing capacity (forcing the player to build more); an unhappy one shrinks back below it. Could also gate housing tier evolution.
+  - **Inputs to weigh:** housing tier (higher = happier), service access (well, school, temple, bathhouse, tavern within range), tax pressure (Tax Office in range = unhappy), food variety (more food types in stock = happier), density (overcrowding = unhappy), road access, unstaffed buildings nearby, etc.
+  - **Effects (decide between):** (a) directly modifies worker pool (immigration/emigration), (b) modifies housing growth rate, (c) modifies extractor/processor productivity, (d) some combination. Atlas's framing favors (a) — explicit population shifts over time.
+  - **Design discussion needed** before any code lands. Open questions: is happiness per-house or per-player? per-house lets us show heatmap on the map; per-player is simpler. How fast should the worker pool actually shift? What's the equilibrium point?
 
 - [ ] **Tavern's worker bonus is decorative, not functional.**
   - In `process_production`, the staffing loop runs first with `v_worker_supply = 5 + housing`. The tavern's `v_tavern_bonus` is added AFTER the staffing decisions, so it shows up in the displayed `worker_capacity` but doesn't actually allow more buildings to staff in the same tick.
