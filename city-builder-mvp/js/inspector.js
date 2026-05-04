@@ -170,7 +170,6 @@ function renderResourceInspector() {
       rows += '<div class="insp-row"><span class="insp-label">Then</span><span class="insp-value">' + proc2.name + ' → ' + resName(proc2.output_resource_key) + '</span></div>';
     }
   }
-  rows += '<div class="insp-row"><span class="insp-label">Tile</span><span class="insp-value">(' + inspectedTile.x + ', ' + inspectedTile.y + ')</span></div>';
   bodyEl.innerHTML = rows;
 
   // Block demolition while an extractor still claims this tile —
@@ -309,9 +308,6 @@ function renderInspector() {
   if (!mine && b.player_profiles) {
     html += '<div class="insp-row"><span class="insp-label">Owner</span><span class="insp-value">' + b.player_profiles.display_name + '</span></div>';
   }
-
-  // Position
-  html += '<div class="insp-row"><span class="insp-label">Position</span><span class="insp-value">(' + b.x + ', ' + b.y + ')</span></div>';
 
   // Status indicators (only for own buildings)
   if (mine && bt.category !== 'road') {
@@ -666,10 +662,6 @@ export function openWalkerInspector(walkerInfo) {
   html += '<div class="insp-row"><span class="insp-label">Activity</span><span class="insp-value">' + activity + '</span></div>';
   var originLabel = jobType === 'citizen' ? 'Home' : 'Workplace';
   html += '<div class="insp-row"><span class="insp-label">' + originLabel + '</span><span class="insp-value">' + walkerInfo.sourceName + '</span></div>';
-  if (walkerInfo.sourceX !== null) {
-    html += '<div class="insp-row"><span class="insp-label">' + originLabel + ' location</span><span class="insp-value">(' + walkerInfo.sourceX + ', ' + walkerInfo.sourceY + ')</span></div>';
-  }
-  html += '<div class="insp-row"><span class="insp-label">Position</span><span class="insp-value">(' + walkerInfo.x + ', ' + walkerInfo.y + ')</span></div>';
   html += '<div class="insp-row"><span class="insp-label">Steps</span><span class="insp-value">' + walkerInfo.steps + ' / ' + walkerInfo.maxSteps + '</span></div>';
   html += '<div class="insp-hint">Walkers wander along roads from their buildings. They are purely cosmetic and don\'t affect production.</div>';
 
