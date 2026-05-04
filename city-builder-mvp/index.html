@@ -134,8 +134,12 @@
     <div class="inspector-header">
       <span class="inspector-title" id="inspector-title">Building</span>
       <div class="inspector-header-actions">
-        <button class="inspector-mini" id="inspector-mini" title="Minimize">▾</button>
-        <button class="inspector-close" id="inspector-close">&times;</button>
+        <button class="inspector-mini" id="inspector-mini" aria-label="Minimize" title="Minimize">
+          <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3,6 8,11 13,6"/></svg>
+        </button>
+        <button class="inspector-close" id="inspector-close" aria-label="Close" title="Close">
+          <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="4" y1="4" x2="12" y2="12"/><line x1="12" y1="4" x2="4" y2="12"/></svg>
+        </button>
       </div>
     </div>
     <div class="inspector-body" id="inspector-body"></div>
