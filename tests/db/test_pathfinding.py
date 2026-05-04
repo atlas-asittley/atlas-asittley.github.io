@@ -35,19 +35,17 @@ def test_finds_nearest_resource_through_roads(make_player, place, cur):
     p = make_player(industry='timber')
     hx, hy = p['home_x'], p['home_y']
     _clear_resources(cur, p['id'])
-    _seed_resource(cur, p['id'], hx + 4, hy + 1, 'timber')
+    _seed_resource(cur, p['id'], hx + 4, hy + 2, 'timber')
 
-    # Build a road run east from home
+    # Build a road run east, parallel to the highway (y=hy is the highway row).
     for dx in range(1, 5):
-        place('road', hx + dx, hy)
+        place('road', hx + dx, hy + 1)
 
-    # Place extractor adjacent to road (but not on resource)
-    result = place('timber_camp', hx + 1, hy + 1)
+    # Place extractor adjacent to a road, not on the resource.
+    result = place('timber_camp', hx + 1, hy + 2)
     target = result.get('extractor_target')
     assert target is not None, "BFS should have found the seeded timber"
-    assert (target['x'], target['y']) == (hx + 4, hy + 1)
-    # path_length: extractor at (hx+1, hy+1), adj road at (hx+1, hy);
-    # walk east 3 tiles to (hx+4, hy), which is adjacent to (hx+4, hy+1)
+    assert (target['x'], target['y']) == (hx + 4, hy + 2)
     assert target['path_length'] >= 1
 
 
@@ -68,8 +66,8 @@ def test_no_path_when_isolated(make_player, place, cur):
     _seed_resource(cur, p['id'], hx + 8, hy + 8, 'timber')
 
     # Build a road but only adjacent to home — won't reach (hx+8, hy+8)
-    place('road', hx + 1, hy)
-    result = place('timber_camp', hx + 1, hy + 1)
+    place('road', hx + 1, hy + 1)
+    result = place('timber_camp', hx + 1, hy + 2)
     assert result.get('extractor_target') is None
 
 
@@ -81,12 +79,13 @@ def test_only_finds_owned_resource_tiles(make_player, place, as_user, cur):
 
     _clear_resources(cur, pA['id'])
     _clear_resources(cur, pB['id'])
-    # B has a timber tile near their home; A does not
-    _seed_resource(cur, pB['id'], pB['home_x'] + 1, pB['home_y'], 'timber')
+    # B has a timber tile near their home; A does not. Seed off the
+    # highway (which runs through y=home_y) to keep this on regular ground.
+    _seed_resource(cur, pB['id'], pB['home_x'] + 1, pB['home_y'] + 1, 'timber')
 
     hx, hy = pA['home_x'], pA['home_y']
-    place('road', hx + 1, hy)
-    result = place('timber_camp', hx + 1, hy + 1)
+    place('road', hx + 1, hy + 1)
+    result = place('timber_camp', hx + 1, hy + 2)
     assert result.get('extractor_target') is None, "should not see B's resources"
 
 
@@ -96,18 +95,18 @@ def test_two_extractors_cannot_share_a_resource(make_player, place, cur):
     p = make_player(industry='timber')
     hx, hy = p['home_x'], p['home_y']
     _clear_resources(cur, p['id'])
-    _seed_resource(cur, p['id'], hx + 4, hy + 1, 'timber')   # only one tile
+    _seed_resource(cur, p['id'], hx + 4, hy + 2, 'timber')   # only one tile
 
     for dx in range(1, 5):
-        place('road', hx + dx, hy)
+        place('road', hx + dx, hy + 1)
 
-    r1 = place('timber_camp', hx + 1, hy + 1)
-    r2 = place('timber_camp', hx + 2, hy + 1)
+    r1 = place('timber_camp', hx + 1, hy + 2)
+    r2 = place('timber_camp', hx + 2, hy + 2)
     t1 = r1.get('extractor_target')
     t2 = r2.get('extractor_target')
 
     # First should have claimed the only timber tile
     assert t1 is not None
-    assert (t1['x'], t1['y']) == (hx + 4, hy + 1)
+    assert (t1['x'], t1['y']) == (hx + 4, hy + 2)
     # Second should be idle
     assert t2 is None

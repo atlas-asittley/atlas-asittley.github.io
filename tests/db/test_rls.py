@@ -25,7 +25,7 @@ def test_owner_can_delete_own_building(make_player, place, cur, clear_resources)
     p = make_player()
     clear_resources(p['id'])
     hx, hy = p['home_x'], p['home_y']
-    result = place('road', hx + 1, hy)
+    result = place('road', hx + 1, hy + 1)
     bid = result['building_id']
 
     # We're the postgres role with auth.uid() set to the player; RLS still applies
@@ -43,7 +43,7 @@ def test_cannot_delete_other_players_building(make_player, place, as_user, cur, 
     pA = make_player()
     clear_resources(pA['id'])
     hx, hy = pA['home_x'], pA['home_y']
-    result = place('road', hx + 1, hy)
+    result = place('road', hx + 1, hy + 1)
     bid = result['building_id']
 
     pB = make_player()

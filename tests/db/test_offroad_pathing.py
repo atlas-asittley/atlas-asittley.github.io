@@ -56,24 +56,22 @@ def test_road_path_cheaper_than_offroad(make_player, place, cur):
     hx, hy = p['home_x'], p['home_y']
     _clear_resources(cur, p['id'])
 
-    # Build road from home east: (hx+1, hy) → (hx+4, hy). All connect.
+    # Build road from home east, parallel to the highway (y=hy is highway).
     for dx in range(1, 5):
-        place('road', hx + dx, hy)
+        place('road', hx + dx, hy + 1)
 
-    # Resource just north of the far end of the road
-    _seed_resource(cur, p['id'], hx + 4, hy + 1, 'timber')
+    # Resource one tile south of the far end of the road
+    _seed_resource(cur, p['id'], hx + 4, hy + 2, 'timber')
 
-    # Extractor adjacent to start of road, just north of (hx+1, hy)
-    result = place('timber_camp', hx + 1, hy + 1)
+    # Extractor adjacent to start of road
+    result = place('timber_camp', hx + 1, hy + 2)
     target = result['extractor_target']
     assert target is not None
-    assert (target['x'], target['y']) == (hx + 4, hy + 1)
+    assert (target['x'], target['y']) == (hx + 4, hy + 2)
 
-    # Road path: extractor → road(hx+1,hy) [1] → road(hx+2,hy) [1] →
-    #   road(hx+3,hy) [1] → road(hx+4,hy) [1] → target(hx+4,hy+1) [3, off-road]
+    # Road path: extractor → road(hx+1,hy+1) [1] → road(hx+2,hy+1) [1] →
+    #   road(hx+3,hy+1) [1] → road(hx+4,hy+1) [1] → target(hx+4,hy+2) [3, off-road]
     # = 1+1+1+1+3 = 7
-    # Pure off-road alternative: (hx+1,hy+1) → (hx+2,hy+1) [3] →
-    #   (hx+3,hy+1) [3] → (hx+4,hy+1) [3, target] = 9
     assert target['path_length'] == 7, \
         f"expected road-preferring path_length=7, got {target['path_length']}"
 

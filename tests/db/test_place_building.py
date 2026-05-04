@@ -15,7 +15,7 @@ def test_road_placement_succeeds_adjacent_to_home(make_player, place, clear_reso
     p = make_player(industry='timber')
     clear_resources(p['id'])
     hx, hy = p['home_x'], p['home_y']
-    result = place('road', hx + 1, hy)
+    result = place('road', hx + 1, hy + 1)
     assert 'building_id' in result
     assert result['extractor_target'] is None  # roads aren't extractors
 
@@ -26,8 +26,8 @@ def test_housing_placement_no_v_path_crash(make_player, place, clear_resources):
     p = make_player()
     clear_resources(p['id'])
     hx, hy = p['home_x'], p['home_y']
-    place('road', hx + 1, hy)
-    result = place('house', hx + 2, hy)
+    place('road', hx + 1, hy + 1)
+    result = place('house', hx + 2, hy + 1)
     assert 'building_id' in result
 
 
@@ -51,14 +51,15 @@ def test_extractor_finds_path_when_road_adjacent(make_player, place, cur, clear_
     clear_resources(p['id'])
     hx, hy = p['home_x'], p['home_y']
 
-    # Build a road run
+    # Build a road run one row south of the highway so it doesn't collide
+    # with the highway tiles themselves.
     for dx in range(1, 6):
-        place('road', hx + dx, hy)
+        place('road', hx + dx, hy + 1)
 
     # Place an extractor adjacent to one of the roads. Whether it finds a
     # resource depends on random seeding; just verify the placement path
     # itself succeeds and target is either set or NULL (idle).
-    result = place('timber_camp', hx + 3, hy + 1)
+    result = place('timber_camp', hx + 3, hy + 2)
     assert 'building_id' in result
     # extractor_target may or may not be set depending on resource layout
     # — what matters is no crash and a valid response shape.
@@ -103,9 +104,9 @@ def test_industry_mismatch_rejected(make_player, place, clear_resources):
     p = make_player(industry='timber')
     clear_resources(p['id'])
     hx, hy = p['home_x'], p['home_y']
-    place('road', hx + 1, hy)
+    place('road', hx + 1, hy + 1)
     with pytest.raises(psycopg2.errors.RaiseException, match="industry"):
-        place('stone_quarry', hx + 1, hy + 1)
+        place('stone_quarry', hx + 1, hy + 2)
 
 
 def test_common_buildings_allowed_for_any_industry(make_player, place, clear_resources):
@@ -114,7 +115,7 @@ def test_common_buildings_allowed_for_any_industry(make_player, place, clear_res
         p = make_player(industry=industry)
         clear_resources(p['id'])
         hx, hy = p['home_x'], p['home_y']
-        result = place('road', hx + 1, hy)
+        result = place('road', hx + 1, hy + 1)
         assert 'building_id' in result
-        result = place('house', hx + 2, hy)
+        result = place('house', hx + 2, hy + 1)
         assert 'building_id' in result

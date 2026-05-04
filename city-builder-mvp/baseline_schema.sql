@@ -475,15 +475,19 @@ BEGIN
     END LOOP;
   END LOOP;
 
-  -- Stamp city center for the player's first chunk (overwrites any
-  -- resource that randomly seeded onto (7,7) — fine, city center wins).
-  IF v_is_first_chunk THEN
-    UPDATE public.map_tiles
-    SET terrain_type = 'city_center',
-        buildable = false,
-        resource_node_key = NULL
-    WHERE x = v_x_start + 7 AND y = v_y_start + 7;
+  -- Stamp highway: horizontal strip at y_offset = 7, vertical strip at
+  -- x_offset = 7. Unbuildable, no resource. Threads through every chunk
+  -- so districts are connected via shared road-cost infrastructure.
+  UPDATE public.map_tiles
+  SET terrain_type = 'highway',
+      buildable = false,
+      resource_node_key = NULL
+  WHERE owner_player_id = p_player_id
+    AND x >= v_x_start AND x < v_x_start + 15
+    AND y >= v_y_start AND y < v_y_start + 15
+    AND (x = v_x_start + 7 OR y = v_y_start + 7);
 
+  IF v_is_first_chunk THEN
     UPDATE public.player_profiles
     SET home_x = v_x_start + 7, home_y = v_y_start + 7
     WHERE id = p_player_id;
@@ -963,6 +967,7 @@ DECLARE
   v_neighbor_cost integer;
   v_existing_dist integer;
   v_is_road boolean;
+  v_is_highway boolean;
   v_neighbor_walkable boolean;
   v_is_resource boolean;
   v_dx int[] := ARRAY[-1, 1, 0, 0];
@@ -997,8 +1002,6 @@ BEGIN
 
     v_state := jsonb_set(v_state, ARRAY[v_cur_key, 'v'], 'true'::jsonb);
 
-    -- Goal check: this tile has the matching unclaimed resource and isn't
-    -- the extractor's own footprint.
     IF NOT (v_cur_x = p_ex AND v_cur_y = p_ey) THEN
       SELECT EXISTS (
         SELECT 1 FROM public.map_tiles mt
@@ -1017,35 +1020,44 @@ BEGIN
       END IF;
     END IF;
 
-    -- Expand 4 neighbors. Walkable = owned by player AND (is a road OR has
-    -- no building on it). Roads cost 1 to step on, off-road costs 3.
+    -- Expand 4 neighbors. Walkable at cost 1 if highway tile (any owner,
+    -- shared infrastructure) or player-owned road. Off-road = owned by
+    -- player + no building on it, cost 3.
     FOR v_i IN 1..4 LOOP
       v_neighbor_x := v_cur_x + v_dx[v_i];
       v_neighbor_y := v_cur_y + v_dy[v_i];
       v_neighbor_key := v_neighbor_x || ',' || v_neighbor_y;
 
-      -- Is there a player-owned road here?
       SELECT EXISTS (
-        SELECT 1 FROM public.buildings b
-        JOIN public.building_types bt ON bt.key = b.building_type_key
-        WHERE b.x = v_neighbor_x AND b.y = v_neighbor_y
-          AND bt.category = 'road'
-          AND b.status = 'active'
-          AND b.player_id = p_player_id
-      ) INTO v_is_road;
+        SELECT 1 FROM public.map_tiles mt
+        WHERE mt.x = v_neighbor_x AND mt.y = v_neighbor_y
+          AND mt.terrain_type = 'highway'
+      ) INTO v_is_highway;
 
-      IF v_is_road THEN
+      IF v_is_highway THEN
         v_neighbor_cost := v_road_cost;
         v_neighbor_walkable := true;
       ELSE
-        -- Off-road: must be owned and not have a building on it
         SELECT EXISTS (
-          SELECT 1 FROM public.map_tiles mt
-          WHERE mt.x = v_neighbor_x AND mt.y = v_neighbor_y
-            AND mt.owner_player_id = p_player_id
-            AND mt.occupied_building_id IS NULL
-        ) INTO v_neighbor_walkable;
-        v_neighbor_cost := v_offroad_cost;
+          SELECT 1 FROM public.buildings b
+          JOIN public.building_types bt ON bt.key = b.building_type_key
+          WHERE b.x = v_neighbor_x AND b.y = v_neighbor_y
+            AND bt.category = 'road' AND b.status = 'active'
+            AND b.player_id = p_player_id
+        ) INTO v_is_road;
+
+        IF v_is_road THEN
+          v_neighbor_cost := v_road_cost;
+          v_neighbor_walkable := true;
+        ELSE
+          SELECT EXISTS (
+            SELECT 1 FROM public.map_tiles mt
+            WHERE mt.x = v_neighbor_x AND mt.y = v_neighbor_y
+              AND mt.owner_player_id = p_player_id
+              AND mt.occupied_building_id IS NULL
+          ) INTO v_neighbor_walkable;
+          v_neighbor_cost := v_offroad_cost;
+        END IF;
       END IF;
 
       IF NOT v_neighbor_walkable THEN CONTINUE; END IF;
@@ -1099,22 +1111,25 @@ END;
 $function$
 
 
+-- A tile counts as having road access if an orthogonal neighbor is
+-- either a player-owned road building OR a highway tile (shared
+-- infrastructure threading every chunk).
 CREATE OR REPLACE FUNCTION public.has_road_access(p_x integer, p_y integer)
  RETURNS boolean
  LANGUAGE sql
  STABLE
 AS $function$
   SELECT EXISTS (
-    SELECT 1
-    FROM public.buildings b
+    SELECT 1 FROM public.buildings b
     JOIN public.building_types bt ON bt.key = b.building_type_key
     WHERE bt.category = 'road' AND b.status = 'active'
-      AND (
-        (b.x = p_x - 1 AND b.y = p_y)
-        OR (b.x = p_x + 1 AND b.y = p_y)
-        OR (b.x = p_x AND b.y = p_y - 1)
-        OR (b.x = p_x AND b.y = p_y + 1)
-      )
+      AND ((b.x = p_x - 1 AND b.y = p_y) OR (b.x = p_x + 1 AND b.y = p_y)
+           OR (b.x = p_x AND b.y = p_y - 1) OR (b.x = p_x AND b.y = p_y + 1))
+  ) OR EXISTS (
+    SELECT 1 FROM public.map_tiles mt
+    WHERE mt.terrain_type = 'highway'
+      AND ((mt.x = p_x - 1 AND mt.y = p_y) OR (mt.x = p_x + 1 AND mt.y = p_y)
+           OR (mt.x = p_x AND mt.y = p_y - 1) OR (mt.x = p_x AND mt.y = p_y + 1))
   );
 $function$
 
@@ -1125,17 +1140,17 @@ CREATE OR REPLACE FUNCTION public.has_road_access(p_player_id uuid, p_x integer,
  STABLE
 AS $function$
   SELECT EXISTS (
-    SELECT 1
-    FROM public.buildings b
+    SELECT 1 FROM public.buildings b
     JOIN public.building_types bt ON bt.key = b.building_type_key
     WHERE bt.category = 'road' AND b.status = 'active'
       AND b.player_id = p_player_id
-      AND (
-        (b.x = p_x - 1 AND b.y = p_y)
-        OR (b.x = p_x + 1 AND b.y = p_y)
-        OR (b.x = p_x AND b.y = p_y - 1)
-        OR (b.x = p_x AND b.y = p_y + 1)
-      )
+      AND ((b.x = p_x - 1 AND b.y = p_y) OR (b.x = p_x + 1 AND b.y = p_y)
+           OR (b.x = p_x AND b.y = p_y - 1) OR (b.x = p_x AND b.y = p_y + 1))
+  ) OR EXISTS (
+    SELECT 1 FROM public.map_tiles mt
+    WHERE mt.terrain_type = 'highway'
+      AND ((mt.x = p_x - 1 AND mt.y = p_y) OR (mt.x = p_x + 1 AND mt.y = p_y)
+           OR (mt.x = p_x AND mt.y = p_y - 1) OR (mt.x = p_x AND mt.y = p_y + 1))
   );
 $function$
 
@@ -1258,8 +1273,14 @@ BEGIN
 
   IF v_bt.category = 'road' THEN
     SELECT (
-      (v_player.home_x IS NOT NULL
-       AND ABS(v_tile.x - v_player.home_x) + ABS(v_tile.y - v_player.home_y) = 1)
+      EXISTS (
+        SELECT 1 FROM public.map_tiles mt
+        WHERE mt.terrain_type = 'highway'
+          AND ((mt.x = v_tile.x - 1 AND mt.y = v_tile.y)
+               OR (mt.x = v_tile.x + 1 AND mt.y = v_tile.y)
+               OR (mt.x = v_tile.x AND mt.y = v_tile.y - 1)
+               OR (mt.x = v_tile.x AND mt.y = v_tile.y + 1))
+      )
       OR EXISTS (
         SELECT 1
         FROM public.buildings b2
@@ -1276,7 +1297,7 @@ BEGIN
       )
     ) INTO v_road_connected;
     IF NOT v_road_connected THEN
-      RAISE EXCEPTION 'Roads must connect to your city center or another of your roads';
+      RAISE EXCEPTION 'Roads must connect to the highway or another of your roads';
     END IF;
   END IF;
 
@@ -2073,6 +2094,7 @@ DECLARE
   v_neighbor_cost integer;
   v_existing_dist integer;
   v_is_road boolean;
+  v_is_highway boolean;
   v_neighbor_walkable boolean;
   v_dx int[] := ARRAY[-1, 1, 0, 0];
   v_dy int[] := ARRAY[0, 0, -1, 1];
@@ -2107,25 +2129,35 @@ BEGIN
       v_neighbor_key := v_neighbor_x || ',' || v_neighbor_y;
 
       SELECT EXISTS (
-        SELECT 1 FROM public.buildings b
-        JOIN public.building_types bt ON bt.key = b.building_type_key
-        WHERE b.x = v_neighbor_x AND b.y = v_neighbor_y
-          AND bt.category = 'road'
-          AND b.status = 'active'
-          AND b.player_id = p_player_id
-      ) INTO v_is_road;
+        SELECT 1 FROM public.map_tiles mt
+        WHERE mt.x = v_neighbor_x AND mt.y = v_neighbor_y
+          AND mt.terrain_type = 'highway'
+      ) INTO v_is_highway;
 
-      IF v_is_road THEN
+      IF v_is_highway THEN
         v_neighbor_cost := v_road_cost;
         v_neighbor_walkable := true;
       ELSE
         SELECT EXISTS (
-          SELECT 1 FROM public.map_tiles mt
-          WHERE mt.x = v_neighbor_x AND mt.y = v_neighbor_y
-            AND mt.owner_player_id = p_player_id
-            AND (mt.occupied_building_id IS NULL OR (mt.x = p_tx AND mt.y = p_ty))
-        ) INTO v_neighbor_walkable;
-        v_neighbor_cost := v_offroad_cost;
+          SELECT 1 FROM public.buildings b
+          JOIN public.building_types bt ON bt.key = b.building_type_key
+          WHERE b.x = v_neighbor_x AND b.y = v_neighbor_y
+            AND bt.category = 'road' AND b.status = 'active'
+            AND b.player_id = p_player_id
+        ) INTO v_is_road;
+
+        IF v_is_road THEN
+          v_neighbor_cost := v_road_cost;
+          v_neighbor_walkable := true;
+        ELSE
+          SELECT EXISTS (
+            SELECT 1 FROM public.map_tiles mt
+            WHERE mt.x = v_neighbor_x AND mt.y = v_neighbor_y
+              AND mt.owner_player_id = p_player_id
+              AND (mt.occupied_building_id IS NULL OR (mt.x = p_tx AND mt.y = p_ty))
+          ) INTO v_neighbor_walkable;
+          v_neighbor_cost := v_offroad_cost;
+        END IF;
       END IF;
 
       IF NOT v_neighbor_walkable THEN CONTINUE; END IF;

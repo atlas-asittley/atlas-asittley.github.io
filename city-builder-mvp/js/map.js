@@ -467,8 +467,8 @@ export function renderMap() {
         }
       }
 
-      if (x === getHomeX() && y === getHomeY() && isMyTile(tile)) {
-        classes.push('city-center');
+      if (tile.terrain_type === 'highway') {
+        classes.push('highway');
       } else if (tile.resource_node_key) {
         classes.push('res-' + tile.resource_node_key);
       } else {

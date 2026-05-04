@@ -17,8 +17,8 @@ def test_housing_evolves_to_tier_1_with_road(make_player, place, cur, clear_reso
     p = make_player()
     clear_resources(p['id'])
     hx, hy = p['home_x'], p['home_y']
-    place('road', hx + 1, hy)
-    house_id = place('house', hx + 1, hy + 1)['building_id']
+    place('road', hx + 1, hy + 1)
+    house_id = place('house', hx + 1, hy + 2)['building_id']
 
     # Verify it started at tier 0
     cur.execute("SELECT housing_tier FROM public.buildings WHERE id = %s", (house_id,))
@@ -40,21 +40,31 @@ def test_housing_evolves_to_tier_1_with_road(make_player, place, cur, clear_reso
 
 
 def test_housing_devolves_without_road(make_player, place, cur, clear_resources):
-    """A tier-1 mud hut should devolve to shanty if road access is lost."""
+    """A tier-1 mud hut should devolve to shanty if road access is lost.
+    Has to be set up far from the highway, otherwise the highway alone
+    keeps providing road access after the player's road is demolished."""
     p = make_player()
     clear_resources(p['id'])
     hx, hy = p['home_x'], p['home_y']
-    road_id = place('road', hx + 1, hy)['building_id']
-    house_id = place('house', hx + 1, hy + 1)['building_id']
+    # Chain a road south from the highway so the house's only road
+    # adjacency is the last segment of the chain.
+    road_chain = []
+    for dy_off in range(1, 5):
+        rid = place('road', hx + 1, hy + dy_off)['building_id']
+        road_chain.append(rid)
+    last_road = road_chain[-1]
+    # House placed adjacent to the last road but two cells off the highway
+    # column, so neither its position nor its neighbors touch the highway.
+    house_id = place('house', hx + 2, hy + 4)['building_id']
 
-    # Manually push to tier 1
     cur.execute(
         "UPDATE public.buildings SET housing_tier = 1, last_processed_at = now() - interval '120 seconds' WHERE id = %s",
         (house_id,),
     )
 
-    # Demolish the road
-    cur.execute("DELETE FROM public.buildings WHERE id = %s", (road_id,))
+    # Demolish only the road touching the house. The rest of the chain
+    # remains but doesn't reach the house's adjacency cells.
+    cur.execute("DELETE FROM public.buildings WHERE id = %s", (last_road,))
 
     cur.execute("SELECT public.process_production()")
 
@@ -69,8 +79,8 @@ def test_extractor_no_path_produces_nothing(make_player, place, cur):
     # Strip resources so BFS finds nothing
     cur.execute("UPDATE public.map_tiles SET resource_node_key = NULL WHERE owner_player_id = %s", (str(p['id']),))
 
-    place('road', hx + 1, hy)
-    place('timber_camp', hx + 1, hy + 1)
+    place('road', hx + 1, hy + 1)
+    place('timber_camp', hx + 1, hy + 2)
 
     # Backdate so a normal extractor would have produced
     cur.execute("UPDATE public.buildings SET last_processed_at = now() - interval '60 seconds' WHERE player_id = %s", (str(p['id']),))
