@@ -402,7 +402,9 @@ export function renderMap() {
       var classes = ['cell'];
 
       if (!tile) {
-        html += '<div class="cell empty-cell" data-x="' + x + '" data-y="' + y + '"></div>';
+        var emptyClasses = ['cell', 'empty-cell'];
+        if (isInExpansionCandidate(x, y)) emptyClasses.push('expansion-candidate');
+        html += '<div class="' + emptyClasses.join(' ') + '" data-x="' + x + '" data-y="' + y + '"></div>';
         continue;
       }
 
@@ -758,9 +760,22 @@ function executeDragPlacements() {
   });
 }
 
-// ── District expansion (M1) ──
-// Replaces the old auto-grow-when-near-edge behavior. A player explicitly
-// buys the next chunk via the expand_district RPC, paying base × chunks_owned².
+// ── District expansion ──
+// Player taps "+ Expand", server returns the chunks orthogonally adjacent
+// to their district that they're allowed to claim (i.e., not in another
+// player's reserved row). Those chunks render as buyable territory; the
+// player taps one to allocate it.
+
+function isInExpansionCandidate(x, y) {
+  if (!state.expansionCandidates.length) return false;
+  var cx = Math.floor(x / 15);
+  var cy = Math.floor(y / 15);
+  for (var i = 0; i < state.expansionCandidates.length; i++) {
+    var c = state.expansionCandidates[i];
+    if (c.chunk_x === cx && c.chunk_y === cy) return true;
+  }
+  return false;
+}
 
 export function expandDistrict() {
   if (!state.profile) return Promise.resolve(null);
@@ -770,10 +785,42 @@ export function expandDistrict() {
     showToast('Need $' + cost + ' to expand district', 'error');
     return Promise.resolve(null);
   }
-  if (!confirm('Buy a new 15×15 chunk for $' + cost + '?')) {
-    return Promise.resolve(null);
-  }
-  return sb.rpc('expand_district').then(function (r) {
+  if (state.selectedBuildType) cancelPlacement();
+  return sb.rpc('expansion_candidates', { p_player_id: state.currentUser.id }).then(function (r) {
+    if (r.error) {
+      showToast('Could not load expansion options: ' + r.error.message, 'error');
+      return null;
+    }
+    var candidates = (r.data || []).map(function (row) {
+      return { chunk_x: row.chunk_x, chunk_y: row.chunk_y };
+    });
+    if (candidates.length === 0) {
+      showToast('No adjacent chunks available to claim', 'error');
+      return null;
+    }
+    state.expansionCandidates = candidates;
+    state.expansionCost = cost;
+    computeGridBounds();
+    renderMap();
+    var bar = document.getElementById('expansion-bar');
+    bar.querySelector('#expansion-text').textContent = 'Tap a highlighted chunk to claim it ($' + cost + ')';
+    bar.classList.add('active');
+    return null;
+  }).catch(function (err) {
+    showToast('Could not load expansion options: ' + (err.message || err), 'error');
+  });
+}
+
+export function cancelExpansion() {
+  state.expansionCandidates = [];
+  state.expansionCost = 0;
+  document.getElementById('expansion-bar').classList.remove('active');
+  computeGridBounds();
+  renderMap();
+}
+
+function selectExpansionChunk(cx, cy) {
+  return sb.rpc('expand_district', { p_chunk_x: cx, p_chunk_y: cy }).then(function (r) {
     if (r.error) {
       showToast('Expand failed: ' + r.error.message, 'error');
       return null;
@@ -783,6 +830,9 @@ export function expandDistrict() {
     state.profile.chunks_owned = data.chunks_owned;
     updateMoney();
     showToast('District expanded! +1 chunk at (' + data.chunk_x + ', ' + data.chunk_y + ')', 'success');
+    state.expansionCandidates = [];
+    state.expansionCost = 0;
+    document.getElementById('expansion-bar').classList.remove('active');
     return reloadMapData();
   }).catch(function (err) {
     showToast('Expand failed: ' + (err.message || err), 'error');
@@ -801,11 +851,17 @@ export function initMapEvents() {
     if (Date.now() < dragState.suppressClick) return;
     var cell = e.target.closest('.cell');
     if (!cell) return;
-    // Roads use drag system exclusively; other build types still support tap/click placement.
-    if (state.selectedBuildType && isSelectedBuildRoad()) return;
 
     var x = parseInt(cell.dataset.x);
     var y = parseInt(cell.dataset.y);
+
+    // Expansion picker mode: tapping a highlighted candidate chunk claims it.
+    if (state.expansionCandidates.length > 0 && cell.classList.contains('expansion-candidate')) {
+      selectExpansionChunk(Math.floor(x / 15), Math.floor(y / 15));
+      return;
+    }
+    // Roads use drag system exclusively; other build types still support tap/click placement.
+    if (state.selectedBuildType && isSelectedBuildRoad()) return;
 
     // Always check for existing building first — tapping a building opens the inspector
     // even in placement mode. This makes inspect/demolish discoverable.
@@ -895,14 +951,15 @@ export function initMapEvents() {
     executeDragPlacements();
   });
 
-  // ── Cancel button ──
+  // ── Cancel buttons ──
   document.getElementById('placement-cancel').addEventListener('click', cancelPlacement);
+  document.getElementById('expansion-cancel').addEventListener('click', cancelExpansion);
 
-  // ── Escape key cancels active placement ──
+  // ── Escape key cancels active placement / expansion ──
   document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape' && state.selectedBuildType) {
-      cancelPlacement();
-    }
+    if (e.key !== 'Escape') return;
+    if (state.expansionCandidates.length > 0) cancelExpansion();
+    else if (state.selectedBuildType) cancelPlacement();
   });
 
   // ── Optional zoom controls (desktop/dev only if present) ──

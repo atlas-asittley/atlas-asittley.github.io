@@ -79,10 +79,18 @@ export var state = {
   gridMaxX: 14,
   gridMaxY: 14,
   gridCols: 15,
-  gridRows: 15
+  gridRows: 15,
+  // District expansion picker — set when the player taps "+ Expand" and
+  // the server returns the candidate chunks they can claim. Each entry
+  // is { chunk_x, chunk_y }. While non-empty, the map renders these
+  // chunks as buyable territory; tapping one allocates it.
+  expansionCandidates: [],
+  expansionCost: 0
 };
 
 // ── Grid bounds: compute dynamic grid size from tiles ──
+// Also widens to include any expansion-candidate chunks so the picker can
+// render unallocated territory as empty cells the player can tap.
 export function computeGridBounds() {
   var minX = 0, minY = 0, maxX = 14, maxY = 14;
   state.tiles.forEach(function (t) {
@@ -90,6 +98,16 @@ export function computeGridBounds() {
     if (t.y < minY) minY = t.y;
     if (t.x > maxX) maxX = t.x;
     if (t.y > maxY) maxY = t.y;
+  });
+  state.expansionCandidates.forEach(function (c) {
+    var cMinX = c.chunk_x * 15;
+    var cMaxX = c.chunk_x * 15 + 14;
+    var cMinY = c.chunk_y * 15;
+    var cMaxY = c.chunk_y * 15 + 14;
+    if (cMinX < minX) minX = cMinX;
+    if (cMaxX > maxX) maxX = cMaxX;
+    if (cMinY < minY) minY = cMinY;
+    if (cMaxY > maxY) maxY = cMaxY;
   });
   state.gridMinX = minX;
   state.gridMinY = minY;

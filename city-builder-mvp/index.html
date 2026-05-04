@@ -130,7 +130,7 @@
       <span class="stat"><span class="v" id="g-chunks">1</span> chunks</span>
     </div>
     <div class="topbar-right">
-      <button class="btn-sm" id="g-expand-district" title="Buy the next chunk in spiral order">+ Expand</button>
+      <button class="btn-sm" id="g-expand-district" title="Pick an adjacent chunk to claim">+ Expand</button>
       <button class="btn-sm" id="g-logout">Logout</button>
     </div>
   </div>
@@ -162,6 +162,10 @@
   <div class="placement-bar" id="placement-bar">
     <span id="placement-text">Tap a tile to place</span>
     <button class="btn-cancel" id="placement-cancel">Cancel</button>
+  </div>
+  <div class="placement-bar expansion-bar" id="expansion-bar">
+    <span id="expansion-text">Tap a highlighted chunk to claim it</span>
+    <button class="btn-cancel" id="expansion-cancel">Cancel</button>
   </div>
   <div class="drag-cost-counter" id="drag-cost-counter"></div>
 </div>

@@ -101,6 +101,17 @@ body.inspector-open .map-canvas { margin-bottom: calc(50vh + 28px); }
               0 0 12px 2px rgba(230,198,90,0.55) !important;
   z-index: 5;
 }
+/* During expansion-picker mode, every cell within a candidate chunk
+   pulses gold to show it's buyable. Tap any cell in the chunk to
+   claim it. */
+.cell.expansion-candidate { background: rgba(230,198,90,0.18); cursor: pointer;
+  animation: expansion-pulse 2.4s ease-in-out infinite; }
+.cell.expansion-candidate:hover { background: rgba(230,198,90,0.45); }
+@keyframes expansion-pulse {
+  0%, 100% { box-shadow: inset 0 0 0 0 rgba(230,198,90,0); }
+  50%      { box-shadow: inset 0 0 0 1px rgba(230,198,90,0.5); }
+}
+
 /* While placing an extractor, unclaimed matching resource tiles in your
    district pulse softly so you can see where the walker COULD go. */
 .cell.potential-target { animation: target-pulse 2.4s ease-in-out infinite; }

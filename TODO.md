@@ -8,12 +8,6 @@ visible without needing `git log`.
 
 ## Up next
 
-- [ ] **Fix district expansion: adjacent, not diagonal — and rethink the layout for multiple players.**
-  - **Immediate bug:** Atlas just bought an expansion and got the chunk diagonally off his starter, with a 1-chunk gap he can't build a road across. Cause is in `next_unowned_chunk_slot()` (baseline_schema.sql ~line 1072): at each radius it iterates the full square ring with `ABS(x)=r OR ABS(y)=r`, which visits corners before edges, so the first available ring-1 slot is a diagonal.
-  - **Bigger design question:** the allocator is a single global spiral and conflates "where does a new player land?" with "where does an existing player's expansion go?" — those should probably be separate decisions. Districts need to grow infinitely AND accommodate infinite players without collision.
-  - Atlas's leaning: **row-based** — each player gets a horizontal strip that grows left/right; new players get a strip below.
-  - Other options worth weighing: (a) per-player local spiral that prefers orthogonal neighbors of *your* existing chunks, with a starter allocator that spreads new players far apart; (b) explicit "directions to grow" picker each time the player taps Expand.
-
 - [ ] **Resource tiles: can't build on, but can demolish/clear to free the tile.**
   - Placement validator should reject building on a tile with `resource_node_key IS NOT NULL`.
   - Add a player action to clear the resource (sets `resource_node_key = NULL`), after which the tile is buildable. UI: tap the resource tile → inspector shows a "Clear resource" action.
@@ -29,8 +23,14 @@ visible without needing `git log`.
   - **Well / watering hole** — possibly required for housing to evolve to tier 1 (or 2). Cheap, no workers, area-of-effect happiness or just a precondition.
   - **Tax collector / tax man** — produces money for the city periodically; reduces local happiness. Tradeoff building.
 
+- [ ] **Add a highway / shared road network connecting all districts.**
+  - A persistent road system the game owns (not any one player), running through every district so districts can talk to each other and players have somewhere to attach their first road segment.
+  - Currently the only seed for road-building is the city center tile of the starter chunk (which Atlas wants to remove anyway — see below).
+  - Open: where exactly does the highway run within a chunk? Probably one row + one column at fixed offsets (e.g., y=7 horizontal, x=7 vertical) so it threads through every chunk consistently.
+  - **Also: remove the city-center / headquarter tile.** It's stamped at the starter chunk's (7, 7) and Atlas isn't sure why we have it. Once the highway exists it's no longer needed as a road seed. Other side effects to check: it's used as the player's "home" coords for distance calculations; unbuildable; rendered specially on the map. If we remove the visual but keep `home_x/home_y` as a logical anchor, that might be enough.
+
 ---
 
 ## Done
 
-_(empty — completed items move here with a date and a one-line summary)_
+- **2026-05-04** — District expansion: row-based starters + player-picked expansion. Each player reserves one row at signup; expansion candidates are unowned chunks orthogonally adjacent to the player's district excluding other players' reserved rows. Tap **+ Expand**, candidate chunks pulse gold, tap one to claim. Trapped state impossible because your own row's edges are always available.

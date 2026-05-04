@@ -69,8 +69,13 @@ CREATE TABLE public.player_profiles (
   chunks_owned integer NOT NULL DEFAULT 0,
   home_x integer,
   home_y integer,
+  reserved_row integer,
   PRIMARY KEY (id)
 );
+
+CREATE UNIQUE INDEX player_profiles_reserved_row_key
+  ON public.player_profiles (reserved_row)
+  WHERE reserved_row IS NOT NULL;
 
 CREATE TABLE public.map_tiles (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -643,8 +648,8 @@ AS $function$
 DECLARE
   v_uid uuid := auth.uid();
   v_profile record;
-  v_chunk record;
   v_chunks_owned integer;
+  v_row integer;
 BEGIN
   IF p_industry_key NOT IN ('timber', 'stone', 'grain', 'clay') THEN
     RAISE EXCEPTION 'Invalid industry. Choose timber, stone, grain, or clay.';
@@ -674,13 +679,14 @@ BEGIN
     (v_uid, 'statuary', 0)
   ON CONFLICT (player_id, resource_key) DO NOTHING;
 
-  -- Allocate first chunk if the player doesn't have one yet
+  -- Allocate first chunk on a fresh reserved row going down.
   SELECT chunks_owned INTO v_chunks_owned
   FROM public.player_profiles WHERE id = v_uid;
 
   IF v_chunks_owned = 0 THEN
-    SELECT * INTO v_chunk FROM public.next_unowned_chunk_slot();
-    PERFORM public.allocate_district_chunk(v_uid, v_chunk.chunk_x, v_chunk.chunk_y);
+    v_row := public.next_starter_row();
+    UPDATE public.player_profiles SET reserved_row = v_row WHERE id = v_uid;
+    PERFORM public.allocate_district_chunk(v_uid, 0, v_row);
   END IF;
 
   SELECT * INTO v_profile FROM public.player_profiles WHERE id = v_uid;
@@ -694,7 +700,8 @@ BEGIN
     'workers_used', v_profile.workers_used,
     'chunks_owned', v_profile.chunks_owned,
     'home_x', v_profile.home_x,
-    'home_y', v_profile.home_y
+    'home_y', v_profile.home_y,
+    'reserved_row', v_profile.reserved_row
   );
 END;
 $function$
@@ -831,7 +838,7 @@ end;
 $function$
 
 
-CREATE OR REPLACE FUNCTION public.expand_district()
+CREATE OR REPLACE FUNCTION public.expand_district(p_chunk_x integer, p_chunk_y integer)
  RETURNS json
  LANGUAGE plpgsql
  SECURITY DEFINER
@@ -840,9 +847,9 @@ DECLARE
   v_uid uuid := auth.uid();
   v_player record;
   v_cost integer;
-  v_chunk record;
   v_alloc json;
   v_base_cost integer := 500;
+  v_is_candidate boolean;
 BEGIN
   SELECT * INTO v_player FROM public.player_profiles WHERE id = v_uid;
   IF NOT FOUND THEN RAISE EXCEPTION 'Player not found'; END IF;
@@ -854,8 +861,16 @@ BEGIN
       v_cost, v_player.money;
   END IF;
 
-  SELECT * INTO v_chunk FROM public.next_unowned_chunk_slot();
-  v_alloc := public.allocate_district_chunk(v_uid, v_chunk.chunk_x, v_chunk.chunk_y);
+  -- Validate the player picked a chunk that's in their candidate set.
+  SELECT EXISTS (
+    SELECT 1 FROM public.expansion_candidates(v_uid) ec
+    WHERE ec.chunk_x = p_chunk_x AND ec.chunk_y = p_chunk_y
+  ) INTO v_is_candidate;
+  IF NOT v_is_candidate THEN
+    RAISE EXCEPTION 'Chunk (%, %) is not a valid expansion candidate', p_chunk_x, p_chunk_y;
+  END IF;
+
+  v_alloc := public.allocate_district_chunk(v_uid, p_chunk_x, p_chunk_y);
 
   UPDATE public.player_profiles
   SET money = money - v_cost
@@ -863,8 +878,8 @@ BEGIN
   RETURNING * INTO v_player;
 
   RETURN json_build_object(
-    'chunk_x', v_chunk.chunk_x,
-    'chunk_y', v_chunk.chunk_y,
+    'chunk_x', p_chunk_x,
+    'chunk_y', p_chunk_y,
     'cost', v_cost,
     'money', v_player.money,
     'chunks_owned', v_player.chunks_owned,
@@ -1069,48 +1084,60 @@ AS $function$
 $function$
 
 
-CREATE OR REPLACE FUNCTION public.next_unowned_chunk_slot()
- RETURNS TABLE(chunk_x integer, chunk_y integer)
+-- Starter allocator: each new player gets a fresh row going down. Their
+-- starter chunk is at (0, reserved_row).
+CREATE OR REPLACE FUNCTION public.next_starter_row()
+ RETURNS integer
  LANGUAGE plpgsql
 AS $function$
 DECLARE
-  v_radius integer := 0;
-  v_x integer;
-  v_y integer;
+  v_max_row integer;
 BEGIN
-  -- Origin first.
-  -- Note: column references must be table-qualified (dc.chunk_x) because the
-  -- OUT parameters of this function are also named chunk_x/chunk_y, which
-  -- would otherwise cause "column reference is ambiguous" errors.
-  IF NOT EXISTS (
-    SELECT 1 FROM public.district_chunks dc
-    WHERE dc.chunk_x = 0 AND dc.chunk_y = 0
-  ) THEN
-    chunk_x := 0; chunk_y := 0;
-    RETURN NEXT;
-    RETURN;
-  END IF;
+  SELECT max(pp.reserved_row) INTO v_max_row
+  FROM public.player_profiles pp
+  WHERE pp.reserved_row IS NOT NULL;
+  RETURN COALESCE(v_max_row + 1, 0);
+END;
+$function$;
 
-  v_radius := 1;
-  WHILE v_radius < 200 LOOP
-    FOR v_x IN -v_radius..v_radius LOOP
-      FOR v_y IN -v_radius..v_radius LOOP
-        -- Only cells on the ring (not interior, those were checked at smaller radii)
-        IF ABS(v_x) = v_radius OR ABS(v_y) = v_radius THEN
-          IF NOT EXISTS (
-            SELECT 1 FROM public.district_chunks dc
-            WHERE dc.chunk_x = v_x AND dc.chunk_y = v_y
-          ) THEN
-            chunk_x := v_x; chunk_y := v_y;
-            RETURN NEXT;
-            RETURN;
-          END IF;
-        END IF;
-      END LOOP;
-    END LOOP;
-    v_radius := v_radius + 1;
-  END LOOP;
-  RAISE EXCEPTION 'Could not find unowned chunk slot within safety radius';
+
+-- Expansion candidate enumerator. Returns every unowned chunk
+-- orthogonally adjacent to the player's district, EXCLUDING chunks in
+-- another player's reserved row. By design the left and right edges of
+-- the player's own reserved row are always present, so an empty
+-- candidate set is impossible — players can never be trapped.
+CREATE OR REPLACE FUNCTION public.expansion_candidates(p_player_id uuid)
+ RETURNS TABLE(chunk_x integer, chunk_y integer)
+ LANGUAGE plpgsql
+AS $function$
+BEGIN
+  RETURN QUERY
+  WITH neighbors AS (
+    SELECT DISTINCT cand_x, cand_y FROM (
+      SELECT dc.chunk_x + 1 AS cand_x, dc.chunk_y AS cand_y FROM public.district_chunks dc WHERE dc.owner_player_id = p_player_id
+      UNION ALL
+      SELECT dc.chunk_x - 1, dc.chunk_y FROM public.district_chunks dc WHERE dc.owner_player_id = p_player_id
+      UNION ALL
+      SELECT dc.chunk_x, dc.chunk_y + 1 FROM public.district_chunks dc WHERE dc.owner_player_id = p_player_id
+      UNION ALL
+      SELECT dc.chunk_x, dc.chunk_y - 1 FROM public.district_chunks dc WHERE dc.owner_player_id = p_player_id
+    ) raw
+  ),
+  reserved_rows AS (
+    SELECT pp.reserved_row AS row
+    FROM public.player_profiles pp
+    WHERE pp.reserved_row IS NOT NULL AND pp.id <> p_player_id
+  )
+  SELECT n.cand_x, n.cand_y
+  FROM neighbors n
+  WHERE NOT EXISTS (
+    SELECT 1 FROM public.district_chunks dc2
+    WHERE dc2.chunk_x = n.cand_x AND dc2.chunk_y = n.cand_y
+  )
+  AND NOT EXISTS (
+    SELECT 1 FROM reserved_rows rr WHERE rr.row = n.cand_y
+  )
+  ORDER BY n.cand_y, n.cand_x;
 END;
 $function$
 
@@ -2089,12 +2116,12 @@ GRANT EXECUTE ON FUNCTION public.allocate_district_chunk(p_player_id uuid, p_chu
 GRANT EXECUTE ON FUNCTION public.black_market_trade(p_resource_key text, p_quantity integer, p_direction text) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.choose_industry(p_display_name text, p_industry_key text) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.complete_onboarding(p_display_name text, p_specialization_key text) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.expand_district() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.expand_district(integer, integer) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.expansion_candidates(uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.find_nearest_unclaimed_resource(p_player_id uuid, p_ex integer, p_ey integer) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.handle_building_change() TO authenticated;
 GRANT EXECUTE ON FUNCTION public.has_road_access(p_x integer, p_y integer) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.has_road_access(p_player_id uuid, p_x integer, p_y integer) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.next_unowned_chunk_slot() TO authenticated;
 GRANT EXECUTE ON FUNCTION public.place_building(p_tile_id uuid, p_building_type_key text) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.preview_extractor_target(p_x integer, p_y integer) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.process_production() TO authenticated;
