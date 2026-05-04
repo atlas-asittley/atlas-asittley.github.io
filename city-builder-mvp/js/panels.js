@@ -102,7 +102,12 @@ export function renderBuildPanel() {
     var showTier = bt.category !== 'housing' && bt.category !== 'road';
     html += '<div class="build-item' + (disabled ? ' disabled' : '') + (selected ? ' selected' : '') + '" data-bt="' + key + '">';
     if (spriteUrl) {
-      html += '<div class="build-icon" data-sprite="1" style="background-image:url(' + spriteUrl + ');background-color:' + bgColor + '"></div>';
+      // Wrap url() value in &quot; — the inline-SVG data URLs contain
+      // unencoded ')' (e.g. fill='url(%23gradId)') that would otherwise
+      // close the outer CSS url() prematurely. The on-map .bldg.* CSS
+      // rules already wrap in "...", which is why on-map sprites work
+      // even when the build-panel sidebar icons disappear.
+      html += '<div class="build-icon" data-sprite="1" style="background-image:url(&quot;' + spriteUrl + '&quot;);background-color:' + bgColor + '"></div>';
     } else {
       html += '<div class="build-icon" style="background:' + bgColor + '">' + label + '</div>';
     }
