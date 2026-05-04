@@ -4,7 +4,7 @@ import { state, CITY_CENTER_X, CITY_CENTER_Y, getHomeX, getHomeY, isMyTile, isWi
 import { showToast, updateMoney, updateWorkers } from './ui.js';
 import { renderBuildPanel } from './panels.js';
 import { rebuildRoadSet, renderWalkers, snapWalkersToZoom, syncCollectorWalkers } from './walkers.js';
-import { openInspector } from './inspector.js';
+import { openInspector, openResourceInspector } from './inspector.js';
 
 export var BLDG_LABELS = {
   timber_camp: 'TC', sawmill: 'SM',
@@ -827,26 +827,6 @@ export function cancelExpansion() {
   renderMap();
 }
 
-function resourceLabel(key) {
-  var r = state.resources[key];
-  return (r && r.name) ? r.name : (key || 'resource');
-}
-
-function promptClearResourceTile(tile) {
-  var label = resourceLabel(tile.resource_node_key);
-  if (!confirm('Clear the ' + label + ' on this tile? You can then build here.')) return;
-  sb.rpc('clear_resource_tile', { p_tile_id: tile.id }).then(function (r) {
-    if (r.error) {
-      showToast('Cannot clear: ' + r.error.message, 'error');
-      return;
-    }
-    showToast(label + ' cleared', 'success');
-    return reloadMapData();
-  }).catch(function (err) {
-    showToast('Clear failed: ' + (err.message || err), 'error');
-  });
-}
-
 function selectExpansionChunk(cx, cy) {
   return sb.rpc('expand_district', { p_chunk_x: cx, p_chunk_y: cy }).then(function (r) {
     if (r.error) {
@@ -901,12 +881,11 @@ export function initMapEvents() {
       return;
     }
 
-    // Resource tile (no building on it) — offer to clear so the player
-    // can build there. Only on owned tiles; tapping a wilderness or
-    // other-player resource tile does nothing.
+    // Resource tile (no building on it) — open the resource inspector
+    // with role description + Demolish action. Only on owned tiles.
     var tile = state.tileMap[x + ',' + y];
     if (tile && tile.resource_node_key && isMyTile(tile) && !state.selectedBuildType) {
-      promptClearResourceTile(tile);
+      openResourceInspector(tile);
       return;
     }
 

@@ -7,6 +7,29 @@ import { renderBuildPanel, renderInventory } from './panels.js';
 import { setWalkerClickHandler } from './walkers.js';
 
 var inspectedBuilding = null;
+var inspectedTile = null;       // resource-tile inspector mode
+
+// Lookups for the resource role rows in the tile inspector.
+function findExtractorFor(resourceKey) {
+  var match = null;
+  Object.keys(state.buildingTypes).forEach(function (k) {
+    var bt = state.buildingTypes[k];
+    if (bt && bt.category === 'extractor' && bt.output_resource_key === resourceKey) match = bt;
+  });
+  return match;
+}
+function findProcessorConsuming(resourceKey) {
+  var match = null;
+  Object.keys(state.buildingTypes).forEach(function (k) {
+    var bt = state.buildingTypes[k];
+    if (bt && bt.category === 'processor' && bt.input_resource_key === resourceKey) match = bt;
+  });
+  return match;
+}
+function resName(key) {
+  if (state.resources && state.resources[key]) return state.resources[key].name;
+  return key ? key.charAt(0).toUpperCase() + key.slice(1) : '';
+}
 
 // Helper: show trade value per minute for a given output resource/rate
 function buildTradeValueRow(resourceKey, rate) {
@@ -100,10 +123,110 @@ function ensureInspectionVisible(building) {
 
 export function closeInspector() {
   inspectedBuilding = null;
+  inspectedTile = null;
   inspectedBuildingHolder.value = null;
   document.getElementById('inspector-overlay').classList.remove('active');
   document.body.classList.remove('inspector-open');
   renderMap();  // re-render to clear the target highlight
+}
+
+// ── Resource Tile Inspector ──
+// Opens the same inspector panel chrome but with resource-role text and
+// a Demolish button that clears the tile (calls clear_resource_tile).
+export function openResourceInspector(tile) {
+  if (!tile || !tile.resource_node_key) return;
+  // Close any building inspection first so the two modes don't co-exist.
+  inspectedBuilding = null;
+  inspectedBuildingHolder.value = null;
+  inspectedTile = tile;
+  renderResourceInspector();
+  document.getElementById('inspector-overlay').classList.add('active');
+  document.body.classList.add('inspector-open');
+  renderMap();
+}
+
+function renderResourceInspector() {
+  if (!inspectedTile) return;
+  var titleEl = document.getElementById('inspector-title');
+  var bodyEl = document.getElementById('inspector-body');
+  var actionsEl = document.getElementById('inspector-actions');
+  var rkey = inspectedTile.resource_node_key;
+  var rName = resName(rkey);
+  var ext = findExtractorFor(rkey);
+  var proc = findProcessorConsuming(rkey);
+
+  titleEl.textContent = rName + ' deposit';
+
+  var rows = '';
+  rows += '<div class="insp-row"><span class="insp-label">Resource</span><span class="insp-value">' + rName + '</span></div>';
+  if (ext) {
+    rows += '<div class="insp-row"><span class="insp-label">Harvested by</span><span class="insp-value">' + ext.name + '</span></div>';
+  }
+  if (proc) {
+    rows += '<div class="insp-row"><span class="insp-label">Processed by</span><span class="insp-value">' + proc.name + ' → ' + resName(proc.output_resource_key) + '</span></div>';
+    // Show one more downstream step if there is one.
+    var proc2 = findProcessorConsuming(proc.output_resource_key);
+    if (proc2) {
+      rows += '<div class="insp-row"><span class="insp-label">Then</span><span class="insp-value">' + proc2.name + ' → ' + resName(proc2.output_resource_key) + '</span></div>';
+    }
+  }
+  rows += '<div class="insp-row"><span class="insp-label">Tile</span><span class="insp-value">(' + inspectedTile.x + ', ' + inspectedTile.y + ')</span></div>';
+  bodyEl.innerHTML = rows;
+
+  // Block demolition while an extractor still claims this tile —
+  // matches the server-side rule in clear_resource_tile.
+  var claimed = !!inspectedTile.claimed_by_building_id;
+  var actHtml = '<div class="demolish-info">';
+  if (claimed) {
+    actHtml += '<span class="demolish-warning">An extractor is targeting this tile — demolish that first.</span>';
+  } else {
+    actHtml += '<span class="demolish-refund">Removes the deposit so you can build here.</span>';
+  }
+  actHtml += '</div>';
+  actHtml += '<button class="btn-demolish' + (claimed ? ' btn-demolish-disabled' : '') + '" id="btn-demolish-tile"' + (claimed ? ' disabled' : '') + '>Demolish</button>';
+  actionsEl.innerHTML = actHtml;
+
+  if (!claimed) {
+    document.getElementById('btn-demolish-tile').addEventListener('click', demolishInspectedTile);
+  }
+}
+
+function demolishInspectedTile() {
+  if (!inspectedTile) return;
+  var btn = document.getElementById('btn-demolish-tile');
+  if (btn) { btn.disabled = true; btn.textContent = 'Demolishing…'; }
+  var label = resName(inspectedTile.resource_node_key);
+  sb.rpc('clear_resource_tile', { p_tile_id: inspectedTile.id }).then(function (r) {
+    if (r.error) {
+      showToast('Cannot clear: ' + r.error.message, 'error');
+      if (btn) { btn.disabled = false; btn.textContent = 'Demolish'; }
+      return;
+    }
+    showToast(label + ' cleared', 'success');
+    closeInspector();
+    return reloadAfterTileChange();
+  }).catch(function (err) {
+    showToast('Clear failed: ' + (err.message || err), 'error');
+    if (btn) { btn.disabled = false; btn.textContent = 'Demolish'; }
+  });
+}
+
+// Reload tiles + buildings after a tile-level change. Keeping it small
+// and local so the inspector module doesn't pull in map.js's whole
+// reloadMapData export.
+function reloadAfterTileChange() {
+  return Promise.all([
+    sb.from('buildings').select('*, player_profiles(display_name, color_hex)'),
+    sb.from('map_tiles').select('*').order('y', { ascending: true }).order('x', { ascending: true })
+  ]).then(function (results) {
+    state.allBuildings = results[0].data || [];
+    state.tiles = results[1].data || [];
+    state.tileMap = {};
+    state.tiles.forEach(function (t) { state.tileMap[t.x + ',' + t.y] = t; });
+    computeLaborAllocation();
+    renderMap();
+    renderBuildPanel();
+  });
 }
 
 // ── Helper: get staffing priority position for a building ──
