@@ -71,7 +71,11 @@ def test_resource_booster_boosts_adjacent_extractor(make_player, place, cur, cle
                    LIMIT 1""", (str(p['id']),))
     bx, by = cur.fetchone()
     place('timber_camp', bx, by)
-    # Place booster adjacent (within boost_range=2)
+    # Make sure the tile we put the booster on is plain ground (with two
+    # resource types now seeded per chunk, the adjacent tile sometimes
+    # has an orchard_grove or timber on it).
+    cur.execute("UPDATE public.map_tiles SET resource_node_key = NULL WHERE x = %s AND y = %s",
+                (bx + 1, by))
     place('foresters_office', bx + 1, by)
 
     # Run a tick from a fresh state
@@ -98,12 +102,13 @@ def test_resource_booster_boosts_adjacent_extractor(make_player, place, cur, cle
         f"booster should add ~25% — boosted={boosted}, unboosted={unboosted}"
 
 
-def test_food_booster_boosts_adjacent_food_extractor(make_player, place, cur, clear_resources):
+def test_food_booster_boosts_adjacent_food_extractor(make_player, place, stamp_food_tile, cur, clear_resources):
     p = make_player(industry='timber')
     clear_resources(p['id'])
     _cheap_extractors_and_boosters(cur)
     cur.execute("UPDATE public.player_profiles SET money = 5000 WHERE id = %s", (str(p['id']),))
     hx, hy = p['home_x'], p['home_y']
+    stamp_food_tile('orchard_grove', hx + 1, hy + 1)
     place('orchard', hx + 1, hy + 1)
     place('apiary',  hx + 2, hy + 1)
     cur.execute("""UPDATE public.buildings SET last_processed_at = now() - interval '60 seconds'
@@ -116,13 +121,14 @@ def test_food_booster_boosts_adjacent_food_extractor(make_player, place, cur, cl
     assert boosted > 2.4, f"orchard with apiary should produce >2.4 berries/min, got {boosted}"
 
 
-def test_resource_booster_does_not_boost_food_extractor(make_player, place, cur, clear_resources):
+def test_resource_booster_does_not_boost_food_extractor(make_player, place, stamp_food_tile, cur, clear_resources):
     """Forester's Office (boost_target='extractor') should NOT boost an Orchard."""
     p = make_player(industry='timber')
     clear_resources(p['id'])
     _cheap_extractors_and_boosters(cur)
     cur.execute("UPDATE public.player_profiles SET money = 5000 WHERE id = %s", (str(p['id']),))
     hx, hy = p['home_x'], p['home_y']
+    stamp_food_tile('orchard_grove', hx + 1, hy + 1)
     place('orchard',           hx + 1, hy + 1)
     place('foresters_office',  hx + 2, hy + 1)
     cur.execute("""UPDATE public.buildings SET last_processed_at = now() - interval '60 seconds'
@@ -136,13 +142,14 @@ def test_resource_booster_does_not_boost_food_extractor(make_player, place, cur,
         f"resource booster shouldn't boost food extractor; got {yield_} (expected ~2)"
 
 
-def test_out_of_range_booster_doesnt_apply(make_player, place, cur, clear_resources):
+def test_out_of_range_booster_doesnt_apply(make_player, place, stamp_food_tile, cur, clear_resources):
     """Booster at distance 3 (range = 2) shouldn't boost the orchard."""
     p = make_player(industry='timber')
     clear_resources(p['id'])
     _cheap_extractors_and_boosters(cur)
     cur.execute("UPDATE public.player_profiles SET money = 5000 WHERE id = %s", (str(p['id']),))
     hx, hy = p['home_x'], p['home_y']
+    stamp_food_tile('orchard_grove', hx + 1, hy + 1)
     place('orchard', hx + 1, hy + 1)
     # Distance 3+ → out of range
     place('apiary',  hx + 5, hy + 1)
@@ -155,13 +162,14 @@ def test_out_of_range_booster_doesnt_apply(make_player, place, cur, clear_resour
     assert 1.8 < yield_ < 2.2, f"out-of-range booster should not boost; got {yield_}"
 
 
-def test_unstaffed_booster_doesnt_apply(make_player, place, cur, clear_resources):
+def test_unstaffed_booster_doesnt_apply(make_player, place, stamp_food_tile, cur, clear_resources):
     """Pause the booster — it should drop out of v_staffed_ids and stop applying."""
     p = make_player(industry='timber')
     clear_resources(p['id'])
     _cheap_extractors_and_boosters(cur)
     cur.execute("UPDATE public.player_profiles SET money = 5000 WHERE id = %s", (str(p['id']),))
     hx, hy = p['home_x'], p['home_y']
+    stamp_food_tile('orchard_grove', hx + 1, hy + 1)
     place('orchard', hx + 1, hy + 1)
     apiary_id = place('apiary', hx + 2, hy + 1)['building_id']
     cur.execute("UPDATE public.buildings SET status = 'paused' WHERE id = %s", (apiary_id,))
@@ -174,7 +182,7 @@ def test_unstaffed_booster_doesnt_apply(make_player, place, cur, clear_resources
     assert 1.8 < yield_ < 2.2, f"paused booster should not apply; got {yield_}"
 
 
-def test_two_boosters_dont_stack(make_player, place, cur, clear_resources):
+def test_two_boosters_dont_stack(make_player, place, stamp_food_tile, cur, clear_resources):
     """Two boosters within range should still apply only the MAX multiplier
     (1.25), not stack to 1.5625."""
     p = make_player(industry='timber')
@@ -182,6 +190,7 @@ def test_two_boosters_dont_stack(make_player, place, cur, clear_resources):
     _cheap_extractors_and_boosters(cur)
     cur.execute("UPDATE public.player_profiles SET money = 5000 WHERE id = %s", (str(p['id']),))
     hx, hy = p['home_x'], p['home_y']
+    stamp_food_tile('orchard_grove', hx + 1, hy + 1)
     place('orchard', hx + 1, hy + 1)
     place('apiary',  hx + 2, hy + 1)
     place('apiary',  hx + 1, hy + 2)  # second apiary, also within range 2

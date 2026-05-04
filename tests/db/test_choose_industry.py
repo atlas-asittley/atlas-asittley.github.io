@@ -24,8 +24,9 @@ def test_starting_chunk_has_resource_tiles(make_player, cur):
         WHERE owner_player_id = %s AND resource_node_key = 'timber'
     """, (str(p['id']),))
     n = cur.fetchone()[0]
-    # Random ~8% of 224 tiles (city center is excluded) = ~18, with variance
-    assert 5 <= n <= 35, f"unexpected resource tile count: {n}"
+    # 4 random-walk clusters of 6-15 steps each — typically ~15-30 tiles
+    # with variance, but can be up to ~50 when walks don't double back.
+    assert 5 <= n <= 50, f"unexpected resource tile count: {n}"
 
 
 def test_total_tiles_in_chunk_is_225(make_player, cur):

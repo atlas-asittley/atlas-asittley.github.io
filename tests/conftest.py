@@ -209,3 +209,17 @@ def place(cur, tile_id_at):
         cur.execute("SELECT public.place_building(%s, %s)", (tid, building_type_key))
         return cur.fetchone()[0]
     return _place
+
+
+@pytest.fixture
+def stamp_food_tile(cur, tile_id_at):
+    """Stamp a food tile (resource_node_key) at (x, y). Use before placing
+    a food extractor (orchard, fishing_pier, garden, grain_farm) since
+    those buildings require their matching food tile to be present at
+    placement time."""
+    def _stamp(food_tile_key, x, y):
+        tid = tile_id_at(x, y)
+        assert tid is not None, f"No tile at ({x}, {y})"
+        cur.execute("UPDATE public.map_tiles SET resource_node_key = %s WHERE id = %s",
+                    (food_tile_key, str(tid)))
+    return _stamp

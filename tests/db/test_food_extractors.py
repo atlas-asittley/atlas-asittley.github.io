@@ -16,15 +16,20 @@ import pytest
 
 # ── industry filter on placement ─────────────────────────────
 
+_FOOD_TILE_FOR = {'orchard': 'orchard_grove', 'fishing_pier': 'pond',
+                  'garden': 'garden_plot', 'grain_farm': 'farmland'}
+
+
 @pytest.mark.parametrize("industry,allowed_key", [
     ('timber', 'orchard'),
     ('stone',  'fishing_pier'),
     ('clay',   'garden'),
 ])
-def test_industry_can_place_paired_food_extractor(industry, allowed_key, make_player, place, cur, clear_resources):
+def test_industry_can_place_paired_food_extractor(industry, allowed_key, make_player, place, stamp_food_tile, cur, clear_resources):
     p = make_player(industry=industry)
     clear_resources(p['id'])
     hx, hy = p['home_x'], p['home_y']
+    stamp_food_tile(_FOOD_TILE_FOR[allowed_key], hx + 1, hy + 1)
     result = place(allowed_key, hx + 1, hy + 1)
     assert result['building_id'] is not None
 
@@ -59,12 +64,13 @@ def _food_extractors_cheap(cur):
     cur.execute("UPDATE public.building_types SET worker_cost = 4 WHERE category = 'food_extractor'")
 
 
-def test_orchard_produces_berries_at_flat_rate(make_player, place, cur, clear_resources):
+def test_orchard_produces_berries_at_flat_rate(make_player, place, stamp_food_tile, cur, clear_resources):
     """orchard at output_rate=2 berries/min → ~2 berries over a 60s tick."""
     p = make_player(industry='timber')
     clear_resources(p['id'])
     _food_extractors_cheap(cur)
     hx, hy = p['home_x'], p['home_y']
+    stamp_food_tile('orchard_grove', hx + 1, hy + 1)
     place('orchard', hx + 1, hy + 1)
     cur.execute("""UPDATE public.buildings
                    SET last_processed_at = now() - interval '60 seconds'
@@ -76,11 +82,12 @@ def test_orchard_produces_berries_at_flat_rate(make_player, place, cur, clear_re
     assert 1.5 < berries < 2.5, f"orchard expected ~2 berries/min, got {berries}"
 
 
-def test_fishing_pier_produces_fish(make_player, place, cur, clear_resources):
+def test_fishing_pier_produces_fish(make_player, place, stamp_food_tile, cur, clear_resources):
     p = make_player(industry='stone')
     clear_resources(p['id'])
     _food_extractors_cheap(cur)
     hx, hy = p['home_x'], p['home_y']
+    stamp_food_tile('pond', hx + 1, hy + 1)
     place('fishing_pier', hx + 1, hy + 1)
     cur.execute("""UPDATE public.buildings
                    SET last_processed_at = now() - interval '60 seconds'
@@ -94,13 +101,14 @@ def test_fishing_pier_produces_fish(make_player, place, cur, clear_resources):
 
 # ── food extractor doesn't need road ─────────────────────────
 
-def test_food_extractor_staffs_without_road(make_player, place, cur, clear_resources):
+def test_food_extractor_staffs_without_road(make_player, place, stamp_food_tile, cur, clear_resources):
     """Food extractors are like extractors — don't need road access for staffing."""
     p = make_player(industry='clay')
     clear_resources(p['id'])
     _food_extractors_cheap(cur)
     hx, hy = p['home_x'], p['home_y']
     # Stay close to home but pick a tile that's off-highway and not road-adjacent.
+    stamp_food_tile('garden_plot', hx + 2, hy + 2)
     bid = place('garden', hx + 2, hy + 2)['building_id']
     cur.execute("""UPDATE public.buildings
                    SET last_processed_at = now() - interval '60 seconds'
@@ -114,7 +122,7 @@ def test_food_extractor_staffs_without_road(make_player, place, cur, clear_resou
 
 # ── output satisfies housing food gate ───────────────────────
 
-def test_orchard_output_satisfies_food_gate(make_player, place, cur, clear_resources):
+def test_orchard_output_satisfies_food_gate(make_player, place, stamp_food_tile, cur, clear_resources):
     """Berries from an orchard satisfy the tier-1+ housing food gate.
     Within a single process_production tick, the orchard's berries arrive
     in the inventory BEFORE the housing eval runs, so the food gate
@@ -124,6 +132,7 @@ def test_orchard_output_satisfies_food_gate(make_player, place, cur, clear_resou
     _food_extractors_cheap(cur)
     hx, hy = p['home_x'], p['home_y']
     place('well', hx + 2, hy + 1)
+    stamp_food_tile('orchard_grove', hx + 4, hy + 4)
     place('orchard', hx + 4, hy + 4)
     house_id = place('house', hx + 1, hy + 2)['building_id']  # tier 0
 

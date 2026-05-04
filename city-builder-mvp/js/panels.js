@@ -117,7 +117,10 @@ export function renderBuildPanel() {
     } else if (bt.category === 'extractor') {
       desc = 'Produces ' + bt.output_rate + ' ' + resourceName(bt.output_resource_key).toLowerCase() + '/min';
     } else if (bt.category === 'food_extractor') {
-      desc = 'Produces ' + bt.output_rate + ' ' + resourceName(bt.output_resource_key).toLowerCase() + '/min (a food). Place anywhere in your district — no resource tile needed.';
+      var tileLabel = bt.placement_resource_node_key
+        ? resourceName(bt.placement_resource_node_key).toLowerCase() + ' tile'
+        : 'any open tile';
+      desc = 'Produces ' + bt.output_rate + ' ' + resourceName(bt.output_resource_key).toLowerCase() + '/min (a food). Place on a ' + tileLabel + '.';
     } else if (bt.category === 'booster') {
       var pct = Math.round(((bt.boost_multiplier || 1) - 1) * 100);
       var targetText = bt.boost_target === 'food_extractor' ? 'food extractors' : 'extractors';

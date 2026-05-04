@@ -15,11 +15,13 @@ def test_iron_player_can_build_iron_mine(make_player, place, cur, clear_resource
     assert 'building_id' in result
 
 
-def test_iron_player_can_build_grain_farm(make_player, place, cur, clear_resources):
-    """Grain farm is the iron player's paired food extractor."""
+def test_iron_player_can_build_grain_farm(make_player, place, stamp_food_tile, cur, clear_resources):
+    """Grain farm is the iron player's paired food extractor — must sit
+    on a farmland tile."""
     p = make_player(industry='iron')
     clear_resources(p['id'])
     hx, hy = p['home_x'], p['home_y']
+    stamp_food_tile('farmland', hx + 1, hy + 1)
     result = place('grain_farm', hx + 1, hy + 1)
     assert 'building_id' in result
 
@@ -53,13 +55,14 @@ def test_grain_farm_is_now_food_extractor(cur):
     assert cur.fetchone()[0] == 'food_extractor'
 
 
-def test_grain_farm_produces_grain_at_flat_rate(make_player, place, cur, clear_resources):
-    """No tile claim, no path math — flat 2 grain/min when staffed."""
+def test_grain_farm_produces_grain_at_flat_rate(make_player, place, stamp_food_tile, cur, clear_resources):
+    """No path math, flat 2 grain/min when staffed (must be on farmland)."""
     p = make_player(industry='iron')
     clear_resources(p['id'])
     # Make food extractors cheap enough for the base capacity to staff one
     cur.execute("UPDATE public.building_types SET worker_cost = 4 WHERE key = 'grain_farm'")
     hx, hy = p['home_x'], p['home_y']
+    stamp_food_tile('farmland', hx + 1, hy + 1)
     place('grain_farm', hx + 1, hy + 1)
     cur.execute("""UPDATE public.buildings
                    SET last_processed_at = now() - interval '60 seconds'

@@ -18,6 +18,17 @@ function findExtractorFor(resourceKey) {
   });
   return match;
 }
+function findBuilderRequiringTile(resourceKey) {
+  var match = null;
+  Object.keys(state.buildingTypes).forEach(function (k) {
+    var bt = state.buildingTypes[k];
+    if (bt && bt.placement_resource_node_key === resourceKey) match = bt;
+  });
+  return match;
+}
+function isTerrainResource(resourceKey) {
+  return !!(state.resources && state.resources[resourceKey] && state.resources[resourceKey].kind === 'terrain');
+}
 function findProcessorConsuming(resourceKey) {
   var match = null;
   Object.keys(state.buildingTypes).forEach(function (k) {
@@ -152,13 +163,18 @@ function renderResourceInspector() {
   var actionsEl = document.getElementById('inspector-actions');
   var rkey = inspectedTile.resource_node_key;
   var rName = resName(rkey);
+  var isTerrain = isTerrainResource(rkey);
   var ext = findExtractorFor(rkey);
   var proc = findProcessorConsuming(rkey);
+  var builder = findBuilderRequiringTile(rkey);
 
-  titleEl.textContent = rName + ' deposit';
+  titleEl.textContent = isTerrain ? rName : rName + ' deposit';
 
   var rows = '';
-  rows += '<div class="insp-row"><span class="insp-label">Resource</span><span class="insp-value">' + rName + '</span></div>';
+  rows += '<div class="insp-row"><span class="insp-label">' + (isTerrain ? 'Terrain' : 'Resource') + '</span><span class="insp-value">' + rName + '</span></div>';
+  if (builder) {
+    rows += '<div class="insp-row"><span class="insp-label">Build here</span><span class="insp-value">' + builder.name + ' → ' + resName(builder.output_resource_key) + '</span></div>';
+  }
   if (ext) {
     rows += '<div class="insp-row"><span class="insp-label">Harvested by</span><span class="insp-value">' + ext.name + '</span></div>';
   }
@@ -179,7 +195,7 @@ function renderResourceInspector() {
   if (claimed) {
     actHtml += '<span class="demolish-warning">An extractor is targeting this tile — demolish that first.</span>';
   } else {
-    actHtml += '<span class="demolish-refund">Removes the deposit so you can build here.</span>';
+    actHtml += '<span class="demolish-refund">' + (isTerrain ? 'Removes the terrain so you can build anything here.' : 'Removes the deposit so you can build here.') + '</span>';
   }
   actHtml += '</div>';
   actHtml += '<button class="btn-demolish' + (claimed ? ' btn-demolish-disabled' : '') + '" id="btn-demolish-tile"' + (claimed ? ' disabled' : '') + '>Demolish</button>';

@@ -93,7 +93,7 @@ export function stopProdLoop() {
 function loadGameData() {
   return Promise.all([
     sb.from('building_types').select('*').eq('is_active', true),
-    sb.from('resources').select('*').eq('is_active', true),
+    sb.from('resources').select('*'),
     sb.from('map_tiles').select('*').order('y', { ascending: true }).order('x', { ascending: true }),
     sb.from('buildings').select('*, player_profiles(display_name, color_hex)'),
     sb.from('trader_prices').select('*').eq('is_active', true),

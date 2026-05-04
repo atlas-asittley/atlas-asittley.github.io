@@ -70,10 +70,18 @@ export function isPlacementValid(btKey, tile) {
   if (!bt) return false;
   if (!tile.buildable) return false;
   if (tile.occupied_building_id) return false;
-  // No building on top of a resource tile — the player must clear the
-  // resource first (tap the resource tile to do that). Server enforces
-  // this too via a BEFORE INSERT trigger; this is for click feedback.
-  if (tile.resource_node_key) return false;
+  // Resource tiles: by default no building goes on top (clear it first).
+  // Exception: food extractors must be placed on their matching food tile
+  // (bt.placement_resource_node_key === tile.resource_node_key). Server
+  // enforces both via a BEFORE INSERT trigger; this is for click feedback.
+  if (tile.resource_node_key) {
+    if (bt.placement_resource_node_key
+        && bt.placement_resource_node_key === tile.resource_node_key) {
+      // allowed; fall through to remaining checks
+    } else {
+      return false;
+    }
+  }
 
   // M1: District ownership check. Only build on your own tiles.
   // (Server enforces this too — this is for click feedback.)
@@ -906,8 +914,16 @@ export function initMapEvents() {
       var tileId = cell.dataset.tileId;
       if (!tileId) return;
       if (!tile || !isPlacementValid(state.selectedBuildType, tile)) {
-        if (tile && tile.resource_node_key) {
-          showToast('Clear the ' + tile.resource_node_key + ' resource first', 'error');
+        var sbt = state.buildingTypes[state.selectedBuildType];
+        if (sbt && sbt.placement_resource_node_key && (!tile || tile.resource_node_key !== sbt.placement_resource_node_key)) {
+          var rname = state.resources && state.resources[sbt.placement_resource_node_key]
+            ? state.resources[sbt.placement_resource_node_key].name
+            : sbt.placement_resource_node_key;
+          showToast('Place on a ' + rname + ' tile', 'error');
+        } else if (tile && tile.resource_node_key) {
+          var rk = tile.resource_node_key;
+          var rn = state.resources && state.resources[rk] ? state.resources[rk].name : rk;
+          showToast('Clear the ' + rn + ' first', 'error');
         } else {
           showToast('Cannot place here', 'error');
         }
