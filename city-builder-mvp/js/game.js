@@ -91,6 +91,7 @@ export function stopProdLoop() {
 }
 
 function loadGameData() {
+  console.log('[load] loadGameData: firing 10 parallel queries for user', state.currentUser && state.currentUser.id);
   return Promise.all([
     sb.from('building_types').select('*').eq('is_active', true),
     sb.from('resources').select('*').eq('is_active', true),
@@ -103,6 +104,9 @@ function loadGameData() {
     sb.from('traders').select('*').eq('is_active', true),
     sb.from('housing_tier_config').select('*')
   ]).then(function (results) {
+    console.log('[load] loadGameData: queries returned. statuses:', results.map(function (r, i) {
+      return i + ':' + (r.error ? 'ERR ' + r.error.message : (r.data ? r.data.length + ' rows' : 'no data'));
+    }));
     state.buildingTypes = {};
     if (results[0].data) results[0].data.forEach(function (bt) { state.buildingTypes[bt.key] = bt; });
 
@@ -194,35 +198,35 @@ function loadGameData() {
 }
 
 export function enterGame() {
+  console.log('[load] enterGame start');
   showScreen('screen-game');
   document.getElementById('g-industry').textContent = capitalize(state.profile.industry_key);
   document.getElementById('g-player-name').textContent = state.profile.display_name;
   updateMoney();
   updateWorkers();
+  console.log('[load] enterGame: about to call loadGameData');
 
   loadGameData().then(function () {
-    computeLaborAllocation();
-    updateWorkers();
-    renderMap();
-    renderBuildPanel();
-    renderInventory();
-    renderTradePanel();
-    processProduction();
-    subscribeRealtime();
-    startProdLoop();
-    // Start walker system (visual walkers on roads)
-    startWalkers();
-    // Wire up expand-district button (M1)
+    console.log('[load] loadGameData resolved. buildings:', state.allBuildings.length, 'tiles:', state.tiles.length);
+    try { console.log('[load] computeLaborAllocation'); computeLaborAllocation(); } catch (e) { console.error('[load] computeLaborAllocation failed:', e); throw e; }
+    try { updateWorkers(); } catch (e) { console.error('[load] updateWorkers failed:', e); throw e; }
+    try { console.log('[load] renderMap'); renderMap(); } catch (e) { console.error('[load] renderMap failed:', e); throw e; }
+    try { console.log('[load] renderBuildPanel'); renderBuildPanel(); } catch (e) { console.error('[load] renderBuildPanel failed:', e); throw e; }
+    try { console.log('[load] renderInventory'); renderInventory(); } catch (e) { console.error('[load] renderInventory failed:', e); throw e; }
+    try { console.log('[load] renderTradePanel'); renderTradePanel(); } catch (e) { console.error('[load] renderTradePanel failed:', e); throw e; }
+    try { console.log('[load] processProduction'); processProduction(); } catch (e) { console.error('[load] processProduction failed:', e); throw e; }
+    try { subscribeRealtime(); } catch (e) { console.error('[load] subscribeRealtime failed:', e); throw e; }
+    try { startProdLoop(); } catch (e) { console.error('[load] startProdLoop failed:', e); throw e; }
+    try { console.log('[load] startWalkers'); startWalkers(); } catch (e) { console.error('[load] startWalkers failed:', e); throw e; }
     var expandBtn = document.getElementById('g-expand-district');
     if (expandBtn) {
       expandBtn.onclick = function () { expandDistrict(); };
     }
-    // Lazy visit resolution: check if any trader visits are due
-    checkAllTraderVisits();
-    // One-time tap hint for new players
-    showTapHintOnce();
+    try { checkAllTraderVisits(); } catch (e) { console.error('[load] checkAllTraderVisits failed:', e); throw e; }
+    try { showTapHintOnce(); } catch (e) { console.error('[load] showTapHintOnce failed:', e); throw e; }
+    console.log('[load] enterGame complete');
   }).catch(function (err) {
-    console.error('Game load failed:', err);
+    console.error('[load] Game load failed:', err);
     showToast('Failed to load game data', 'error');
   });
 }
