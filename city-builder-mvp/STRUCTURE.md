@@ -50,8 +50,22 @@ When new features ship, new migration files land at `city-builder-mvp/*.sql` alo
 
 ## How to update the app version
 
-Edit `js/version.js` — change the `APP_VERSION` string. This is the only place the
-version is defined; it is displayed automatically in the bottom-right badge.
+Edit `js/version.js` — change the `PAGE_BUILD` string. This is the only place the
+version is defined; it is displayed automatically in the upper-left badge.
+
+## Cache-buster
+
+The version badge in the upper-left doubles as a cache-buster. Tapping it clears
+any service-worker / Cache-API entries and reloads with `?_cb=<timestamp>` in
+the URL. A small inline bootstrap at the top of `index.html` reads that query,
+injects an import map that remaps every `js/<name>.js` to `js/<name>.js?_cb=<n>`,
+and applies the same query to the CSS link and the main module script — forcing
+fresh fetches for HTML, CSS, and every JS module without waiting for the
+GH-Pages cache TTL.
+
+**If you add a new ES module under `js/`**, also add its bare name to the
+`modules` array in the bootstrap (`index.html`, near the top of `<head>`),
+or it won't be cache-bustable.
 
 ## Module system
 
