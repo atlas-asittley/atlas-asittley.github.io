@@ -8,6 +8,10 @@ visible without needing `git log`.
 
 ## Up next
 
+- [ ] **Wider zoom-out range as the map grows.**
+  - The current `applyMapZoom` clamps zoom to a fixed minimum that was sized for a single 15×15 chunk. As districts expand, you can no longer fit the whole map in view. The minimum zoom should scale down with the player's actual map dimensions (gridCols × gridRows) so you can always see the full district at once if you want.
+  - Cap is mostly cosmetic — at extreme zoom-out tiles get tiny — but it should at least cover "all my chunks fit on screen."
+
 - [ ] **Resource tiles: can't build on, but can demolish/clear to free the tile.**
   - Placement validator should reject building on a tile with `resource_node_key IS NOT NULL`.
   - Add a player action to clear the resource (sets `resource_node_key = NULL`), after which the tile is buildable. UI: tap the resource tile → inspector shows a "Clear resource" action.
