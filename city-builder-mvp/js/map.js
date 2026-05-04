@@ -78,10 +78,12 @@ export function isPlacementValid(btKey, tile) {
       if (!t) return false;
       if (!t.buildable) return false;
       if (t.occupied_building_id) return false;
-      if (t.resource_node_key) {
-        if (!(bt.placement_resource_node_key && bt.placement_resource_node_key === t.resource_node_key)) {
-          return false;
-        }
+      if (bt.placement_resource_node_key) {
+        // Building requires a specific terrain tile (food extractors).
+        if (t.resource_node_key !== bt.placement_resource_node_key) return false;
+      } else if (t.resource_node_key) {
+        // Building doesn't take a terrain — any resource tile blocks placement.
+        return false;
       }
       if (!isMyTile(t)) return false;
     }
