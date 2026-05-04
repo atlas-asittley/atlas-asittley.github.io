@@ -311,15 +311,42 @@ function getHousingUpgradeBlockers(building, nextTierCfg) {
     blockers.push('temple');
   }
 
+  // Tier 6+: any luxury food (spirits/caviar/spices/ale) in inventory
+  if (nextTierCfg.needs_luxury_food) {
+    var hasLuxFood = Object.keys(state.resources).some(function (k) {
+      return state.resources[k].is_luxury_food && (state.inventory[k] || 0) > 0;
+    });
+    if (!hasLuxFood) blockers.push('luxury_food');
+  }
+
+  // Tier 7+: any industrial luxury (cabinets/monuments/mosaics/machinery)
+  if (nextTierCfg.needs_industrial_luxury) {
+    var hasIndLux = Object.keys(state.resources).some(function (k) {
+      return state.resources[k].is_industrial_luxury && (state.inventory[k] || 0) > 0;
+    });
+    if (!hasIndLux) blockers.push('industrial_luxury');
+  }
+
+  // Tier 8: ALL industrial luxuries simultaneously in stock
+  if (nextTierCfg.needs_all_industrial_luxuries) {
+    var allIndLux = Object.keys(state.resources)
+      .filter(function (k) { return state.resources[k].is_industrial_luxury; })
+      .every(function (k) { return (state.inventory[k] || 0) > 0; });
+    if (!allIndLux) blockers.push('all_industrial_luxuries');
+  }
+
   return blockers;
 }
 
 function describeUpgradeBlocker(key) {
   if (key === 'road') return 'a road touching this house';
   if (key === 'well') return 'a well within 4 tiles';
-  if (key === 'food') return 'food in stock (any food: grain, flour, or bread today)';
+  if (key === 'food') return 'food in stock (any food: grain, flour, bread, berries, fish, vegetables, or any luxury food)';
   if (key === 'school') return 'an operating school within 5 tiles';
   if (key === 'temple') return 'an operating temple within 6 tiles';
+  if (key === 'luxury_food') return 'a luxury food in stock (spirits, caviar, spices, or ale)';
+  if (key === 'industrial_luxury') return 'an industrial luxury in stock (cabinets, monuments, mosaics, or machinery)';
+  if (key === 'all_industrial_luxuries') return 'ALL FOUR industrial luxuries in stock simultaneously (cabinets + monuments + mosaics + machinery)';
   return key;
 }
 

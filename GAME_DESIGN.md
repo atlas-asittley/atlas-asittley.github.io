@@ -82,7 +82,7 @@ Buildings are stored in `buildings`; their catalog is `building_types`. Categori
 - **`food_extractor`** (tier 1) — flat-rate food production. No resource tile claim, no path math, no walker. Each industry has a paired food extractor (timber → Orchard / berries, stone → Fishing Pier / fish, clay → Garden / vegetables; iron uses the existing `grain_farm`). Locked to its industry via `industry_key`. Output is flagged `is_food = true` so it auto-satisfies the housing food gate.
 - **`booster`** (tier 1) — AOE production multiplier. No production of its own. Each industry has two: a *resource booster* (boosts adjacent T1 extractors) and a *food booster* (boosts adjacent food extractors). When staffed, applies `boost_multiplier` (default +25%) to matching buildings within Manhattan distance `boost_range` (default 2). Multiple boosters within range take the **MAX** multiplier — not stack. Same staffing semantics as extractors (no road needed). Locked to industry via `industry_key`; per-booster behavior is configured by `boost_target` ('extractor' or 'food_extractor').
 - **`processor`** (tier 2+) — consumes resources from inventory, produces another. Supports a single input (legacy: e.g. sawmill timber → lumber) or two inputs (multi-input recipe gated by the scarcer input — output is proportional to `min(avail/need)` across the inputs and both inputs drain at that proportion). Tier-3 processors (woodcarver, sculptor, bakery, distillery, etc.) live in this same category — they're just deeper in the chain. Cross-converters (charcoal_kiln, lime_kiln, glassworks, nail_forge) are also processors that produce a unique support good per industry.
-- **`housing`** — provides workers, evolves through tiers t0–t5 with prerequisites; see [Housing evolution](#housing-evolution). `industry_key = 'common'`.
+- **`housing`** — provides workers, evolves through tiers t0–t8 with prerequisites; see [Housing evolution](#housing-evolution). `industry_key = 'common'`.
 - **`road`** — connectivity infrastructure. Walkers move on roads. Required for staffing of processor / service / tax / housing-tier-1+ buildings. `industry_key = 'common'`.
 - **`service`** — citizen-job buildings that consume resources to provide an effect. All require road access to staff and must be staffed AND fed (all inputs available for the elapsed window) to "operate". Examples: well (gates housing tier 1+ within 4), tavern (consumes bread+pottery for a worker bonus), bathhouse (consumes brick+clay, blocks housing devolve in 4 tiles), school (consumes lumber+flour, gates Townhouse within 5), temple (consumes statuary+brick, gates Villa within 6). `industry_key = 'common'`.
 - **`tax`** — credits money to the player when staffed. Currently just Tax Office ($10/min, 10 workers, road-required). `industry_key = 'common'`.
@@ -238,16 +238,19 @@ Two modes coexist:
 
 ## Housing evolution
 
-Houses begin as Tier 0 (Shanty) and evolve up through Tier 5 (Manor Estate) when their prerequisites are met for at least `upgrade_secs` (per-tier; see `housing_tier_config`). They devolve when prerequisites lapse for at least `devolve_secs`. Both checks are per-house and run inside `process_production`.
+Houses begin as Tier 0 (Shanty) and evolve up through Tier 8 (Palace) when their prerequisites are met for at least `upgrade_secs` (per-tier; see `housing_tier_config`). They devolve when prerequisites lapse for at least `devolve_secs`. Both checks are per-house and run inside `process_production`.
 
-| Tier | Name | Workers | Needs road | Needs well | Needs food | Needs school | Needs temple |
-|---|---|---|---|---|---|---|---|
-| 0 | Shanty | 2 | — | — | — | — | — |
-| 1 | Mud Hut | 6 | ✓ | ✓ | ✓ | — | — |
-| 2 | Cottage | 10 | ✓ | ✓ | ✓ | — | — |
-| 3 | Townhouse | 16 | ✓ | ✓ | ✓ | ✓ | — |
-| 4 | Villa | 24 | ✓ | ✓ | ✓ | ✓ | ✓ |
-| 5 | Manor Estate | 34 | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Tier | Name | Workers | Road | Well | Food | School | Temple | Luxury food | Industrial luxury | All 4 industrial |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 0 | Shanty | 2 | — | — | — | — | — | — | — | — |
+| 1 | Mud Hut | 6 | ✓ | ✓ | ✓ | — | — | — | — | — |
+| 2 | Cottage | 10 | ✓ | ✓ | ✓ | — | — | — | — | — |
+| 3 | Townhouse | 16 | ✓ | ✓ | ✓ | ✓ | — | — | — | — |
+| 4 | Villa | 24 | ✓ | ✓ | ✓ | ✓ | ✓ | — | — | — |
+| 5 | Manor Estate | 34 | ✓ | ✓ | ✓ | ✓ | ✓ | — | — | — |
+| 6 | Mansion | 50 | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | — | — |
+| 7 | Estate | 70 | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | — |
+| 8 | Palace | 100 | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 
 Per-prereq mechanics:
 - **Road**: any orthogonal neighbor is an active road building. Highways count.
@@ -255,6 +258,9 @@ Per-prereq mechanics:
 - **Food**: any resource flagged `is_food = true` has quantity > 0 in inventory. Presence-only check today; consumption-per-tick is planned once the food-pairing item lands so non-grain industries have a local food source.
 - **School**: any school within Manhattan distance 5 that is currently *operating* — staffed AND has both inputs (lumber + flour) available for the elapsed window. Built but unfed schools don't gate.
 - **Temple**: any temple within distance 6 that is operating (statuary + brick).
+- **Luxury food** (tier 6+): any resource flagged `is_luxury_food = true` (spirits, caviar, spices, ale) has quantity > 0 in inventory. Each luxury food is the T4 capstone of one industry's chain (timber / stone / clay / iron respectively), so satisfying this gate requires either running a distillery / curing house / spicery / brewery yourself or buying from a trade partner.
+- **Industrial luxury** (tier 7+): any resource flagged `is_industrial_luxury = true` (cabinets, monuments, mosaics, machinery) has quantity > 0 in inventory. Each is a T4 cross-recipe processor's output and ties into the round-robin trade cycle.
+- **All four industrial luxuries** (tier 8 only): cabinets AND monuments AND mosaics AND machinery all simultaneously > 0. Computed by counting distinct `is_industrial_luxury` resources in stock vs total defined — generalizes if more industrial luxuries are added later. Effectively forces a fully-traded city across all four industries.
 
 Devolve override: an *operating bathhouse* (consumes brick + clay) within distance 4 blocks devolve regardless of which prereq lapsed. Useful as a buffer against a temporary food / road / service interruption.
 
@@ -353,7 +359,7 @@ These are the dials that affect game feel. Defaults shown.
 | NPC trader visit interval | 10–18 min (per trader) | `traders.visit_interval_minutes` |
 | Trader visit capacity | 14–26 (per trader) | `traders.visit_capacity` |
 | Base workers per player | 5 | constant in `process_production` |
-| Workers per house | 2/6/10/16/24/34 by tier | `housing_tier_config.workers` |
+| Workers per house | 2/6/10/16/24/34/50/70/100 by tier (0–8) | `housing_tier_config.workers` |
 | Extractor / processor worker_cost | 10 | `building_types.worker_cost` |
 | Service worker_cost | well 3, tavern/bathhouse 5, school/temple 10 | `building_types.worker_cost` |
 | Tax Office revenue | $10/min when staffed | Tax building's `output_rate` |
