@@ -4,27 +4,52 @@
 
 ```
 city-builder-mvp/
-├── index.html          HTML structure (no inline CSS or JS)
+├── index.html              HTML structure (no inline CSS or JS)
 ├── css/
-│   └── styles.css      All styles, extracted from the original inline <style>
+│   └── styles.css          All styles
 ├── js/
-│   ├── main.js         Entry point — bootstraps the app, restores session
-│   ├── version.js      APP_VERSION constant (single source of truth)
-│   ├── config.js       Supabase URL/key, creates the client
-│   ├── state.js        Shared mutable game state object
-│   ├── ui.js           Screen switching, toast notifications, error helpers
-│   ├── auth.js         Login, register, logout, industry selection
-│   ├── game.js         Game entry, data loading, production loop
-│   ├── map.js          Map rendering, placement validation, building placement
-│   ├── panels.js       Build/Inventory/Trade panel rendering and events
-│   └── realtime.js     Supabase realtime subscription for multiplayer
-├── mvp_schema.sql                    Base database schema
-├── phase2a_trade_migration.sql       Phase 2A migration (run after mvp_schema)
-├── phase2b_trade_partners_migration.sql  Phase 2B migration (run after 2A)
-├── black_market_migration.sql        Black Market migration (run after 2B)
-├── housing_labor_migration.sql       Housing & Labor migration (run after Black Market)
-└── STRUCTURE.md                      This file
+│   ├── main.js             Entry point — bootstraps the app, restores session
+│   ├── version.js          APP_VERSION constant (single source of truth)
+│   ├── config.js           Supabase URL/key, creates the client
+│   ├── state.js            Shared mutable game state + helpers
+│   ├── ui.js               Screen switching, toast notifications
+│   ├── auth.js             Login, register, logout, industry selection
+│   ├── game.js             Game entry, data loading, production loop
+│   ├── map.js              Map rendering, placement, district expansion
+│   ├── panels.js           Build/Inventory/Trade panel rendering and events
+│   ├── walkers.js          Ambient + collector walker spawning and movement
+│   ├── inspector.js        Building inspector overlay
+│   └── realtime.js         Supabase realtime subscription for multiplayer
+│
+├── *.sql                   Schema migrations (see "Migration order" below)
+├── migration_patches/      Small standalone bugfix SQLs (see folder README)
+├── graphics/               Art direction, sprite plans, asset tracking
+│   └── archive/            Completed initiative plans (e.g. BUILDING_POLISH_PLAN)
+└── STRUCTURE.md            This file
 ```
+
+Outside `city-builder-mvp/`:
+
+```
+citybuilder/
+├── GAME_DESIGN.md          Canonical game mechanics (target state)
+├── docs/
+│   └── ONBOARDING.md       Getting up and running locally
+└── archive/                Historical operational runbooks
+    └── M1_M2_deployment_runbook.md
+```
+
+## Migration order
+
+Run the `*.sql` files in `city-builder-mvp/` in this order on a fresh Supabase project. See `docs/ONBOARDING.md` for the full list and rationale.
+
+1. `mvp_schema.sql`
+2. Trade phase: `phase2a_trade_migration.sql` → `phase2b_trade_partners_migration.sql` → `black_market_migration.sql`
+3. Housing + roads: `housing_labor_migration.sql` → `roads_migration.sql` → `housing_evolution_migration.sql` → `road_connectivity_rule_migration.sql`
+4. Resource chains: `grain_chain_migration.sql` → `clay_chain_migration.sql` → `tier3_chains_migration.sql` → `sculptor_migration.sql` → `housing_tiers_expansion.sql`
+5. District + collection: `district_scaffolding_migration.sql` (M1, destructive) → `resource_collection_migration.sql` (M2)
+6. Tuning: `worker_cost_tuning_migration.sql`
+7. Patches from `migration_patches/` (already merged into the canonical files above; only needed for in-place fixes on already-deployed DBs)
 
 ## How to update the app version
 

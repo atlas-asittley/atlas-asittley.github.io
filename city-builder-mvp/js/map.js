@@ -737,10 +737,6 @@ function executeDragPlacements() {
 // Replaces the old auto-grow-when-near-edge behavior. A player explicitly
 // buys the next chunk via the expand_district RPC, paying base × chunks_owned².
 
-export function expandMapIfNeeded() {
-  // No-op since M1: districts no longer auto-grow. Use expandDistrict() instead.
-}
-
 export function expandDistrict() {
   if (!state.profile) return Promise.resolve(null);
   var chunksOwned = state.profile.chunks_owned || 1;
