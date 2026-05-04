@@ -384,6 +384,19 @@ DECLARE
   v_resource_key text;
   v_resource_count integer;
   v_is_first_chunk boolean;
+
+  -- Cluster generator state
+  v_cluster_count constant integer := 4;
+  v_cluster_idx integer;
+  v_walk_steps integer;
+  v_step_idx integer;
+  v_seed_dx integer;
+  v_seed_dy integer;
+  v_curr_dx integer;
+  v_curr_dy integer;
+  v_new_dx integer;
+  v_new_dy integer;
+  v_dir integer;
 BEGIN
   IF EXISTS (
     SELECT 1 FROM public.district_chunks
@@ -398,7 +411,8 @@ BEGIN
   v_resource_key := v_player.industry_key;
   v_is_first_chunk := (v_player.chunks_owned = 0);
 
-  -- Insert tiles. ~8% chance per tile of being a resource node.
+  -- Lay down all 225 ground tiles with no resource. Cluster seeding fills
+  -- them in below. Upsert preserves any pre-existing resource on a tile.
   FOR v_dx IN 0..14 LOOP
     FOR v_dy IN 0..14 LOOP
       INSERT INTO public.map_tiles (
@@ -407,22 +421,57 @@ BEGIN
         v_x_start + v_dx,
         v_y_start + v_dy,
         'ground',
-        CASE WHEN random() < 0.08 THEN v_resource_key ELSE NULL END,
+        NULL,
         true,
         p_player_id
       )
       ON CONFLICT (x, y) DO UPDATE SET
         owner_player_id = p_player_id,
         terrain_type = 'ground',
-        buildable = true,
-        resource_node_key = COALESCE(
-          public.map_tiles.resource_node_key,
-          EXCLUDED.resource_node_key
-        );
+        buildable = true;
     END LOOP;
   END LOOP;
 
-  -- Stamp city center for the player's first chunk
+  -- Drop N cluster seeds at random points and random-walk each one out
+  -- 6-15 steps. Out-of-chunk steps rewind to the seed so clusters stay
+  -- in-chunk. Revisits are no-ops, so actual cluster sizes are organic.
+  FOR v_cluster_idx IN 1..v_cluster_count LOOP
+    v_seed_dx := floor(random() * 15)::integer;
+    v_seed_dy := floor(random() * 15)::integer;
+    v_walk_steps := 6 + floor(random() * 10)::integer;
+    v_curr_dx := v_seed_dx;
+    v_curr_dy := v_seed_dy;
+
+    UPDATE public.map_tiles
+    SET resource_node_key = v_resource_key
+    WHERE x = v_x_start + v_curr_dx
+      AND y = v_y_start + v_curr_dy
+      AND resource_node_key IS NULL;
+
+    FOR v_step_idx IN 1..v_walk_steps LOOP
+      v_dir := floor(random() * 4)::integer;
+      v_new_dx := v_curr_dx
+                  + CASE v_dir WHEN 0 THEN 1 WHEN 1 THEN -1 ELSE 0 END;
+      v_new_dy := v_curr_dy
+                  + CASE v_dir WHEN 2 THEN 1 WHEN 3 THEN -1 ELSE 0 END;
+      IF v_new_dx < 0 OR v_new_dx > 14
+         OR v_new_dy < 0 OR v_new_dy > 14 THEN
+        v_curr_dx := v_seed_dx;
+        v_curr_dy := v_seed_dy;
+        CONTINUE;
+      END IF;
+      UPDATE public.map_tiles
+      SET resource_node_key = v_resource_key
+      WHERE x = v_x_start + v_new_dx
+        AND y = v_y_start + v_new_dy
+        AND resource_node_key IS NULL;
+      v_curr_dx := v_new_dx;
+      v_curr_dy := v_new_dy;
+    END LOOP;
+  END LOOP;
+
+  -- Stamp city center for the player's first chunk (overwrites any
+  -- resource that randomly seeded onto (7,7) — fine, city center wins).
   IF v_is_first_chunk THEN
     UPDATE public.map_tiles
     SET terrain_type = 'city_center',
@@ -435,7 +484,6 @@ BEGIN
     WHERE id = p_player_id;
   END IF;
 
-  -- Record chunk ownership and bump count
   INSERT INTO public.district_chunks (chunk_x, chunk_y, owner_player_id)
   VALUES (p_chunk_x, p_chunk_y, p_player_id);
 

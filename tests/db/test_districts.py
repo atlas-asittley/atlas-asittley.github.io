@@ -87,6 +87,42 @@ def test_expand_fails_when_too_poor(make_player, cur):
         cur.execute("SELECT public.expand_district()")
 
 
+def test_resources_are_clustered_in_new_chunks(make_player, cur):
+    """New chunks seed resources in blob/forest shapes via random walk, so
+    most resource tiles should have at least one resource neighbor. A
+    uniform 8% sprinkle would put that fraction near 28%; clustering
+    pushes it well above 50%. We sample multiple chunks for a stable
+    enough signal across random seeds."""
+    p = make_player()
+    cur.execute(
+        "UPDATE public.player_profiles SET money = 1000000 WHERE id = %s",
+        (str(p['id']),),
+    )
+    for _ in range(3):
+        cur.execute("SELECT public.expand_district()")
+
+    cur.execute("""
+        WITH res AS (
+          SELECT x, y FROM public.map_tiles
+          WHERE owner_player_id = %s AND resource_node_key IS NOT NULL
+        )
+        SELECT
+          (SELECT count(*) FROM res) AS total,
+          (SELECT count(*) FROM res a
+            WHERE EXISTS (
+              SELECT 1 FROM res b
+              WHERE (b.x = a.x+1 AND b.y = a.y)
+                 OR (b.x = a.x-1 AND b.y = a.y)
+                 OR (b.x = a.x   AND b.y = a.y+1)
+                 OR (b.x = a.x   AND b.y = a.y-1)
+            )) AS with_neighbor
+    """, (str(p['id']),))
+    total, with_neighbor = cur.fetchone()
+    assert total >= 30, f"too few resources sampled: {total}"
+    pct = with_neighbor / total
+    assert pct > 0.5, f"resources don't look clustered: only {pct:.0%} have a neighbor"
+
+
 def test_expansion_chunk_is_owned_by_player(make_player, cur):
     p = make_player()
     cur.execute(
