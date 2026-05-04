@@ -11,6 +11,19 @@ after that, polish, then big design lifts last.
 
 ## Up next
 
+- [ ] **Hide tile coordinates in inspector panels.**
+  - Building, road, walker, and resource-tile inspectors all show a "Tile / Position: (x, y)" row in the body. Position has no gameplay value — strip the row out everywhere.
+
+- [ ] **Two resources per player: their industry resource + an industry-paired food.**
+  - Currently each player extracts one resource (timber/stone/grain/clay). New rule: every player ALSO produces one food crop, paired with their industry. Total of two extractable resources per player.
+  - Open: how to pair industries with foods given grain itself is currently an industry. Options to weigh: (a) collapse grain into a sub-step of another industry and replace it with a non-food primary like "iron" or "copper"; (b) keep grain as an industry whose food is a different food; (c) something else. Will need to revisit `industry_key` and the seed building_types.
+  - Likely pairings to discuss: timber → berries (orchard), stone → fish (fishing pier), clay → vegetables (garden), <new fourth> → grain (farm).
+
+- [ ] **More citizen-job buildings that consume multiple resources to push trade.**
+  - Well is one. We need a small library of similar service / consumer buildings each requiring 2+ resources (typically one your industry produces + one you have to trade for), to force inter-player trade.
+  - Brainstorm pool (none specced yet): marketplace, tavern, school, temple, blacksmith, watchtower, library, bathhouse. Each picks a unique pair of input resources and a job-count.
+  - Effects to pick from once the happiness system exists: AoE happiness boost, worker-capacity bonus, unlock for higher-tier housing, etc. For now the building can just consume the inputs (sink) and provide a flat "+N workers" or unlock — TBD.
+
 - [ ] **Happiness system: citizens immigrate when happy, emigrate when unhappy.**
   - Per-player happiness rating that scales worker supply (or housing growth rate, TBD).
   - Inputs to figure out: housing tier, road access, nearby services (well, market), tax pressure, density, etc.
