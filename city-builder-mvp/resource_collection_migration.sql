@@ -713,11 +713,11 @@ BEGIN
     v_should_upgrade := v_next_tier IS NOT NULL
       AND v_has_road
       AND (NOT v_next_tier.needs_road OR v_has_road)
-      AND v_elapsed_secs >= COALESCE(v_cur_tier.upgrade_seconds, 60);
+      AND v_elapsed_secs >= COALESCE(v_cur_tier.upgrade_secs, 60);
     v_should_devolve := v_cur_tier IS NOT NULL
       AND v_cur_tier.needs_road
       AND NOT v_has_road
-      AND v_elapsed_secs >= COALESCE(v_cur_tier.devolve_seconds, 30);
+      AND v_elapsed_secs >= COALESCE(v_cur_tier.devolve_secs, 30);
 
     IF v_should_upgrade THEN
       UPDATE public.buildings
