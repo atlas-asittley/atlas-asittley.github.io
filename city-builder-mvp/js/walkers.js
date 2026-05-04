@@ -28,7 +28,11 @@ var WALKER_JOB_MAP = {
   'pottery_kiln': 'stone',
   // Well attendants are visualized as plain citizens for now — could
   // get their own bucket-carrying sprite variant later.
-  'well': 'citizen'
+  'well': 'citizen',
+  'tavern': 'tavern',
+  'bathhouse': 'bathhouse',
+  'school': 'school',
+  'temple': 'temple'
 };
 
 function getWalkerJob(building) {

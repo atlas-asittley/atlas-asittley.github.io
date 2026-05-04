@@ -220,13 +220,16 @@ export function computeLaborAllocation() {
 
   var workerSupply = 5 + housingWorkers; // base 5 + housing
 
-  // Get production buildings sorted by creation date (oldest first)
-  // Extractors always eligible; processors only with road access
+  // Get worker-consuming buildings sorted by creation date (oldest first).
+  // Mirrors the server's staffing loop in process_production:
+  //   extractors always eligible; processors / tax / services only with road access.
   var prodBuildings = myBuildings.filter(function (b) {
     var bt = state.buildingTypes[b.building_type_key];
     if (!bt || b.status !== 'active') return false;
     if (bt.category === 'extractor') return true;
-    if (bt.category === 'processor') return !!state.roadAccessIds[b.id];
+    if (bt.category === 'processor' || bt.category === 'tax' || bt.category === 'service') {
+      return !!state.roadAccessIds[b.id];
+    }
     return false;
   }).sort(function (a, b) {
     return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
