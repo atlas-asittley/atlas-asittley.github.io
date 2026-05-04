@@ -484,6 +484,22 @@ function renderInspector() {
         html += '<div class="insp-row"><span class="insp-label">Output</span><span class="insp-value">' + bt.output_rate + ' ' + outName + '/min</span></div>';
         html += buildTradeValueRow(bt.output_resource_key, bt.output_rate);
       }
+    } else if (bt.category === 'service') {
+      var inputs = [];
+      if (bt.input_resource_key && bt.input_rate > 0) {
+        inputs.push({ key: bt.input_resource_key, rate: bt.input_rate });
+      }
+      if (bt.input_resource_key_2 && bt.input_rate_2 > 0) {
+        inputs.push({ key: bt.input_resource_key_2, rate: bt.input_rate_2 });
+      }
+      inputs.forEach(function (inp, i) {
+        var nm = state.resources[inp.key] ? state.resources[inp.key].name : inp.key;
+        var stock = state.inventory[inp.key] || 0;
+        html += '<div class="insp-row"><span class="insp-label">' + (i === 0 ? 'Input' : 'Input 2') + '</span><span class="insp-value">' + inp.rate + ' ' + nm + '/min</span></div>';
+        if (stock === 0 && !state.laborInfo.unstaffedIds[b.id] && !state.noRoadAccessIds[b.id]) {
+          html += '<div class="insp-hint insp-hint-muted">No ' + nm + ' in stock — service idle until supply returns.</div>';
+        }
+      });
     }
   }
 
