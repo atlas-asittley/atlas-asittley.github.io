@@ -560,6 +560,16 @@ export function initInspector() {
   document.getElementById('inspector-overlay').addEventListener('click', function (e) {
     if (e.target === this) closeInspector();
   });
+  document.getElementById('inspector-mini').addEventListener('click', function () {
+    var panel = document.getElementById('inspector-panel');
+    panel.classList.toggle('minimized');
+    // Re-run the visibility scroll after the height transition settles, so
+    // the previously-covered cells are pulled into the freshly enlarged
+    // visible strip.
+    if (inspectedBuilding) {
+      setTimeout(function () { ensureInspectionVisible(inspectedBuilding); }, 220);
+    }
+  });
   // Wire up walker click -> inspector
   setWalkerClickHandler(function (walkerInfo) {
     openWalkerInspector(walkerInfo);
