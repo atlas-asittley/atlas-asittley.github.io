@@ -4,23 +4,41 @@
 import { state } from './state.js';
 
 // ── Walker config ──
+// Per-building roster model: every building has a target number of
+// walkers tied to it. The spawn tick tops up each building's cohort
+// to its target. Walkers despawn (steps cap or source gone), and
+// respawn after a cooldown. There is no global cap — total walker
+// count scales naturally with the size of the city.
 var WALKER_MOVE_MS = 1400;        // tile-to-tile travel time (also CSS transition duration)
 var WALKER_SPAWN_TICK_MS = 1400;  // spawn-logic tick interval
 var WALKER_MAX_STEPS = 14;        // ambient walkers: despawn after this many steps
-var WALKER_BASE_COUNT = 8;        // baseline cap before any buildings
-var WALKER_PER_BUILDING = 0.6;    // additional cap slots per eligible spawn building
-var WALKER_HARD_CAP = 80;         // absolute ceiling so very large cities stay performant
-var WALKER_SPAWN_CHANCE = 0.20;   // per eligible building per tick
-var WALKER_SPAWN_COOLDOWN = 5;    // min ticks between spawns from same building
+// Cooldown between respawns from the same building. Tuned so target
+// rosters can maintain themselves: tier-8 Palace has target 7, walkers
+// live ~20s (14 steps × 1.4s), so we need cooldown ≤ 20/7 ≈ 2.8s.
+// 2 ticks × 1.4s = 2.8s — barely keeps up.
+var WALKER_SPAWN_COOLDOWN = 2;
 // M2: collector walker pause at the resource end
 var COLLECTOR_PAUSE_MS = 1500;
 
-// Compute the dynamic ambient cap from current spawn-eligible count.
-function getMaxAmbient(spawnerCount) {
-  return Math.min(
-    WALKER_HARD_CAP,
-    Math.floor(WALKER_BASE_COUNT + spawnerCount * WALKER_PER_BUILDING)
-  );
+// Per-building target count. Bigger / busier buildings produce more
+// walkers; tier-0 shanties produce just one (a single "subsistence"
+// resident). Roads produce nothing (drawn separately).
+function getWalkerTarget(b) {
+  var bt = state.buildingTypes[b.building_type_key];
+  if (!bt) return 0;
+  if (bt.category === 'housing') {
+    var tier = b.housing_tier !== undefined ? b.housing_tier : 0;
+    // tier 0..8 → 1, 1, 2, 2, 3, 4, 5, 6, 7. Bigger houses, more residents.
+    var TARGET_BY_TIER = [1, 1, 2, 2, 3, 4, 5, 6, 7];
+    return TARGET_BY_TIER[Math.min(tier, TARGET_BY_TIER.length - 1)];
+  }
+  if (bt.category === 'extractor')      return 2;
+  if (bt.category === 'food_extractor') return 1;
+  if (bt.category === 'processor')      return 2;
+  if (bt.category === 'service')        return 1;
+  if (bt.category === 'tax')            return 1;
+  if (bt.category === 'booster')        return 1;
+  return 0;
 }
 
 // ── Persona system: visual variants picked at spawn time ──
@@ -53,32 +71,42 @@ function pickPersona() {
   return PERSONAS[0];
 }
 
-// ── Job type mapping: building_type_key -> walker visual category ──
-var WALKER_JOB_MAP = {
-  'timber_camp': 'timber',
-  'sawmill': 'sawmill',
-  'woodcarver': 'sawmill',
-  'stone_quarry': 'stone',
-  'mason_workshop': 'stone',
-  'sculptor': 'stone',
-  'grain_farm': 'grain',
-  'mill': 'grain',
-  'bakery': 'grain',
-  'clay_pit': 'stone',
-  'pottery_kiln': 'stone',
-  // Well attendants are visualized as plain citizens for now — could
-  // get their own bucket-carrying sprite variant later.
-  'well': 'citizen',
-  'tavern': 'tavern',
-  'bathhouse': 'bathhouse',
-  'school': 'school',
-  'temple': 'temple'
+// ── Walker visual category ──
+// Per-building overrides for sprites that differ from the industry
+// default — e.g., the sawmill's worker carries a plank, the temple's
+// priest wears robes. Anything not listed here falls through to the
+// industry sprite (walker-timber / walker-stone / walker-clay /
+// walker-iron) or 'citizen' for housing / 'civic' for tax_man.
+var WALKER_JOB_OVERRIDES = {
+  'sawmill':       'sawmill',
+  'mill':          'grain',
+  'bakery':        'grain',
+  'grain_farm':    'grain',
+  'orchard':       'orchard',
+  'fishing_pier':  'fish',
+  'garden':        'garden',
+  'well':          'citizen',
+  'tavern':        'tavern',
+  'bathhouse':     'bathhouse',
+  'school':        'school',
+  'temple':        'temple',
+  'tax_man':       'civic'
 };
 
 function getWalkerJob(building) {
   var bt = state.buildingTypes[building.building_type_key];
-  if (bt && bt.category === 'housing') return 'citizen';
-  return WALKER_JOB_MAP[building.building_type_key] || 'citizen';
+  if (!bt) return 'citizen';
+  if (bt.category === 'housing') return 'citizen';
+  // Per-building override takes precedence.
+  var override = WALKER_JOB_OVERRIDES[building.building_type_key];
+  if (override) return override;
+  // Industry-locked buildings (extractors / processors / boosters / food
+  // extractors) inherit their industry's walker sprite.
+  if (bt.industry_key === 'timber') return 'timber';
+  if (bt.industry_key === 'stone')  return 'stone';
+  if (bt.industry_key === 'clay')   return 'clay';
+  if (bt.industry_key === 'iron')   return 'iron';
+  return 'citizen';
 }
 
 // ── Walker state ──
@@ -131,7 +159,10 @@ function roadNeighbors(x, y) {
 }
 
 // ── Find eligible spawn buildings ──
-// Housing and staffed production buildings with road access
+// Anything that has a positive walker target and a road neighbor.
+// Production buildings (extractor / processor / service / tax /
+// food_extractor / booster) only count when staffed — an unstaffed
+// workshop has nobody to send walking.
 function getSpawnBuildings() {
   if (!state.currentUser) return [];
   return state.allBuildings.filter(function (b) {
@@ -139,16 +170,15 @@ function getSpawnBuildings() {
     if (b.status !== 'active') return false;
     var bt = state.buildingTypes[b.building_type_key];
     if (!bt) return false;
-    // Housing spawns citizen walkers
-    if (bt.category === 'housing') {
-      return roadNeighbors(b.x, b.y).length > 0;
+    if (bt.category === 'road') return false;
+    if (getWalkerTarget(b) <= 0) return false;
+    if (roadNeighbors(b.x, b.y).length === 0) return false;
+    // Production buildings only spawn while staffed.
+    if (bt.category !== 'housing' && state.laborInfo
+        && state.laborInfo.unstaffedIds && state.laborInfo.unstaffedIds[b.id]) {
+      return false;
     }
-    // Production buildings spawn job walkers when staffed
-    if (WALKER_JOB_MAP[b.building_type_key]) {
-      if (state.laborInfo.unstaffedIds[b.id]) return false;
-      return roadNeighbors(b.x, b.y).length > 0;
-    }
-    return false;
+    return true;
   });
 }
 
@@ -365,9 +395,13 @@ function applyWalkerPosition(w, immediate) {
 }
 
 // ── Spawn-only tick ──
-// Movement happens on per-walker timers, so this tick only handles spawning
-// and cooldown bookkeeping. getMaxAmbient() applies only to ambient walkers;
-// collector walkers are sized by the number of active extractors.
+// Per-building roster: every eligible building has a target walker
+// count from getWalkerTarget(). Each tick we (1) decrement cooldowns,
+// (2) prune walkers whose source building is gone or paused, (3) for
+// each spawn-eligible building below its target and not on cooldown,
+// spawn one walker. No global cap — total population scales with the
+// city. Movement happens on per-walker timers, so this tick is purely
+// spawn/despawn bookkeeping.
 function spawnTick() {
   Object.keys(spawnCooldowns).forEach(function (id) {
     spawnCooldowns[id]--;
@@ -377,27 +411,40 @@ function spawnTick() {
   // M2: keep one collector walker alive per active extractor with a target
   syncCollectorWalkers();
 
-  // Ambient walker spawning (housing + staffed processors)
-  var ambientCount = 0;
-  for (var i = 0; i < walkers.length; i++) {
-    if (walkers[i].mode === 'ambient') ambientCount++;
-  }
+  // Build a quick lookup for whether each source building still exists,
+  // is active, and (for production buildings) is staffed.
   var spawners = getSpawnBuildings();
-  var maxAmbient = getMaxAmbient(spawners.length);
-  if (ambientCount < maxAmbient) {
-    // Shuffle so we don't always favor the first buildings in iteration order.
-    for (var s = spawners.length - 1; s > 0; s--) {
-      var swap = Math.floor(Math.random() * (s + 1));
-      var tmp = spawners[s]; spawners[s] = spawners[swap]; spawners[swap] = tmp;
+  var liveSources = {};
+  spawners.forEach(function (b) { liveSources[b.id] = b; });
+
+  // Despawn stale ambient walkers — source demolished, paused, or no
+  // longer eligible (e.g., processor lost staffing).
+  for (var i = walkers.length - 1; i >= 0; i--) {
+    var w = walkers[i];
+    if (w.mode !== 'ambient') continue;
+    if (!liveSources[w.sourceId]) {
+      despawnWalker(w);
     }
-    for (var j = 0; j < spawners.length && ambientCount < maxAmbient; j++) {
-      var b = spawners[j];
-      if (spawnCooldowns[b.id]) continue;
-      if (Math.random() < WALKER_SPAWN_CHANCE) {
-        spawnWalker(b);
-        spawnCooldowns[b.id] = WALKER_SPAWN_COOLDOWN;
-        ambientCount++;
-      }
+  }
+
+  // Count current walkers per source so we can top each building up
+  // to its target.
+  var perSource = {};
+  for (var k = 0; k < walkers.length; k++) {
+    if (walkers[k].mode !== 'ambient') continue;
+    perSource[walkers[k].sourceId] = (perSource[walkers[k].sourceId] || 0) + 1;
+  }
+
+  // Spawn at most one walker per building per tick — staggers respawns
+  // so a building's cohort doesn't all vanish and reappear in unison.
+  for (var s = 0; s < spawners.length; s++) {
+    var b = spawners[s];
+    if (spawnCooldowns[b.id]) continue;
+    var target = getWalkerTarget(b);
+    var current = perSource[b.id] || 0;
+    if (current < target) {
+      spawnWalker(b);
+      spawnCooldowns[b.id] = WALKER_SPAWN_COOLDOWN;
     }
   }
 }
@@ -556,10 +603,13 @@ function preseedWalkers() {
   var roadKeys = Object.keys(roadSet);
   if (roadKeys.length === 0) return;
 
-  var target = Math.min(
-    Math.max(3, Math.ceil(spawners.length * 1.5)),
-    Math.floor(getMaxAmbient(spawners.length) * 0.75)
-  );
+  // Preseed roughly the steady-state population minus a bit of slack
+  // so the spawn tick still has work to do.
+  var rosterTotal = 0;
+  for (var rs = 0; rs < spawners.length; rs++) {
+    rosterTotal += getWalkerTarget(spawners[rs]);
+  }
+  var target = Math.max(3, Math.floor(rosterTotal * 0.7));
 
   var housingRoads = [];
   for (var s = 0; s < spawners.length; s++) {
