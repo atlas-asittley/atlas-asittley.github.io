@@ -383,18 +383,22 @@ function applyWalkerPosition(w, immediate) {
   var gap = 1;
   var gx = w.x - (state.gridMinX || 0);
   var gy = w.y - (state.gridMinY || 0);
-  var left = gx * (cellSize + gap) + cellSize * 0.5;
-  var top = gy * (cellSize + gap) + cellSize * 0.5;
+  var tx = gx * (cellSize + gap) + cellSize * 0.5;
+  var ty = gy * (cellSize + gap) + cellSize * 0.5;
+  // Position via the typed custom properties --wk-tx / --wk-ty (declared
+  // <length> in CSS so transitions interpolate them). The walker's
+  // transform reads these, so no `left` / `top` writes — and therefore
+  // no layout-coupled transition resets when the grid HTML rebuilds.
   if (immediate) {
     var prev = w.el.style.transition;
     w.el.style.transition = 'none';
-    w.el.style.left = left.toFixed(1) + 'px';
-    w.el.style.top = top.toFixed(1) + 'px';
+    w.el.style.setProperty('--wk-tx', tx.toFixed(1) + 'px');
+    w.el.style.setProperty('--wk-ty', ty.toFixed(1) + 'px');
     void w.el.offsetHeight; // force reflow so the no-transition style applies
     w.el.style.transition = prev;
   } else {
-    w.el.style.left = left.toFixed(1) + 'px';
-    w.el.style.top = top.toFixed(1) + 'px';
+    w.el.style.setProperty('--wk-tx', tx.toFixed(1) + 'px');
+    w.el.style.setProperty('--wk-ty', ty.toFixed(1) + 'px');
   }
   w.el.style.opacity = '1';
   // (Don't set --wk-scale here — it carries the per-walker jitter +
@@ -419,18 +423,30 @@ function spawnTick() {
   // M2: keep one collector walker alive per active extractor with a target
   syncCollectorWalkers();
 
-  // Build a quick lookup for whether each source building still exists,
-  // is active, and (for production buildings) is staffed.
+  // Map every active building by id so we can detect truly-gone sources
+  // (demolished or paused). Spawners is the spawn-eligible subset (live
+  // + road + staffed).
   var spawners = getSpawnBuildings();
   var liveSources = {};
   spawners.forEach(function (b) { liveSources[b.id] = b; });
+  var allActiveById = {};
+  if (state.currentUser) {
+    state.allBuildings.forEach(function (b) {
+      if (b.player_id === state.currentUser.id && b.status === 'active') {
+        allActiveById[b.id] = true;
+      }
+    });
+  }
 
-  // Despawn stale ambient walkers — source demolished, paused, or no
-  // longer eligible (e.g., processor lost staffing).
+  // Despawn walkers only when the source is truly gone (demolished or
+  // paused). Don't despawn on transient unstaffed states — that produces
+  // a synchronized snap when labor recomputes flip several buildings at
+  // once. Walkers from now-unstaffed buildings just stop being topped up
+  // and naturally drain via WALKER_MAX_STEPS.
   for (var i = walkers.length - 1; i >= 0; i--) {
     var w = walkers[i];
     if (w.mode !== 'ambient') continue;
-    if (!liveSources[w.sourceId]) {
+    if (!allActiveById[w.sourceId]) {
       despawnWalker(w);
     }
   }

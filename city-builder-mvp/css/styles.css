@@ -619,15 +619,25 @@ body.inspector-open .map-canvas { margin-bottom: calc(50vh + 28px); }
 .hq-label { font-size: 7px; color: #d0c0e8; font-weight: 700; letter-spacing: 0.12em; text-shadow: 0 0 4px rgba(160,120,220,0.4), 0 1px 2px rgba(0,0,0,0.5); position: relative; z-index: 1; }
 .road-surface.hq-road { opacity: 0.5; }
 /* ── Walker overlay ─────────────────────────────────── */
+/* Walker positioning uses TYPED CSS custom properties (@property) so
+   movement interpolates via transitions on --wk-tx / --wk-ty without
+   ever touching layout-coupled `left` / `top`. This makes walkers
+   immune to reflow-induced transition resets — closing the inspector
+   panel, rebuilding the grid HTML, etc., no longer snap walkers to
+   their destination tile centers. The waddle keyframes read the same
+   custom properties, so animation and transition compose naturally. */
+@property --wk-tx { syntax: '<length>'; inherits: false; initial-value: 0px; }
+@property --wk-ty { syntax: '<length>'; inherits: false; initial-value: 0px; }
 #walker-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2; }
 #walker-layer.no-transition .walker-dot { transition: none !important; }
 .walker-dot {
-  position: absolute; width: 10px; height: 14px;
+  position: absolute; left: 0; top: 0; width: 10px; height: 14px;
+  --wk-tx: 0px; --wk-ty: 0px;
   --wk-scale: 1; --wk-hue: 0deg;
   --wk-bob-ms: 700ms; --wk-waddle-ms: 550ms;
   --wk-bob-delay: 0s; --wk-waddle-delay: 0s;
-  transform: translate(-50%, -50%) scale(var(--wk-scale));
-  transition: left 1.4s linear, top 1.4s linear;
+  transform: translate(var(--wk-tx), var(--wk-ty)) translate(-50%, -50%) scale(var(--wk-scale));
+  transition: --wk-tx 1.4s linear, --wk-ty 1.4s linear;
   animation: walker-bob var(--wk-bob-ms) ease-in-out infinite alternate,
              walker-waddle var(--wk-waddle-ms) ease-in-out infinite;
   animation-delay: var(--wk-bob-delay), var(--wk-waddle-delay);
@@ -635,7 +645,7 @@ body.inspector-open .map-canvas { margin-bottom: calc(50vh + 28px); }
   cursor: pointer;
   background-size: contain; background-repeat: no-repeat; background-position: center;
 }
-.walker-dot:hover { filter: hue-rotate(var(--wk-hue)) brightness(1.5) drop-shadow(0 0 3px rgba(255,255,255,0.4)); transform: translate(-50%, -50%) scale(calc(var(--wk-scale) * 1.3)); }
+.walker-dot:hover { filter: hue-rotate(var(--wk-hue)) brightness(1.5) drop-shadow(0 0 3px rgba(255,255,255,0.4)); }
 .walker-dot::before, .walker-dot::after { content: none; }
 /* Occasional hat: small SVG overlay anchored to the head (top of sprite).
    Hue rotates with the rest of the body so colors stay coordinated. */
@@ -714,9 +724,9 @@ body.inspector-open .map-canvas { margin-bottom: calc(50vh + 28px); }
   to { margin-top: 1px; }
 }
 @keyframes walker-waddle {
-  0% { transform: translate(-50%, -50%) scale(var(--wk-scale)) rotate(-3deg); }
-  50% { transform: translate(-50%, -50%) scale(var(--wk-scale)) rotate(3deg); }
-  100% { transform: translate(-50%, -50%) scale(var(--wk-scale)) rotate(-3deg); }
+  0%   { transform: translate(var(--wk-tx), var(--wk-ty)) translate(-50%, -50%) scale(var(--wk-scale)) rotate(-3deg); }
+  50%  { transform: translate(var(--wk-tx), var(--wk-ty)) translate(-50%, -50%) scale(var(--wk-scale)) rotate(3deg); }
+  100% { transform: translate(var(--wk-tx), var(--wk-ty)) translate(-50%, -50%) scale(var(--wk-scale)) rotate(-3deg); }
 }
 
 /* ── Bottom panel ──────────────────────────────────── */
