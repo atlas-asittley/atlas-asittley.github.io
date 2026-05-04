@@ -115,19 +115,23 @@ Stored in the `resources` catalog table; per-player counts in `inventories`. Eac
 Today's resources:
 - **Raw industry**: timber, stone, clay, iron
 - **Raw food**: berries, fish, vegetables, grain (each is the paired food for one industry)
-- **Processed (tier-2)**: lumber, brick, pottery, flour
-- **Processed (tier-3)**: bread, furniture, statuary
+- **Processed (tier-2)**: lumber, brick, pottery, flour, iron_ingot, wine, smoked_fish, preserves
+- **Processed (tier-3)**: bread, furniture, statuary, tools, tiles
 
-Industry → paired food extractor:
+Industry trees (symmetric shape — every industry has the same depth, just with different resources):
 
-| Industry | Industry resource | Paired food | Food extractor |
-|---|---|---|---|
-| timber | timber | berries | Orchard |
-| stone | stone | fish | Fishing Pier |
-| clay | clay | vegetables | Garden |
-| iron | iron | grain | Grain Farm (flat-rate `food_extractor`) |
+| Tier | Timber | Stone | Clay | Iron |
+|---|---|---|---|---|
+| **T1 industry** | Timber Camp → timber | Stone Quarry → stone | Clay Pit → clay | Iron Mine → iron |
+| **T2 processor** | Sawmill → lumber | Mason Workshop → brick | Pottery Kiln → pottery | Smelter → iron_ingot |
+| **T3 processor** | Woodcarver → furniture | Sculptor → statuary | Tile Maker → tiles | Toolmaker → tools |
+| **T1 food** | Orchard → berries | Fishing Pier → fish | Garden → vegetables | Grain Farm → grain |
+| **T2 food** | Winery → wine | Smokehouse → smoked_fish | Cannery → preserves | Mill → flour |
+| **T3 food** | — | — | — | Bakery → bread |
 
-Foods (`is_food = true`): grain, flour, bread, berries, fish, vegetables. Any of these in inventory satisfies the housing food gate. Future tier-specialized gates (e.g., "Townhouse needs grain specifically") would add per-resource booleans to `housing_tier_config`.
+Foods (`is_food = true`): grain, flour, bread, berries, fish, vegetables, wine, smoked_fish, preserves. Any of these in inventory satisfies the housing food gate. Future tier-specialized gates (e.g., "Townhouse needs grain specifically") would add per-resource booleans to `housing_tier_config`.
+
+Industry buildings are locked to their industry via `building_types.industry_key`. General buildings (housing, road, services like well / tavern / bathhouse / school / temple, tax) stay `industry_key='common'` and are buildable by everyone. Cross-industry trade is the only way to get other industries' raw or processed goods.
 
 A player can produce **only their primary resource** directly via extractors. To get any other resource, they must trade (NPC or player-to-player).
 
