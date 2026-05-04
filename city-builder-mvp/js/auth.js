@@ -1,7 +1,7 @@
 // ── Authentication: login, register, logout, industry selection ──
 import { sb } from './config.js';
 import { state } from './state.js';
-import { showScreen, showError, clearError } from './ui.js';
+import { showScreen, showError, clearError, updateMoney, showToast } from './ui.js';
 import { enterGame, stopProdLoop } from './game.js';
 
 var selectedIndustry = null;
@@ -193,5 +193,31 @@ export function initAuthEvents() {
       btn.textContent = 'Reset';
       alert('Reset failed: ' + (err.message || err));
     });
+  });
+
+  // Cheat: triple-tap the money display to grant $100,000. Strictly for
+  // testing — easy to spot in the topbar so you don't trigger it by
+  // accident during normal play.
+  var moneyTaps = [];
+  document.getElementById('g-money').addEventListener('click', function () {
+    if (!state.currentUser || !state.profile) return;
+    var now = Date.now();
+    moneyTaps = moneyTaps.filter(function (t) { return now - t < 1500; });
+    moneyTaps.push(now);
+    if (moneyTaps.length < 3) return;
+    moneyTaps = [];
+    var bonus = 100000;
+    sb.from('player_profiles')
+      .update({ money: state.profile.money + bonus })
+      .eq('id', state.currentUser.id)
+      .then(function (r) {
+        if (r.error) {
+          showToast('Cheat failed: ' + r.error.message, 'error');
+          return;
+        }
+        state.profile.money += bonus;
+        updateMoney();
+        showToast('+$' + bonus.toLocaleString() + ' (cheat)', 'success');
+      });
   });
 }
