@@ -6,10 +6,10 @@ import { state } from './state.js';
 // ── Walker config ──
 var WALKER_MOVE_MS = 1400;        // tile-to-tile travel time (also CSS transition duration)
 var WALKER_SPAWN_TICK_MS = 1400;  // spawn-logic tick interval
-var WALKER_MAX_STEPS = 18;        // ambient walkers: despawn after this many steps
-var WALKER_MAX_COUNT = 12;        // global cap on ambient walkers (mobile-safe)
-var WALKER_SPAWN_CHANCE = 0.4;    // per eligible housing per tick
-var WALKER_SPAWN_COOLDOWN = 4;    // min ticks between spawns from same building
+var WALKER_MAX_STEPS = 14;        // ambient walkers: despawn after this many steps
+var WALKER_MAX_COUNT = 7;         // global cap on ambient walkers (lower = less crowd)
+var WALKER_SPAWN_CHANCE = 0.22;   // per eligible housing per tick
+var WALKER_SPAWN_COOLDOWN = 6;    // min ticks between spawns from same building
 // M2: collector walker pause at the resource end
 var COLLECTOR_PAUSE_MS = 1500;
 
@@ -245,14 +245,27 @@ function ensureWalkerEl(w) {
   var layer = document.getElementById('walker-layer');
   if (!layer) return;
   var el = document.createElement('div');
-  el.className = 'walker-dot walker-' + (w.sourceType || 'citizen');
+  // Per-walker visual jitter ─────────────────────────────────────
+  // Mostly cheap CSS-var noise so individuals read as distinct without
+  // authoring 2-3 sprite variants per type. Picks are decided once at
+  // spawn and then preserved with the walker.
+  if (w.scale === undefined) {
+    w.scale = (0.85 + Math.random() * 0.30).toFixed(2);   // 0.85..1.15
+    w.hue   = Math.floor(Math.random() * 36 - 18);        // ±18°
+    w.bobMs = (600 + Math.random() * 240).toFixed(0);     // 0.6..0.84s bob period
+    w.wadMs = (480 + Math.random() * 200).toFixed(0);     // 0.48..0.68s waddle period
+    w.hat   = (w.mode === 'ambient' && Math.random() < 0.18); // ~1 in 5 wears a hat
+  }
+  var classes = ['walker-dot', 'walker-' + (w.sourceType || 'citizen')];
+  if (w.hat) classes.push('has-hat');
+  el.className = classes.join(' ');
   el.style.pointerEvents = 'auto';
-  // Random negative animation delays put bob/waddle at a random phase so
-  // walkers don't bob in unison.
+  el.style.setProperty('--wk-scale', w.scale);
+  el.style.setProperty('--wk-hue', w.hue + 'deg');
+  el.style.setProperty('--wk-bob-ms', w.bobMs + 'ms');
+  el.style.setProperty('--wk-waddle-ms', w.wadMs + 'ms');
   el.style.setProperty('--wk-bob-delay', '-' + (Math.random() * 0.7).toFixed(2) + 's');
   el.style.setProperty('--wk-waddle-delay', '-' + (Math.random() * 0.55).toFixed(2) + 's');
-  // Per-element click handler captures `w` directly (no index lookup needed,
-  // immune to splicing the walkers array on despawn).
   el.addEventListener('click', function () {
     if (onWalkerClick) onWalkerClick(buildWalkerInfo(w));
   });
@@ -527,6 +540,7 @@ function preseedWalkers() {
     }
 
     var w = {
+      mode: 'ambient',
       x: cx,
       y: cy,
       prevDir: cd,
