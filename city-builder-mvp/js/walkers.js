@@ -55,32 +55,41 @@ function pickPersona() {
   return PERSONAS[0];
 }
 
-// ── Job type mapping: building_type_key -> walker visual category ──
-var WALKER_JOB_MAP = {
-  'timber_camp': 'timber',
-  'sawmill': 'sawmill',
-  'woodcarver': 'sawmill',
-  'stone_quarry': 'stone',
-  'mason_workshop': 'stone',
-  'sculptor': 'stone',
-  'grain_farm': 'grain',
-  'mill': 'grain',
-  'bakery': 'grain',
-  'clay_pit': 'stone',
-  'pottery_kiln': 'stone',
-  // Well attendants are visualized as plain citizens for now — could
-  // get their own bucket-carrying sprite variant later.
-  'well': 'citizen',
-  'tavern': 'tavern',
-  'bathhouse': 'bathhouse',
-  'school': 'school',
-  'temple': 'temple'
+// ── Walker visual category ──
+// Per-building overrides for sprites that differ from the industry
+// default — e.g., the sawmill's worker carries a plank, the orchard's
+// worker carries a basket. Anything not listed here falls through to
+// the industry sprite (walker-timber / walker-stone / walker-clay /
+// walker-iron) for industry-locked buildings, or 'citizen' otherwise.
+var WALKER_JOB_OVERRIDES = {
+  'sawmill':       'sawmill',
+  'mill':          'grain',
+  'bakery':        'grain',
+  'grain_farm':    'grain',
+  'orchard':       'orchard',
+  'fishing_pier':  'fish',
+  'garden':        'garden',
+  'well':          'citizen',
+  'tavern':        'tavern',
+  'bathhouse':     'bathhouse',
+  'school':        'school',
+  'temple':        'temple',
+  'tax_man':       'civic'
 };
 
 function getWalkerJob(building) {
   var bt = state.buildingTypes[building.building_type_key];
-  if (bt && bt.category === 'housing') return 'citizen';
-  return WALKER_JOB_MAP[building.building_type_key] || 'citizen';
+  if (!bt) return 'citizen';
+  if (bt.category === 'housing') return 'citizen';
+  var override = WALKER_JOB_OVERRIDES[building.building_type_key];
+  if (override) return override;
+  // Industry-locked buildings (extractors / processors / boosters / food
+  // extractors) inherit their industry's walker sprite.
+  if (bt.industry_key === 'timber') return 'timber';
+  if (bt.industry_key === 'stone')  return 'stone';
+  if (bt.industry_key === 'clay')   return 'clay';
+  if (bt.industry_key === 'iron')   return 'iron';
+  return 'citizen';
 }
 
 // ── Walker state ──
@@ -141,16 +150,16 @@ function getSpawnBuildings() {
     if (b.status !== 'active') return false;
     var bt = state.buildingTypes[b.building_type_key];
     if (!bt) return false;
-    // Housing spawns citizen walkers
-    if (bt.category === 'housing') {
-      return roadNeighbors(b.x, b.y).length > 0;
+    if (bt.category === 'road') return false;
+    if (roadNeighbors(b.x, b.y).length === 0) return false;
+    // Housing spawns citizens unconditionally; production buildings
+    // (extractor/processor/service/tax/booster/food_extractor) only
+    // spawn while staffed.
+    if (bt.category === 'housing') return true;
+    if (state.laborInfo && state.laborInfo.unstaffedIds && state.laborInfo.unstaffedIds[b.id]) {
+      return false;
     }
-    // Production buildings spawn job walkers when staffed
-    if (WALKER_JOB_MAP[b.building_type_key]) {
-      if (state.laborInfo.unstaffedIds[b.id]) return false;
-      return roadNeighbors(b.x, b.y).length > 0;
-    }
-    return false;
+    return true;
   });
 }
 
