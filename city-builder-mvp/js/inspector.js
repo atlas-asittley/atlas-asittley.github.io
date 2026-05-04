@@ -254,6 +254,65 @@ function countDependentBuildings(building) {
   return count;
 }
 
+// ── Housing upgrade gating: mirror process_production's checks ──
+// Returns the labels of any prerequisite that's blocking the next-tier
+// upgrade (subset of: 'road', 'well', 'school', 'temple'). Empty array
+// means all conditions are met.
+//
+// Server reference (process_production):
+//   needs_road   → has_road_access (any road tile orthogonal, status='active')
+//   needs_well   → well within Manhattan dist 4, status='active' (no staff/feed required)
+//   needs_school → school within 5, in v_operating_services (staffed AND both inputs available)
+//   needs_temple → temple within 6, in v_operating_services
+function getHousingUpgradeBlockers(building, nextTierCfg) {
+  if (!nextTierCfg) return [];
+  var blockers = [];
+
+  if (nextTierCfg.needs_road && !state.roadAccessIds[building.id]) {
+    blockers.push('road');
+  }
+
+  function hasNearbyService(serviceKey, range, requiresFeeding) {
+    return state.allBuildings.some(function (s) {
+      if (s.player_id !== state.currentUser.id) return false;
+      if (s.status !== 'active') return false;
+      if (s.building_type_key !== serviceKey) return false;
+      var dist = Math.abs(s.x - building.x) + Math.abs(s.y - building.y);
+      if (dist > range) return false;
+      if (!requiresFeeding) return true;
+      // Approximation of v_operating_services: staffed AND every input is in stock
+      if (state.laborInfo.unstaffedIds[s.id]) return false;
+      var sbt = state.buildingTypes[serviceKey];
+      if (!sbt) return false;
+      if (sbt.input_resource_key && sbt.input_rate > 0
+          && (state.inventory[sbt.input_resource_key] || 0) <= 0) return false;
+      if (sbt.input_resource_key_2 && sbt.input_rate_2 > 0
+          && (state.inventory[sbt.input_resource_key_2] || 0) <= 0) return false;
+      return true;
+    });
+  }
+
+  if (nextTierCfg.needs_well && !hasNearbyService('well', 4, false)) {
+    blockers.push('well');
+  }
+  if (nextTierCfg.needs_school && !hasNearbyService('school', 5, true)) {
+    blockers.push('school');
+  }
+  if (nextTierCfg.needs_temple && !hasNearbyService('temple', 6, true)) {
+    blockers.push('temple');
+  }
+
+  return blockers;
+}
+
+function describeUpgradeBlocker(key) {
+  if (key === 'road') return 'a road touching this house';
+  if (key === 'well') return 'a well within 4 tiles';
+  if (key === 'school') return 'an operating school within 5 tiles';
+  if (key === 'temple') return 'an operating temple within 6 tiles';
+  return key;
+}
+
 // ── Issues: consolidated list of reasons this building isn't operational ──
 // Returns an array of { label, hint, severity } where severity is 'bad'
 // (blocks operation entirely) or 'warn' (idle but recoverable). Empty
@@ -436,9 +495,9 @@ function renderInspector() {
 
       // Housing evolution / progression feedback
       var nextTierCfg = state.housingTierConfig[tier + 1];
-      var hasRoad = !!state.roadAccessIds[b.id];
       if (nextTierCfg) {
-        var canUpgrade = !nextTierCfg.needs_road || hasRoad;
+        var blockers = getHousingUpgradeBlockers(b, nextTierCfg);
+        var canUpgrade = blockers.length === 0;
         var evolving = canUpgrade && b.evolution_eligible_at;
         if (evolving) {
           var elapsed = Math.floor((Date.now() - new Date(b.evolution_eligible_at).getTime()) / 1000);
@@ -452,8 +511,14 @@ function renderInspector() {
           html += '<div class="insp-row"><span class="insp-label">Next</span><span class="insp-value">' + nextTierCfg.name + ' (+' + nextTierCfg.workers + ' wkrs)</span></div>';
           html += '<div class="insp-hint insp-hint-muted">Conditions met — will begin upgrading at next production tick.</div>';
         } else {
-          html += '<div class="insp-row"><span class="insp-label">Next</span><span class="insp-value insp-warn">' + nextTierCfg.name + ' — needs road</span></div>';
-          html += '<div class="insp-hint">Connect a road to this house to enable upgrades and full worker output.</div>';
+          var blockerLabels = blockers.join(' + ');
+          html += '<div class="insp-row"><span class="insp-label">Next</span><span class="insp-value insp-warn">' + nextTierCfg.name + ' — needs ' + blockerLabels + '</span></div>';
+          var missingDesc = blockers.map(describeUpgradeBlocker).join(', plus ');
+          var hint = 'Missing: ' + missingDesc + '.';
+          if (blockers.indexOf('school') >= 0 || blockers.indexOf('temple') >= 0) {
+            hint += ' "Operating" means staffed AND has both inputs in stock.';
+          }
+          html += '<div class="insp-hint">' + hint + '</div>';
         }
       } else {
         html += '<div class="insp-row"><span class="insp-label">Tier</span><span class="insp-value insp-good">Max tier reached</span></div>';
