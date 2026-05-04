@@ -200,6 +200,43 @@ function computeNetRates() {
       rates[bt.input_resource_key_2] = (rates[bt.input_resource_key_2] || 0) - bt.input_rate_2;
     }
   });
+
+  // Housing food consumption: aggregate food drain across active tier-1+
+  // houses, then split it proportionally across whatever foods the player
+  // currently has in stock — that's how the server distributes the drain.
+  var totalFoodPerMin = 0;
+  myBuildings.forEach(function (b) {
+    var bt = state.buildingTypes[b.building_type_key];
+    if (!bt || bt.category !== 'housing' || b.status !== 'active') return;
+    var tier = b.housing_tier !== undefined ? b.housing_tier : 1;
+    var cfg = state.housingTierConfig[tier];
+    if (cfg && cfg.food_per_minute) {
+      totalFoodPerMin += Number(cfg.food_per_minute);
+    }
+  });
+  if (totalFoodPerMin > 0) {
+    var foodKeys = Object.keys(state.resources).filter(function (k) {
+      return state.resources[k].is_food;
+    });
+    var totalFoodAvail = foodKeys.reduce(function (sum, k) {
+      return sum + (state.inventory[k] || 0);
+    }, 0);
+    if (totalFoodAvail > 0) {
+      foodKeys.forEach(function (k) {
+        var qty = state.inventory[k] || 0;
+        if (qty <= 0) return;
+        var share = qty / totalFoodAvail;
+        rates[k] = (rates[k] || 0) - totalFoodPerMin * share;
+      });
+    } else {
+      // No food in stock — show the full demand against the cheapest food
+      // (grain) so the player at least sees a -rate signal in the panel.
+      if (foodKeys.indexOf('grain') >= 0) {
+        rates['grain'] = (rates['grain'] || 0) - totalFoodPerMin;
+      }
+    }
+  }
+
   return rates;
 }
 
