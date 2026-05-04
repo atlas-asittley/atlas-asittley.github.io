@@ -82,7 +82,7 @@ export function renderBuildPanel() {
     if (bt.category === 'road') {
       desc = 'Connects buildings to the city. Housing and processors need road access.';
     } else if (bt.category === 'housing') {
-      desc = 'Shanty \u2192 Hut \u2192 Cottage \u2192 Townhouse \u2192 Villa \u2192 Manor Estate. Workers: 2\u201334 as conditions improve. Tier 1 needs a well; Townhouse needs a school; Villa needs a temple.';
+      desc = 'Shanty \u2192 Hut \u2192 Cottage \u2192 Townhouse \u2192 Villa \u2192 Manor Estate. Workers: 2\u201334 as conditions improve. Tier 1 needs a well + any food in stock. Townhouse needs a school; Villa needs a temple.';
     } else if (bt.category === 'extractor') {
       desc = 'Produces ' + bt.output_rate + ' ' + resourceName(bt.output_resource_key).toLowerCase() + '/min';
     } else if (bt.category === 'service') {

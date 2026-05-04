@@ -131,6 +131,7 @@ def test_school_required_for_tier_3_evolution(make_player, place, cur, clear_res
     house_id = place('house', hx + 1, hy + 2)['building_id']
     cur.execute("UPDATE public.buildings SET housing_tier = 2 WHERE id = %s", (house_id,))
     _give_lots_of_workers(cur, p['id'])
+    _stock(cur, p['id'], 'grain', 10.0)  # Food gate passes — isolates the school check
     _backdate(cur, p['id'], 240)
 
     # No school yet → should stay at tier 2.
@@ -143,6 +144,7 @@ def test_school_required_for_tier_3_evolution(make_player, place, cur, clear_res
     _give_lots_of_workers(cur, p['id'])
     _stock(cur, p['id'], 'lumber', 5.0)
     _stock(cur, p['id'], 'flour', 5.0)
+    _stock(cur, p['id'], 'grain', 10.0)
     _backdate(cur, p['id'], 240)
     cur.execute("SELECT public.process_production()")
     cur.execute("SELECT housing_tier FROM public.buildings WHERE id = %s", (house_id,))
@@ -164,6 +166,8 @@ def test_unfed_school_does_not_unlock_tier_3(make_player, place, cur, clear_reso
     _give_lots_of_workers(cur, p['id'])
     _stock(cur, p['id'], 'lumber', 0)
     _stock(cur, p['id'], 'flour', 0)
+    # Stock food so the food gate passes — the test isolates the school feed.
+    _stock(cur, p['id'], 'grain', 10.0)
     _backdate(cur, p['id'], 240)
 
     cur.execute("SELECT public.process_production()")

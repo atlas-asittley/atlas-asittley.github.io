@@ -11,6 +11,10 @@ def test_well_required_for_tier_1_evolution(make_player, place, cur, clear_resou
     hx, hy = p['home_x'], p['home_y']
     place('road', hx + 1, hy + 1)
     house_id = place('house', hx + 1, hy + 2)['building_id']
+    cur.execute("""INSERT INTO public.inventories (player_id, resource_key, quantity)
+                   VALUES (%s, 'grain', 5.0)
+                   ON CONFLICT (player_id, resource_key) DO UPDATE SET quantity = 5.0""",
+                (str(p['id']),))
     cur.execute(
         "UPDATE public.buildings SET last_processed_at = now() - interval '120 seconds' WHERE id = %s",
         (house_id,),

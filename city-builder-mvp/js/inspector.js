@@ -272,6 +272,15 @@ function getHousingUpgradeBlockers(building, nextTierCfg) {
     blockers.push('road');
   }
 
+  // Food: any resource flagged is_food in inventory > 0 satisfies the gate.
+  if (nextTierCfg.needs_food) {
+    var hasFood = false;
+    Object.keys(state.resources).forEach(function (k) {
+      if (state.resources[k].is_food && (state.inventory[k] || 0) > 0) hasFood = true;
+    });
+    if (!hasFood) blockers.push('food');
+  }
+
   function hasNearbyService(serviceKey, range, requiresFeeding) {
     return state.allBuildings.some(function (s) {
       if (s.player_id !== state.currentUser.id) return false;
@@ -308,6 +317,7 @@ function getHousingUpgradeBlockers(building, nextTierCfg) {
 function describeUpgradeBlocker(key) {
   if (key === 'road') return 'a road touching this house';
   if (key === 'well') return 'a well within 4 tiles';
+  if (key === 'food') return 'food in stock (any food: grain, flour, or bread today)';
   if (key === 'school') return 'an operating school within 5 tiles';
   if (key === 'temple') return 'an operating temple within 6 tiles';
   return key;
