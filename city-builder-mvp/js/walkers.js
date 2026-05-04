@@ -397,7 +397,9 @@ function applyWalkerPosition(w, immediate) {
     w.el.style.top = top.toFixed(1) + 'px';
   }
   w.el.style.opacity = '1';
-  w.el.style.setProperty('--wk-scale', (state.mapZoom || 1).toFixed(3));
+  // (Don't set --wk-scale here — it carries the per-walker jitter +
+  // persona scale tweaks chosen at spawn. Map zoom is applied via the
+  // canvas transform; walkers don't need their own zoom multiplier.)
 }
 
 // ── Spawn-only tick ──
@@ -578,12 +580,24 @@ function computeCollectorTour(ext) {
 }
 
 // ── Re-render all walkers ──
-// Called on map/road rebuilds. Re-applies current position to each walker's
-// element (new cell size, etc.). Movement timers keep running independently.
+// Called on map/road rebuilds. We only need to re-apply each walker's
+// position if the grid bounds or column count actually changed (e.g.,
+// chunk expansion). Otherwise the walker's own movement timer is mid-
+// transition between tiles and re-setting style.left/top would snap it
+// to the destination, producing the jump-to-tile-center glitch when
+// other UI (inspector panel, build panel) closes and triggers renderMap.
+var lastGridSig = null;
 export function renderWalkers() {
+  var sig = (state.gridCols || 0) + ',' + (state.gridMinX || 0) + ',' + (state.gridMinY || 0);
+  var gridChanged = sig !== lastGridSig;
+  lastGridSig = sig;
   for (var i = 0; i < walkers.length; i++) {
     ensureWalkerEl(walkers[i]);
-    applyWalkerPosition(walkers[i]);
+    if (gridChanged) {
+      // Snap silently so walkers don't slide through the world when the
+      // grid origin shifts (chunk allocation).
+      applyWalkerPosition(walkers[i], true);
+    }
   }
 }
 
