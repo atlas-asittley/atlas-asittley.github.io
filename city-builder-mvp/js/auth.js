@@ -161,4 +161,37 @@ export function initAuthEvents() {
       showScreen('screen-welcome');
     });
   });
+
+  // Reset game: wipe the player's game state and route to industry
+  // selection so they can pick a fresh start. Auth session is kept so
+  // they don't have to re-login. Heavily warned because this is
+  // destructive — every chunk, building, and inventory is gone.
+  document.getElementById('g-reset').addEventListener('click', function () {
+    if (!state.currentUser) return;
+    if (!confirm('Reset your game? Every chunk, building, and resource you have will be permanently deleted. This cannot be undone.')) return;
+    var btn = document.getElementById('g-reset');
+    btn.disabled = true;
+    btn.textContent = 'Resetting…';
+    sb.rpc('reset_player', { p_player_id: state.currentUser.id }).then(function (r) {
+      if (r.error) {
+        btn.disabled = false;
+        btn.textContent = 'Reset';
+        alert('Reset failed: ' + r.error.message);
+        return;
+      }
+      stopProdLoop();
+      if (state.channel) { sb.removeChannel(state.channel); state.channel = null; }
+      // Profile is gone — re-routing through checkProfileAndRoute will
+      // land the user on the industry-selection screen, where
+      // choose_industry recreates the profile and a starter chunk.
+      state.profile = null;
+      btn.disabled = false;
+      btn.textContent = 'Reset';
+      checkProfileAndRoute(state.currentUser);
+    }).catch(function (err) {
+      btn.disabled = false;
+      btn.textContent = 'Reset';
+      alert('Reset failed: ' + (err.message || err));
+    });
+  });
 }
