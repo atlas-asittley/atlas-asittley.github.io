@@ -2,7 +2,7 @@
 import { sb } from './config.js';
 import { state, computeTraderUnlocks } from './state.js';
 import { showToast, updateMoney } from './ui.js';
-import { BLDG_LABELS, renderMap } from './map.js';
+import { BLDG_LABELS, renderMap, cancelPlacement } from './map.js';
 
 function resourceName(key) {
   if (state.resources[key]) return state.resources[key].name;
@@ -120,7 +120,12 @@ export function renderBuildPanel() {
 
   panel.querySelectorAll('.build-item:not(.disabled)').forEach(function (item) {
     item.addEventListener('click', function () {
-      selectBuildingType(item.dataset.bt);
+      // Toggle: clicking the already-selected build type deselects it
+      if (state.selectedBuildType === item.dataset.bt) {
+        cancelPlacement();
+      } else {
+        selectBuildingType(item.dataset.bt);
+      }
     });
   });
 }

@@ -877,6 +877,13 @@ export function initMapEvents() {
   // ── Cancel button ──
   document.getElementById('placement-cancel').addEventListener('click', cancelPlacement);
 
+  // ── Escape key cancels active placement ──
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && state.selectedBuildType) {
+      cancelPlacement();
+    }
+  });
+
   // ── Optional zoom controls (desktop/dev only if present) ──
   var zoomInBtn = document.getElementById('zoom-in');
   var zoomOutBtn = document.getElementById('zoom-out');
