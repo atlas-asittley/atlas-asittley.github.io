@@ -54,10 +54,10 @@ export function updateWorkers() {
   el.textContent = li.workersUsed + '/' + li.workerSupply;
   el.className = 'v ' + (li.laborShortage ? 'shortage' : 'workers');
   el.title = li.laborShortage
-    ? 'Labor shortage! ' + li.workersNeeded + ' needed, only ' + li.workerSupply + ' available'
+    ? 'Labor shortage! ' + li.workersNeeded + ' workers needed, only ' + li.workerSupply + ' available. Build more housing.'
     : li.workersIdle > 0
-      ? li.workersIdle + ' workers idle'
-      : 'All workers employed';
+      ? li.workersUsed + ' of ' + li.workerSupply + ' workers employed (' + li.workersIdle + ' idle — build more production to use them)'
+      : 'All ' + li.workerSupply + ' workers employed';
   var badge = document.getElementById('g-labor-badge');
   if (badge) {
     badge.style.display = li.laborShortage ? 'inline' : 'none';

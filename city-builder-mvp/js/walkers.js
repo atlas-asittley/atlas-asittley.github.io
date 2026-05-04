@@ -8,8 +8,8 @@ var WALKER_MOVE_MS = 1400;        // tile-to-tile travel time (also CSS transiti
 var WALKER_SPAWN_TICK_MS = 1400;  // spawn-logic tick interval
 var WALKER_MAX_STEPS = 18;        // ambient walkers: despawn after this many steps
 var WALKER_MAX_COUNT = 12;        // global cap on ambient walkers (mobile-safe)
-var WALKER_SPAWN_CHANCE = 0.12;   // per eligible housing per tick
-var WALKER_SPAWN_COOLDOWN = 8;    // min ticks between spawns from same building
+var WALKER_SPAWN_CHANCE = 0.4;    // per eligible housing per tick
+var WALKER_SPAWN_COOLDOWN = 4;    // min ticks between spawns from same building
 // M2: collector walker pause at the resource end
 var COLLECTOR_PAUSE_MS = 1500;
 
