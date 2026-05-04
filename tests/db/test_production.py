@@ -11,10 +11,11 @@ import pytest
 import psycopg2
 
 
-def test_housing_evolves_to_tier_1_with_road(make_player, place, cur):
+def test_housing_evolves_to_tier_1_with_road(make_player, place, cur, clear_resources):
     """Regression: shanty (tier 0) should upgrade to mud hut (tier 1)
     after enough time has elapsed AND a road is adjacent."""
     p = make_player()
+    clear_resources(p['id'])
     hx, hy = p['home_x'], p['home_y']
     place('road', hx + 1, hy)
     house_id = place('house', hx + 1, hy + 1)['building_id']
@@ -38,9 +39,10 @@ def test_housing_evolves_to_tier_1_with_road(make_player, place, cur):
         "shanty did not upgrade to mud hut even with road + elapsed time"
 
 
-def test_housing_devolves_without_road(make_player, place, cur):
+def test_housing_devolves_without_road(make_player, place, cur, clear_resources):
     """A tier-1 mud hut should devolve to shanty if road access is lost."""
     p = make_player()
+    clear_resources(p['id'])
     hx, hy = p['home_x'], p['home_y']
     road_id = place('road', hx + 1, hy)['building_id']
     house_id = place('house', hx + 1, hy + 1)['building_id']

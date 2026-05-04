@@ -11,40 +11,44 @@ import pytest
 import psycopg2
 
 
-def test_road_placement_succeeds_adjacent_to_home(make_player, place):
+def test_road_placement_succeeds_adjacent_to_home(make_player, place, clear_resources):
     p = make_player(industry='timber')
+    clear_resources(p['id'])
     hx, hy = p['home_x'], p['home_y']
     result = place('road', hx + 1, hy)
     assert 'building_id' in result
     assert result['extractor_target'] is None  # roads aren't extractors
 
 
-def test_housing_placement_no_v_path_crash(make_player, place):
+def test_housing_placement_no_v_path_crash(make_player, place, clear_resources):
     """Regression: v_path was uninitialized for non-extractor placements,
     causing 'record not yet assigned' on RETURN's CASE expression."""
     p = make_player()
+    clear_resources(p['id'])
     hx, hy = p['home_x'], p['home_y']
     place('road', hx + 1, hy)
     result = place('house', hx + 2, hy)
     assert 'building_id' in result
 
 
-def test_extractor_no_longer_requires_road_adjacency(make_player, place, cur):
+def test_extractor_no_longer_requires_road_adjacency(make_player, place, cur, clear_resources):
     """Updated: with weighted Dijkstra walker pathing, extractors can be
     placed anywhere on the player's owned, buildable, unoccupied tiles.
     Off-road tiles cost more to walk over, so production scales down,
     but placement itself succeeds."""
     p = make_player(industry='timber')
+    clear_resources(p['id'])
     hx, hy = p['home_x'], p['home_y']
     # Place an extractor with NO road anywhere — should succeed
     result = place('timber_camp', hx + 5, hy + 5)
     assert 'building_id' in result
 
 
-def test_extractor_finds_path_when_road_adjacent(make_player, place, cur):
+def test_extractor_finds_path_when_road_adjacent(make_player, place, cur, clear_resources):
     """M2: after placement, server BFS should claim a resource tile if
     one is reachable through the player's roads."""
     p = make_player(industry='timber')
+    clear_resources(p['id'])
     hx, hy = p['home_x'], p['home_y']
 
     # Build a road run
@@ -94,19 +98,21 @@ def test_cannot_build_on_other_players_district(make_player, place, as_user, cur
         cur.execute("SELECT public.place_building(%s, %s)", (other_tile, 'road'))
 
 
-def test_industry_mismatch_rejected(make_player, place):
+def test_industry_mismatch_rejected(make_player, place, clear_resources):
     """A timber player cannot build a stone_quarry."""
     p = make_player(industry='timber')
+    clear_resources(p['id'])
     hx, hy = p['home_x'], p['home_y']
     place('road', hx + 1, hy)
     with pytest.raises(psycopg2.errors.RaiseException, match="industry"):
         place('stone_quarry', hx + 1, hy + 1)
 
 
-def test_common_buildings_allowed_for_any_industry(make_player, place):
+def test_common_buildings_allowed_for_any_industry(make_player, place, clear_resources):
     """Housing and roads are 'common' — buildable by any industry."""
     for industry in ['timber', 'stone', 'grain', 'clay']:
         p = make_player(industry=industry)
+        clear_resources(p['id'])
         hx, hy = p['home_x'], p['home_y']
         result = place('road', hx + 1, hy)
         assert 'building_id' in result

@@ -640,6 +640,62 @@ END;
 $function$
 
 
+-- Trigger fn: reject inserting a building on a tile that still has a
+-- resource_node_key. The player must clear the resource first.
+CREATE OR REPLACE FUNCTION public.reject_build_on_resource()
+ RETURNS trigger
+ LANGUAGE plpgsql
+AS $function$
+DECLARE
+  v_resource text;
+BEGIN
+  SELECT mt.resource_node_key INTO v_resource
+  FROM public.map_tiles mt WHERE mt.id = NEW.tile_id;
+  IF v_resource IS NOT NULL THEN
+    RAISE EXCEPTION 'Cannot build on a resource tile — clear the % resource first', v_resource;
+  END IF;
+  RETURN NEW;
+END;
+$function$;
+
+
+-- Player action: clear a resource on an owned tile so the tile can be
+-- built on. Free for now. Rejects if the tile is claimed by an extractor
+-- (the player should demolish the extractor first so the dependency is
+-- explicit, rather than silently re-targeting).
+CREATE OR REPLACE FUNCTION public.clear_resource_tile(p_tile_id uuid)
+ RETURNS json
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+AS $function$
+DECLARE
+  v_uid uuid := auth.uid();
+  v_tile record;
+BEGIN
+  SELECT * INTO v_tile FROM public.map_tiles WHERE id = p_tile_id FOR UPDATE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'Tile not found'; END IF;
+  IF v_tile.owner_player_id IS NULL OR v_tile.owner_player_id <> v_uid THEN
+    RAISE EXCEPTION 'Cannot clear a resource tile you do not own';
+  END IF;
+  IF v_tile.resource_node_key IS NULL THEN
+    RAISE EXCEPTION 'Tile has no resource to clear';
+  END IF;
+  IF v_tile.claimed_by_building_id IS NOT NULL THEN
+    RAISE EXCEPTION 'Demolish the extractor targeting this tile before clearing it';
+  END IF;
+  UPDATE public.map_tiles
+  SET resource_node_key = NULL
+  WHERE id = p_tile_id;
+  RETURN json_build_object(
+    'tile_id', p_tile_id,
+    'cleared_resource', v_tile.resource_node_key,
+    'x', v_tile.x,
+    'y', v_tile.y
+  );
+END;
+$function$;
+
+
 CREATE OR REPLACE FUNCTION public.choose_industry(p_display_name text, p_industry_key text)
  RETURNS json
  LANGUAGE plpgsql
@@ -2107,6 +2163,7 @@ $function$
 CREATE TRIGGER set_buildings_updated_at BEFORE UPDATE ON public.buildings FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 CREATE TRIGGER trg_buildings_change AFTER DELETE ON public.buildings FOR EACH ROW EXECUTE FUNCTION handle_building_change();
 CREATE TRIGGER set_player_profiles_updated_at BEFORE UPDATE ON public.player_profiles FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+CREATE TRIGGER reject_build_on_resource BEFORE INSERT ON public.buildings FOR EACH ROW EXECUTE FUNCTION reject_build_on_resource();
 
 -- ────────────────────────────────────────────────────────────
 -- 7. PERMISSIONS
@@ -2115,6 +2172,7 @@ CREATE TRIGGER set_player_profiles_updated_at BEFORE UPDATE ON public.player_pro
 GRANT EXECUTE ON FUNCTION public.allocate_district_chunk(p_player_id uuid, p_chunk_x integer, p_chunk_y integer) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.black_market_trade(p_resource_key text, p_quantity integer, p_direction text) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.choose_industry(p_display_name text, p_industry_key text) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.clear_resource_tile(uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.complete_onboarding(p_display_name text, p_specialization_key text) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.expand_district(integer, integer) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.expansion_candidates(uuid) TO authenticated;

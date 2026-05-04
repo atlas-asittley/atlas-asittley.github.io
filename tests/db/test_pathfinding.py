@@ -51,26 +51,12 @@ def test_finds_nearest_resource_through_roads(make_player, place, cur):
     assert target['path_length'] >= 1
 
 
-def test_skips_occupied_resource_tile(make_player, place, cur):
-    """Regression: an extractor placed on a tile that happens to also be
-    a resource node would claim itself. Now we skip occupied tiles."""
-    p = make_player(industry='timber')
-    hx, hy = p['home_x'], p['home_y']
-    _clear_resources(cur, p['id'])
-    # Two timber tiles: one where extractor will sit, one further away
-    _seed_resource(cur, p['id'], hx + 1, hy + 1, 'timber')   # under extractor
-    _seed_resource(cur, p['id'], hx + 4, hy + 1, 'timber')   # legitimate target
-
-    # Roads
-    for dx in range(1, 5):
-        place('road', hx + dx, hy)
-
-    result = place('timber_camp', hx + 1, hy + 1)
-    target = result.get('extractor_target')
-    # Should pick the OTHER timber tile, not the one under the extractor
-    assert target is not None
-    assert (target['x'], target['y']) != (hx + 1, hy + 1)
-    assert (target['x'], target['y']) == (hx + 4, hy + 1)
+# Removed: test_skips_occupied_resource_tile.
+# The scenario it tested (extractor placed on a tile that's also a resource
+# node, then claiming itself) is now structurally impossible — the
+# reject_build_on_resource trigger blocks building on any tile with
+# resource_node_key set. The test_cannot_build_on_resource_tile test in
+# test_resource_tile_rules.py covers the new invariant.
 
 
 def test_no_path_when_isolated(make_player, place, cur):

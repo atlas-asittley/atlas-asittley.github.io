@@ -137,6 +137,20 @@ def tile_id_at(cur):
 
 
 @pytest.fixture
+def clear_resources(cur):
+    """Wipe any random resource clusters from a player's district. Tests
+    that build at known coordinates near home need this because the
+    reject_build_on_resource trigger blocks building on a resource tile,
+    and clustering may seed a resource right where the test wants to build."""
+    def _clear(player_id):
+        cur.execute(
+            "UPDATE public.map_tiles SET resource_node_key = NULL WHERE owner_player_id = %s",
+            (str(player_id),),
+        )
+    return _clear
+
+
+@pytest.fixture
 def place(cur, tile_id_at):
     """Place a building via RPC. Returns the JSON result.
 

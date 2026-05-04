@@ -20,9 +20,10 @@ def test_delete_policy_exists(cur):
     assert cur.fetchone() == ('d',), "buildings_delete_self DELETE policy is missing"
 
 
-def test_owner_can_delete_own_building(make_player, place, cur):
+def test_owner_can_delete_own_building(make_player, place, cur, clear_resources):
     """Regression: demolish silently failed for years before this policy."""
     p = make_player()
+    clear_resources(p['id'])
     hx, hy = p['home_x'], p['home_y']
     result = place('road', hx + 1, hy)
     bid = result['building_id']
@@ -38,8 +39,9 @@ def test_owner_can_delete_own_building(make_player, place, cur):
         cur.execute("RESET ROLE")
 
 
-def test_cannot_delete_other_players_building(make_player, place, as_user, cur):
+def test_cannot_delete_other_players_building(make_player, place, as_user, cur, clear_resources):
     pA = make_player()
+    clear_resources(pA['id'])
     hx, hy = pA['home_x'], pA['home_y']
     result = place('road', hx + 1, hy)
     bid = result['building_id']

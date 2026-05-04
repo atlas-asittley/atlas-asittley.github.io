@@ -54,6 +54,10 @@ export function isPlacementValid(btKey, tile) {
   if (!bt) return false;
   if (!tile.buildable) return false;
   if (tile.occupied_building_id) return false;
+  // No building on top of a resource tile — the player must clear the
+  // resource first (tap the resource tile to do that). Server enforces
+  // this too via a BEFORE INSERT trigger; this is for click feedback.
+  if (tile.resource_node_key) return false;
 
   // M1: District ownership check. Only build on your own tiles.
   // (Server enforces this too — this is for click feedback.)
@@ -819,6 +823,26 @@ export function cancelExpansion() {
   renderMap();
 }
 
+function resourceLabel(key) {
+  var r = state.resources[key];
+  return (r && r.name) ? r.name : (key || 'resource');
+}
+
+function promptClearResourceTile(tile) {
+  var label = resourceLabel(tile.resource_node_key);
+  if (!confirm('Clear the ' + label + ' on this tile? You can then build here.')) return;
+  sb.rpc('clear_resource_tile', { p_tile_id: tile.id }).then(function (r) {
+    if (r.error) {
+      showToast('Cannot clear: ' + r.error.message, 'error');
+      return;
+    }
+    showToast(label + ' cleared', 'success');
+    return reloadMapData();
+  }).catch(function (err) {
+    showToast('Clear failed: ' + (err.message || err), 'error');
+  });
+}
+
 function selectExpansionChunk(cx, cy) {
   return sb.rpc('expand_district', { p_chunk_x: cx, p_chunk_y: cy }).then(function (r) {
     if (r.error) {
@@ -873,13 +897,25 @@ export function initMapEvents() {
       return;
     }
 
+    // Resource tile (no building on it) — offer to clear so the player
+    // can build there. Only on owned tiles; tapping a wilderness or
+    // other-player resource tile does nothing.
+    var tile = state.tileMap[x + ',' + y];
+    if (tile && tile.resource_node_key && isMyTile(tile) && !state.selectedBuildType) {
+      promptClearResourceTile(tile);
+      return;
+    }
+
     // Placement mode: try to place building on empty tile
     if (state.selectedBuildType) {
       var tileId = cell.dataset.tileId;
       if (!tileId) return;
-      var tile = state.tileMap[x + ',' + y];
       if (!tile || !isPlacementValid(state.selectedBuildType, tile)) {
-        showToast('Cannot place here', 'error');
+        if (tile && tile.resource_node_key) {
+          showToast('Clear the ' + tile.resource_node_key + ' resource first', 'error');
+        } else {
+          showToast('Cannot place here', 'error');
+        }
         return;
       }
       placeBuilding(tileId, state.selectedBuildType);
