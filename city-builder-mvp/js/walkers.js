@@ -26,19 +26,21 @@ function getMaxAmbient(spawnerCount) {
 // ── Persona system: visual variants picked at spawn time ──
 // Personas only apply to citizen (housing-spawned) walkers — the
 // job-specific walkers (timber/stone/grain/etc.) keep their fixed look.
-// Each persona is a (variant class, optional overlay class, scale tweak)
-// triple. Weights sum to ~100 for readability.
+// Each persona has a sprite variant (or null for the citizen base),
+// an optional overlay class, and a flavor name shown in the walker
+// inspector. Weights sum to ~100 for readability.
 var PERSONAS = [
-  { weight: 38, variant: null,             overlay: null },          // unadorned adult
-  { weight: 12, variant: null,             overlay: 'has-hat' },     // hatted adult
-  { weight: 11, variant: 'walker-child',   overlay: null },          // child
-  { weight: 4,  variant: 'walker-child',   overlay: 'has-hat' },     // hatted child
-  { weight: 8,  variant: 'walker-elder',   overlay: 'has-cane' },    // elder + cane
-  { weight: 9,  variant: 'walker-couple',  overlay: null },          // couple (paired sprite)
-  { weight: 6,  variant: null,             overlay: 'has-pet' },     // walking the dog
-  { weight: 5,  variant: null,             overlay: 'has-pack' },    // merchant / carrier
-  { weight: 4,  variant: null,             overlay: 'has-cape' },    // caped
-  { weight: 3,  variant: null,             overlay: 'has-umbrella' } // umbrella
+  { weight: 30, variant: null,             overlay: null,           name: 'Citizen' },
+  { weight: 11, variant: null,             overlay: 'has-hat',      name: 'Townsperson' },
+  { weight: 11, variant: 'walker-child',   overlay: null,           name: 'Child' },
+  { weight: 4,  variant: 'walker-child',   overlay: 'has-hat',      name: 'Schoolchild' },
+  { weight: 8,  variant: 'walker-elder',   overlay: 'has-cane',     name: 'Elder' },
+  { weight: 9,  variant: 'walker-couple',  overlay: null,           name: 'Happy Couple' },
+  { weight: 8,  variant: 'walker-fat',     overlay: null,           name: 'Well-Fed Citizen' },
+  { weight: 6,  variant: null,             overlay: 'has-pet',      name: 'Dog Walker' },
+  { weight: 5,  variant: null,             overlay: 'has-pack',     name: 'Peddler' },
+  { weight: 4,  variant: null,             overlay: 'has-cape',     name: 'Fancy Citizen' },
+  { weight: 3,  variant: null,             overlay: 'has-umbrella', name: 'Stroller' }
 ];
 
 function pickPersona() {
@@ -315,6 +317,10 @@ function ensureWalkerEl(w) {
       w.bobMs = (parseInt(w.bobMs, 10) * 1.4).toFixed(0);  // elders move slower
       w.wadMs = (parseInt(w.wadMs, 10) * 1.35).toFixed(0);
     }
+    if (w.persona && w.persona.variant === 'walker-fat') {
+      w.scale = (parseFloat(w.scale) * 1.05).toFixed(2);   // a touch larger overall
+      w.wadMs = (parseInt(w.wadMs, 10) * 1.25).toFixed(0); // wider waddle
+    }
   }
   var classes = ['walker-dot', 'walker-' + (w.sourceType || 'citizen')];
   if (w.persona && w.persona.variant) classes.push(w.persona.variant);
@@ -501,11 +507,9 @@ function computeCollectorTour(ext) {
         path.unshift({ x: parseInt(p[0], 10), y: parseInt(p[1], 10) });
         cursor = prev[cursor] || null;
       }
-      // The first element is the extractor itself; drop it so the tour starts
-      // on the first STEP outward.
-      if (path.length > 0 && path[0].x === ext.x && path[0].y === ext.y) {
-        path.shift();
-      }
+      // Keep the extractor's tile as tour[0] — the collector walker
+      // returns all the way back to the building, not the road tile
+      // outside it.
       return path;
     }
 
@@ -670,6 +674,7 @@ function buildWalkerInfo(w) {
     maxSteps: WALKER_MAX_STEPS,
     sourceTier: w.sourceTier,
     sourceType: w.sourceType || 'citizen',
+    personaName: w.persona ? w.persona.name : null,
     sourceName: tierCfg ? tierCfg.name : (sourceBt ? sourceBt.name : 'Housing'),
     sourceX: source ? source.x : null,
     sourceY: source ? source.y : null

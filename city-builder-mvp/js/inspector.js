@@ -838,12 +838,19 @@ export function openWalkerInspector(walkerInfo) {
 
   var jobTitles = { citizen: 'Citizen', timber: 'Timber Worker', sawmill: 'Sawmill Worker', stone: 'Stone Worker', grain: 'Grain Worker' };
   var jobType = walkerInfo.sourceType || 'citizen';
-  titleEl.textContent = jobTitles[jobType] || 'Citizen';
+  // Citizen walkers display their persona flavor name (Happy Couple,
+  // Well-Fed Citizen, Fancy Citizen, etc.); job walkers fall back to
+  // the job title.
+  if (jobType === 'citizen' && walkerInfo.personaName) {
+    titleEl.textContent = walkerInfo.personaName;
+  } else {
+    titleEl.textContent = jobTitles[jobType] || 'Citizen';
+  }
 
   var typeLabel;
   if (jobType === 'citizen') {
     var walkerTierLabels = { 0: 'Shanty dweller', 1: 'Villager', 2: 'Cottage resident', 3: 'Townhouse resident', 4: 'Villa resident', 5: 'Manor estate resident' };
-    typeLabel = walkerTierLabels[walkerInfo.sourceTier] || 'Citizen';
+    typeLabel = walkerInfo.personaName || walkerTierLabels[walkerInfo.sourceTier] || 'Citizen';
   } else {
     typeLabel = jobTitles[jobType] || 'Worker';
   }
