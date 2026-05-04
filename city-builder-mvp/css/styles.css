@@ -591,8 +591,10 @@ body {
 .toast.info { border-color: #4fa3e0; color: #a0d0f0; }
 
 /* ── Version badge ─────────────────────────────────── */
+/* Pinned to upper-left of the map area, just below the info bar, so
+   it doesn't collide with the placement cancel button at the bottom. */
 .version-badge {
-  position: fixed; bottom: 8px; right: 8px;
+  position: fixed; top: 78px; left: 12px;
   font-size: 0.72rem; color: #d7e7ff; font-family: monospace;
   z-index: 300; pointer-events: auto; user-select: none;
   background: rgba(8, 14, 22, 0.88); border: 1px solid rgba(79,163,224,0.45);
