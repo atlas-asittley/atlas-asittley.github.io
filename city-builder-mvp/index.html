@@ -4,7 +4,45 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>City Builder</title>
-<link rel="stylesheet" href="css/styles.css">
+
+<!--
+  Cache-buster bootstrap. If the URL has ?_cb=<n> (added by tapping the
+  version badge), inject CSS/JS tags with that query so the browser
+  bypasses its HTTP cache. Without ?_cb=, this is equivalent to the old
+  static tags. An import map gives nested module imports the same query
+  even though static `import './foo.js'` doesn't propagate it.
+-->
+<script>
+  (function () {
+    var u = new URL(window.location.href);
+    var cb = u.searchParams.get('_cb');
+    var q = cb ? '?_cb=' + cb : '';
+    var modules = ['ui','auth','game','config','state','map','inspector','panels','walkers','realtime','version'];
+
+    var link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = 'css/styles.css' + q;
+    document.head.appendChild(link);
+
+    if (cb) {
+      var imports = {};
+      modules.forEach(function (name) {
+        imports['./js/' + name + '.js'] = './js/' + name + '.js' + q;
+      });
+      var im = document.createElement('script');
+      im.type = 'importmap';
+      im.textContent = JSON.stringify({ imports: imports });
+      document.head.appendChild(im);
+    }
+
+    var s = document.createElement('script');
+    s.type = 'module';
+    s.src = 'js/main.js' + q;
+    s.async = false;
+    document.head.appendChild(s);
+  })();
+</script>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
@@ -154,6 +192,5 @@
 <!-- ── Version badge (always visible) ─────────────────── -->
 <div class="version-badge" id="version-badge"></div>
 
-<script type="module" src="js/main.js"></script>
 </body>
 </html>

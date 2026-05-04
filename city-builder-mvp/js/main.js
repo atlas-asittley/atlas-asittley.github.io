@@ -7,33 +7,36 @@ import { initGameEvents } from './game.js';
 
 var versionBadge = document.getElementById('version-badge');
 versionBadge.textContent = PAGE_BUILD + ' • checking repo…';
-versionBadge.title = 'Click to copy build info';
-
-function flashBadgeCopied(ok) {
-  var original = versionBadge.textContent;
-  versionBadge.classList.add('copied');
-  versionBadge.textContent = ok ? 'Copied build info' : 'Copy failed';
-  setTimeout(function () {
-    versionBadge.classList.remove('copied');
-    versionBadge.textContent = original;
-  }, 1100);
-}
-
-versionBadge.addEventListener('click', function () {
-  var text = versionBadge.dataset.copyText || versionBadge.textContent;
-  if (!navigator.clipboard || !navigator.clipboard.writeText) {
-    flashBadgeCopied(false);
-    return;
-  }
-  navigator.clipboard.writeText(text)
-    .then(function () { flashBadgeCopied(true); })
-    .catch(function () { flashBadgeCopied(false); });
-});
+versionBadge.title = 'Tap to bust cache & reload';
 
 function setBadgeText(text) {
   versionBadge.textContent = text;
   versionBadge.dataset.copyText = text;
 }
+
+// Tap badge → clear any browser-side caches and reload with a fresh URL.
+// The unique query string forces the HTML fetch to bypass the HTTP cache;
+// referenced JS/CSS revalidate as part of a full navigation. Sufficient
+// for the GitHub-Pages test cycle without a build step.
+async function bustCacheAndReload() {
+  versionBadge.classList.add('copied');
+  versionBadge.textContent = 'reloading…';
+  try {
+    if ('serviceWorker' in navigator) {
+      var regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(function (r) { return r.unregister(); }));
+    }
+    if (typeof caches !== 'undefined' && caches.keys) {
+      var keys = await caches.keys();
+      await Promise.all(keys.map(function (k) { return caches.delete(k); }));
+    }
+  } catch (e) { /* best effort */ }
+  var base = window.location.pathname;
+  var hash = window.location.hash;
+  window.location.replace(base + '?_cb=' + Date.now() + hash);
+}
+
+versionBadge.addEventListener('click', bustCacheAndReload);
 
 fetch('https://api.github.com/repos/' + REPO_OWNER + '/' + REPO_NAME + '/commits/main', { cache: 'no-store' })
   .then(function (r) { return r.ok ? r.json() : null; })
