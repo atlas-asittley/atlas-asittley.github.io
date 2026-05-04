@@ -415,10 +415,14 @@ export function renderMap() {
         classes.push('owned-other');
       }
 
-      // Highlight the inspected extractor's target resource tile
+      // Highlight the inspected extractor and its target resource tile so
+      // the pair reads as linked.
       var ib = inspectedBuildingHolder.value;
       if (ib && ib.target_x === x && ib.target_y === y) {
         classes.push('inspected-target');
+      }
+      if (ib && ib.x === x && ib.y === y) {
+        classes.push('inspected-source');
       }
 
       // While placing an extractor, soft-pulse all unclaimed matching resource
