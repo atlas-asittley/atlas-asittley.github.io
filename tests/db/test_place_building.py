@@ -29,13 +29,16 @@ def test_housing_placement_no_v_path_crash(make_player, place):
     assert 'building_id' in result
 
 
-def test_extractor_requires_road_adjacency(make_player, place, cur):
-    """M2 rule: extractor must be next to one of the player's roads."""
+def test_extractor_no_longer_requires_road_adjacency(make_player, place, cur):
+    """Updated: with weighted Dijkstra walker pathing, extractors can be
+    placed anywhere on the player's owned, buildable, unoccupied tiles.
+    Off-road tiles cost more to walk over, so production scales down,
+    but placement itself succeeds."""
     p = make_player(industry='timber')
     hx, hy = p['home_x'], p['home_y']
-    # Try to place an extractor with no road around — should fail
-    with pytest.raises(psycopg2.errors.RaiseException, match="road"):
-        place('timber_camp', hx + 5, hy + 5)
+    # Place an extractor with NO road anywhere — should succeed
+    result = place('timber_camp', hx + 5, hy + 5)
+    assert 'building_id' in result
 
 
 def test_extractor_finds_path_when_road_adjacent(make_player, place, cur):

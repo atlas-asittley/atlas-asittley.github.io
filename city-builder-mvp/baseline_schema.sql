@@ -829,101 +829,130 @@ $function$
 CREATE OR REPLACE FUNCTION public.find_nearest_unclaimed_resource(p_player_id uuid, p_ex integer, p_ey integer)
  RETURNS TABLE(target_x integer, target_y integer, path_length integer)
  LANGUAGE plpgsql
- STABLE
 AS $function$
 DECLARE
   v_player record;
   v_resource_key text;
-  v_visited jsonb := '{}'::jsonb;
-  v_queue jsonb := '[]'::jsonb;
-  v_cur jsonb;
-  v_rx integer;
-  v_ry integer;
-  v_dist integer;
+  v_state jsonb := '{}'::jsonb;
+  v_cur_key text;
+  v_cur_dist integer;
+  v_cur_x integer;
+  v_cur_y integer;
+  v_neighbor_x integer;
+  v_neighbor_y integer;
   v_neighbor_key text;
-  v_neighbor record;
+  v_neighbor_cost integer;
+  v_existing_dist integer;
+  v_is_road boolean;
+  v_neighbor_walkable boolean;
+  v_is_resource boolean;
+  v_dx int[] := ARRAY[-1, 1, 0, 0];
+  v_dy int[] := ARRAY[0, 0, -1, 1];
+  v_i integer;
   v_iters integer := 0;
-  v_max_iters integer := 1000;
+  v_road_cost constant integer := 1;
+  v_offroad_cost constant integer := 3;
 BEGIN
   SELECT * INTO v_player FROM public.player_profiles WHERE id = p_player_id;
   IF NOT FOUND THEN RETURN; END IF;
   v_resource_key := v_player.industry_key;
 
-  FOR v_neighbor IN
-    SELECT b.x AS rx, b.y AS ry
-    FROM public.buildings b
-    JOIN public.building_types bt ON bt.key = b.building_type_key
-    WHERE bt.category = 'road'
-      AND b.status = 'active'
-      AND b.player_id = p_player_id
-      AND (
-        (b.x = p_ex - 1 AND b.y = p_ey)
-        OR (b.x = p_ex + 1 AND b.y = p_ey)
-        OR (b.x = p_ex AND b.y = p_ey - 1)
-        OR (b.x = p_ex AND b.y = p_ey + 1)
-      )
-  LOOP
-    v_neighbor_key := v_neighbor.rx || ',' || v_neighbor.ry;
-    IF NOT (v_visited ? v_neighbor_key) THEN
-      v_visited := v_visited || jsonb_build_object(v_neighbor_key, true);
-      v_queue := v_queue || jsonb_build_array(jsonb_build_object(
-        'x', v_neighbor.rx, 'y', v_neighbor.ry, 'd', 1
-      ));
-    END IF;
-  END LOOP;
+  -- Seed: extractor's own tile at distance 0 (we never claim it as target)
+  v_state := jsonb_build_object(
+    p_ex || ',' || p_ey,
+    jsonb_build_object('x', p_ex, 'y', p_ey, 'd', 0, 'v', false)
+  );
 
-  WHILE jsonb_array_length(v_queue) > 0 AND v_iters < v_max_iters LOOP
+  -- Dijkstra: pop min-distance unvisited, expand neighbors with weighted cost
+  WHILE v_iters < 2000 LOOP
     v_iters := v_iters + 1;
-    v_cur := v_queue->0;
-    v_queue := v_queue - 0;
-    v_rx := (v_cur->>'x')::integer;
-    v_ry := (v_cur->>'y')::integer;
-    v_dist := (v_cur->>'d')::integer;
 
-    SELECT mt.x, mt.y INTO target_x, target_y
-    FROM public.map_tiles mt
-    WHERE mt.owner_player_id = p_player_id
-      AND mt.resource_node_key = v_resource_key
-      AND mt.claimed_by_building_id IS NULL
-      AND mt.occupied_building_id IS NULL
-      AND (
-        (mt.x = v_rx - 1 AND mt.y = v_ry)
-        OR (mt.x = v_rx + 1 AND mt.y = v_ry)
-        OR (mt.x = v_rx AND mt.y = v_ry - 1)
-        OR (mt.x = v_rx AND mt.y = v_ry + 1)
-      )
+    SELECT key, (value->>'x')::int, (value->>'y')::int, (value->>'d')::int
+    INTO v_cur_key, v_cur_x, v_cur_y, v_cur_dist
+    FROM jsonb_each(v_state)
+    WHERE (value->>'v')::boolean = false
+    ORDER BY (value->>'d')::int ASC
     LIMIT 1;
 
-    IF target_x IS NOT NULL THEN
-      path_length := v_dist;
-      RETURN NEXT;
-      RETURN;
+    IF v_cur_key IS NULL THEN RETURN; END IF;
+
+    v_state := jsonb_set(v_state, ARRAY[v_cur_key, 'v'], 'true'::jsonb);
+
+    -- Goal check: this tile has the matching unclaimed resource and isn't
+    -- the extractor's own footprint.
+    IF NOT (v_cur_x = p_ex AND v_cur_y = p_ey) THEN
+      SELECT EXISTS (
+        SELECT 1 FROM public.map_tiles mt
+        WHERE mt.x = v_cur_x AND mt.y = v_cur_y
+          AND mt.owner_player_id = p_player_id
+          AND mt.resource_node_key = v_resource_key
+          AND mt.claimed_by_building_id IS NULL
+          AND mt.occupied_building_id IS NULL
+      ) INTO v_is_resource;
+      IF v_is_resource THEN
+        target_x := v_cur_x;
+        target_y := v_cur_y;
+        path_length := v_cur_dist;
+        RETURN NEXT;
+        RETURN;
+      END IF;
     END IF;
 
-    FOR v_neighbor IN
-      SELECT b.x AS rx, b.y AS ry
-      FROM public.buildings b
-      JOIN public.building_types bt ON bt.key = b.building_type_key
-      WHERE bt.category = 'road'
-        AND b.status = 'active'
-        AND b.player_id = p_player_id
-        AND (
-          (b.x = v_rx - 1 AND b.y = v_ry)
-          OR (b.x = v_rx + 1 AND b.y = v_ry)
-          OR (b.x = v_rx AND b.y = v_ry - 1)
-          OR (b.x = v_rx AND b.y = v_ry + 1)
-        )
-    LOOP
-      v_neighbor_key := v_neighbor.rx || ',' || v_neighbor.ry;
-      IF NOT (v_visited ? v_neighbor_key) THEN
-        v_visited := v_visited || jsonb_build_object(v_neighbor_key, true);
-        v_queue := v_queue || jsonb_build_array(jsonb_build_object(
-          'x', v_neighbor.rx, 'y', v_neighbor.ry, 'd', v_dist + 1
-        ));
+    -- Expand 4 neighbors. Walkable = owned by player AND (is a road OR has
+    -- no building on it). Roads cost 1 to step on, off-road costs 3.
+    FOR v_i IN 1..4 LOOP
+      v_neighbor_x := v_cur_x + v_dx[v_i];
+      v_neighbor_y := v_cur_y + v_dy[v_i];
+      v_neighbor_key := v_neighbor_x || ',' || v_neighbor_y;
+
+      -- Is there a player-owned road here?
+      SELECT EXISTS (
+        SELECT 1 FROM public.buildings b
+        JOIN public.building_types bt ON bt.key = b.building_type_key
+        WHERE b.x = v_neighbor_x AND b.y = v_neighbor_y
+          AND bt.category = 'road'
+          AND b.status = 'active'
+          AND b.player_id = p_player_id
+      ) INTO v_is_road;
+
+      IF v_is_road THEN
+        v_neighbor_cost := v_road_cost;
+        v_neighbor_walkable := true;
+      ELSE
+        -- Off-road: must be owned and not have a building on it
+        SELECT EXISTS (
+          SELECT 1 FROM public.map_tiles mt
+          WHERE mt.x = v_neighbor_x AND mt.y = v_neighbor_y
+            AND mt.owner_player_id = p_player_id
+            AND mt.occupied_building_id IS NULL
+        ) INTO v_neighbor_walkable;
+        v_neighbor_cost := v_offroad_cost;
+      END IF;
+
+      IF NOT v_neighbor_walkable THEN CONTINUE; END IF;
+
+      -- Add or relax
+      IF v_state ? v_neighbor_key THEN
+        IF NOT ((v_state->v_neighbor_key->>'v')::boolean) THEN
+          v_existing_dist := (v_state->v_neighbor_key->>'d')::int;
+          IF v_cur_dist + v_neighbor_cost < v_existing_dist THEN
+            v_state := jsonb_set(
+              v_state, ARRAY[v_neighbor_key, 'd'],
+              to_jsonb(v_cur_dist + v_neighbor_cost)
+            );
+          END IF;
+        END IF;
+      ELSE
+        v_state := v_state || jsonb_build_object(
+          v_neighbor_key,
+          jsonb_build_object(
+            'x', v_neighbor_x, 'y', v_neighbor_y,
+            'd', v_cur_dist + v_neighbor_cost, 'v', false
+          )
+        );
       END IF;
     END LOOP;
   END LOOP;
-
   RETURN;
 END;
 $function$
@@ -1052,11 +1081,9 @@ DECLARE
   v_worker_supply integer;
   v_workers_needed integer;
   v_road_connected boolean;
-  v_road_adjacent boolean;
   v_path record;
 BEGIN
-  -- Initialize v_path with NULL fields so the RETURN's CASE expression can
-  -- safely read v_path.path_length even for non-extractor placements.
+  -- Pre-init v_path so the RETURN's CASE expression is safe for non-extractor placements
   SELECT NULL::integer AS target_x,
          NULL::integer AS target_y,
          NULL::integer AS path_length
@@ -1093,13 +1120,12 @@ BEGIN
     RAISE EXCEPTION 'Tile already occupied';
   END IF;
 
-  IF v_bt.category = 'extractor' THEN
-    v_road_adjacent := public.has_road_access(v_uid, v_tile.x, v_tile.y);
-    IF NOT v_road_adjacent THEN
-      RAISE EXCEPTION 'Extractors must be placed adjacent to one of your roads';
-    END IF;
+  -- Extractors: anywhere in the district, no road-adjacency required.
+  -- The walker uses weighted Dijkstra over walkable tiles (roads + open),
+  -- so an extractor placed in the middle of empty land still has a path,
+  -- just slower (off-road steps cost more, so production scales down).
 
-  ELSIF v_bt.category = 'road' THEN
+  IF v_bt.category = 'road' THEN
     SELECT (
       (v_player.home_x IS NOT NULL
        AND ABS(v_tile.x - v_player.home_x) + ABS(v_tile.y - v_player.home_y) = 1)
@@ -1118,7 +1144,6 @@ BEGIN
           )
       )
     ) INTO v_road_connected;
-
     IF NOT v_road_connected THEN
       RAISE EXCEPTION 'Roads must connect to your city center or another of your roads';
     END IF;
@@ -1191,6 +1216,30 @@ BEGIN
     'extractor_target', CASE WHEN v_path.path_length IS NOT NULL
       THEN json_build_object('x', v_path.target_x, 'y', v_path.target_y, 'path_length', v_path.path_length)
       ELSE NULL END
+  );
+END;
+$function$
+
+
+CREATE OR REPLACE FUNCTION public.preview_extractor_target(p_x integer, p_y integer)
+ RETURNS json
+ LANGUAGE plpgsql
+ STABLE
+AS $function$
+DECLARE
+  v_uid uuid := auth.uid();
+  v_path record;
+BEGIN
+  IF v_uid IS NULL THEN RETURN NULL; END IF;
+  SELECT * INTO v_path FROM public.find_nearest_unclaimed_resource(v_uid, p_x, p_y);
+  IF v_path.path_length IS NULL THEN
+    RETURN json_build_object('target', NULL);
+  END IF;
+  RETURN json_build_object(
+    'target', json_build_object(
+      'x', v_path.target_x, 'y', v_path.target_y,
+      'path_length', v_path.path_length
+    )
   );
 END;
 $function$
@@ -1876,75 +1925,101 @@ $function$
 CREATE OR REPLACE FUNCTION public.verify_extractor_path(p_player_id uuid, p_ex integer, p_ey integer, p_tx integer, p_ty integer)
  RETURNS integer
  LANGUAGE plpgsql
- STABLE
 AS $function$
+-- Returns the weighted distance from extractor (p_ex, p_ey) to target
+-- tile (p_tx, p_ty), or NULL if unreachable. Same walkability rules as
+-- find_nearest_unclaimed_resource: roads cost 1, off-road owned tiles
+-- cost 3, anything else is impassable.
 DECLARE
-  v_visited jsonb := '{}'::jsonb;
-  v_queue jsonb := '[]'::jsonb;
-  v_cur jsonb;
-  v_rx integer;
-  v_ry integer;
-  v_dist integer;
+  v_state jsonb := '{}'::jsonb;
+  v_cur_key text;
+  v_cur_dist integer;
+  v_cur_x integer;
+  v_cur_y integer;
+  v_neighbor_x integer;
+  v_neighbor_y integer;
   v_neighbor_key text;
-  v_neighbor record;
+  v_neighbor_cost integer;
+  v_existing_dist integer;
+  v_is_road boolean;
+  v_neighbor_walkable boolean;
+  v_dx int[] := ARRAY[-1, 1, 0, 0];
+  v_dy int[] := ARRAY[0, 0, -1, 1];
+  v_i integer;
   v_iters integer := 0;
-  v_max_iters integer := 1000;
+  v_road_cost constant integer := 1;
+  v_offroad_cost constant integer := 3;
 BEGIN
-  FOR v_neighbor IN
-    SELECT b.x AS rx, b.y AS ry
-    FROM public.buildings b
-    JOIN public.building_types bt ON bt.key = b.building_type_key
-    WHERE bt.category = 'road' AND b.status = 'active' AND b.player_id = p_player_id
-      AND (
-        (b.x = p_ex - 1 AND b.y = p_ey)
-        OR (b.x = p_ex + 1 AND b.y = p_ey)
-        OR (b.x = p_ex AND b.y = p_ey - 1)
-        OR (b.x = p_ex AND b.y = p_ey + 1)
-      )
-  LOOP
-    v_neighbor_key := v_neighbor.rx || ',' || v_neighbor.ry;
-    IF NOT (v_visited ? v_neighbor_key) THEN
-      v_visited := v_visited || jsonb_build_object(v_neighbor_key, true);
-      v_queue := v_queue || jsonb_build_array(jsonb_build_object(
-        'x', v_neighbor.rx, 'y', v_neighbor.ry, 'd', 1
-      ));
-    END IF;
-  END LOOP;
+  v_state := jsonb_build_object(
+    p_ex || ',' || p_ey,
+    jsonb_build_object('x', p_ex, 'y', p_ey, 'd', 0, 'v', false)
+  );
 
-  WHILE jsonb_array_length(v_queue) > 0 AND v_iters < v_max_iters LOOP
+  WHILE v_iters < 2000 LOOP
     v_iters := v_iters + 1;
-    v_cur := v_queue->0;
-    v_queue := v_queue - 0;
-    v_rx := (v_cur->>'x')::integer;
-    v_ry := (v_cur->>'y')::integer;
-    v_dist := (v_cur->>'d')::integer;
 
-    IF (ABS(v_rx - p_tx) + ABS(v_ry - p_ty)) = 1 THEN
-      RETURN v_dist;
-    END IF;
+    SELECT key, (value->>'x')::int, (value->>'y')::int, (value->>'d')::int
+    INTO v_cur_key, v_cur_x, v_cur_y, v_cur_dist
+    FROM jsonb_each(v_state)
+    WHERE (value->>'v')::boolean = false
+    ORDER BY (value->>'d')::int ASC
+    LIMIT 1;
 
-    FOR v_neighbor IN
-      SELECT b.x AS rx, b.y AS ry
-      FROM public.buildings b
-      JOIN public.building_types bt ON bt.key = b.building_type_key
-      WHERE bt.category = 'road' AND b.status = 'active' AND b.player_id = p_player_id
-        AND (
-          (b.x = v_rx - 1 AND b.y = v_ry)
-          OR (b.x = v_rx + 1 AND b.y = v_ry)
-          OR (b.x = v_rx AND b.y = v_ry - 1)
-          OR (b.x = v_rx AND b.y = v_ry + 1)
-        )
-    LOOP
-      v_neighbor_key := v_neighbor.rx || ',' || v_neighbor.ry;
-      IF NOT (v_visited ? v_neighbor_key) THEN
-        v_visited := v_visited || jsonb_build_object(v_neighbor_key, true);
-        v_queue := v_queue || jsonb_build_array(jsonb_build_object(
-          'x', v_neighbor.rx, 'y', v_neighbor.ry, 'd', v_dist + 1
-        ));
+    IF v_cur_key IS NULL THEN RETURN NULL; END IF;
+    IF v_cur_x = p_tx AND v_cur_y = p_ty THEN RETURN v_cur_dist; END IF;
+
+    v_state := jsonb_set(v_state, ARRAY[v_cur_key, 'v'], 'true'::jsonb);
+
+    FOR v_i IN 1..4 LOOP
+      v_neighbor_x := v_cur_x + v_dx[v_i];
+      v_neighbor_y := v_cur_y + v_dy[v_i];
+      v_neighbor_key := v_neighbor_x || ',' || v_neighbor_y;
+
+      SELECT EXISTS (
+        SELECT 1 FROM public.buildings b
+        JOIN public.building_types bt ON bt.key = b.building_type_key
+        WHERE b.x = v_neighbor_x AND b.y = v_neighbor_y
+          AND bt.category = 'road'
+          AND b.status = 'active'
+          AND b.player_id = p_player_id
+      ) INTO v_is_road;
+
+      IF v_is_road THEN
+        v_neighbor_cost := v_road_cost;
+        v_neighbor_walkable := true;
+      ELSE
+        SELECT EXISTS (
+          SELECT 1 FROM public.map_tiles mt
+          WHERE mt.x = v_neighbor_x AND mt.y = v_neighbor_y
+            AND mt.owner_player_id = p_player_id
+            AND (mt.occupied_building_id IS NULL OR (mt.x = p_tx AND mt.y = p_ty))
+        ) INTO v_neighbor_walkable;
+        v_neighbor_cost := v_offroad_cost;
+      END IF;
+
+      IF NOT v_neighbor_walkable THEN CONTINUE; END IF;
+
+      IF v_state ? v_neighbor_key THEN
+        IF NOT ((v_state->v_neighbor_key->>'v')::boolean) THEN
+          v_existing_dist := (v_state->v_neighbor_key->>'d')::int;
+          IF v_cur_dist + v_neighbor_cost < v_existing_dist THEN
+            v_state := jsonb_set(
+              v_state, ARRAY[v_neighbor_key, 'd'],
+              to_jsonb(v_cur_dist + v_neighbor_cost)
+            );
+          END IF;
+        END IF;
+      ELSE
+        v_state := v_state || jsonb_build_object(
+          v_neighbor_key,
+          jsonb_build_object(
+            'x', v_neighbor_x, 'y', v_neighbor_y,
+            'd', v_cur_dist + v_neighbor_cost, 'v', false
+          )
+        );
       END IF;
     END LOOP;
   END LOOP;
-
   RETURN NULL;
 END;
 $function$
@@ -1973,6 +2048,7 @@ GRANT EXECUTE ON FUNCTION public.has_road_access(p_x integer, p_y integer) TO au
 GRANT EXECUTE ON FUNCTION public.has_road_access(p_player_id uuid, p_x integer, p_y integer) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.next_unowned_chunk_slot() TO authenticated;
 GRANT EXECUTE ON FUNCTION public.place_building(p_tile_id uuid, p_building_type_key text) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.preview_extractor_target(p_x integer, p_y integer) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.process_production() TO authenticated;
 GRANT EXECUTE ON FUNCTION public.recompute_extractor_paths(p_player_id uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.resolve_trader_visit(p_trader_key text) TO authenticated;

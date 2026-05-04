@@ -1,6 +1,6 @@
 // ── Map rendering, placement logic, drag-to-paint roads, and map expansion ──
 import { sb } from './config.js';
-import { state, CITY_CENTER_X, CITY_CENTER_Y, getHomeX, getHomeY, isMyTile, isWildernessTile, computeLaborAllocation, computeGridBounds } from './state.js';
+import { state, CITY_CENTER_X, CITY_CENTER_Y, getHomeX, getHomeY, isMyTile, isWildernessTile, inspectedBuildingHolder, computeLaborAllocation, computeGridBounds } from './state.js';
 import { showToast, updateMoney, updateWorkers } from './ui.js';
 import { renderBuildPanel } from './panels.js';
 import { rebuildRoadSet, renderWalkers, snapWalkersToZoom, syncCollectorWalkers } from './walkers.js';
@@ -60,10 +60,11 @@ export function isPlacementValid(btKey, tile) {
   if (!isMyTile(tile)) return false;
 
   if (bt.category === 'extractor') {
-    // M2: extractors place on any road-adjacent tile in the district.
-    // Server BFS finds and claims the nearest matching unclaimed
-    // resource tile after placement. The on-tile resource rule is gone.
-    return isRoadAdjacent(tile);
+    // Extractors can be placed on any owned, buildable, unoccupied tile.
+    // The walker uses weighted Dijkstra (roads cost 1, off-road cost 3)
+    // to reach the nearest unclaimed matching resource tile, so neither
+    // road-adjacency nor on-tile resources are required at placement.
+    return true;
   }
   if (bt.category === 'road') {
     return isRoadPlacementConnected(tile, null);
@@ -412,6 +413,26 @@ export function renderMap() {
         classes.push('wilderness');
       } else {
         classes.push('owned-other');
+      }
+
+      // Highlight the inspected extractor's target resource tile
+      var ib = inspectedBuildingHolder.value;
+      if (ib && ib.target_x === x && ib.target_y === y) {
+        classes.push('inspected-target');
+      }
+
+      // While placing an extractor, soft-pulse all unclaimed matching resource
+      // tiles in the player's district as "potential targets". The exact
+      // tile picked is determined by the server's BFS at placement time.
+      if (state.selectedBuildType && state.profile) {
+        var sbt = state.buildingTypes[state.selectedBuildType];
+        if (sbt && sbt.category === 'extractor'
+            && tile.resource_node_key === sbt.output_resource_key
+            && !tile.claimed_by_building_id
+            && !tile.occupied_building_id
+            && isMyTile(tile)) {
+          classes.push('potential-target');
+        }
       }
 
       if (x === getHomeX() && y === getHomeY() && isMyTile(tile)) {

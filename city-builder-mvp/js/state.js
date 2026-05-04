@@ -6,6 +6,10 @@
 export var CITY_CENTER_X = 7;
 export var CITY_CENTER_Y = 7;
 
+// Currently-inspected building (set by inspector.js). renderMap consults it
+// to highlight the inspected extractor's target resource tile.
+export var inspectedBuildingHolder = { value: null };
+
 // Player's home (city-center) coordinates. Falls back to legacy (7,7) if the
 // profile hasn't been loaded yet.
 export function getHomeX() {

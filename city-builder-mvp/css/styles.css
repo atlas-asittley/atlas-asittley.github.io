@@ -87,6 +87,22 @@ body {
    adjacent tile has a different owner. Skip the heavy implementation for v1
    and just mark the cell edge for own-mine tiles for now. */
 .cell.owned-mine { /* full color, no overlay */ }
+
+/* M2 polish: target indicators ───────────────────────── */
+/* The inspected extractor's claimed resource tile gets a steady gold ring */
+.cell.inspected-target {
+  box-shadow: inset 0 0 0 2px rgba(230,198,90,0.95),
+              0 0 12px 2px rgba(230,198,90,0.55) !important;
+  z-index: 5;
+}
+/* While placing an extractor, unclaimed matching resource tiles in your
+   district pulse softly so you can see where the walker COULD go. */
+.cell.potential-target { animation: target-pulse 2.4s ease-in-out infinite; }
+@keyframes target-pulse {
+  0%, 100% { box-shadow: inset 0 0 0 2px rgba(94,196,158,0.55); }
+  50%      { box-shadow: inset 0 0 0 2px rgba(94,196,158,1.0),
+                         0 0 10px 2px rgba(94,196,158,0.55); }
+}
 /* Base terrain is intentionally uniform so the eye reads continuous ground instead of patchwork tiles. */
 .cell::before { content: ''; position: absolute; inset: 0; opacity: 0.12; pointer-events: none; z-index: 0;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='34' height='34'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' seed='42'/%3E%3C/filter%3E%3Crect width='34' height='34' filter='url(%23n)' opacity='0.35'/%3E%3C/svg%3E");

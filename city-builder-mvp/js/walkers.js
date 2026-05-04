@@ -369,49 +369,81 @@ function computeCollectorTour(ext) {
   var ty = ext.target_y;
   if (tx === null || tx === undefined) return null;
 
-  // Seed with the extractor's road neighbors
+  // Weighted Dijkstra over walkable tiles.
+  //   road tile = cost 1 (preferred)
+  //   off-road owned tile = cost 3 (fallback)
+  // Mirrors the server's find_nearest_unclaimed_resource. Used purely for
+  // visualization; server still owns the authoritative path_length.
+  var ROAD_COST = 1;
+  var OFFROAD_COST = 3;
+
+  function walkable(x, y) {
+    var k = x + ',' + y;
+    if (roadSet[k]) return ROAD_COST;
+    var tile = state.tileMap[k];
+    if (!tile) return 0;
+    if (!state.currentUser || tile.owner_player_id !== state.currentUser.id) return 0;
+    if (tile.occupied_building_id) {
+      // The target tile must be reachable even if the BFS sees it as
+      // "occupied" by some claim status. Allow if it's our destination.
+      if (x === tx && y === ty) return OFFROAD_COST;
+      return 0;
+    }
+    return OFFROAD_COST;
+  }
+
+  var startKey = ext.x + ',' + ext.y;
+  var dist = {};
+  var prev = {};
   var visited = {};
-  var predecessor = {};
-  var queue = [];
-  var starts = roadNeighbors(ext.x, ext.y);
-  for (var i = 0; i < starts.length; i++) {
-    var s = starts[i];
-    var k = s.x + ',' + s.y;
-    visited[k] = true;
-    predecessor[k] = null;
-    queue.push({ x: s.x, y: s.y });
-  }
+  dist[startKey] = 0;
 
-  var found = null;
-  while (queue.length > 0) {
-    var cur = queue.shift();
-    if (Math.abs(cur.x - tx) + Math.abs(cur.y - ty) === 1) {
-      found = cur;
-      break;
+  while (true) {
+    // Pop min-distance unvisited
+    var bestKey = null;
+    var bestDist = Infinity;
+    for (var k in dist) {
+      if (visited[k]) continue;
+      if (dist[k] < bestDist) { bestDist = dist[k]; bestKey = k; }
     }
-    var neighbors = roadNeighbors(cur.x, cur.y);
-    for (var n = 0; n < neighbors.length; n++) {
-      var nb = neighbors[n];
-      var nk = nb.x + ',' + nb.y;
-      if (visited[nk]) continue;
-      visited[nk] = true;
-      predecessor[nk] = cur.x + ',' + cur.y;
-      queue.push({ x: nb.x, y: nb.y });
-    }
-  }
-  if (!found) return null;
+    if (bestKey === null) break;
+    visited[bestKey] = true;
 
-  // Reconstruct path from found road tile back to a start
-  var path = [];
-  var cursor = found.x + ',' + found.y;
-  while (cursor) {
-    var parts = cursor.split(',');
-    path.unshift({ x: parseInt(parts[0], 10), y: parseInt(parts[1], 10) });
-    cursor = predecessor[cursor];
+    var parts = bestKey.split(',');
+    var cx = parseInt(parts[0], 10);
+    var cy = parseInt(parts[1], 10);
+    if (cx === tx && cy === ty) {
+      // Reconstruct path from target back to start
+      var path = [];
+      var cursor = bestKey;
+      while (cursor) {
+        var p = cursor.split(',');
+        path.unshift({ x: parseInt(p[0], 10), y: parseInt(p[1], 10) });
+        cursor = prev[cursor] || null;
+      }
+      // The first element is the extractor itself; drop it so the tour starts
+      // on the first STEP outward.
+      if (path.length > 0 && path[0].x === ext.x && path[0].y === ext.y) {
+        path.shift();
+      }
+      return path;
+    }
+
+    var dirs = [[-1,0],[1,0],[0,-1],[0,1]];
+    for (var d = 0; d < 4; d++) {
+      var nx = cx + dirs[d][0];
+      var ny = cy + dirs[d][1];
+      var w = walkable(nx, ny);
+      if (!w) continue;
+      var nk = nx + ',' + ny;
+      var nd = bestDist + w;
+      if (dist[nk] === undefined || nd < dist[nk]) {
+        dist[nk] = nd;
+        prev[nk] = bestKey;
+      }
+    }
   }
-  // Append the resource tile itself as the final stop
-  path.push({ x: tx, y: ty });
-  return path;
+  return null;
 }
 
 // ── Re-render all walkers ──

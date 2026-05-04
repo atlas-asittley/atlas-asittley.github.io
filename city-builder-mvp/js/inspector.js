@@ -1,6 +1,6 @@
 // ── Building Inspector, Walker Inspector & Demolition ──
 import { sb } from './config.js';
-import { state, computeLaborAllocation } from './state.js';
+import { state, computeLaborAllocation, inspectedBuildingHolder } from './state.js';
 import { showToast, updateMoney, updateWorkers } from './ui.js';
 import { renderMap } from './map.js';
 import { renderBuildPanel, renderInventory } from './panels.js';
@@ -26,13 +26,17 @@ function buildTradeValueRow(resourceKey, rate) {
 export function openInspector(building) {
   if (!building) return;
   inspectedBuilding = building;
+  inspectedBuildingHolder.value = building;
   renderInspector();
   document.getElementById('inspector-overlay').classList.add('active');
+  renderMap();  // re-render so map can highlight the inspected extractor's target
 }
 
 export function closeInspector() {
   inspectedBuilding = null;
+  inspectedBuildingHolder.value = null;
   document.getElementById('inspector-overlay').classList.remove('active');
+  renderMap();  // re-render to clear the target highlight
 }
 
 // ── Helper: get staffing priority position for a building ──

@@ -133,9 +133,14 @@ export function renderBuildPanel() {
 function selectBuildingType(key) {
   state.selectedBuildType = key;
   var bt = state.buildingTypes[key];
-  var text = bt.category === 'road'
-    ? 'Drag to paint roads, or tap to place one'
-    : 'Tap a tile to place ' + bt.name;
+  var text;
+  if (bt.category === 'road') {
+    text = 'Drag to paint roads, or tap to place one';
+  } else if (bt.category === 'extractor') {
+    text = 'Tap any tile to place ' + bt.name + '. Highlighted resource tiles are potential targets.';
+  } else {
+    text = 'Tap a tile to place ' + bt.name;
+  }
   document.getElementById('placement-text').textContent = text;
   document.getElementById('placement-bar').classList.add('active');
   renderMap();
