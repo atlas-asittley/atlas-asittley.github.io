@@ -836,33 +836,46 @@ export function openWalkerInspector(walkerInfo) {
   var bodyEl = document.getElementById('inspector-body');
   var actionsEl = document.getElementById('inspector-actions');
 
-  var jobTitles = { citizen: 'Citizen', timber: 'Timber Worker', sawmill: 'Sawmill Worker', stone: 'Stone Worker', grain: 'Grain Worker' };
+  var jobTitles = {
+    citizen: 'Citizen',
+    timber: 'Lumberjack', sawmill: 'Sawyer',
+    stone: 'Stonemason', clay: 'Potter', iron: 'Ironworker',
+    grain: 'Miller', orchard: 'Fruit Picker', fish: 'Fisher', garden: 'Gardener',
+    tavern: 'Barkeep', bathhouse: 'Bath Attendant', school: 'Scholar', temple: 'Priest',
+    civic: 'Tax Clerk'
+  };
   var jobType = walkerInfo.sourceType || 'citizen';
-  titleEl.textContent = jobTitles[jobType] || 'Citizen';
-
-  var typeLabel;
-  if (jobType === 'citizen') {
-    var walkerTierLabels = { 0: 'Shanty dweller', 1: 'Villager', 2: 'Cottage resident', 3: 'Townhouse resident', 4: 'Villa resident', 5: 'Manor estate resident' };
-    typeLabel = walkerTierLabels[walkerInfo.sourceTier] || 'Citizen';
+  // Citizen walkers display their persona flavor name (Happy Couple,
+  // Fat Citizen, Fancy Citizen, etc.); job walkers fall back to the
+  // job title.
+  var displayName;
+  if (jobType === 'citizen' && walkerInfo.personaName) {
+    displayName = walkerInfo.personaName;
   } else {
-    typeLabel = jobTitles[jobType] || 'Worker';
+    displayName = jobTitles[jobType] || 'Worker';
   }
+  titleEl.textContent = displayName;
+
   var stepsLeft = walkerInfo.maxSteps - walkerInfo.steps;
   var jobActivities = {
     citizen: stepsLeft > 4 ? 'Strolling' : 'Heading home',
     timber: stepsLeft > 4 ? 'Hauling timber' : 'Returning to camp',
     sawmill: stepsLeft > 4 ? 'Carrying planks' : 'Returning to mill',
     stone: stepsLeft > 4 ? 'Hauling stone' : 'Returning to quarry',
-    grain: stepsLeft > 4 ? 'Delivering grain' : 'Returning to farm'
+    clay: stepsLeft > 4 ? 'Carrying pottery' : 'Returning to the works',
+    iron: stepsLeft > 4 ? 'Hauling ore' : 'Returning to the mine',
+    grain: stepsLeft > 4 ? 'Delivering grain' : 'Returning to farm',
+    orchard: stepsLeft > 4 ? 'Picking fruit' : 'Returning with the basket',
+    fish: stepsLeft > 4 ? 'Heading to the water' : 'Returning with the catch',
+    garden: stepsLeft > 4 ? 'Tending the garden' : 'Returning with vegetables',
+    civic: stepsLeft > 4 ? 'Doing the rounds' : 'Returning to the office'
   };
   var activity = jobActivities[jobType] || (stepsLeft > 4 ? 'Working' : 'Heading back');
 
   var html = '';
-  html += '<div class="insp-row"><span class="insp-label">Type</span><span class="insp-value">' + typeLabel + '</span></div>';
   html += '<div class="insp-row"><span class="insp-label">Activity</span><span class="insp-value">' + activity + '</span></div>';
   var originLabel = jobType === 'citizen' ? 'Home' : 'Workplace';
   html += '<div class="insp-row"><span class="insp-label">' + originLabel + '</span><span class="insp-value">' + walkerInfo.sourceName + '</span></div>';
-  html += '<div class="insp-row"><span class="insp-label">Steps</span><span class="insp-value">' + walkerInfo.steps + ' / ' + walkerInfo.maxSteps + '</span></div>';
   html += '<div class="insp-hint">Walkers wander along roads from their buildings. They are purely cosmetic and don\'t affect production.</div>';
 
   bodyEl.innerHTML = html;
