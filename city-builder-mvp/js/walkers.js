@@ -366,7 +366,7 @@ function applyWalkerPosition(w, immediate) {
 
 // ── Spawn-only tick ──
 // Movement happens on per-walker timers, so this tick only handles spawning
-// and cooldown bookkeeping. WALKER_MAX_COUNT applies only to ambient walkers;
+// and cooldown bookkeeping. getMaxAmbient() applies only to ambient walkers;
 // collector walkers are sized by the number of active extractors.
 function spawnTick() {
   Object.keys(spawnCooldowns).forEach(function (id) {
@@ -558,7 +558,7 @@ function preseedWalkers() {
 
   var target = Math.min(
     Math.max(3, Math.ceil(spawners.length * 1.5)),
-    Math.floor(WALKER_MAX_COUNT * 0.75)
+    Math.floor(getMaxAmbient(spawners.length) * 0.75)
   );
 
   var housingRoads = [];
