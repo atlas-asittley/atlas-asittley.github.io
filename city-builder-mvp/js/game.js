@@ -58,10 +58,16 @@ function processProduction() {
         }
       });
       data.evolution_events.forEach(function (ev) {
-        if (ev.direction === 'upgrade') {
-          showToast(ev.old_name + ' upgraded to ' + ev.new_name + '!', 'success');
+        // Server emits { event: 'upgrade'|'devolve', from_tier, to_tier }.
+        // Look up tier names client-side from housingTierConfig.
+        var fromCfg = state.housingTierConfig[ev.from_tier];
+        var toCfg = state.housingTierConfig[ev.to_tier];
+        var fromName = (fromCfg && (fromCfg.label || fromCfg.name)) || ('Tier ' + ev.from_tier);
+        var toName = (toCfg && (toCfg.label || toCfg.name)) || ('Tier ' + ev.to_tier);
+        if (ev.event === 'upgrade') {
+          showToast(fromName + ' upgraded to ' + toName + '!', 'success');
         } else {
-          showToast(ev.old_name + ' devolved to ' + ev.new_name, 'info');
+          showToast(fromName + ' devolved to ' + toName, 'info');
         }
       });
     }
