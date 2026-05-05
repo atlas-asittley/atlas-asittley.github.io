@@ -362,6 +362,7 @@ function computeMinZoom() {
   return Math.max(MAP_MIN_ZOOM_FLOOR, Math.min(MAP_MIN_ZOOM, fit));
 }
 
+var lastAppliedMapWidth = null;
 export function applyMapZoom() {
   var grid = document.getElementById('map-grid');
   var label = document.getElementById('zoom-label');
@@ -369,7 +370,14 @@ export function applyMapZoom() {
   var mapWidth = Math.round(CELL_BASE_SIZE * state.gridCols * state.mapZoom);
   grid.style.width = mapWidth + 'px';
   if (label) label.textContent = Math.round(state.mapZoom * 100) + '%';
-  snapWalkersToZoom();
+  // Only snap walkers when the map width actually changed (zoom or grid
+  // bounds shifted). Calling snapWalkersToZoom() on every renderMap was
+  // teleporting every walker to its destination tile-center on every
+  // click / close / place / build-type select.
+  if (mapWidth !== lastAppliedMapWidth) {
+    lastAppliedMapWidth = mapWidth;
+    snapWalkersToZoom();
+  }
 }
 
 function setMapZoom(nextZoom) {
