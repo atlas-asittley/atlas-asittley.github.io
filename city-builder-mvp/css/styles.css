@@ -602,15 +602,26 @@ body.inspector-open .map-canvas { margin-bottom: calc(50vh + 28px); }
 .hq-label { font-size: 7px; color: #d0c0e8; font-weight: 700; letter-spacing: 0.12em; text-shadow: 0 0 4px rgba(160,120,220,0.4), 0 1px 2px rgba(0,0,0,0.5); position: relative; z-index: 1; }
 .road-surface.hq-road { opacity: 0.5; }
 /* ── Walker overlay ─────────────────────────────────── */
+/* Two-element walker structure:
+   - .walker-pos  (outer wrapper) carries position via transform: translate().
+     Transition runs on transform — composited, immune to layout reflows.
+   - .walker-dot  (inner sprite) handles centering, scale, bob, waddle. All
+     pre-existing animations stay scoped to this inner element so they don't
+     fight the position transition on the wrapper. */
 #walker-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2; }
-#walker-layer.no-transition .walker-dot { transition: none !important; }
+#walker-layer.no-transition .walker-pos { transition: none !important; }
+.walker-pos {
+  position: absolute; left: 0; top: 0;
+  transition: transform 1.4s linear;
+  pointer-events: auto;
+  will-change: transform;
+}
 .walker-dot {
-  position: absolute; width: 10px; height: 14px;
+  position: relative; width: 10px; height: 14px;
   --wk-scale: 1; --wk-hue: 0deg;
   --wk-bob-ms: 700ms; --wk-waddle-ms: 550ms;
   --wk-bob-delay: 0s; --wk-waddle-delay: 0s;
   transform: translate(-50%, -50%) scale(var(--wk-scale));
-  transition: left 1.4s linear, top 1.4s linear;
   animation: walker-bob var(--wk-bob-ms) ease-in-out infinite alternate,
              walker-waddle var(--wk-waddle-ms) ease-in-out infinite;
   animation-delay: var(--wk-bob-delay), var(--wk-waddle-delay);
