@@ -99,15 +99,35 @@ def test_fishing_pier_produces_fish(make_player, place, stamp_food_tile, cur, cl
     assert 1.5 < fish < 2.5, f"fishing pier expected ~2 fish/min, got {fish}"
 
 
-# ── food extractor doesn't need road ─────────────────────────
+# ── food extractor needs road access ─────────────────────────
 
-def test_food_extractor_staffs_without_road(make_player, place, stamp_food_tile, cur, clear_resources):
-    """Food extractors are like extractors — don't need road access for staffing."""
+def test_food_extractor_idle_without_road(make_player, place, stamp_food_tile, cur, clear_resources):
+    """Food extractors now require road access (universal rule). A
+    garden placed off-highway with no road touching it stays idle."""
     p = make_player(industry='clay')
     clear_resources(p['id'])
     _food_extractors_cheap(cur)
     hx, hy = p['home_x'], p['home_y']
-    # Stay close to home but pick a tile that's off-highway and not road-adjacent.
+    # Off-highway tile with no adjacent road.
+    stamp_food_tile('garden_plot', hx + 2, hy + 2)
+    bid = place('garden', hx + 2, hy + 2)['building_id']
+    cur.execute("""UPDATE public.buildings
+                   SET last_processed_at = now() - interval '60 seconds'
+                   WHERE id = %s""", (bid,))
+    cur.execute("SELECT public.process_production()")
+    cur.execute("SELECT COALESCE(SUM(quantity), 0) FROM public.inventories WHERE player_id = %s AND resource_key = 'vegetables'",
+                (str(p['id']),))
+    veg = float(cur.fetchone()[0])
+    assert veg == 0, f"garden without road access should not produce; got {veg}"
+
+
+def test_food_extractor_with_road_produces(make_player, place, stamp_food_tile, cur, clear_resources):
+    """Same garden becomes productive once a road touches it."""
+    p = make_player(industry='clay')
+    clear_resources(p['id'])
+    _food_extractors_cheap(cur)
+    hx, hy = p['home_x'], p['home_y']
+    place('road', hx + 2, hy + 1)  # road tile adjacent (north of) garden
     stamp_food_tile('garden_plot', hx + 2, hy + 2)
     bid = place('garden', hx + 2, hy + 2)['building_id']
     cur.execute("""UPDATE public.buildings
@@ -117,7 +137,7 @@ def test_food_extractor_staffs_without_road(make_player, place, stamp_food_tile,
     cur.execute("SELECT quantity FROM public.inventories WHERE player_id = %s AND resource_key = 'vegetables'",
                 (str(p['id']),))
     veg = float(cur.fetchone()[0])
-    assert veg > 1.5, f"garden should produce even without road; got {veg}"
+    assert veg > 1.5, f"garden with road should produce; got {veg}"
 
 
 # ── output satisfies housing food gate ───────────────────────
@@ -132,8 +152,10 @@ def test_orchard_output_satisfies_food_gate(make_player, place, stamp_food_tile,
     _food_extractors_cheap(cur)
     hx, hy = p['home_x'], p['home_y']
     place('well', hx + 2, hy + 1)
-    stamp_food_tile('orchard_grove', hx + 4, hy + 4)
-    place('orchard', hx + 4, hy + 4)
+    # Orchard needs road access — place at (hx-1, hy+1) which is
+    # adjacent to the vertical highway at (hx, hy+1).
+    stamp_food_tile('orchard_grove', hx - 1, hy + 1)
+    place('orchard', hx - 1, hy + 1)
     house_id = place('house', hx + 1, hy + 2)['building_id']  # tier 0
 
     cur.execute("""UPDATE public.buildings

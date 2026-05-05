@@ -27,32 +27,45 @@ function getMaxAmbient(spawnerCount) {
 // Personas only apply to citizen (housing-spawned) walkers — the
 // job-specific walkers (timber/stone/grain/etc.) keep their fixed look.
 // Each persona has a sprite variant (or null for the citizen base),
-// an optional overlay class, and a flavor name shown in the walker
-// inspector. Weights sum to ~100 for readability.
+// an optional overlay class, a flavor name, and a `minTier` that gates
+// it to a minimum housing tier.
+//
+// Variety ramps with housing tier: a tier-0 shanty street is just plain
+// Citizens, while a tier-8 Palace neighborhood unlocks Fancy Citizens,
+// Strollers, etc. Weights sum to ~100 (when all are unlocked) for
+// readability; pickPersona renormalizes within the eligible subset.
 var PERSONAS = [
-  { weight: 30, variant: null,             overlay: null,           name: 'Citizen' },
-  { weight: 11, variant: null,             overlay: 'has-hat',      name: 'Townsperson' },
-  { weight: 11, variant: 'walker-child',   overlay: null,           name: 'Child' },
-  { weight: 4,  variant: 'walker-child',   overlay: 'has-hat',      name: 'Schoolchild' },
-  { weight: 8,  variant: 'walker-elder',   overlay: 'has-cane',     name: 'Elder' },
-  { weight: 9,  variant: 'walker-couple',  overlay: null,           name: 'Happy Couple' },
-  { weight: 8,  variant: 'walker-fat',     overlay: null,           name: 'Well-Fed Citizen' },
-  { weight: 6,  variant: null,             overlay: 'has-pet',      name: 'Dog Walker' },
-  { weight: 5,  variant: null,             overlay: 'has-pack',     name: 'Peddler' },
-  { weight: 4,  variant: null,             overlay: 'has-cape',     name: 'Fancy Citizen' },
-  { weight: 3,  variant: null,             overlay: 'has-umbrella', name: 'Stroller' }
+  { weight: 30, variant: null,             overlay: null,           name: 'Citizen',          minTier: 0 },
+  { weight: 11, variant: null,             overlay: 'has-hat',      name: 'Townsperson',      minTier: 1 },
+  { weight: 11, variant: 'walker-child',   overlay: null,           name: 'Child',            minTier: 2 },
+  { weight: 8,  variant: 'walker-elder',   overlay: 'has-cane',     name: 'Elder',            minTier: 2 },
+  { weight: 5,  variant: null,             overlay: 'has-pack',     name: 'Peddler',          minTier: 2 },
+  { weight: 4,  variant: 'walker-child',   overlay: 'has-hat',      name: 'Schoolchild',      minTier: 3 },
+  { weight: 6,  variant: null,             overlay: 'has-pet',      name: 'Dog Walker',       minTier: 3 },
+  { weight: 9,  variant: 'walker-couple',  overlay: null,           name: 'Happy Couple',     minTier: 4 },
+  { weight: 3,  variant: null,             overlay: 'has-umbrella', name: 'Stroller',         minTier: 4 },
+  { weight: 8,  variant: 'walker-fat',     overlay: null,           name: 'Well-Fed Citizen', minTier: 5 },
+  { weight: 4,  variant: null,             overlay: 'has-cape',     name: 'Fancy Citizen',    minTier: 6 }
 ];
 
-function pickPersona() {
+function pickPersona(tier) {
+  if (tier === undefined || tier === null) tier = 0;
+  var eligible = [];
   var total = 0;
-  for (var i = 0; i < PERSONAS.length; i++) total += PERSONAS[i].weight;
+  for (var i = 0; i < PERSONAS.length; i++) {
+    if (PERSONAS[i].minTier <= tier) {
+      eligible.push(PERSONAS[i]);
+      total += PERSONAS[i].weight;
+    }
+  }
+  if (eligible.length === 0) return PERSONAS[0];
   var r = Math.random() * total;
   var acc = 0;
-  for (var j = 0; j < PERSONAS.length; j++) {
-    acc += PERSONAS[j].weight;
-    if (r < acc) return PERSONAS[j];
+  for (var j = 0; j < eligible.length; j++) {
+    acc += eligible[j].weight;
+    if (r < acc) return eligible[j];
   }
-  return PERSONAS[0];
+  return eligible[0];
 }
 
 // ── Walker visual category ──
@@ -317,7 +330,7 @@ function ensureWalkerEl(w) {
     w.bobMs = (600 + Math.random() * 240).toFixed(0);     // 0.6..0.84s bob period
     w.wadMs = (480 + Math.random() * 200).toFixed(0);     // 0.48..0.68s waddle period
     w.persona = (w.mode === 'ambient' && w.sourceType === 'citizen')
-      ? pickPersona() : null;
+      ? pickPersona(w.sourceTier) : null;
     if (w.persona && w.persona.variant === 'walker-child') {
       w.scale = (parseFloat(w.scale) * 0.65).toFixed(2);   // children are smaller
       w.bobMs = (parseInt(w.bobMs, 10) * 0.85).toFixed(0); // and bouncier

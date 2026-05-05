@@ -18,6 +18,7 @@ body {
 .card .sub { color: #7a8a9e; font-size: 0.9rem; margin-bottom: 20px; }
 .field { margin-bottom: 16px; }
 .field label { display: block; font-size: 0.75rem; font-weight: 600; color: #7a8a9e; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+.field-hint { font-size: 0.74rem; color: #7a8a9e; margin-top: 6px; }
 .field input, .field select { display: block; width: 100%; padding: 10px 12px; background: #0b0f14; border: 1px solid #1e2a3a; border-radius: 8px; color: #e0e6ed; font-size: 1rem; }
 .field input:focus { outline: none; border-color: #4fa3e0; }
 .btn { display: block; width: 100%; padding: 12px; border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; text-align: center; touch-action: manipulation; -webkit-tap-highlight-color: transparent; transition: opacity 0.2s; }
@@ -588,6 +589,19 @@ body.inspector-open .map-canvas { margin-bottom: calc(50vh + 28px); }
   pointer-events: none; z-index: 3;
 }
 /* ── Unstaffed / disconnected ── */
+/* ── Non-producing states ────────────────────────────────
+   .idle is the umbrella class for any functional building (extractor,
+   processor, service, tax, booster, food extractor) that's currently
+   NOT producing — paused, unstaffed, no-road, OR missing inputs. All
+   four states render the building grayed out + static (the .producing
+   class on the same element is what runs animations, so its absence
+   already kills any pseudo-element animation).
+
+   .unstaffed / .disconnected / .paused stay as marker classes that add
+   their specific overlay (red `!`, gold dot, pause overlay). Their own
+   opacity overrides .idle's lighter fade since they layer on top. */
+.bldg.idle { opacity: 0.55; filter: grayscale(0.4); }
+.bldg.idle::before, .bldg.idle::after { animation: none !important; }
 .bldg.unstaffed { opacity: 0.35; animation: none; }
 .bldg.unstaffed::after { content: '!'; position: absolute; top: -2px; right: -2px; font-size: 6px; color: #f06060; font-weight: 700; z-index: 1; }
 /* ── Road tiles ──────────────────────────────────────── */

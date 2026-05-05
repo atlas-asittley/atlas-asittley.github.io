@@ -585,13 +585,18 @@ export function renderMap() {
             || buildingBt.category === 'booster';
           var isProducing = !isPaused && !isUnstaffed && !isDisconnected
             && hasInputs && isFunctionalCategory;
+          // Idle = functional building that's currently NOT producing for
+          // any reason at all (paused, unstaffed, no-road, or missing
+          // inputs). All four cases get a grayed-out, static sprite.
+          var isIdle = isFunctionalCategory && !isProducing;
           if (isPaused) titleText += ' (paused)';
           else if (isDisconnected) titleText += ' (no road)';
           else if (isUnstaffed) titleText += ' (unstaffed)';
+          else if (isIdle) titleText += ' (no inputs)';
           var fw = (buildingBt && buildingBt.footprint_w) || 1;
           var fh = (buildingBt && buildingBt.footprint_h) || 1;
           var footprintClass = (fw !== 1 || fh !== 1) ? ' footprint-' + fw + 'x' + fh : '';
-          var bldgClasses = 'bldg ' + btk + housingTierClass + footprintClass + (mine ? ' mine' : '') + (isPaused ? ' paused' : '') + (isUnstaffed ? ' unstaffed' : '') + (isDisconnected ? ' disconnected' : '') + (isProducing ? ' producing' : '');
+          var bldgClasses = 'bldg ' + btk + housingTierClass + footprintClass + (mine ? ' mine' : '') + (isPaused ? ' paused' : '') + (isUnstaffed ? ' unstaffed' : '') + (isDisconnected ? ' disconnected' : '') + (isIdle ? ' idle' : '') + (isProducing ? ' producing' : '');
           var pausedBadge = isPaused ? '<span class="paused-overlay">⏸</span>' : '';
           html += '<div class="' + bldgClasses + '" title="' + titleText + '">' + label + pausedBadge + '</div>';
         }

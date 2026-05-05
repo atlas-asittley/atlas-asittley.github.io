@@ -143,14 +143,17 @@ export function computeRoadAccess() {
     var bt = state.buildingTypes[b.building_type_key];
     if (!bt) return;
 
-    // Roads themselves and (food-)extractors / boosters don't need road access
-    if (bt.category === 'road' || bt.category === 'extractor'
-        || bt.category === 'food_extractor' || bt.category === 'booster') return;
+    // Roads themselves don't need road access (they ARE the roads).
+    if (bt.category === 'road') return;
 
-    // Processors / services / tax always require road access.
-    // Housing requires road access only if tier config says so (tier 0 shanties don't).
-    if (bt.category === 'processor' || bt.category === 'housing'
-        || bt.category === 'service' || bt.category === 'tax') {
+    // Every other production category — extractor, food_extractor,
+    // processor, service, tax, booster — now needs road access to
+    // operate. Housing keeps its tier-config gate (tier 0 shanties
+    // don't need roads).
+    if (bt.category === 'extractor' || bt.category === 'food_extractor'
+        || bt.category === 'processor' || bt.category === 'housing'
+        || bt.category === 'service'  || bt.category === 'tax'
+        || bt.category === 'booster') {
       // Check if this housing tier actually needs road
       if (bt.category === 'housing') {
         var tier = b.housing_tier !== undefined ? b.housing_tier : 1;
@@ -223,14 +226,15 @@ export function computeLaborAllocation() {
   var workerSupply = 5 + housingWorkers; // base 5 + housing
 
   // Get worker-consuming buildings sorted by priority DESC, then created_at ASC.
-  // Mirrors the server's staffing loop in process_production:
-  //   extractors always eligible; processors / tax / services only with road access.
+  // Mirrors the server's staffing loop in process_production: every
+  // production category requires road access now (extractors, food
+  // extractors, boosters included — previously they were unconditional).
   var prodBuildings = myBuildings.filter(function (b) {
     var bt = state.buildingTypes[b.building_type_key];
     if (!bt || b.status !== 'active') return false;
     if (bt.category === 'extractor' || bt.category === 'food_extractor'
-        || bt.category === 'booster') return true;
-    if (bt.category === 'processor' || bt.category === 'tax' || bt.category === 'service') {
+        || bt.category === 'processor' || bt.category === 'service'
+        || bt.category === 'tax' || bt.category === 'booster') {
       return !!state.roadAccessIds[b.id];
     }
     return false;

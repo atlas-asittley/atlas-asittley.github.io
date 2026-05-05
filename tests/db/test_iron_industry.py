@@ -86,15 +86,26 @@ def test_iron_mine_produces_iron(make_player, place, cur, clear_resources):
                 (str(p['id']),))
     hx, hy = p['home_x'], p['home_y']
 
-    # Find an iron-tile-adjacent placement spot
+    # Find a buildable tile that's adjacent to a road (every production
+    # building now needs road access). The chunk has the curving
+    # highway crossing at y=hy and x=hx; pick a tile next to that.
     cur.execute("""SELECT mt.x, mt.y FROM public.map_tiles mt
                    WHERE mt.owner_player_id = %s AND mt.buildable
                      AND mt.resource_node_key IS NULL
                      AND mt.terrain_type != 'highway'
+                     AND mt.occupied_building_id IS NULL
+                     AND EXISTS (
+                       SELECT 1 FROM public.buildings r
+                       JOIN public.building_types rt ON rt.key = r.building_type_key
+                       WHERE rt.category = 'road' AND r.status = 'active'
+                         AND r.player_id = mt.owner_player_id
+                         AND ((r.x = mt.x - 1 AND r.y = mt.y) OR (r.x = mt.x + 1 AND r.y = mt.y)
+                            OR (r.x = mt.x AND r.y = mt.y - 1) OR (r.x = mt.x AND r.y = mt.y + 1))
+                     )
                    LIMIT 1""", (str(p['id']),))
     row = cur.fetchone()
     if row is None:
-        return  # No buildable tiles — skip (chunk seed produced no usable spots)
+        return  # No road-adjacent buildable tile — skip
     bx, by = row
     result = place('iron_mine', bx, by)
     assert 'building_id' in result

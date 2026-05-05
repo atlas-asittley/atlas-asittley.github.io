@@ -63,19 +63,55 @@ def test_resource_booster_boosts_adjacent_extractor(make_player, place, cur, cle
     cur.execute("UPDATE public.player_profiles SET money = 5000 WHERE id = %s", (str(p['id']),))
     hx, hy = p['home_x'], p['home_y']
 
-    # Place the timber camp first (it'll find a timber tile via Dijkstra)
+    # Place the timber camp on a road-adjacent tile (production now
+    # requires road access). The chunk has the highway cross at y=hy
+    # and x=hx; find a buildable tile adjacent to that.
     cur.execute("""SELECT mt.x, mt.y FROM public.map_tiles mt
                    WHERE mt.owner_player_id = %s AND mt.buildable
                      AND mt.resource_node_key IS NULL
                      AND mt.terrain_type != 'highway'
+                     AND mt.occupied_building_id IS NULL
+                     AND EXISTS (
+                       SELECT 1 FROM public.buildings r
+                       JOIN public.building_types rt ON rt.key = r.building_type_key
+                       WHERE rt.category = 'road' AND r.status = 'active'
+                         AND r.player_id = mt.owner_player_id
+                         AND ((r.x = mt.x - 1 AND r.y = mt.y) OR (r.x = mt.x + 1 AND r.y = mt.y)
+                            OR (r.x = mt.x AND r.y = mt.y - 1) OR (r.x = mt.x AND r.y = mt.y + 1))
+                     )
                    LIMIT 1""", (str(p['id']),))
     bx, by = cur.fetchone()
     place('timber_camp', bx, by)
-    # Make sure the tile we put the booster on is plain ground (with two
-    # resource types now seeded per chunk, the adjacent tile sometimes
-    # has an orchard_grove or timber on it).
+    # Booster goes on an adjacent (road-bordered) tile. Wipe any
+    # resource that happened to seed there. We can't be picky about the
+    # specific tile; if (bx+1, by) isn't road-adjacent, place a road
+    # there to give it access.
     cur.execute("UPDATE public.map_tiles SET resource_node_key = NULL WHERE x = %s AND y = %s",
                 (bx + 1, by))
+    cur.execute("""SELECT 1 FROM public.buildings r
+                   JOIN public.building_types rt ON rt.key = r.building_type_key
+                   WHERE rt.category = 'road' AND r.player_id = %s AND r.status = 'active'
+                     AND ((r.x = %s AND r.y = %s) OR (r.x = %s AND r.y = %s)
+                        OR (r.x = %s AND r.y = %s) OR (r.x = %s AND r.y = %s))""",
+                (str(p['id']),
+                 bx + 0, by + 0,  # tile itself shouldn't be road
+                 bx + 2, by + 0, bx + 1, by - 1, bx + 1, by + 1))
+    has_road = cur.fetchone() is not None
+    if not has_road:
+        # Add a connecting road. We know (bx, by) is road-adjacent
+        # (timber_camp passed staffing), so neighbors of (bx, by) include
+        # at least one road; place a road at (bx+1, by) by connecting
+        # through a chain. Simpler: just place road at a nearby spot.
+        # Easiest: connect via a tile that's road-adjacent to (bx+1, by)
+        # using existing roads — try (bx, by-1) or (bx, by+1) etc.
+        for nx, ny in [(bx + 1, by - 1), (bx + 1, by + 1), (bx + 2, by)]:
+            try:
+                cur.execute("UPDATE public.map_tiles SET resource_node_key = NULL WHERE x = %s AND y = %s",
+                            (nx, ny))
+                place('road', nx, ny)
+                break
+            except Exception:
+                continue
     place('foresters_office', bx + 1, by)
 
     # Run a tick from a fresh state

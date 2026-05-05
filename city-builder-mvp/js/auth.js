@@ -26,13 +26,18 @@ export function checkProfileAndRoute(user) {
 }
 
 function enterIndustrySelect() {
+  // Leave the screen-name field empty so the user actively chooses a
+  // name. Previously this prefilled with the email's local part, which
+  // exposed the email in their public display name by default.
   var nameInput = document.getElementById('industry-name');
-  nameInput.value = (state.currentUser.email || '').split('@')[0];
+  nameInput.value = '';
   selectedIndustry = null;
   document.querySelectorAll('.industry-card').forEach(function (c) { c.classList.remove('selected'); });
   document.getElementById('industry-confirm').disabled = true;
   clearError(document.getElementById('industry-error'));
   showScreen('screen-industry');
+  // Focus the name input so it's the first thing the user types into.
+  setTimeout(function () { nameInput.focus(); }, 60);
 }
 
 export function initAuthEvents() {
