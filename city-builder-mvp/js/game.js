@@ -72,8 +72,13 @@ function processProduction() {
       });
     }
 
-    if (data.total_produced > 0) {
-      showToast('+' + data.total_produced + ' goods produced', 'success');
+    // total_produced is a numeric — per-minute rate × elapsed seconds —
+    // so it's almost always a fraction. Floor to whole goods (sub-1
+    // production carries over to the next tick anyway) and skip the
+    // toast entirely if it's less than 1.
+    var producedWhole = Math.floor(data.total_produced || 0);
+    if (producedWhole >= 1) {
+      showToast('+' + producedWhole + ' goods produced', 'success');
     }
   }).catch(function (err) {
     console.warn('Production fetch error:', err);
