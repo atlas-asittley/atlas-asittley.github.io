@@ -517,6 +517,14 @@ export function renderMap() {
       if (building && buildingBt && buildingBt.category === 'housing') {
         classes.push('has-house');
       }
+      // Multi-tile anchor: lift the cell's z-index so the .bldg's
+      // overflow into adjacent cells paints ABOVE those cells'
+      // backgrounds. Without this, sibling cells (later in document
+      // order) cover the overflow.
+      if (building && buildingBt
+          && ((buildingBt.footprint_w || 1) > 1 || (buildingBt.footprint_h || 1) > 1)) {
+        classes.push('multi-tile-anchor');
+      }
 
       if (state.selectedBuildType && !building && isPlacementValid(state.selectedBuildType, tile)) {
         classes.push('valid-placement');
