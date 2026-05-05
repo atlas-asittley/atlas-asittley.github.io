@@ -931,13 +931,12 @@ body.app-hidden *::after {
 .walker-dot {
   position: absolute; width: 10px; height: 14px;
   --wk-scale: 1; --wk-hue: 0deg;
-  --wk-bob-ms: 700ms; --wk-waddle-ms: 550ms;
-  --wk-bob-delay: 0s; --wk-waddle-delay: 0s;
+  --wk-bob-ms: 700ms;
+  --wk-bob-delay: 0s;
   transform: translate(-50%, -50%) scale(var(--wk-scale));
   transition: left 1.4s linear, top 1.4s linear;
-  animation: walker-bob var(--wk-bob-ms) ease-in-out infinite alternate,
-             walker-waddle var(--wk-waddle-ms) ease-in-out infinite;
-  animation-delay: var(--wk-bob-delay), var(--wk-waddle-delay);
+  animation: walker-bob var(--wk-bob-ms) ease-in-out infinite alternate;
+  animation-delay: var(--wk-bob-delay);
   filter: hue-rotate(var(--wk-hue));
   cursor: pointer;
   background-size: contain; background-repeat: no-repeat; background-position: center;
