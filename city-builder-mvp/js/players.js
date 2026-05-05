@@ -152,16 +152,20 @@ function renderOfferCard(o, mode) {
   var otherId = mode === 'inbox' ? o.from_player_id : o.to_player_id;
   var other = otherPlayers.find(function (p) { return p.id === otherId; });
   var otherName = other ? other.display_name : 'Unknown';
-  var verbThey = mode === 'inbox' ? 'They give' : 'You give';
-  var verbYou  = mode === 'inbox' ? 'You give'  : 'They give';
-  var theyMoney = mode === 'inbox' ? o.give_money : o.give_money;
-  var theyRes   = mode === 'inbox' ? o.give_resources : o.give_resources;
-  var youMoney  = mode === 'inbox' ? o.receive_money : o.receive_money;
-  var youRes    = mode === 'inbox' ? o.receive_resources : o.receive_resources;
-  // Outbox: from = you. give = you give. receive = they give.
-  if (mode === 'outbox') {
+  // The DB stores trade offers from the SENDER's perspective:
+  //   give_*    = what the sender gives
+  //   receive_* = what the sender receives in exchange
+  // The card always labels one side "They give" and the other "You give",
+  // so we map the columns based on which side of the offer the viewer is on.
+  var theyMoney, theyRes, youMoney, youRes;
+  if (mode === 'inbox') {
+    // Viewer is the recipient → sender is "they".
+    theyMoney = o.give_money;    theyRes = o.give_resources;
+    youMoney  = o.receive_money; youRes  = o.receive_resources;
+  } else {
+    // Viewer is the sender → "you" gave; counterpart will give what we receive.
     theyMoney = o.receive_money; theyRes = o.receive_resources;
-    youMoney = o.give_money;     youRes = o.give_resources;
+    youMoney  = o.give_money;    youRes  = o.give_resources;
   }
 
   var actions = '';
@@ -177,8 +181,8 @@ function renderOfferCard(o, mode) {
        + '<div class="offer-header"><span class="offer-other">' + escapeHtml(otherName) + '</span>'
        + '<span class="offer-time">' + timeAgo(o.created_at) + '</span></div>'
        + '<div class="offer-body">'
-       + '<div class="offer-line"><span class="offer-label">' + verbThey + ':</span><span class="offer-value">' + fmtSide(theyMoney, theyRes) + '</span></div>'
-       + '<div class="offer-line"><span class="offer-label">' + verbYou  + ':</span><span class="offer-value">' + fmtSide(youMoney, youRes) + '</span></div>'
+       + '<div class="offer-line"><span class="offer-label">They give:</span><span class="offer-value">' + fmtSide(theyMoney, theyRes) + '</span></div>'
+       + '<div class="offer-line"><span class="offer-label">You give:</span><span class="offer-value">' + fmtSide(youMoney, youRes) + '</span></div>'
        + msg
        + '</div>'
        + '<div class="offer-actions">' + actions + '</div>'
