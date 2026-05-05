@@ -63,3 +63,23 @@ export function updateWorkers() {
     badge.style.display = li.laborShortage ? 'inline' : 'none';
   }
 }
+
+export function updateHappiness() {
+  var h = Math.round((state.profile && state.profile.happiness) || 50);
+  var v = document.getElementById('g-happiness');
+  var icon = document.getElementById('g-happiness-icon');
+  if (v) v.textContent = h;
+  if (icon) {
+    icon.textContent = h <= 25 ? '☹'
+                     : h <= 50 ? '😐'
+                     : h <= 75 ? '🙂'
+                     : '😊';
+  }
+  var stat = document.getElementById('g-happiness-stat');
+  if (stat) {
+    stat.title = 'Happiness ' + h + '/100. '
+               + (h > 50 ? 'Citizens slowly moving in (~' + ((h - 50) / 50).toFixed(2) + '/min).'
+                  : h < 50 ? 'Citizens slowly leaving (~' + ((50 - h) / 50).toFixed(2) + '/min).'
+                  : 'Population steady.');
+  }
+}

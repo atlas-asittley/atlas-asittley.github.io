@@ -1,7 +1,7 @@
 // ── Game entry, data loading, and production loop ──
 import { sb } from './config.js';
 import { state, computeTraderUnlocks, computeLaborAllocation, computeGridBounds } from './state.js';
-import { showScreen, showToast, capitalize, updateMoney, updateWorkers } from './ui.js';
+import { showScreen, showToast, capitalize, updateMoney, updateWorkers, updateHappiness } from './ui.js';
 import { renderMap, initMapEvents, expandDistrict, restoreMapView } from './map.js';
 import { renderBuildPanel, renderInventory, renderTradePanel, initTabs, initPanelCollapse, checkAllTraderVisits } from './panels.js';
 import { subscribeRealtime } from './realtime.js';
@@ -37,8 +37,13 @@ function processProduction() {
     // Recompute client-side staffed/unstaffed IDs for map rendering
     computeLaborAllocation();
 
+    // Server is authoritative on happiness + population.
+    if (data.happiness !== undefined) state.profile.happiness = data.happiness;
+    if (data.population !== undefined) state.profile.population = data.population;
+
     updateMoney();
     updateWorkers();
+    updateHappiness();
     renderInventory();
 
     if (document.getElementById('panel-trade').classList.contains('active')) {
@@ -204,6 +209,7 @@ export function enterGame() {
   document.getElementById('g-player-name').textContent = state.profile.display_name;
   updateMoney();
   updateWorkers();
+  updateHappiness();
 
   loadGameData().then(function () {
     computeLaborAllocation();

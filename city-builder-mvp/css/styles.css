@@ -52,6 +52,7 @@ body {
 #g-expand-district.disabled { opacity: 0.45; cursor: not-allowed; color: #7a8a9e; }
 .topbar-title { font-weight: 700; font-size: 1rem; }
 .stat { font-size: 0.78rem; color: #7a8a9e; }
+.happiness-icon { display: inline-block; margin-right: 3px; font-size: 0.95rem; line-height: 1; vertical-align: middle; }
 .stat .v { font-weight: 700; }
 .stat .v.gold { color: #e6c65a; }
 .stat .v.workers { color: #5ec49e; }

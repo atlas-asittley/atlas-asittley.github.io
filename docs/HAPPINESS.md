@@ -20,26 +20,33 @@ Last updated: 2026-05-05.
 
 ## Population dynamics
 
+**Asymmetric model.** Immigration is *fast* (citizens fill empty homes the moment new housing appears). Emigration is *slow* (citizens are reluctant to leave but will if conditions are bad enough). This matches builder-game intuition — building a house should produce workers — and only requires happiness to gate the *exit* side of the loop.
+
 Each call to `process_production`:
 
 ```
-v_target       = 5 + housing_workers              -- where population is drifting toward
-v_happiness    = compute_happiness(uid)           -- 0..100
-v_velocity     = (v_happiness - 50) / 50.0        -- -1 .. +1
-v_minutes      = EXTRACT(EPOCH FROM elapsed) / 60
-v_max_rate     = 1.0  -- citizens per minute, full velocity
-v_delta        = v_velocity * v_max_rate * v_minutes
-new_population = clamp(population + v_delta, 0, v_target)
+v_target = 5 + housing_workers
+v_pop    = current population
+v_happiness = compute_happiness(uid)
+
+if v_target > v_pop:
+  v_pop := v_target              -- empty homes fill instantly
+elif v_happiness < 50:
+  delta := (50 - v_happiness)/50 * 1.0 citizens/min × elapsed_minutes
+  v_pop := max(0, v_pop − delta)  -- slow emigration when miserable
+else:
+  v_pop := min(v_target, v_pop)   -- happy + at capacity → stay
 ```
 
 Effects:
 
-- **Happiness 100, below capacity**: +1/min until full.
-- **Happiness 100, at capacity**: stays full (clamp at v_target).
-- **Happiness 50**: no change either direction.
-- **Happiness 0**: -1/min until empty.
+- **Build a house**: workers appear in the same tick. (target jumps; pop snaps to target.)
+- **Demolish a house / housing devolves**: pop clamps down to the new lower target. (Surplus citizens emigrate immediately — no homes for them.)
+- **Happiness ≥ 50, at capacity**: stays full.
+- **Happiness < 50, at capacity**: -((50-h)/50) citizens/min. At h=0 that's -1/min; at h=49 that's -0.02/min.
+- **Happiness < 50, below capacity**: still drifts down (citizens leave even with empty homes — they don't immigrate to a miserable city).
 
-The clamp at `v_target` (no overflow above housing capacity) is intentional — surplus immigrants *leave* if there's nowhere to live.
+The asymmetry means happiness gates the *retention* of citizens, not the *arrival* of citizens. The arrival is purely housing-driven.
 
 ## Happiness formula (v1)
 
