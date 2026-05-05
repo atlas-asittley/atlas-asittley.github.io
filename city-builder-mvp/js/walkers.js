@@ -4,23 +4,35 @@
 import { state } from './state.js';
 
 // ── Walker config ──
+// Per-building roster model: every spawn-eligible building has a target
+// walker count via getWalkerTarget(). The spawn tick tops each one up.
+// No global cap — total population scales naturally with city size.
 var WALKER_MOVE_MS = 1400;        // tile-to-tile travel time (also CSS transition duration)
 var WALKER_SPAWN_TICK_MS = 1400;  // spawn-logic tick interval
-var WALKER_MAX_STEPS = 14;        // ambient walkers: despawn after this many steps
-var WALKER_BASE_COUNT = 8;        // baseline cap before any buildings
-var WALKER_PER_BUILDING = 0.6;    // additional cap slots per eligible spawn building
-var WALKER_HARD_CAP = 80;         // absolute ceiling so very large cities stay performant
-var WALKER_SPAWN_CHANCE = 0.20;   // per eligible building per tick
-var WALKER_SPAWN_COOLDOWN = 5;    // min ticks between spawns from same building
+var WALKER_MAX_STEPS = 14;        // ambient walker lifetime in steps (~20s)
+// Cooldown between respawns from the same building. Tier-8 housing has
+// a target of 9 walkers and the lifetime is ~20s, so we need cooldown ≤
+// 20/9 ≈ 2.2s. 1 tick × 1.4s = 1.4s — keeps up comfortably.
+var WALKER_SPAWN_COOLDOWN = 1;
 // M2: collector walker pause at the resource end
 var COLLECTOR_PAUSE_MS = 1500;
 
-// Compute the dynamic ambient cap from current spawn-eligible count.
-function getMaxAmbient(spawnerCount) {
-  return Math.min(
-    WALKER_HARD_CAP,
-    Math.floor(WALKER_BASE_COUNT + spawnerCount * WALKER_PER_BUILDING)
-  );
+// Per-building target count.
+//   non-housing buildings: 1 walker each (lumberjack from the camp,
+//     baker from the bakery, clerk from the tax office, etc.).
+//   housing: scales by tier so a Palace street is busier than a shanty
+//     row. tier 0..8 → 1, 2, 3, 4, 5, 6, 7, 8, 9.
+function getWalkerTarget(b) {
+  var bt = state.buildingTypes[b.building_type_key];
+  if (!bt) return 0;
+  if (bt.category === 'road') return 0;
+  if (bt.category === 'housing') {
+    var tier = b.housing_tier !== undefined ? b.housing_tier : 0;
+    var TARGET_BY_TIER = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+    return TARGET_BY_TIER[Math.min(tier, TARGET_BY_TIER.length - 1)];
+  }
+  // extractor / food_extractor / processor / service / tax / booster
+  return 1;
 }
 
 // ── Persona system: visual variants picked at spawn time ──
@@ -30,21 +42,27 @@ function getMaxAmbient(spawnerCount) {
 // an optional overlay class, a flavor name, and a `minTier` that gates
 // it to a minimum housing tier.
 //
-// Variety ramps with housing tier: a tier-0 shanty street is just plain
-// Citizens, while a tier-8 Palace neighborhood unlocks Fancy Citizens,
-// Strollers, etc. Weights sum to ~100 (when all are unlocked) for
-// readability; pickPersona renormalizes within the eligible subset.
+// Variety ramps with housing tier:
+//   tier 0: 1 type   (just Citizen)
+//   tier 1: 3 types  (+ Townsperson, Child)
+//   tier 2: 6 types  (+ Elder, Peddler, Dog Walker)
+//   tier 3: 8 types  (+ Schoolchild, Well-Fed Citizen)
+//   tier 4: 9 types  (+ Happy Couple)
+//   tier 5: 10 types (+ Stroller)
+//   tier 6: 11 types (+ Fancy Citizen)
+// Weights sum to ~100 (when all are unlocked); pickPersona renormalizes
+// within the eligible subset.
 var PERSONAS = [
   { weight: 30, variant: null,             overlay: null,           name: 'Citizen',          minTier: 0 },
-  { weight: 11, variant: null,             overlay: 'has-hat',      name: 'Townsperson',      minTier: 1 },
-  { weight: 11, variant: 'walker-child',   overlay: null,           name: 'Child',            minTier: 2 },
+  { weight: 12, variant: null,             overlay: 'has-hat',      name: 'Townsperson',      minTier: 1 },
+  { weight: 12, variant: 'walker-child',   overlay: null,           name: 'Child',            minTier: 1 },
   { weight: 8,  variant: 'walker-elder',   overlay: 'has-cane',     name: 'Elder',            minTier: 2 },
   { weight: 5,  variant: null,             overlay: 'has-pack',     name: 'Peddler',          minTier: 2 },
+  { weight: 6,  variant: null,             overlay: 'has-pet',      name: 'Dog Walker',       minTier: 2 },
   { weight: 4,  variant: 'walker-child',   overlay: 'has-hat',      name: 'Schoolchild',      minTier: 3 },
-  { weight: 6,  variant: null,             overlay: 'has-pet',      name: 'Dog Walker',       minTier: 3 },
+  { weight: 8,  variant: 'walker-fat',     overlay: null,           name: 'Well-Fed Citizen', minTier: 3 },
   { weight: 9,  variant: 'walker-couple',  overlay: null,           name: 'Happy Couple',     minTier: 4 },
-  { weight: 3,  variant: null,             overlay: 'has-umbrella', name: 'Stroller',         minTier: 4 },
-  { weight: 8,  variant: 'walker-fat',     overlay: null,           name: 'Well-Fed Citizen', minTier: 5 },
+  { weight: 3,  variant: null,             overlay: 'has-umbrella', name: 'Stroller',         minTier: 5 },
   { weight: 4,  variant: null,             overlay: 'has-cape',     name: 'Fancy Citizen',    minTier: 6 }
 ];
 
@@ -393,39 +411,58 @@ function applyWalkerPosition(w, immediate) {
 }
 
 // ── Spawn-only tick ──
-// Movement happens on per-walker timers, so this tick only handles spawning
-// and cooldown bookkeeping. getMaxAmbient() applies only to ambient walkers;
-// collector walkers are sized by the number of active extractors.
+// Per-building roster: each spawn-eligible building has a target
+// walker count from getWalkerTarget(). Each tick we (1) decrement
+// cooldowns, (2) prune walkers whose source building was demolished
+// or paused, (3) for each spawner below its target and not on cooldown,
+// spawn one walker. No global cap. Movement happens on per-walker
+// timers; this tick is purely spawn/despawn bookkeeping.
 function spawnTick() {
   Object.keys(spawnCooldowns).forEach(function (id) {
     spawnCooldowns[id]--;
     if (spawnCooldowns[id] <= 0) delete spawnCooldowns[id];
   });
 
-  // M2: keep one collector walker alive per active extractor with a target
   syncCollectorWalkers();
 
-  // Ambient walker spawning (housing + staffed processors)
-  var ambientCount = 0;
-  for (var i = 0; i < walkers.length; i++) {
-    if (walkers[i].mode === 'ambient') ambientCount++;
-  }
   var spawners = getSpawnBuildings();
-  var maxAmbient = getMaxAmbient(spawners.length);
-  if (ambientCount < maxAmbient) {
-    // Shuffle so we don't always favor the first buildings in iteration order.
-    for (var s = spawners.length - 1; s > 0; s--) {
-      var swap = Math.floor(Math.random() * (s + 1));
-      var tmp = spawners[s]; spawners[s] = spawners[swap]; spawners[swap] = tmp;
-    }
-    for (var j = 0; j < spawners.length && ambientCount < maxAmbient; j++) {
-      var b = spawners[j];
-      if (spawnCooldowns[b.id]) continue;
-      if (Math.random() < WALKER_SPAWN_CHANCE) {
-        spawnWalker(b);
-        spawnCooldowns[b.id] = WALKER_SPAWN_COOLDOWN;
-        ambientCount++;
+
+  // Index every active building (not just spawn-eligible) so we can tell
+  // "demolished/paused" (truly gone) apart from "transiently unstaffed"
+  // (still alive — its walkers should drain naturally, not be culled).
+  var allActiveById = {};
+  if (state.currentUser) {
+    state.allBuildings.forEach(function (b) {
+      if (b.player_id === state.currentUser.id && b.status === 'active') {
+        allActiveById[b.id] = true;
       }
+    });
+  }
+  for (var i = walkers.length - 1; i >= 0; i--) {
+    var w = walkers[i];
+    if (w.mode !== 'ambient') continue;
+    if (!allActiveById[w.sourceId]) {
+      despawnWalker(w);
+    }
+  }
+
+  // Count current walkers per source so we can top each building up.
+  var perSource = {};
+  for (var k = 0; k < walkers.length; k++) {
+    if (walkers[k].mode !== 'ambient') continue;
+    perSource[walkers[k].sourceId] = (perSource[walkers[k].sourceId] || 0) + 1;
+  }
+
+  // Spawn at most one walker per building per tick — staggers respawns
+  // so a building's cohort doesn't all vanish and reappear in unison.
+  for (var s = 0; s < spawners.length; s++) {
+    var b = spawners[s];
+    if (spawnCooldowns[b.id]) continue;
+    var target = getWalkerTarget(b);
+    var current = perSource[b.id] || 0;
+    if (current < target) {
+      spawnWalker(b);
+      spawnCooldowns[b.id] = WALKER_SPAWN_COOLDOWN;
     }
   }
 }
@@ -582,10 +619,13 @@ function preseedWalkers() {
   var roadKeys = Object.keys(roadSet);
   if (roadKeys.length === 0) return;
 
-  var target = Math.min(
-    Math.max(3, Math.ceil(spawners.length * 1.5)),
-    Math.floor(getMaxAmbient(spawners.length) * 0.75)
-  );
+  // Preseed roughly the steady-state population (sum of per-building
+  // targets) minus a bit so the spawn tick still has work to do.
+  var rosterTotal = 0;
+  for (var rs = 0; rs < spawners.length; rs++) {
+    rosterTotal += getWalkerTarget(spawners[rs]);
+  }
+  var target = Math.max(3, Math.floor(rosterTotal * 0.7));
 
   var housingRoads = [];
   for (var s = 0; s < spawners.length; s++) {
