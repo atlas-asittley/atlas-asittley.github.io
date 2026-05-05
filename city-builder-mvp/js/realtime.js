@@ -3,6 +3,7 @@ import { sb } from './config.js';
 import { state, computeLaborAllocation } from './state.js';
 import { showToast } from './ui.js';
 import { renderMap } from './map.js';
+import { onTradeOfferChange } from './players.js';
 
 export function subscribeRealtime() {
   if (state.channel) sb.removeChannel(state.channel);
@@ -54,6 +55,16 @@ export function subscribeRealtime() {
         computeLaborAllocation();
         renderMap();
       }
+    })
+    .on('postgres_changes', {
+      event: '*', schema: 'public', table: 'player_trade_offers'
+    }, function (payload) {
+      var row = payload.new || payload.old;
+      if (!row) return;
+      // Only react to offers we're a party to.
+      if (row.from_player_id !== state.currentUser.id
+          && row.to_player_id !== state.currentUser.id) return;
+      onTradeOfferChange();
     })
     .subscribe();
 }

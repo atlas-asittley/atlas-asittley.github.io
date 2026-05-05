@@ -3,6 +3,7 @@ import { sb } from './config.js';
 import { state, computeTraderUnlocks } from './state.js';
 import { showToast, updateMoney } from './ui.js';
 import { BLDG_LABELS, renderMap, cancelPlacement } from './map.js';
+import { renderPlayersPanel } from './players.js';
 
 function resourceName(key) {
   if (state.resources[key]) return state.resources[key].name;
@@ -931,6 +932,7 @@ export function initTabs() {
       if (btn.dataset.tab === 'inventory') renderInventory();
       else if (btn.dataset.tab === 'trade') renderTradePanel();
       else if (btn.dataset.tab === 'build') renderBuildPanel();
+      else if (btn.dataset.tab === 'players') renderPlayersPanel();
     });
   });
 }

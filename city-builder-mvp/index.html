@@ -17,7 +17,7 @@
     var u = new URL(window.location.href);
     var cb = u.searchParams.get('_cb');
     var q = cb ? '?_cb=' + cb : '';
-    var modules = ['ui','auth','game','config','state','map','inspector','panels','walkers','realtime','version'];
+    var modules = ['ui','auth','game','config','state','map','inspector','panels','walkers','realtime','version','players'];
 
     var link = document.createElement('link');
     link.rel = 'stylesheet';
@@ -164,10 +164,12 @@
         <button class="tab-btn active" data-tab="build">Build</button>
         <button class="tab-btn" data-tab="inventory">Inventory</button>
         <button class="tab-btn" data-tab="trade">Trade</button>
+        <button class="tab-btn" data-tab="players">Players<span class="tab-badge" id="players-badge" style="display:none;"></span></button>
       </div>
       <div id="panel-build" class="panel-content active"></div>
       <div id="panel-inventory" class="panel-content"></div>
       <div id="panel-trade" class="panel-content"></div>
+      <div id="panel-players" class="panel-content"></div>
     </div>
   </div>
   <div class="placement-bar" id="placement-bar">

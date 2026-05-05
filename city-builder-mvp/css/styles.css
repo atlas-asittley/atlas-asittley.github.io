@@ -711,6 +711,64 @@ body.inspector-open .map-canvas { margin-bottom: calc(50vh + 28px); }
 .tab-bar { display: flex; border-bottom: 1px solid #1e2a3a; flex-shrink: 0; }
 .tab-btn { flex: 1; padding: 9px; text-align: center; font-size: 0.78rem; font-weight: 600; color: #7a8a9e; cursor: pointer; background: none; border: none; border-bottom: 2px solid transparent; transition: color 0.2s; }
 .tab-btn.active { color: #4fa3e0; border-bottom-color: #4fa3e0; }
+.tab-badge { display: inline-block; min-width: 16px; height: 16px; line-height: 16px; padding: 0 4px; margin-left: 6px; border-radius: 8px; background: #c84848; color: #fff; font-size: 0.66rem; font-weight: 700; text-align: center; vertical-align: middle; }
+
+/* ── Players / trade panel ─────────────────────────── */
+#panel-players { padding: 10px; overflow-y: auto; }
+.players-section { margin-bottom: 14px; }
+.players-section-title { font-size: 0.78rem; font-weight: 700; color: #c8d4e0; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px; }
+.players-empty { font-size: 0.82rem; color: #7a8a9e; padding: 6px 10px; background: #1a2332; border-radius: 6px; }
+.player-row { display: flex; align-items: center; gap: 8px; padding: 8px 10px; background: #1a2332; border: 1px solid #1e2a3a; border-radius: 8px; margin-bottom: 6px; }
+.player-swatch { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; box-shadow: 0 0 0 1px rgba(255,255,255,0.12); }
+.player-name { font-weight: 600; color: #e6eef6; flex-shrink: 0; }
+.player-industry { color: #7a8a9e; font-size: 0.78rem; flex: 1; }
+.btn-trade-offer { padding: 6px 12px; background: #2a4a78; border: 1px solid #3a5e92; border-radius: 6px; color: #d8e8f4; font-size: 0.78rem; font-weight: 600; cursor: pointer; }
+.btn-trade-offer:hover { background: #345a8a; }
+
+.offer-card { padding: 10px; background: #1a2332; border: 1px solid #1e2a3a; border-radius: 8px; margin-bottom: 8px; }
+.offer-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.offer-other { font-weight: 700; color: #e6eef6; }
+.offer-time { font-size: 0.72rem; color: #7a8a9e; }
+.offer-body { margin-bottom: 8px; }
+.offer-line { display: flex; gap: 8px; padding: 2px 0; font-size: 0.82rem; }
+.offer-label { color: #7a8a9e; min-width: 80px; flex-shrink: 0; }
+.offer-value { color: #e6eef6; }
+.offer-msg { margin-top: 6px; padding: 6px 8px; background: #0e1620; border-left: 2px solid #4fa3e0; font-style: italic; font-size: 0.8rem; color: #c8d4e0; border-radius: 0 4px 4px 0; }
+.offer-actions { display: flex; gap: 6px; justify-content: flex-end; }
+.btn-offer-accept { padding: 6px 14px; background: #2a6a48; border: 1px solid #3a8060; border-radius: 6px; color: #d8f0e4; font-size: 0.8rem; font-weight: 600; cursor: pointer; }
+.btn-offer-accept:hover { background: #348058; }
+.btn-offer-reject, .btn-offer-cancel { padding: 6px 14px; background: #5a2a32; border: 1px solid #7a3a44; border-radius: 6px; color: #f0d8dc; font-size: 0.8rem; font-weight: 600; cursor: pointer; }
+.btn-offer-reject:hover, .btn-offer-cancel:hover { background: #6a3540; }
+
+/* ── Trade dialog ─────────────────────────────────── */
+.trade-dialog-overlay { position: fixed; inset: 0; background: rgba(8,12,18,0.78); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 16px; }
+.trade-dialog { background: #131a24; border: 1px solid #243447; border-radius: 10px; max-width: 460px; width: 100%; max-height: 92vh; display: flex; flex-direction: column; box-shadow: 0 6px 24px rgba(0,0,0,0.5); }
+.trade-dialog-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; border-bottom: 1px solid #243447; }
+.trade-dialog-title { font-weight: 700; color: #e6eef6; }
+.trade-dialog-close { background: none; border: none; color: #7a8a9e; font-size: 1.4rem; cursor: pointer; line-height: 1; padding: 0 4px; }
+.trade-dialog-close:hover { color: #e6eef6; }
+.trade-dialog-body { padding: 12px 14px; overflow-y: auto; flex: 1; }
+.trade-side { margin-bottom: 14px; padding: 10px; background: #1a2332; border: 1px solid #243447; border-radius: 8px; }
+.trade-side-label { font-size: 0.74rem; font-weight: 700; color: #c8d4e0; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px; }
+.trade-money-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.trade-money-label { color: #c8d4e0; font-size: 0.84rem; min-width: 60px; }
+.trade-money-qty { flex: 1; padding: 6px 8px; background: #0e1620; border: 1px solid #243447; border-radius: 6px; color: #f0d870; font-weight: 600; }
+.trade-res-list { display: flex; flex-direction: column; gap: 4px; margin-bottom: 6px; }
+.trade-res-row { display: flex; align-items: center; gap: 6px; padding: 4px 6px; background: #0e1620; border-radius: 6px; }
+.trade-res-name { flex: 1; color: #e6eef6; font-size: 0.84rem; }
+.trade-res-qty { width: 80px; padding: 4px 6px; background: #131a24; border: 1px solid #243447; border-radius: 4px; color: #c8d4e0; }
+.trade-res-remove { background: none; border: none; color: #c84848; font-size: 1rem; cursor: pointer; padding: 0 6px; }
+.trade-res-remove:hover { color: #f08080; }
+.trade-res-add { width: 100%; padding: 6px 8px; background: #0e1620; border: 1px dashed #3a4858; border-radius: 6px; color: #7a8a9e; }
+.trade-msg-row { margin-top: 6px; }
+.trade-msg-label { display: block; font-size: 0.74rem; color: #7a8a9e; margin-bottom: 4px; }
+.trade-msg-input { width: 100%; padding: 6px 8px; background: #0e1620; border: 1px solid #243447; border-radius: 6px; color: #e6eef6; box-sizing: border-box; }
+.trade-dialog-actions { display: flex; gap: 8px; padding: 12px 14px; border-top: 1px solid #243447; justify-content: flex-end; }
+.btn-trade-cancel { padding: 8px 16px; background: #1e2a3a; border: 1px solid #2a3a4e; border-radius: 6px; color: #c8d4e0; font-weight: 600; cursor: pointer; }
+.btn-trade-cancel:hover { background: #243447; }
+.btn-trade-send { padding: 8px 18px; background: #2a4a78; border: 1px solid #3a5e92; border-radius: 6px; color: #fff; font-weight: 700; cursor: pointer; }
+.btn-trade-send:hover { background: #345a8a; }
+.btn-trade-send:disabled { opacity: 0.6; cursor: wait; }
 .panel-content { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 12px; display: none; }
 .panel-content.active { display: block; }
 
