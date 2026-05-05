@@ -58,19 +58,24 @@ def test_population_snaps_up_to_housing_capacity(make_player, place, stamp_food_
     )
 
 
-def test_population_clamped_at_housing_capacity(make_player, place, cur, clear_resources):
-    """Population can't drift above (5 + housing_workers)."""
+def test_population_clamps_down_when_above_target(make_player, cur, clear_resources):
+    """If population is somehow above the housing-capacity target (e.g.
+    housing devolved or was demolished), the next tick clamps it back
+    down to target. Verifies the LEAST(target, ...) branch."""
     p = make_player(industry='timber')
     clear_resources(p['id'])
-    hx, hy = p['home_x'], p['home_y']
-
-    # No housing built — target = 5. Even after a long happy interval, population stays at 5.
-    cur.execute("UPDATE public.player_profiles SET population = 5, happiness = 90 WHERE id = %s",
-                (str(p['id']),))
-    _backdate_population_tick(cur, p['id'], 60 * 30)  # 30 minutes ago
+    # No housing → target = 5. Force population artificially high.
+    # last_population_tick_at = now so no emigration drift this call.
+    cur.execute("""
+        UPDATE public.player_profiles
+        SET population = 20, last_population_tick_at = now()
+        WHERE id = %s
+    """, (str(p['id']),))
     cur.execute("SELECT public.process_production()")
     result = cur.fetchone()[0]
-    assert result['population'] == 5, f'no-housing target = 5 should clamp; got {result["population"]}'
+    assert result['population'] == 5, (
+        f"pop above no-housing target (5) should clamp; got {result['population']}"
+    )
 
 
 def test_happiness_staffing_ratio_uses_capacity_vs_need(make_player, place, stamp_food_tile, cur, clear_resources):

@@ -83,3 +83,19 @@ export function updateHappiness() {
                   : 'Population steady.');
   }
 }
+
+export function updateCrime() {
+  var c = Math.round((state.profile && state.profile.crime) || 0);
+  var v = document.getElementById('g-crime');
+  if (v) {
+    v.textContent = c;
+    v.className = 'v ' + (c <= 25 ? 'crime-low' : c <= 50 ? 'crime-mid' : 'crime-high');
+  }
+  var stat = document.getElementById('g-crime-stat');
+  if (stat) {
+    stat.title = 'Crime ' + c + '/100. '
+               + (c <= 25 ? 'Streets are quiet.'
+                  : c <= 50 ? 'Some unrest — consider more police coverage.'
+                  : 'High crime is dragging down happiness — cover more housing with police.');
+  }
+}

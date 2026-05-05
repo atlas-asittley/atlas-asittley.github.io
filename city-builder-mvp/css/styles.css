@@ -53,6 +53,10 @@ body {
 .topbar-title { font-weight: 700; font-size: 1rem; }
 .stat { font-size: 0.78rem; color: #7a8a9e; }
 .happiness-icon { display: inline-block; margin-right: 3px; font-size: 0.95rem; line-height: 1; vertical-align: middle; }
+.crime-icon { display: inline-block; margin-right: 3px; font-size: 0.85rem; line-height: 1; vertical-align: middle; filter: saturate(0.6); }
+.v.crime-low  { color: #5ec49e; }
+.v.crime-mid  { color: #e6c65a; }
+.v.crime-high { color: #e0707a; }
 .stat .v { font-weight: 700; }
 .stat .v.gold { color: #e6c65a; }
 .stat .v.workers { color: #5ec49e; }
