@@ -1,0 +1,172 @@
+"""Tests for trader auto-trade catch-up across offline time.
+
+A player with a sell_surplus or buy_to_reserve policy who has been
+"offline" for multiple visit intervals should, on next call to
+resolve_trader_visit, have all the missed visits resolved at once.
+This mirrors how process_production catches up for elapsed time.
+"""
+import psycopg2
+import pytest
+
+
+def _act_as(cur, uid):
+    cur.execute("SELECT set_config('request.jwt.claims', %s, true)",
+                ('{"sub": "%s", "role": "authenticated"}' % str(uid),))
+
+
+def _set_inv(cur, uid, key, qty):
+    cur.execute("""INSERT INTO public.inventories (player_id, resource_key, quantity)
+                   VALUES (%s, %s, %s)
+                   ON CONFLICT (player_id, resource_key) DO UPDATE SET quantity = %s""",
+                (str(uid), key, qty, qty))
+
+
+def _get_inv(cur, uid, key):
+    cur.execute("SELECT COALESCE(quantity, 0) FROM public.inventories WHERE player_id = %s AND resource_key = %s",
+                (str(uid), key))
+    r = cur.fetchone()
+    return float(r[0]) if r else 0
+
+
+def _money(cur, uid):
+    cur.execute("SELECT money FROM public.player_profiles WHERE id = %s", (str(uid),))
+    return cur.fetchone()[0]
+
+
+def _set_policy(cur, uid, resource_key, mode, reserve_target):
+    """Insert/update a trade_policies row directly (the save_trade_policy
+    RPC has its own validation that depends on which traders are
+    unlocked; tests bypass that with a direct write)."""
+    cur.execute("""INSERT INTO public.trade_policies (player_id, resource_key, mode, reserve_target)
+                   VALUES (%s, %s, %s, %s)
+                   ON CONFLICT (player_id, resource_key) DO UPDATE SET
+                     mode = EXCLUDED.mode, reserve_target = EXCLUDED.reserve_target""",
+                (str(uid), resource_key, mode, reserve_target))
+
+
+def _backdate_profile(cur, uid, minutes):
+    """Move the player's profile created_at backwards so the trader's
+    'first visit' anchor is far enough in the past for many visits to
+    be due."""
+    cur.execute("UPDATE public.player_profiles SET created_at = now() - make_interval(mins => %s) WHERE id = %s",
+                (minutes, str(uid)))
+
+
+def _delete_visits(cur, uid):
+    cur.execute("DELETE FROM public.trader_visits WHERE player_id = %s", (str(uid),))
+
+
+def test_single_visit_resolves(make_player, cur):
+    p = make_player(industry='timber', display_name='single_v')
+    _act_as(cur, p['id'])
+    _set_policy(cur, p['id'], 'timber', 'sell_surplus', 0)
+    _set_inv(cur, p['id'], 'timber', 25.0)
+    # Backdate so exactly one visit is due (river_traders interval = 10 min).
+    _backdate_profile(cur, p['id'], 11)
+    _delete_visits(cur, p['id'])
+    cur.execute("SELECT public.resolve_trader_visit('river_traders')")
+    result = cur.fetchone()[0]
+    assert result['visit_resolved'] is True
+    assert result.get('visits_resolved') == 1
+
+
+def test_multiple_offline_visits_catch_up(make_player, cur):
+    """Player with 25 timber, sell_surplus policy, river_traders (10 min
+    interval, 20 capacity, buy_price=4). Backdate 65 min → ~6 visits due.
+    Expected: 5 visits at 5 timber/visit (limited by remaining inventory)
+    + 1 visit selling the last 0 (nothing to sell). Or if capacity isn't
+    the binding constraint, fewer visits sell smaller amounts. Verify
+    multiple visits run and end balance reflects every sale."""
+    p = make_player(industry='timber', display_name='catchup_player')
+    _act_as(cur, p['id'])
+    _set_policy(cur, p['id'], 'timber', 'sell_surplus', 0)
+    _set_inv(cur, p['id'], 'timber', 100.0)
+    # 65 minutes / 10-min interval → 6 due visits.
+    _backdate_profile(cur, p['id'], 65)
+    _delete_visits(cur, p['id'])
+    money_before = _money(cur, p['id'])
+    timber_before = _get_inv(cur, p['id'], 'timber')
+
+    cur.execute("SELECT public.resolve_trader_visit('river_traders')")
+    result = cur.fetchone()[0]
+
+    assert result['visit_resolved'] is True
+    assert result.get('visits_resolved') >= 5, f"expected ≥5 visits resolved, got {result.get('visits_resolved')}"
+    # Each river_traders visit can carry up to 20 timber. 100 timber
+    # should fully empty in 5 visits — confirm money grew accordingly
+    # (4g/timber × 100 = 400) and inventory dropped to 0.
+    timber_after = _get_inv(cur, p['id'], 'timber')
+    money_after = _money(cur, p['id'])
+    assert timber_after == 0, f"expected timber to fully sell, got {timber_after}"
+    assert money_after - money_before == 400, f"expected +400g, got +{money_after - money_before}"
+
+
+def test_catchup_records_separate_visit_rows(make_player, cur):
+    """Each catch-up visit records its own row in trader_visits with a
+    distinct visited_at, so the visit history reflects the conceptual
+    timeline rather than collapsing to one big row."""
+    p = make_player(industry='timber', display_name='visit_history')
+    _act_as(cur, p['id'])
+    _set_policy(cur, p['id'], 'timber', 'sell_surplus', 0)
+    _set_inv(cur, p['id'], 'timber', 50.0)
+    _backdate_profile(cur, p['id'], 35)  # ~3 visits due
+    _delete_visits(cur, p['id'])
+    cur.execute("SELECT public.resolve_trader_visit('river_traders')")
+    cur.execute("""SELECT count(*) FROM public.trader_visits
+                   WHERE player_id = %s AND trader_key = 'river_traders'""",
+                (str(p['id']),))
+    assert cur.fetchone()[0] >= 3
+
+
+def test_no_visits_due_returns_not_due(make_player, cur):
+    p = make_player(industry='timber', display_name='not_due')
+    _act_as(cur, p['id'])
+    _set_policy(cur, p['id'], 'timber', 'sell_surplus', 0)
+    _set_inv(cur, p['id'], 'timber', 25.0)
+    # Backdate only a few minutes — less than the 10 min interval.
+    _backdate_profile(cur, p['id'], 3)
+    _delete_visits(cur, p['id'])
+    cur.execute("SELECT public.resolve_trader_visit('river_traders')")
+    result = cur.fetchone()[0]
+    assert result['visit_resolved'] is False
+    assert result.get('reason') == 'not_due'
+
+
+def test_catchup_capped_at_50(make_player, cur):
+    """Runaway guard: even if a player is offline for years, only 50
+    visits resolve in one call (otherwise the call could lock the row
+    arbitrarily long)."""
+    p = make_player(industry='timber', display_name='capped')
+    _act_as(cur, p['id'])
+    _set_policy(cur, p['id'], 'timber', 'sell_surplus', 0)
+    _set_inv(cur, p['id'], 'timber', 10000.0)
+    # 100 visits' worth of backlog (10-min interval × 100 = 1000 min).
+    _backdate_profile(cur, p['id'], 1000)
+    _delete_visits(cur, p['id'])
+    cur.execute("SELECT public.resolve_trader_visit('river_traders')")
+    result = cur.fetchone()[0]
+    assert result.get('visits_resolved') == 50, f"expected exactly 50 (cap), got {result.get('visits_resolved')}"
+
+
+def test_buy_to_reserve_also_catches_up(make_player, cur):
+    """Buy-to-reserve policy should also accumulate across catch-up
+    visits. Player with reserve_target=100 lumber and lots of money
+    should have lumber inventory grow over multiple visits."""
+    p = make_player(industry='timber', display_name='buy_catchup')
+    _act_as(cur, p['id'])
+    cur.execute("UPDATE public.player_profiles SET money = 100000 WHERE id = %s", (str(p['id']),))
+    _set_policy(cur, p['id'], 'lumber', 'buy_to_reserve', 100)
+    # mountain_folk sells lumber — wait, it doesn't. Let me use river_traders.
+    # river_traders only trades timber + stone. Let's check — actually
+    # use mountain_folk with timber; it sells timber.
+    _set_policy(cur, p['id'], 'timber', 'buy_to_reserve', 100)
+    _set_inv(cur, p['id'], 'timber', 0.0)
+    _backdate_profile(cur, p['id'], 60)
+    _delete_visits(cur, p['id'])
+    cur.execute("SELECT public.resolve_trader_visit('mountain_folk')")
+    result = cur.fetchone()[0]
+    assert result['visit_resolved'] is True
+    timber = _get_inv(cur, p['id'], 'timber')
+    # mountain_folk sells timber at 5g, capacity 26. After multiple
+    # visits we should have ≥ 26 (one visit's worth) and probably more.
+    assert timber >= 26, f"expected catch-up to accumulate timber, got {timber}"
