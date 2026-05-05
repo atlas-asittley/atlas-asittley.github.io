@@ -90,9 +90,17 @@ def _set_auth(cur, user_id):
 @pytest.fixture
 def make_player(cur):
     """Factory: creates an auth user + invokes choose_industry to set up
-    a fresh player with a starting district. Returns the player UUID."""
+    a fresh player with a starting district. Returns the player UUID.
+
+    By default, bumps `highest_housing_tier_ever` to 8 so the
+    progressive-unlock gate doesn't get in the way of tests that
+    happen to place school / temple / luxury foods / industrial
+    luxuries — those tests usually aren't asserting on the unlock
+    mechanic itself. Pass `unlock_all=False` for tests that DO want
+    the watermark to start at zero (e.g. the unlock-gate regression
+    tests in test_progressive_unlock.py)."""
     counter = {'n': 0}
-    def _make(industry='timber', display_name=None):
+    def _make(industry='timber', display_name=None, unlock_all=True):
         counter['n'] += 1
         suffix = uuid.uuid4().hex[:8]
         email = f"test-{counter['n']}-{suffix}@citybuilder.test"
@@ -100,6 +108,11 @@ def make_player(cur):
         uid = _create_auth_user(cur, email)
         _set_auth(cur, uid)
         cur.execute("SELECT public.choose_industry(%s, %s)", (name, industry))
+        if unlock_all:
+            cur.execute(
+                "UPDATE public.player_profiles SET highest_housing_tier_ever = 8 WHERE id = %s",
+                (str(uid),)
+            )
         cur.execute("SELECT id, industry_key, money, chunks_owned, home_x, home_y FROM public.player_profiles WHERE id = %s", (str(uid),))
         row = cur.fetchone()
         assert row, f"choose_industry didn't create player_profile for {uid}"

@@ -44,7 +44,7 @@ def test_well_remains_always_available(cur):
 
 
 def test_player_starts_with_zero_watermark(make_player, cur):
-    p = make_player(industry='timber')
+    p = make_player(industry='timber', unlock_all=False)
     cur.execute("SELECT highest_housing_tier_ever FROM public.player_profiles WHERE id = %s",
                 (str(p['id']),))
     assert cur.fetchone()[0] == 0
@@ -52,7 +52,7 @@ def test_player_starts_with_zero_watermark(make_player, cur):
 
 def test_school_locked_at_game_start(make_player, place, cur, clear_resources):
     """A fresh player can't place a school — they need a tier-3 house first."""
-    p = make_player()
+    p = make_player(unlock_all=False)
     clear_resources(p['id'])
     hx, hy = p['home_x'], p['home_y']
     place('road', hx + 1, hy + 1)
@@ -77,7 +77,7 @@ def test_school_unlocks_after_watermark_reaches_3(make_player, place, cur, clear
 
 def test_temple_still_locked_when_school_unlocked(make_player, place, cur, clear_resources):
     """Watermark of 3 unlocks school but not temple — granular gates."""
-    p = make_player()
+    p = make_player(unlock_all=False)
     clear_resources(p['id'])
     cur.execute("""
         UPDATE public.player_profiles

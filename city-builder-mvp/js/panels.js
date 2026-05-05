@@ -1327,9 +1327,17 @@ function renderTreasuryPanel() {
   panel.innerHTML = renderPeriodToggleHtml(period) + '<div class="trade-loading">Loading…</div>';
   wirePeriodToggle(panel, function (p) { state.tradeStatsPeriod = p; renderTreasuryPanel(); });
 
-  fetchTradeFlows(period).then(function (flows) {
-    var earnedBySource = flows.earnedBySource;
-    var spentByDest = flows.spentByDest;
+  Promise.all([fetchTradeFlows(period), fetchCashLedger(period)]).then(function (results) {
+    var flows = results[0];
+    var ledger = results[1];
+    var earnedBySource = Object.assign({}, flows.earnedBySource);
+    var spentByDest = Object.assign({}, flows.spentByDest);
+    // Merge cash-ledger entries — tax_revenue / build_cost / expansion_cost / etc.
+    Object.keys(ledger.bySource).forEach(function (s) {
+      var amt = ledger.bySource[s];
+      if (amt > 0) earnedBySource[s] = (earnedBySource[s] || 0) + amt;
+      else if (amt < 0) spentByDest[s] = (spentByDest[s] || 0) + (-amt);
+    });
     var totalIn = Object.keys(earnedBySource).reduce(function (s, k) { return s + earnedBySource[k]; }, 0);
     var totalOut = Object.keys(spentByDest).reduce(function (s, k) { return s + spentByDest[k]; }, 0);
 
@@ -1358,7 +1366,6 @@ function renderTreasuryPanel() {
     if (totalIn === 0 && totalOut === 0) {
       html += '<div class="trade-empty">No money has moved in this period.</div>';
     }
-    html += '<div class="trade-hint" style="margin-top:14px;font-size:0.74rem;color:#7a8a9e;">Tax revenue and build costs aren’t tracked yet — they’ll appear here once the cash ledger lands.</div>';
     replaceLoading(panel, html);
   }).catch(function (err) {
     replaceLoading(panel, '<div class="trade-error">Failed to load: ' + escapeHtml(err.message || err) + '</div>');
@@ -1368,7 +1375,33 @@ function renderTreasuryPanel() {
 function prettySource(k) {
   if (k === 'black_market') return 'Black Market';
   if (k === 'player_trade') return 'Player Trade';
+  if (k === 'tax_revenue') return 'Tax Revenue';
+  if (k === 'build_cost') return 'Building Construction';
+  if (k === 'expansion_cost') return 'District Expansion';
+  if (k === 'starting_grant') return 'Starting Grant';
+  if (k === 'demolish_refund') return 'Demolish Refund';
   return (state.traders && state.traders[k] && state.traders[k].name) || k;
+}
+
+// Fetch cash_transactions for the period and aggregate by source.
+function fetchCashLedger(period) {
+  var since;
+  if (period === 'today') {
+    var d = new Date(); d.setHours(0, 0, 0, 0); since = d.toISOString();
+  } else if (period === 'week') {
+    since = new Date(Date.now() - 7 * 86400000).toISOString();
+  } else {
+    since = '1970-01-01T00:00:00Z';
+  }
+  return sb.from('cash_transactions')
+    .select('source, amount').gte('created_at', since)
+    .then(function (r) {
+      var bySource = {};
+      (r.data || []).forEach(function (row) {
+        bySource[row.source] = (bySource[row.source] || 0) + row.amount;
+      });
+      return { bySource: bySource };
+    });
 }
 
 function resIconClass(key) {
