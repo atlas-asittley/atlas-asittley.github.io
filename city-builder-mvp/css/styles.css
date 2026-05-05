@@ -1052,6 +1052,59 @@ body.inspector-open .map-canvas { margin-bottom: calc(50vh + 28px); }
 .panel-content { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 12px; display: none; }
 .panel-content.active { display: block; }
 
+/* ── Trade sub-tabs ─────────────────────────────────── */
+#panel-trade.active { display: flex; flex-direction: column; padding: 0; }
+.trade-subtabs { display: flex; border-bottom: 1px solid #1e2a3a; padding: 6px 8px 0; gap: 2px; flex-shrink: 0; background: #0e1620; }
+.trade-subtab { flex: 1; padding: 6px 4px; font-size: 0.74rem; font-weight: 600; color: #7a8a9e; cursor: pointer; background: none; border: none; border-bottom: 2px solid transparent; transition: color 0.2s; position: relative; }
+.trade-subtab.active { color: #4fa3e0; border-bottom-color: #4fa3e0; }
+.trade-subpanels { flex: 1; overflow-y: auto; }
+.trade-subpanel { display: none; padding: 12px; }
+.trade-subpanel.active { display: block; }
+
+/* Locked trade gate */
+.trade-lock { padding: 16px; text-align: center; }
+.trade-lock-title { font-weight: 700; font-size: 0.95rem; color: #e6eef6; margin-bottom: 8px; }
+.trade-lock-body { color: #c8d4e0; font-size: 0.84rem; line-height: 1.5; margin-bottom: 12px; }
+.trade-lock-row { display: flex; align-items: center; justify-content: flex-start; gap: 8px; padding: 6px 12px; text-align: left; }
+.trade-lock-icon { color: #4fa3e0; font-weight: 700; min-width: 16px; }
+.trade-lock-label { color: #c8d4e0; font-size: 0.84rem; }
+.trade-lock-hint { font-size: 0.74rem; color: #7a8a9e; padding-top: 12px; border-top: 1px solid #243447; margin-top: 12px; line-height: 1.4; }
+
+/* Missions */
+.missions-list { display: flex; flex-direction: column; gap: 10px; }
+.mission-card { padding: 10px; background: #1a2332; border: 1px solid #243447; border-radius: 8px; }
+.mission-header { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.mission-trader { font-size: 0.78rem; font-weight: 700; color: #c8d4e0; }
+.mission-deadline { font-size: 0.7rem; color: #7a8a9e; }
+.mission-target { font-size: 0.95rem; font-weight: 700; color: #e6eef6; margin: 4px 0 8px; }
+.mission-progress { width: 100%; height: 6px; background: #0e1620; border-radius: 3px; overflow: hidden; margin-bottom: 6px; }
+.mission-progress-fill { height: 100%; background: linear-gradient(90deg, #4fa3e0, #5ec49e); transition: width 0.4s; }
+.mission-meta { display: flex; justify-content: space-between; font-size: 0.74rem; color: #7a8a9e; margin-bottom: 8px; }
+.mission-actions { display: flex; gap: 6px; }
+.mission-qty { flex: 1; padding: 6px 8px; background: #0e1620; border: 1px solid #243447; border-radius: 4px; color: #c8d4e0; }
+.btn-mission-donate { padding: 6px 14px; background: #2a6a48; border: 1px solid #3a8060; border-radius: 6px; color: #d8f0e4; font-size: 0.8rem; font-weight: 600; cursor: pointer; }
+.btn-mission-donate:hover { background: #348058; }
+.btn-mission-donate[disabled] { background: #1f3a2a; border-color: #2a4a36; color: #6a8474; cursor: not-allowed; }
+
+/* Stats */
+.stats-period-row { display: flex; gap: 4px; margin-bottom: 12px; }
+.stats-period-btn { flex: 1; padding: 6px 8px; background: #1a2332; border: 1px solid #243447; border-radius: 6px; color: #7a8a9e; font-size: 0.74rem; cursor: pointer; }
+.stats-period-btn.active { background: #243447; border-color: #4fa3e0; color: #4fa3e0; }
+.stats-summary { padding: 10px; background: #1a2332; border: 1px solid #243447; border-radius: 8px; margin-bottom: 12px; }
+.stats-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 0.84rem; }
+.stats-label { color: #7a8a9e; }
+.stats-val { font-weight: 700; }
+.stats-val.good { color: #5ec49e; }
+.stats-val.bad { color: #e0a070; }
+.stats-section-title { font-size: 0.74rem; font-weight: 700; color: #c8d4e0; text-transform: uppercase; letter-spacing: 0.04em; margin: 14px 0 6px; }
+.stats-table { display: flex; flex-direction: column; gap: 2px; }
+.stats-tr { display: grid; grid-template-columns: 1fr auto auto; gap: 10px; padding: 4px 8px; background: #1a2332; border-radius: 4px; font-size: 0.78rem; color: #c8d4e0; }
+.stats-tr .good { color: #5ec49e; }
+.stats-tr .bad  { color: #e0a070; }
+
+.trade-loading, .trade-empty, .trade-error { padding: 20px; text-align: center; color: #7a8a9e; font-size: 0.82rem; }
+.trade-error { color: #f0a0a0; }
+
 /* ── Build panel ───────────────────────────────────── */
 .build-section { margin-bottom: 10px; }
 .build-section-header {

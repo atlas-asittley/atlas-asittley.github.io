@@ -164,13 +164,24 @@
       <div class="tab-bar">
         <button class="tab-btn active" data-tab="build">Build</button>
         <button class="tab-btn" data-tab="inventory">Inventory</button>
-        <button class="tab-btn" data-tab="trade">Trade</button>
-        <button class="tab-btn" data-tab="players">Players<span class="tab-badge" id="players-badge" style="display:none;"></span></button>
+        <button class="tab-btn" data-tab="trade">Trade<span class="tab-badge" id="trade-badge" style="display:none;"></span></button>
       </div>
       <div id="panel-build" class="panel-content active"></div>
       <div id="panel-inventory" class="panel-content"></div>
-      <div id="panel-trade" class="panel-content"></div>
-      <div id="panel-players" class="panel-content"></div>
+      <div id="panel-trade" class="panel-content">
+        <div class="trade-subtabs">
+          <button class="trade-subtab active" data-subtab="partners">Partners</button>
+          <button class="trade-subtab" data-subtab="missions">Missions</button>
+          <button class="trade-subtab" data-subtab="players">Players<span class="tab-badge" id="trade-players-badge" style="display:none;"></span></button>
+          <button class="trade-subtab" data-subtab="stats">Stats</button>
+        </div>
+        <div class="trade-subpanels">
+          <div id="panel-trade-partners" class="trade-subpanel active"></div>
+          <div id="panel-trade-missions" class="trade-subpanel"></div>
+          <div id="panel-trade-players" class="trade-subpanel"></div>
+          <div id="panel-trade-stats" class="trade-subpanel"></div>
+        </div>
+      </div>
     </div>
   </div>
   <div class="placement-bar" id="placement-bar">

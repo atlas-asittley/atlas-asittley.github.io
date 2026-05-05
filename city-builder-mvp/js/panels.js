@@ -444,10 +444,20 @@ export function renderInventory() {
 
 // ── Trade panel (Phase 2B: multi-partner trade) ──
 export function renderTradePanel() {
-  var panel = document.getElementById('panel-trade');
+  // Renders the Partners sub-panel of the Trade tab. The Trade tab also
+  // hosts Missions / Players / Stats sub-panels rendered separately.
+  var panel = document.getElementById('panel-trade-partners');
   var html = '';
 
   var traderKeys = Object.keys(state.traders);
+
+  // Gate: NPC trade is locked until the player has 1 extractor + 1 food
+  // extractor + 1 tier-1 housing in their district.
+  var unlockInfo = computeTradeUnlockState();
+  if (!unlockInfo.unlocked) {
+    panel.innerHTML = renderLockedTradeHtml(unlockInfo);
+    return;
+  }
 
   // Fallback if no traders loaded
   if (traderKeys.length === 0) {
@@ -1001,9 +1011,229 @@ export function initTabs() {
       document.getElementById(tabId).classList.add('active');
 
       if (btn.dataset.tab === 'inventory') renderInventory();
-      else if (btn.dataset.tab === 'trade') renderTradePanel();
+      else if (btn.dataset.tab === 'trade') renderTradeTab();
       else if (btn.dataset.tab === 'build') renderBuildPanel();
-      else if (btn.dataset.tab === 'players') renderPlayersPanel();
     });
+  });
+
+  // Sub-tab switching inside the Trade tab.
+  document.querySelectorAll('.trade-subtab').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      document.querySelectorAll('.trade-subtab').forEach(function (b) { b.classList.remove('active'); });
+      document.querySelectorAll('.trade-subpanel').forEach(function (p) { p.classList.remove('active'); });
+      btn.classList.add('active');
+      var subId = 'panel-trade-' + btn.dataset.subtab;
+      document.getElementById(subId).classList.add('active');
+      renderTradeSubpanel(btn.dataset.subtab);
+    });
+  });
+}
+
+// Render the trade tab + currently-active sub-panel.
+export function renderTradeTab() {
+  var active = document.querySelector('.trade-subtab.active');
+  var sub = active ? active.dataset.subtab : 'partners';
+  renderTradeSubpanel(sub);
+}
+
+function renderTradeSubpanel(sub) {
+  if (sub === 'partners') renderTradePanel();
+  else if (sub === 'missions') renderMissionsPanel();
+  else if (sub === 'players') renderPlayersPanel();
+  else if (sub === 'stats') renderStatsPanel();
+}
+
+// ── Trade-unlock gate (client-side mirror of is_trade_unlocked) ──
+// Cheap local check; the server is authoritative on actual RPC calls.
+function computeTradeUnlockState() {
+  var mine = (state.allBuildings || []).filter(function (b) {
+    return b.player_id === state.currentUser.id && b.status === 'active';
+  });
+  var hasExtractor = mine.some(function (b) {
+    var bt = state.buildingTypes[b.building_type_key];
+    return bt && bt.category === 'extractor';
+  });
+  var hasFoodExt = mine.some(function (b) {
+    var bt = state.buildingTypes[b.building_type_key];
+    return bt && bt.category === 'food_extractor';
+  });
+  var hasTier1 = mine.some(function (b) {
+    var bt = state.buildingTypes[b.building_type_key];
+    return bt && bt.category === 'housing' && (b.housing_tier || 0) >= 1;
+  });
+  return {
+    unlocked: hasExtractor && hasFoodExt && hasTier1,
+    hasExtractor: hasExtractor,
+    hasFoodExt: hasFoodExt,
+    hasTier1: hasTier1
+  };
+}
+
+function renderLockedTradeHtml(info) {
+  function row(ok, label) {
+    return '<div class="trade-lock-row">'
+         + '<span class="trade-lock-icon">' + (ok ? '✔' : '○') + '</span>'
+         + '<span class="trade-lock-label">' + label + '</span>'
+         + '</div>';
+  }
+  return '<div class="trade-lock">'
+       + '<div class="trade-lock-title">Develop your district to unlock trade</div>'
+       + '<div class="trade-lock-body">'
+       + 'Outside cities won’t come trading until your district can produce on its own. '
+       + 'You need:'
+       + '</div>'
+       + row(info.hasExtractor, 'Build at least one resource extractor')
+       + row(info.hasFoodExt, 'Build at least one food extractor (orchard, fishing pier, garden, or grain farm)')
+       + row(info.hasTier1, 'Upgrade a house to tier 1 (Hut)')
+       + '<div class="trade-lock-hint">The black market is always open if you really need to offload goods, but its rates are intentionally bad.</div>'
+       + '</div>';
+}
+
+function renderMissionsPanel() {
+  var panel = document.getElementById('panel-trade-missions');
+  var unlock = computeTradeUnlockState();
+  if (!unlock.unlocked) {
+    panel.innerHTML = renderLockedTradeHtml(unlock);
+    return;
+  }
+  panel.innerHTML = '<div class="trade-loading">Loading missions…</div>';
+  sb.rpc('get_active_missions').then(function (r) {
+    if (r.error) {
+      panel.innerHTML = '<div class="trade-error">Failed to load missions: ' + escapeHtml(r.error.message) + '</div>';
+      return;
+    }
+    var missions = r.data || [];
+    if (missions.length === 0) {
+      panel.innerHTML = '<div class="trade-empty">No active requests right now. Traders post new requests every 30 minutes or so — check back.</div>';
+      return;
+    }
+    var html = '<div class="missions-list">';
+    missions.forEach(function (m) {
+      var pct = Math.min(100, Math.round((m.current_qty / m.target_qty) * 100));
+      var youHave = Math.floor((state.inventory && state.inventory[m.resource_key]) || 0);
+      var remaining = m.target_qty - m.current_qty;
+      var disabled = youHave <= 0 || remaining <= 0;
+      var deadlineMs = new Date(m.soft_deadline).getTime() - Date.now();
+      var deadlineText = deadlineMs > 0
+        ? Math.max(1, Math.round(deadlineMs / 60000)) + ' min until soft deadline'
+        : 'past soft deadline (still accepting partial)';
+      html += '<div class="mission-card">'
+            + '<div class="mission-header">'
+            + '<span class="mission-trader">' + escapeHtml(m.trader_name) + ' wants</span>'
+            + '<span class="mission-deadline">' + deadlineText + '</span>'
+            + '</div>'
+            + '<div class="mission-target">' + m.target_qty + ' ' + escapeHtml(resourceName(m.resource_key)) + '</div>'
+            + '<div class="mission-progress"><div class="mission-progress-fill" style="width:' + pct + '%"></div></div>'
+            + '<div class="mission-meta">'
+            + '<span>' + m.current_qty + ' / ' + m.target_qty + '</span>'
+            + '<span>You: ' + (m.your_donated_qty || 0) + ' donated · have ' + youHave + '</span>'
+            + '</div>'
+            + '<div class="mission-actions">'
+            + '<input type="number" min="1" step="1" value="' + Math.min(remaining, youHave || 1) + '" class="mission-qty" data-mission="' + m.id + '">'
+            + '<button class="btn-mission-donate" data-mission="' + m.id + '"' + (disabled ? ' disabled' : '') + '>Donate</button>'
+            + '</div>'
+            + '</div>';
+    });
+    html += '</div>';
+    panel.innerHTML = html;
+
+    panel.querySelectorAll('.btn-mission-donate').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var mid = btn.dataset.mission;
+        var qtyInput = panel.querySelector('.mission-qty[data-mission="' + mid + '"]');
+        var qty = Math.max(1, parseInt(qtyInput.value, 10) || 1);
+        btn.disabled = true; btn.textContent = 'Sending…';
+        sb.rpc('donate_to_mission', { p_mission_id: mid, p_qty: qty }).then(function (rr) {
+          if (rr.error) {
+            showToast('Donate failed: ' + rr.error.message, 'error');
+            btn.disabled = false; btn.textContent = 'Donate';
+            return;
+          }
+          var d = rr.data || {};
+          showToast('Donated ' + d.donated_qty + (d.fulfilled ? ' — mission fulfilled!' : ''), 'success');
+          // Refresh inventory + missions.
+          sb.from('inventories').select('resource_key, quantity').eq('player_id', state.currentUser.id).then(function (q) {
+            state.inventory = {};
+            (q.data || []).forEach(function (row) { state.inventory[row.resource_key] = row.quantity; });
+            renderInventory();
+          });
+          renderMissionsPanel();
+        });
+      });
+    });
+  });
+}
+
+function renderStatsPanel() {
+  var panel = document.getElementById('panel-trade-stats');
+  var period = state.tradeStatsPeriod || 'today';
+  panel.innerHTML = '<div class="stats-period-row">'
+    + ['today','week','all'].map(function (p) {
+        var label = p === 'today' ? 'Today' : p === 'week' ? 'Week' : 'All time';
+        return '<button class="stats-period-btn' + (period === p ? ' active' : '') + '" data-period="' + p + '">' + label + '</button>';
+      }).join('')
+    + '</div><div class="trade-loading">Loading stats…</div>';
+
+  panel.querySelectorAll('.stats-period-btn').forEach(function (b) {
+    b.addEventListener('click', function () {
+      state.tradeStatsPeriod = b.dataset.period;
+      renderStatsPanel();
+    });
+  });
+
+  sb.rpc('get_trade_stats', { p_period: period }).then(function (r) {
+    if (r.error) {
+      panel.querySelector('.trade-loading').outerHTML = '<div class="trade-error">Failed to load: ' + escapeHtml(r.error.message) + '</div>';
+      return;
+    }
+    var d = r.data || {};
+    var imports = d.imports || [];
+    var exports_ = d.exports || [];
+    var partners = d.partners || [];
+    var html = '';
+    html += '<div class="stats-summary">';
+    html += '<div class="stats-row"><span class="stats-label">Earned</span><span class="stats-val good">$' + (d.total_in || 0) + '</span></div>';
+    html += '<div class="stats-row"><span class="stats-label">Spent</span><span class="stats-val bad">$' + (d.total_out || 0) + '</span></div>';
+    html += '<div class="stats-row"><span class="stats-label">Net</span><span class="stats-val ' + ((d.net||0) >= 0 ? 'good' : 'bad') + '">$' + (d.net || 0) + '</span></div>';
+    html += '</div>';
+
+    if (exports_.length) {
+      html += '<div class="stats-section-title">Exports</div><div class="stats-table">';
+      exports_.forEach(function (row) {
+        html += '<div class="stats-tr"><span>' + escapeHtml(resourceName(row.resource_key)) + '</span><span>' + row.qty + '</span><span class="good">$' + row.earned + '</span></div>';
+      });
+      html += '</div>';
+    }
+    if (imports.length) {
+      html += '<div class="stats-section-title">Imports</div><div class="stats-table">';
+      imports.forEach(function (row) {
+        html += '<div class="stats-tr"><span>' + escapeHtml(resourceName(row.resource_key)) + '</span><span>' + row.qty + '</span><span class="bad">$' + row.spent + '</span></div>';
+      });
+      html += '</div>';
+    }
+    if (partners.length) {
+      html += '<div class="stats-section-title">Top partners</div><div class="stats-table">';
+      partners.forEach(function (row) {
+        html += '<div class="stats-tr"><span>' + escapeHtml(row.trader_key) + '</span><span>vol ' + row.volume + '</span><span>$' + ((row.earned||0) - (row.spent||0)) + '</span></div>';
+      });
+      html += '</div>';
+    }
+    if (!exports_.length && !imports.length) {
+      html += '<div class="trade-empty">No trade activity in this period.</div>';
+    }
+    var existing = panel.querySelector('.trade-loading') || panel.querySelector('.trade-error');
+    if (existing) existing.outerHTML = html;
+    else {
+      // Period button rebuilt the panel; append.
+      var body = document.createElement('div');
+      body.innerHTML = html;
+      panel.appendChild(body);
+    }
+  });
+}
+
+function escapeHtml(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+    return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
   });
 }

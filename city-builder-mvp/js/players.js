@@ -77,20 +77,25 @@ function updateInboxBadge() {
   var pending = myOffers.filter(function (o) {
     return o.status === 'pending' && o.to_player_id === state.currentUser.id;
   }).length;
-  var badge = document.getElementById('players-badge');
-  if (!badge) return;
-  if (pending > 0) {
-    badge.textContent = pending;
-    badge.style.display = '';
-  } else {
-    badge.style.display = 'none';
-  }
+  // Both the Trade tab badge (always visible at top level) and the
+  // Players sub-tab badge (shown when the Trade tab is open) reflect
+  // pending inbox count.
+  ['trade-badge', 'trade-players-badge'].forEach(function (id) {
+    var badge = document.getElementById(id);
+    if (!badge) return;
+    if (pending > 0) {
+      badge.textContent = pending;
+      badge.style.display = '';
+    } else {
+      badge.style.display = 'none';
+    }
+  });
 }
 
 // ── Render ──
 
 export function renderPlayersPanel() {
-  var panel = document.getElementById('panel-players');
+  var panel = document.getElementById('panel-trade-players');
   if (!panel) return;
   if (!state.currentUser) { panel.innerHTML = ''; return; }
 
