@@ -113,6 +113,30 @@ export function stopProdLoop() {
   stopWalkers();
 }
 
+// Pause everything when the player switches apps or locks the phone.
+// Mobile browsers throttle JS timers when backgrounded but DO NOT pause
+// CSS animations — those keep compositing every frame, draining battery.
+// The `app-hidden` class on body flips animation-play-state to paused,
+// and we fully tear down the prod timer + walker spawn tick so nothing
+// fires while we're invisible. On revisible, both restart.
+function initVisibilityPause() {
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) {
+      document.body.classList.add('app-hidden');
+      if (state.prodTimer) { clearInterval(state.prodTimer); state.prodTimer = null; }
+      stopWalkers();
+    } else {
+      document.body.classList.remove('app-hidden');
+      if (state.profile && !state.prodTimer) {
+        startProdLoop();
+        startWalkers();
+        // Also catch up production for the time we were away.
+        processProduction();
+      }
+    }
+  });
+}
+
 function loadGameData() {
   return Promise.all([
     sb.from('building_types').select('*').eq('is_active', true),
@@ -240,6 +264,7 @@ export function enterGame() {
     subscribeRealtime();
     startProdLoop();
     startWalkers();
+    initVisibilityPause();
     var expandBtn = document.getElementById('g-expand-district');
     if (expandBtn) {
       expandBtn.onclick = function () { expandDistrict(); };

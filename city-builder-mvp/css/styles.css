@@ -856,6 +856,17 @@ body.inspector-open .map-canvas { margin-bottom: calc(50vh + 28px); }
   pointer-events: none; z-index: 2;
 }
 
+/* App-hidden pause: when the page is backgrounded (tab switch / phone
+   locked / app minimized), pause every running CSS animation so the
+   GPU compositor doesn't keep drawing frames the user can't see.
+   Massive battery + thermal win on mobile. */
+body.app-hidden *,
+body.app-hidden *::before,
+body.app-hidden *::after {
+  animation-play-state: paused !important;
+  transition: none !important;
+}
+
 /* Police buildings — animations when staffed. */
 .bldg.watch_house.producing::after {
   content: ''; position: absolute;
