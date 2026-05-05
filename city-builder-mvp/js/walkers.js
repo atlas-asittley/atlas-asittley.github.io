@@ -540,13 +540,14 @@ function computeCollectorTour(ext) {
 }
 
 // ── Re-render all walkers ──
-// Called on map/road rebuilds. Re-applies current position to each walker's
-// element (new cell size, etc.). Movement timers keep running independently.
+// DIAGNOSTIC: temporarily a no-op to test whether the walker tile-center
+// snap on click/close/place is caused by this function (which writes
+// style.left/top) or by the grid.innerHTML rewrite that runs alongside
+// it in renderMap. If the snap stops, the cause is here; if it
+// continues, the cause is the layout reflow from the grid rewrite.
+// Will be reverted or replaced once we know which side it is.
 export function renderWalkers() {
-  for (var i = 0; i < walkers.length; i++) {
-    ensureWalkerEl(walkers[i]);
-    applyWalkerPosition(walkers[i]);
-  }
+  // (intentionally empty)
 }
 
 // ── Zoom sync: snap walkers to new grid scale without transition ──
