@@ -1187,7 +1187,7 @@ body.inspector-open .map-canvas { margin-bottom: calc(50vh + 28px); }
 .drag-cost-counter.over-budget { border-color: #f06060; color: #f0a0a0; }
 
 /* ── Toast ──────────────────────────────────────────── */
-.toast { position: fixed; top: 56px; left: 50%; transform: translateX(-50%); background: #131a24; border: 1px solid #1e2a3a; color: #e0e6ed; padding: 8px 20px; border-radius: 8px; font-size: 0.82rem; z-index: 200; opacity: 0; transition: opacity 0.3s; pointer-events: none; white-space: nowrap; max-width: 90vw; overflow: hidden; text-overflow: ellipsis; }
+.toast { position: fixed; top: 56px; left: 50%; transform: translateX(-50%); background: #131a24; border: 1px solid #1e2a3a; color: #e0e6ed; padding: 8px 20px; border-radius: 8px; font-size: 0.82rem; z-index: 300; opacity: 0; transition: opacity 0.3s; pointer-events: none; white-space: nowrap; max-width: 90vw; overflow: hidden; text-overflow: ellipsis; }
 .toast.show { opacity: 1; }
 .toast.success { border-color: #5ec49e; color: #5ec49e; }
 .toast.error { border-color: #f06060; color: #f0a0a0; }
