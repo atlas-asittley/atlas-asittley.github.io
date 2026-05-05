@@ -265,6 +265,188 @@ function spawnCollectorWalker(extractor, tour) {
   scheduleWalkerMove(w, Math.random() * WALKER_MOVE_MS);
 }
 
+// ── Immigrant walkers ──
+// Triggered by game.js when the player's population grows. Spawns at a
+// random border cell, walks across grass to the nearest road, follows
+// roads to a random active house, despawns at the house. Reverses for
+// emigrants. Pure visual — server is authoritative on population.
+
+function pickRandomBorderCell() {
+  var minX = state.gridMinX, maxX = state.gridMaxX;
+  var minY = state.gridMinY, maxY = state.gridMaxY;
+  if (minX === undefined || maxX === undefined) return null;
+  var uid = state.currentUser && state.currentUser.id;
+  for (var i = 0; i < 30; i++) {
+    var side = Math.floor(Math.random() * 4);
+    var x, y;
+    if (side === 0)      { x = minX + Math.floor(Math.random() * (maxX - minX + 1)); y = minY; }
+    else if (side === 1) { x = minX + Math.floor(Math.random() * (maxX - minX + 1)); y = maxY; }
+    else if (side === 2) { x = minX; y = minY + Math.floor(Math.random() * (maxY - minY + 1)); }
+    else                 { x = maxX; y = minY + Math.floor(Math.random() * (maxY - minY + 1)); }
+    var t = state.tileMap[x + ',' + y];
+    if (t && t.owner_player_id === uid) return { x: x, y: y };
+  }
+  return null;
+}
+
+function pickRandomActiveHouse() {
+  var uid = state.currentUser && state.currentUser.id;
+  var houses = state.allBuildings.filter(function (b) {
+    if (b.player_id !== uid || b.status !== 'active') return false;
+    var bt = state.buildingTypes[b.building_type_key];
+    return bt && bt.category === 'housing';
+  });
+  if (houses.length === 0) return null;
+  return houses[Math.floor(Math.random() * houses.length)];
+}
+
+function findNearestRoadCell(fromX, fromY) {
+  var uid = state.currentUser && state.currentUser.id;
+  var best = null, bestD = Infinity;
+  state.allBuildings.forEach(function (b) {
+    if (b.player_id !== uid || b.status !== 'active') return;
+    var bt = state.buildingTypes[b.building_type_key];
+    if (!bt || bt.category !== 'road') return;
+    var d = Math.abs(b.x - fromX) + Math.abs(b.y - fromY);
+    if (d < bestD) { bestD = d; best = { x: b.x, y: b.y }; }
+  });
+  return best;
+}
+
+function lineToList(ax, ay, bx, by) {
+  // Manhattan-greedy step-by-step from (ax,ay) to (bx,by); returns the
+  // sequence of intermediate cells excluding the start.
+  var path = [];
+  var x = ax, y = ay, guard = 0;
+  while ((x !== bx || y !== by) && guard++ < 200) {
+    var dx = bx - x, dy = by - y;
+    if (Math.abs(dx) >= Math.abs(dy) && dx !== 0) x += dx > 0 ? 1 : -1;
+    else if (dy !== 0) y += dy > 0 ? 1 : -1;
+    path.push({ x: x, y: y });
+  }
+  return path;
+}
+
+function bfsRoadPath(startX, startY, endX, endY) {
+  if (startX === endX && startY === endY) return [];
+  var startKey = startX + ',' + startY;
+  var visited = {}; visited[startKey] = null;
+  var queue = [{ x: startX, y: startY }];
+  var found = false;
+  while (queue.length) {
+    var cur = queue.shift();
+    if (cur.x === endX && cur.y === endY) { found = true; break; }
+    var nbrs = roadNeighbors(cur.x, cur.y);
+    for (var i = 0; i < nbrs.length; i++) {
+      var nk = nbrs[i].x + ',' + nbrs[i].y;
+      if (visited[nk] === undefined) {
+        visited[nk] = cur.x + ',' + cur.y;
+        queue.push({ x: nbrs[i].x, y: nbrs[i].y });
+      }
+    }
+  }
+  if (!found) return null;
+  var path = [];
+  var key = endX + ',' + endY;
+  while (key && key !== startKey) {
+    var parts = key.split(',');
+    path.unshift({ x: parseInt(parts[0], 10), y: parseInt(parts[1], 10) });
+    key = visited[key];
+  }
+  return path;
+}
+
+function buildImmigrantTour(spawn, house) {
+  var road = findNearestRoadCell(spawn.x, spawn.y);
+  if (!road) {
+    // No road exists yet — walk straight from spawn to house.
+    return [spawn].concat(lineToList(spawn.x, spawn.y, house.x, house.y));
+  }
+  var phase1 = [spawn].concat(lineToList(spawn.x, spawn.y, road.x, road.y));
+  var endRoad = roadNeighbors(house.x, house.y)[0];
+  if (!endRoad) {
+    // House isn't road-adjacent — walk straight from the road to house.
+    return phase1.concat(lineToList(road.x, road.y, house.x, house.y));
+  }
+  var phase2 = bfsRoadPath(road.x, road.y, endRoad.x, endRoad.y);
+  if (!phase2) {
+    return phase1.concat(lineToList(road.x, road.y, house.x, house.y));
+  }
+  return phase1.concat(phase2).concat([{ x: house.x, y: house.y }]);
+}
+
+function buildEmigrantTour(spawn) {
+  var minX = state.gridMinX, maxX = state.gridMaxX;
+  var minY = state.gridMinY, maxY = state.gridMaxY;
+  var border = pickRandomBorderCell();
+  if (!border) return null;
+  var road = roadNeighbors(spawn.x, spawn.y)[0] || findNearestRoadCell(spawn.x, spawn.y);
+  if (!road) {
+    return [spawn].concat(lineToList(spawn.x, spawn.y, border.x, border.y));
+  }
+  var roadEnd = findNearestRoadCell(border.x, border.y) || road;
+  var phase1 = [spawn, road];
+  var phase2 = bfsRoadPath(road.x, road.y, roadEnd.x, roadEnd.y) || [];
+  var phase3 = lineToList(roadEnd.x, roadEnd.y, border.x, border.y);
+  return phase1.concat(phase2).concat(phase3);
+}
+
+var IMMIGRANT_OVERLAYS = ['has-luggage', 'has-backpack', 'has-bindle', null];
+function pickImmigrantOverlay() {
+  return IMMIGRANT_OVERLAYS[Math.floor(Math.random() * IMMIGRANT_OVERLAYS.length)];
+}
+
+export function spawnImmigrantWalker() {
+  var spawn = pickRandomBorderCell();
+  if (!spawn) return;
+  var house = pickRandomActiveHouse();
+  if (!house) return;
+  var tour = buildImmigrantTour(spawn, house);
+  if (!tour || tour.length < 2) return;
+  var w = {
+    mode: 'immigrant',
+    x: tour[0].x, y: tour[0].y,
+    prevX: tour[0].x, prevY: tour[0].y,
+    sourceId: 'immigrant-' + Date.now() + '-' + Math.floor(Math.random() * 9999),
+    sourceTier: 0,
+    sourceType: 'immigrant',
+    tour: tour,
+    tourIdx: 0,
+    overlay: pickImmigrantOverlay(),
+    stepStartedAt: Date.now(),
+    el: null, moveTimer: null
+  };
+  walkers.push(w);
+  ensureWalkerEl(w);
+  applyWalkerPosition(w, true);
+  scheduleWalkerMove(w, 200 + Math.random() * 1500);
+}
+
+export function spawnEmigrantWalker() {
+  var house = pickRandomActiveHouse();
+  if (!house) return;
+  var spawn = { x: house.x, y: house.y };
+  var tour = buildEmigrantTour(spawn);
+  if (!tour || tour.length < 2) return;
+  var w = {
+    mode: 'emigrant',
+    x: tour[0].x, y: tour[0].y,
+    prevX: tour[0].x, prevY: tour[0].y,
+    sourceId: 'emigrant-' + Date.now() + '-' + Math.floor(Math.random() * 9999),
+    sourceTier: 0,
+    sourceType: 'emigrant',
+    tour: tour,
+    tourIdx: 0,
+    overlay: pickImmigrantOverlay(),
+    stepStartedAt: Date.now(),
+    el: null, moveTimer: null
+  };
+  walkers.push(w);
+  ensureWalkerEl(w);
+  applyWalkerPosition(w, true);
+  scheduleWalkerMove(w, 200 + Math.random() * 1500);
+}
+
 // ── Schedule one step ──
 function scheduleWalkerMove(w, delay) {
   if (delay === undefined) delay = WALKER_MOVE_MS;
@@ -275,6 +457,9 @@ function scheduleWalkerMove(w, delay) {
 function walkerStep(w) {
   if (w.mode === 'collector') {
     return collectorStep(w);
+  }
+  if (w.mode === 'immigrant' || w.mode === 'emigrant') {
+    return tourStep(w);
   }
   // Ambient walker: random walk on roads
   var neighbors = roadNeighbors(w.x, w.y);
@@ -336,6 +521,20 @@ function collectorStep(w) {
   scheduleWalkerMove(w);
 }
 
+// ── One-shot tour step (immigrants + emigrants) ──
+// Walker advances through w.tour one cell per call, despawns at the end.
+function tourStep(w) {
+  var nextIdx = w.tourIdx + 1;
+  if (!w.tour || nextIdx >= w.tour.length) { despawnWalker(w); return; }
+  w.tourIdx = nextIdx;
+  var pos = w.tour[w.tourIdx];
+  w.prevX = w.x; w.prevY = w.y;
+  w.x = pos.x; w.y = pos.y;
+  w.stepStartedAt = Date.now();
+  applyWalkerPosition(w);
+  scheduleWalkerMove(w);
+}
+
 // ── Tear down a walker ──
 function despawnWalker(w) {
   if (w.moveTimer) {
@@ -382,9 +581,14 @@ function ensureWalkerEl(w) {
       w.wadMs = (parseInt(w.wadMs, 10) * 1.25).toFixed(0); // wider waddle
     }
   }
-  var classes = ['walker-dot', 'walker-' + (w.sourceType || 'citizen')];
+  // Immigrants/emigrants reuse the citizen sprite — they ARE citizens,
+  // just with a luggage / backpack / bindle overlay to read as in-transit.
+  var spriteType = (w.mode === 'immigrant' || w.mode === 'emigrant')
+    ? 'citizen' : (w.sourceType || 'citizen');
+  var classes = ['walker-dot', 'walker-' + spriteType];
   if (w.persona && w.persona.variant) classes.push(w.persona.variant);
   if (w.persona && w.persona.overlay) classes.push(w.persona.overlay);
+  if (w.overlay) classes.push(w.overlay);
   el.className = classes.join(' ');
   el.style.pointerEvents = 'auto';
   el.style.setProperty('--wk-scale', w.scale);

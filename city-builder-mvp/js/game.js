@@ -5,7 +5,7 @@ import { showScreen, showToast, capitalize, updateMoney, updateWorkers, updateHa
 import { renderMap, initMapEvents, expandDistrict, restoreMapView } from './map.js';
 import { renderBuildPanel, renderInventory, renderTradePanel, initTabs, initPanelCollapse, checkAllTraderVisits } from './panels.js';
 import { subscribeRealtime } from './realtime.js';
-import { startWalkers, stopWalkers } from './walkers.js';
+import { startWalkers, stopWalkers, spawnImmigrantWalker, spawnEmigrantWalker } from './walkers.js';
 import { initInspector } from './inspector.js';
 
 
@@ -37,9 +37,20 @@ function processProduction() {
     // Recompute client-side staffed/unstaffed IDs for map rendering
     computeLaborAllocation();
 
-    // Server is authoritative on happiness + population.
+    // Server is authoritative on happiness + population. Compare floor
+    // before/after to spawn immigrant or emigrant walkers (cosmetic).
+    var prevPopFloor = Math.floor(state.profile.population || 0);
     if (data.happiness !== undefined) state.profile.happiness = data.happiness;
     if (data.population !== undefined) state.profile.population = data.population;
+    var newPopFloor = Math.floor(data.population || prevPopFloor);
+    var popDelta = newPopFloor - prevPopFloor;
+    if (popDelta > 0) {
+      var n = Math.min(popDelta, 3);  // cap so first-load doesn't flood
+      for (var i = 0; i < n; i++) spawnImmigrantWalker();
+    } else if (popDelta < 0) {
+      var n2 = Math.min(-popDelta, 3);
+      for (var j = 0; j < n2; j++) spawnEmigrantWalker();
+    }
 
     updateMoney();
     updateWorkers();
