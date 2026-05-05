@@ -1053,6 +1053,19 @@ body.inspector-open .map-canvas { margin-bottom: calc(50vh + 28px); }
 .panel-content.active { display: block; }
 
 /* ── Build panel ───────────────────────────────────── */
+.build-section { margin-bottom: 10px; }
+.build-section-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 7px 10px; background: #131c28; border: 1px solid #243447;
+  border-radius: 6px; cursor: pointer; user-select: none;
+  transition: background 0.15s, border-color 0.15s;
+}
+.build-section-header:hover { background: #1a2332; border-color: #345066; }
+.build-section-title { font-weight: 700; font-size: 0.78rem; color: #c8d4e0; text-transform: uppercase; letter-spacing: 0.04em; }
+.build-section-chevron { color: #7a8a9e; font-size: 0.85rem; transition: transform 0.18s ease; }
+.build-section.collapsed .build-section-chevron { transform: rotate(-90deg); }
+.build-section-body { padding: 8px 0 2px; }
+.build-section.collapsed .build-section-body { display: none; }
 .build-item { display: flex; align-items: center; gap: 10px; padding: 10px; background: #1a2332; border: 1px solid #1e2a3a; border-radius: 8px; margin-bottom: 8px; cursor: pointer; transition: border-color 0.2s; }
 .build-item:hover { border-color: #4fa3e0; }
 .build-item.selected { border-color: #4fa3e0; background: #1a2a3a; }

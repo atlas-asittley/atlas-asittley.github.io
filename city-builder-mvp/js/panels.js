@@ -15,19 +15,32 @@ export function renderBuildPanel() {
   var panel = document.getElementById('panel-build');
   var html = '';
 
+  // Group buildings into 3 sections so the panel doesn't dump 15+
+  // items in a flat list:
+  //   infra    — road + housing (always available, structural)
+  //   industry — production locked to the player's chosen industry
+  //   civic    — services + tax (common to everyone)
+  // Each section collapses independently; state persists in localStorage.
+  var CATEGORY_ORDER = { road: 0, housing: 1, extractor: 2, food_extractor: 3, processor: 4, booster: 5, service: 6, tax: 7 };
+  var SECTION_RANK = { infra: 0, industry: 1, civic: 2 };
+  function sectionFor(bt) {
+    if (bt.category === 'road' || bt.category === 'housing') return 'infra';
+    if (bt.industry_key !== 'common') return 'industry';
+    return 'civic';
+  }
   var available = Object.keys(state.buildingTypes).filter(function (k) {
     var bt = state.buildingTypes[k];
     return bt.industry_key === state.profile.industry_key || bt.industry_key === 'common';
   }).sort(function (a, b) {
     var btA = state.buildingTypes[a];
     var btB = state.buildingTypes[b];
-    // Roads first, then housing, then services (well), then production
-    // (extractor/processor), then tax. Within each group, sort by tier.
-    var order = { road: 0, housing: 1, service: 2, extractor: 3, food_extractor: 3, processor: 3, tax: 4 };
-    var oa = order[btA.category] !== undefined ? order[btA.category] : 5;
-    var ob = order[btB.category] !== undefined ? order[btB.category] : 5;
+    var sa = SECTION_RANK[sectionFor(btA)];
+    var sb = SECTION_RANK[sectionFor(btB)];
+    if (sa !== sb) return sa - sb;
+    var oa = CATEGORY_ORDER[btA.category] !== undefined ? CATEGORY_ORDER[btA.category] : 9;
+    var ob = CATEGORY_ORDER[btB.category] !== undefined ? CATEGORY_ORDER[btB.category] : 9;
     if (oa !== ob) return oa - ob;
-    return btA.tier - btB.tier;
+    return (btA.tier || 0) - (btB.tier || 0);
   });
 
   if (available.length === 0) {
@@ -37,9 +50,35 @@ export function renderBuildPanel() {
   }
 
   var li = state.laborInfo;
+  var industryName = state.profile.industry_key
+    ? state.profile.industry_key.charAt(0).toUpperCase() + state.profile.industry_key.slice(1)
+    : 'Industry';
+  var SECTION_TITLES = {
+    infra: 'Infrastructure',
+    industry: industryName + ' Industry',
+    civic: 'Civic & Services'
+  };
+  var BUILD_COLLAPSE_KEY = 'city_build_sections_collapsed';
+  var collapsedSections = {};
+  try { collapsedSections = JSON.parse(localStorage.getItem(BUILD_COLLAPSE_KEY) || '{}'); } catch (e) {}
+  var lastSection = null;
 
   available.forEach(function (key) {
     var bt = state.buildingTypes[key];
+    // Emit a collapsible section header when we cross from one section
+    // (infra / industry / civic) to the next.
+    var thisSection = sectionFor(bt);
+    if (thisSection !== lastSection) {
+      if (lastSection !== null) html += '</div></div>';
+      var isCollapsed = !!collapsedSections[thisSection];
+      html += '<div class="build-section' + (isCollapsed ? ' collapsed' : '') + '" data-section="' + thisSection + '">';
+      html += '<div class="build-section-header">';
+      html += '<span class="build-section-title">' + SECTION_TITLES[thisSection] + '</span>';
+      html += '<span class="build-section-chevron">▾</span>';
+      html += '</div>';
+      html += '<div class="build-section-body">';
+      lastSection = thisSection;
+    }
     var canAfford = state.profile.money >= bt.build_cost;
     // Only money blocks placement now — workers are soft constraint
     var disabled = !canAfford;
@@ -183,11 +222,24 @@ export function renderBuildPanel() {
     html += '<div class="build-desc">' + desc + '</div>';
     html += '</div></div>';
   });
+  // Close whichever section we ended in.
+  if (lastSection !== null) html += '</div></div>';
 
   // Hint about inspection/demolition
   html += '<div class="build-hint">Tap any building or citizen on the map to inspect it. Demolish from the inspector.</div>';
 
   panel.innerHTML = html;
+
+  panel.querySelectorAll('.build-section-header').forEach(function (h) {
+    h.addEventListener('click', function () {
+      var sec = h.parentElement;
+      sec.classList.toggle('collapsed');
+      var c = {};
+      try { c = JSON.parse(localStorage.getItem(BUILD_COLLAPSE_KEY) || '{}'); } catch (e) {}
+      c[sec.dataset.section] = sec.classList.contains('collapsed');
+      try { localStorage.setItem(BUILD_COLLAPSE_KEY, JSON.stringify(c)); } catch (e) {}
+    });
+  });
 
   panel.querySelectorAll('.build-item:not(.disabled)').forEach(function (item) {
     item.addEventListener('click', function () {
