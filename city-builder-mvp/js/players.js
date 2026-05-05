@@ -243,7 +243,7 @@ function bindPlayersPanelEvents() {
 
 var dialogState = null;  // { targetId, targetName, give: {money, resources}, receive: {money, resources} }
 
-function openTradeDialog(targetId, targetName) {
+export function openTradeDialog(targetId, targetName) {
   dialogState = {
     targetId: targetId,
     targetName: targetName,

@@ -3,7 +3,7 @@ import { sb } from './config.js';
 import { state, computeTraderUnlocks } from './state.js';
 import { showToast, updateMoney } from './ui.js';
 import { BLDG_LABELS, renderMap, cancelPlacement } from './map.js';
-import { renderPlayersPanel } from './players.js';
+import { renderPlayersPanel, openTradeDialog } from './players.js';
 
 function resourceName(key) {
   if (state.resources[key]) return state.resources[key].name;
@@ -1040,7 +1040,8 @@ function renderTradeSubpanel(sub) {
   if (sub === 'partners') renderTradePanel();
   else if (sub === 'missions') renderMissionsPanel();
   else if (sub === 'players') renderPlayersPanel();
-  else if (sub === 'stats') renderStatsPanel();
+  else if (sub === 'resources') renderResourcesPanel();
+  else if (sub === 'treasury') renderTreasuryPanel();
 }
 
 // ── Trade-unlock gate (client-side mirror of is_trade_unlocked) ──
@@ -1182,72 +1183,333 @@ function renderMissionsPanel() {
   });
 }
 
-function renderStatsPanel() {
-  var panel = document.getElementById('panel-trade-stats');
+// ── Resources sub-tab ──
+// One row per known resource:
+//   icon · name · production rate · inventory · imports / exports / net $
+// Click a row to drill down into a per-partner breakdown for that resource.
+
+function renderResourcesPanel() {
+  var panel = document.getElementById('panel-trade-resources');
   var period = state.tradeStatsPeriod || 'today';
-  panel.innerHTML = '<div class="stats-period-row">'
+  panel.innerHTML = renderPeriodToggleHtml(period) + '<div class="trade-loading">Loading…</div>';
+  wirePeriodToggle(panel, function (p) { state.tradeStatsPeriod = p; renderResourcesPanel(); });
+
+  fetchTradeFlows(period).then(function (flows) {
+    var rates = computeNetRates();
+    var rows = buildResourceRows(rates, flows);
+    if (rows.length === 0) {
+      replaceLoading(panel, '<div class="trade-empty">No resources or trade activity yet.</div>');
+      return;
+    }
+    var html = '<div class="rsrc-table">'
+      + '<div class="rsrc-tr rsrc-thead">'
+      + '<span class="rsrc-icon"></span>'
+      + '<span class="rsrc-name">Resource</span>'
+      + '<span class="rsrc-rate">Rate</span>'
+      + '<span class="rsrc-stock">Stock</span>'
+      + '<span class="rsrc-net">Net $</span>'
+      + '</div>';
+    rows.forEach(function (row) {
+      var netClass = row.net > 0 ? 'good' : row.net < 0 ? 'bad' : '';
+      html += '<div class="rsrc-tr" data-resource="' + escapeHtml(row.key) + '">'
+            + '<span class="rsrc-icon ' + resIconClass(row.key) + '"></span>'
+            + '<span class="rsrc-name">' + escapeHtml(row.name) + '</span>'
+            + '<span class="rsrc-rate">' + (row.rate ? formatRate(row.rate) : '—') + '</span>'
+            + '<span class="rsrc-stock">' + row.stock + '</span>'
+            + '<span class="rsrc-net ' + netClass + '">' + (row.net === 0 ? '—' : (row.net > 0 ? '+$' : '−$') + Math.abs(row.net)) + '</span>'
+            + '</div>'
+            + '<div class="rsrc-detail" id="rsrc-detail-' + escapeHtml(row.key) + '" style="display:none;"></div>';
+    });
+    html += '</div>';
+    replaceLoading(panel, html);
+
+    panel.querySelectorAll('.rsrc-tr[data-resource]').forEach(function (tr) {
+      tr.addEventListener('click', function () {
+        var rk = tr.dataset.resource;
+        var detail = document.getElementById('rsrc-detail-' + rk);
+        if (!detail) return;
+        if (detail.style.display === 'none') {
+          detail.innerHTML = renderResourceDrilldownHtml(rk, flows);
+          detail.style.display = 'block';
+          tr.classList.add('expanded');
+          // Wire any per-partner trade buttons inside the drilldown.
+          detail.querySelectorAll('.btn-rsrc-trade').forEach(function (btn) {
+            btn.addEventListener('click', function (e) {
+              e.stopPropagation();
+              openTradeDialog(btn.dataset.playerId, btn.dataset.playerName);
+            });
+          });
+        } else {
+          detail.style.display = 'none';
+          tr.classList.remove('expanded');
+        }
+      });
+    });
+  }).catch(function (err) {
+    replaceLoading(panel, '<div class="trade-error">Failed to load: ' + escapeHtml(err.message || err) + '</div>');
+  });
+}
+
+function buildResourceRows(rates, flows) {
+  // Build the full set of resources that the player either has, produces,
+  // consumes, or has traded recently. Skip terrain.
+  var seen = {};
+  Object.keys(state.resources || {}).forEach(function (k) {
+    var r = state.resources[k];
+    if (r && r.kind !== 'terrain') seen[k] = true;
+  });
+  var rows = Object.keys(seen).map(function (k) {
+    var r = state.resources[k] || {};
+    var stock = Math.floor((state.inventory && state.inventory[k]) || 0);
+    var rate = rates[k] || 0;
+    var f = flows.byResource[k] || { import_qty: 0, import_money: 0, export_qty: 0, export_money: 0 };
+    return {
+      key: k,
+      name: resourceName(k),
+      stock: stock,
+      rate: rate,
+      import_qty: f.import_qty,
+      import_money: f.import_money,
+      export_qty: f.export_qty,
+      export_money: f.export_money,
+      net: (f.export_money || 0) - (f.import_money || 0),
+      kind: r.kind || 'other'
+    };
+  });
+  // Sort: anything with rate or stock or trade volume first, alphabetical within.
+  rows.sort(function (a, b) {
+    var aActive = a.stock > 0 || a.rate !== 0 || a.import_qty > 0 || a.export_qty > 0;
+    var bActive = b.stock > 0 || b.rate !== 0 || b.import_qty > 0 || b.export_qty > 0;
+    if (aActive !== bActive) return aActive ? -1 : 1;
+    return a.name.localeCompare(b.name);
+  });
+  return rows;
+}
+
+function renderResourceDrilldownHtml(resourceKey, flows) {
+  var byPartner = (flows.byPartner[resourceKey] || []).slice();
+  byPartner.sort(function (a, b) { return (b.export_qty + b.import_qty) - (a.export_qty + a.import_qty); });
+  if (byPartner.length === 0) {
+    return '<div class="rsrc-detail-empty">No trade activity for this resource in the selected period.</div>';
+  }
+  var html = '<div class="rsrc-detail-table">';
+  html += '<div class="rsrc-detail-tr rsrc-detail-thead"><span>Partner</span><span>You sent</span><span>You got</span><span class="rsrc-detail-act"></span></div>';
+  byPartner.forEach(function (p) {
+    var act = '';
+    if (p.kind === 'player' && p.player_id) {
+      act = '<button class="btn-rsrc-trade" data-player-id="' + escapeHtml(p.player_id) + '" data-player-name="' + escapeHtml(p.name) + '">Trade</button>';
+    }
+    var sent = p.export_qty > 0 ? p.export_qty + ' (+$' + p.export_money + ')' : '—';
+    var got = p.import_qty > 0 ? p.import_qty + ' (−$' + p.import_money + ')' : '—';
+    html += '<div class="rsrc-detail-tr"><span>' + escapeHtml(p.name) + '</span><span class="good">' + sent + '</span><span class="bad">' + got + '</span><span class="rsrc-detail-act">' + act + '</span></div>';
+  });
+  html += '</div>';
+  return html;
+}
+
+// ── Treasury sub-tab ──
+
+function renderTreasuryPanel() {
+  var panel = document.getElementById('panel-trade-treasury');
+  var period = state.tradeStatsPeriod || 'today';
+  panel.innerHTML = renderPeriodToggleHtml(period) + '<div class="trade-loading">Loading…</div>';
+  wirePeriodToggle(panel, function (p) { state.tradeStatsPeriod = p; renderTreasuryPanel(); });
+
+  fetchTradeFlows(period).then(function (flows) {
+    var earnedBySource = flows.earnedBySource;
+    var spentByDest = flows.spentByDest;
+    var totalIn = Object.keys(earnedBySource).reduce(function (s, k) { return s + earnedBySource[k]; }, 0);
+    var totalOut = Object.keys(spentByDest).reduce(function (s, k) { return s + spentByDest[k]; }, 0);
+
+    var html = '<div class="stats-summary">';
+    html += '<div class="stats-row"><span class="stats-label">Earned</span><span class="stats-val good">$' + totalIn + '</span></div>';
+    html += '<div class="stats-row"><span class="stats-label">Spent</span><span class="stats-val bad">$' + totalOut + '</span></div>';
+    html += '<div class="stats-row"><span class="stats-label">Net</span><span class="stats-val ' + ((totalIn - totalOut) >= 0 ? 'good' : 'bad') + '">$' + (totalIn - totalOut) + '</span></div>';
+    html += '</div>';
+
+    if (Object.keys(earnedBySource).length) {
+      html += '<div class="stats-section-title">Income sources</div><div class="stats-table">';
+      Object.keys(earnedBySource).sort(function (a, b) { return earnedBySource[b] - earnedBySource[a]; })
+        .forEach(function (k) {
+          html += '<div class="stats-tr"><span>' + escapeHtml(prettySource(k)) + '</span><span class="good">$' + earnedBySource[k] + '</span></div>';
+        });
+      html += '</div>';
+    }
+    if (Object.keys(spentByDest).length) {
+      html += '<div class="stats-section-title">Spending</div><div class="stats-table">';
+      Object.keys(spentByDest).sort(function (a, b) { return spentByDest[b] - spentByDest[a]; })
+        .forEach(function (k) {
+          html += '<div class="stats-tr"><span>' + escapeHtml(prettySource(k)) + '</span><span class="bad">$' + spentByDest[k] + '</span></div>';
+        });
+      html += '</div>';
+    }
+    if (totalIn === 0 && totalOut === 0) {
+      html += '<div class="trade-empty">No money has moved in this period.</div>';
+    }
+    html += '<div class="trade-hint" style="margin-top:14px;font-size:0.74rem;color:#7a8a9e;">Tax revenue and build costs aren’t tracked yet — they’ll appear here once the cash ledger lands.</div>';
+    replaceLoading(panel, html);
+  }).catch(function (err) {
+    replaceLoading(panel, '<div class="trade-error">Failed to load: ' + escapeHtml(err.message || err) + '</div>');
+  });
+}
+
+function prettySource(k) {
+  if (k === 'black_market') return 'Black Market';
+  if (k === 'player_trade') return 'Player Trade';
+  return (state.traders && state.traders[k] && state.traders[k].name) || k;
+}
+
+function resIconClass(key) {
+  // Map a resource key to a CSS class that picks up .res-X { background } rules.
+  return 'res-icon-' + key;
+}
+
+function formatRate(r) {
+  var sign = r > 0 ? '+' : '−';
+  var abs = Math.abs(r);
+  var disp = abs >= 10 ? abs.toFixed(0) : abs.toFixed(1);
+  return sign + disp + '/min';
+}
+
+// ── Period toggle helpers (shared by Resources + Treasury) ──
+
+function renderPeriodToggleHtml(period) {
+  return '<div class="stats-period-row">'
     + ['today','week','all'].map(function (p) {
         var label = p === 'today' ? 'Today' : p === 'week' ? 'Week' : 'All time';
         return '<button class="stats-period-btn' + (period === p ? ' active' : '') + '" data-period="' + p + '">' + label + '</button>';
       }).join('')
-    + '</div><div class="trade-loading">Loading stats…</div>';
+    + '</div>';
+}
 
+function wirePeriodToggle(panel, onChange) {
   panel.querySelectorAll('.stats-period-btn').forEach(function (b) {
-    b.addEventListener('click', function () {
-      state.tradeStatsPeriod = b.dataset.period;
-      renderStatsPanel();
+    b.addEventListener('click', function () { onChange(b.dataset.period); });
+  });
+}
+
+function replaceLoading(panel, newHtml) {
+  var ex = panel.querySelector('.trade-loading') || panel.querySelector('.trade-error');
+  if (ex) ex.outerHTML = newHtml;
+  else {
+    var body = document.createElement('div');
+    body.innerHTML = newHtml;
+    panel.appendChild(body);
+  }
+}
+
+// ── Trade-flow aggregation ──
+// Walks the player's trade_transactions + accepted player_trade_offers
+// in the period and rolls up per-resource and per-partner numbers.
+function fetchTradeFlows(period) {
+  var since;
+  if (period === 'today') {
+    var d = new Date(); d.setHours(0, 0, 0, 0); since = d.toISOString();
+  } else if (period === 'week') {
+    since = new Date(Date.now() - 7 * 86400000).toISOString();
+  } else {
+    since = '1970-01-01T00:00:00Z';
+  }
+  var uid = state.currentUser.id;
+
+  var pTrans = sb.from('trade_transactions')
+    .select('*').eq('player_id', uid).gte('created_at', since);
+  var pOffers = sb.from('player_trade_offers')
+    .select('*').eq('status', 'accepted').gte('resolved_at', since)
+    .or('from_player_id.eq.' + uid + ',to_player_id.eq.' + uid);
+
+  return Promise.all([pTrans, pOffers]).then(function (results) {
+    var allOffers = results[1].data || [];
+    // Resolve counterparty display names via a single follow-up query.
+    var ids = {};
+    allOffers.forEach(function (o) {
+      if (o.from_player_id !== uid) ids[o.from_player_id] = true;
+      if (o.to_player_id !== uid) ids[o.to_player_id] = true;
+    });
+    var idList = Object.keys(ids);
+    var pNames = idList.length > 0
+      ? sb.from('player_profiles').select('id, display_name').in('id', idList)
+      : Promise.resolve({ data: [] });
+
+    return pNames.then(function (np) {
+      var nameMap = {};
+      (np.data || []).forEach(function (p) { nameMap[p.id] = p.display_name; });
+      return aggregateTradeFlows(uid, results[0].data || [], allOffers, nameMap);
     });
   });
+}
 
-  sb.rpc('get_trade_stats', { p_period: period }).then(function (r) {
-    if (r.error) {
-      panel.querySelector('.trade-loading').outerHTML = '<div class="trade-error">Failed to load: ' + escapeHtml(r.error.message) + '</div>';
-      return;
-    }
-    var d = r.data || {};
-    var imports = d.imports || [];
-    var exports_ = d.exports || [];
-    var partners = d.partners || [];
-    var html = '';
-    html += '<div class="stats-summary">';
-    html += '<div class="stats-row"><span class="stats-label">Earned</span><span class="stats-val good">$' + (d.total_in || 0) + '</span></div>';
-    html += '<div class="stats-row"><span class="stats-label">Spent</span><span class="stats-val bad">$' + (d.total_out || 0) + '</span></div>';
-    html += '<div class="stats-row"><span class="stats-label">Net</span><span class="stats-val ' + ((d.net||0) >= 0 ? 'good' : 'bad') + '">$' + (d.net || 0) + '</span></div>';
-    html += '</div>';
+function aggregateTradeFlows(uid, transactions, offers, nameMap) {
+    var byResource = {};       // resource_key → {import_qty, import_money, export_qty, export_money}
+    var byPartner = {};        // resource_key → [{name, kind, player_id, import_qty, import_money, export_qty, export_money}]
+    var earnedBySource = {};   // partner-key → $
+    var spentByDest = {};      // partner-key → $
 
-    if (exports_.length) {
-      html += '<div class="stats-section-title">Exports</div><div class="stats-table">';
-      exports_.forEach(function (row) {
-        html += '<div class="stats-tr"><span>' + escapeHtml(resourceName(row.resource_key)) + '</span><span>' + row.qty + '</span><span class="good">$' + row.earned + '</span></div>';
+    function bumpResource(rk, dir, qty, money) {
+      var b = byResource[rk] = byResource[rk] || { import_qty: 0, import_money: 0, export_qty: 0, export_money: 0 };
+      if (dir === 'import') { b.import_qty += qty; b.import_money += money; }
+      else { b.export_qty += qty; b.export_money += money; }
+    }
+    function bumpPartner(rk, partnerKey, partnerName, kind, playerId, dir, qty, money) {
+      byPartner[rk] = byPartner[rk] || [];
+      var existing = byPartner[rk].find(function (p) { return p.partnerKey === partnerKey; });
+      if (!existing) {
+        existing = { partnerKey: partnerKey, name: partnerName, kind: kind, player_id: playerId,
+                     import_qty: 0, import_money: 0, export_qty: 0, export_money: 0 };
+        byPartner[rk].push(existing);
+      }
+      if (dir === 'import') { existing.import_qty += qty; existing.import_money += money; }
+      else { existing.export_qty += qty; existing.export_money += money; }
+    }
+    function bumpCash(target, partnerKey, amount) {
+      target[partnerKey] = (target[partnerKey] || 0) + amount;
+    }
+
+    // Trade transactions: NPC + black market.
+    transactions.forEach(function (t) {
+      var isExport = t.transaction_type === 'sell';
+      var dir = isExport ? 'export' : 'import';
+      bumpResource(t.resource_key, dir, t.quantity, t.total_price);
+      var traderName = (state.traders && state.traders[t.trader_key] && state.traders[t.trader_key].name)
+                     || prettySource(t.trader_key);
+      bumpPartner(t.resource_key, t.trader_key, traderName, 'npc', null, dir, t.quantity, t.total_price);
+      if (isExport) bumpCash(earnedBySource, t.trader_key, t.total_price);
+      else bumpCash(spentByDest, t.trader_key, t.total_price);
+    });
+
+    // Player trades. Each accepted offer touches both sides' books.
+    offers.forEach(function (o) {
+      var iAmSender = o.from_player_id === uid;
+      var counterpartyId = iAmSender ? o.to_player_id : o.from_player_id;
+      var counterpartyKey = 'player:' + counterpartyId;
+      var counterpartyName = nameMap[counterpartyId] || 'Player';
+
+      var giveRes = o.give_resources || {};
+      var recvRes = o.receive_resources || {};
+      // Sender exports give_*; recipient exports receive_*.
+      var myExports = iAmSender ? giveRes : recvRes;
+      var myImports = iAmSender ? recvRes : giveRes;
+      var myCashOut = iAmSender ? (o.give_money || 0) : (o.receive_money || 0);
+      var myCashIn  = iAmSender ? (o.receive_money || 0) : (o.give_money || 0);
+
+      Object.keys(myExports).forEach(function (rk) {
+        var qty = parseInt(myExports[rk], 10) || 0;
+        if (qty <= 0) return;
+        bumpResource(rk, 'export', qty, 0);
+        bumpPartner(rk, counterpartyKey, counterpartyName, 'player', counterpartyId, 'export', qty, 0);
       });
-      html += '</div>';
-    }
-    if (imports.length) {
-      html += '<div class="stats-section-title">Imports</div><div class="stats-table">';
-      imports.forEach(function (row) {
-        html += '<div class="stats-tr"><span>' + escapeHtml(resourceName(row.resource_key)) + '</span><span>' + row.qty + '</span><span class="bad">$' + row.spent + '</span></div>';
+      Object.keys(myImports).forEach(function (rk) {
+        var qty = parseInt(myImports[rk], 10) || 0;
+        if (qty <= 0) return;
+        bumpResource(rk, 'import', qty, 0);
+        bumpPartner(rk, counterpartyKey, counterpartyName, 'player', counterpartyId, 'import', qty, 0);
       });
-      html += '</div>';
-    }
-    if (partners.length) {
-      html += '<div class="stats-section-title">Top partners</div><div class="stats-table">';
-      partners.forEach(function (row) {
-        html += '<div class="stats-tr"><span>' + escapeHtml(row.trader_key) + '</span><span>vol ' + row.volume + '</span><span>$' + ((row.earned||0) - (row.spent||0)) + '</span></div>';
-      });
-      html += '</div>';
-    }
-    if (!exports_.length && !imports.length) {
-      html += '<div class="trade-empty">No trade activity in this period.</div>';
-    }
-    var existing = panel.querySelector('.trade-loading') || panel.querySelector('.trade-error');
-    if (existing) existing.outerHTML = html;
-    else {
-      // Period button rebuilt the panel; append.
-      var body = document.createElement('div');
-      body.innerHTML = html;
-      panel.appendChild(body);
-    }
-  });
+      if (myCashIn > 0) bumpCash(earnedBySource, 'player_trade', myCashIn);
+      if (myCashOut > 0) bumpCash(spentByDest, 'player_trade', myCashOut);
+    });
+
+    return { byResource: byResource, byPartner: byPartner,
+             earnedBySource: earnedBySource, spentByDest: spentByDest };
 }
 
 function escapeHtml(s) {
