@@ -252,7 +252,7 @@ export function enterGame() {
   loadGameData().then(function () {
     computeLaborAllocation();
     updateWorkers();
-    renderMap();
+    renderMap(true);  // immediate — restoreMapView below depends on a populated grid
     // Restore the scroll + zoom from the player's last session, or center
     // on home for a first-ever load. Must run AFTER renderMap so the grid
     // is sized and scrollable.

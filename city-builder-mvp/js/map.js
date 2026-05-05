@@ -256,7 +256,27 @@ function touchCenter(touches) {
 
 // ── Map rendering ──
 
-export function renderMap() {
+// renderMap is called from 15+ places. Multiple state changes within
+// the same animation frame (e.g. inspector close → renderMap, then
+// state.selectedBuildType update → renderMap) used to trigger two
+// full innerHTML rebuilds of the grid. Coalesce them via rAF so we
+// only do the actual rebuild once per frame.
+var _renderMapPending = false;
+export function renderMap(immediate) {
+  // Initial render in enterGame passes immediate=true so restoreMapView
+  // (which reads the rendered grid) sees a populated DOM. All other
+  // call sites just want "render whenever's convenient" — debounce via
+  // rAF so multiple state changes in the same frame coalesce.
+  if (immediate) { _doRenderMap(); return; }
+  if (_renderMapPending) return;
+  _renderMapPending = true;
+  requestAnimationFrame(function () {
+    _renderMapPending = false;
+    _doRenderMap();
+  });
+}
+
+function _doRenderMap() {
   var grid = document.getElementById('map-grid');
   rebuildPlacementRoadSet();
   // buildingAt: anchor (top-left) tile of each building. For multi-tile
