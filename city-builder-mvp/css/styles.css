@@ -1470,3 +1470,21 @@ body.app-hidden *::after {
   /* grain/mill sprites scale with cell naturally */
   .bottom-panel { max-height: 38vh; }
 }
+
+/* ── Reduced motion ────────────────────────────────────
+   Honors the OS-level preference (iOS Settings → Accessibility →
+   Motion → Reduce Motion; Android equivalent in low-power mode).
+   When enabled, every infinite animation collapses to a single frame
+   and transitions become instant. The map still works fully — just
+   without the bobbing workers, smoke, glow, etc. that drain battery
+   on phones the user has already told to chill out. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
