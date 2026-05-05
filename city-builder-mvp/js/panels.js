@@ -15,18 +15,36 @@ export function renderBuildPanel() {
   var panel = document.getElementById('panel-build');
   var html = '';
 
-  // Group buildings into 3 sections so the panel doesn't dump 15+
+  // Group buildings into 4 sections so the panel doesn't dump 15+
   // items in a flat list:
   //   infra    — road + housing (always available, structural)
-  //   industry — production locked to the player's chosen industry
+  //   industry — resource chain locked to the player's industry
+  //              (extractor + non-food processors + cross-converters +
+  //               cross-recipe T4 + resource boosters)
+  //   farming  — food chain (food_extractor + food-output processors +
+  //              luxury food T3 + food boosters)
   //   civic    — services + tax (common to everyone)
   // Each section collapses independently; state persists in localStorage.
   var CATEGORY_ORDER = { road: 0, housing: 1, extractor: 2, food_extractor: 3, processor: 4, booster: 5, service: 6, tax: 7 };
-  var SECTION_RANK = { infra: 0, industry: 1, civic: 2 };
+  var SECTION_RANK = { infra: 0, industry: 1, farming: 2, civic: 3 };
+  function isFoodOutput(bt) {
+    if (!bt.output_resource_key || !state.resources) return false;
+    var r = state.resources[bt.output_resource_key];
+    return !!(r && r.is_food);
+  }
   function sectionFor(bt) {
     if (bt.category === 'road' || bt.category === 'housing') return 'infra';
-    if (bt.industry_key !== 'common') return 'industry';
-    return 'civic';
+    if (bt.industry_key === 'common') return 'civic';
+    // Industry-locked: split resource chain (industry) from food chain (farming).
+    if (bt.category === 'food_extractor') return 'farming';
+    if (bt.category === 'extractor') return 'industry';
+    if (bt.category === 'booster') {
+      return bt.boost_target === 'food_extractor' ? 'farming' : 'industry';
+    }
+    if (bt.category === 'processor') {
+      return isFoodOutput(bt) ? 'farming' : 'industry';
+    }
+    return 'industry';
   }
   var available = Object.keys(state.buildingTypes).filter(function (k) {
     var bt = state.buildingTypes[k];
@@ -56,6 +74,7 @@ export function renderBuildPanel() {
   var SECTION_TITLES = {
     infra: 'Infrastructure',
     industry: industryName + ' Industry',
+    farming: 'Farming',
     civic: 'Civic & Services'
   };
   var BUILD_COLLAPSE_KEY = 'city_build_sections_collapsed';
@@ -66,7 +85,7 @@ export function renderBuildPanel() {
   available.forEach(function (key) {
     var bt = state.buildingTypes[key];
     // Emit a collapsible section header when we cross from one section
-    // (infra / industry / civic) to the next.
+    // (infra / industry / farming / civic) to the next.
     var thisSection = sectionFor(bt);
     if (thisSection !== lastSection) {
       if (lastSection !== null) html += '</div></div>';
