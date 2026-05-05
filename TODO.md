@@ -28,6 +28,7 @@ after that, polish, then big design lifts last.
 
 ## Done
 
+- **2026-05-05** — Build panel: split Industry section into Industry + Farming. Resource chain (extractor / non-food processors / cross-converters / T4 cross-recipes / resource boosters) stays in `<Industry>`; food chain (food extractor / food-output processors / luxury food / food boosters) moves to a new `Farming` section. Routing distinguishes food vs non-food via the output resource's `is_food` flag and the booster's `boost_target`.
 - **2026-05-05** — Build panel: collapsible sections — Infrastructure (road + house), <Industry> Industry (industry-locked production), Civic & Services (services + tax). Replaces a flat 15+ item list. Sections sort by category + tier within; collapse state persists per-section in localStorage so the panel layout survives reloads.
 - **2026-05-05** — Toast z-index lifted to 300 so notifications paint above the trade dialog (200) and inspector overlay (150). Send-Offer validation messages were getting hidden behind the dialog they referred to.
 - **2026-05-05** — Trade UX overhaul: offer-card wording is now viewer-perspective ("You'd give:" / "You'd receive:" + "From X" / "To X" header) for both inbox and outbox; inbox pre-checks money + inventory and disables Accept with a "Can't accept: missing 5 lumber" notice when you can't fulfill; new `get_player_trade_view` RPC + dialog wiring shows the counterparty's tradeable inventory ("they have N" annotations + dropdown filtered to what they actually hold) and the Send button refuses to ask for more than they have.
