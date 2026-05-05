@@ -16,6 +16,7 @@ city-builder-mvp/
 │   ├── auth.js             Login, register, logout, industry selection
 │   ├── game.js             Game entry, data loading, production loop
 │   ├── map.js              Map rendering, placement, district expansion
+│   ├── map_roads.js        Road autotile SVGs + placement-time connectivity cache
 │   ├── panels.js           Build/Inventory/Trade panel rendering and events
 │   ├── walkers.js          Ambient + collector walker spawning and movement
 │   ├── inspector.js        Building inspector overlay
@@ -81,7 +82,8 @@ main.js
  ├── ui.js
  ├── auth.js ──► config, state, ui, game
  └── game.js ──► config, state, ui, map, panels, realtime
-      ├── map.js ──► config, state, ui, panels
+      ├── map.js ──► config, state, ui, panels, map_roads
+      ├── map_roads.js ──► state
       ├── panels.js ──► config, state, ui, map
       └── realtime.js ──► config, state, ui, map
 ```
