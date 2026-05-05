@@ -217,11 +217,14 @@ function spawnWalker(building) {
     mode: 'ambient',
     x: start.x,
     y: start.y,
+    prevX: start.x,
+    prevY: start.y,
     prevDir: start.dir,
     steps: 0,
     sourceId: building.id,
     sourceTier: building.housing_tier !== undefined ? building.housing_tier : 1,
     sourceType: getWalkerJob(building),
+    stepStartedAt: Date.now(),
     el: null,
     moveTimer: null
   };
@@ -243,12 +246,15 @@ function spawnCollectorWalker(extractor, tour) {
     mode: 'collector',
     x: tour[0].x,
     y: tour[0].y,
+    prevX: tour[0].x,
+    prevY: tour[0].y,
     sourceId: extractor.id,
     sourceTier: 1,
     sourceType: getWalkerJob(extractor),
     tour: tour,
     tourIdx: 0,
     direction: 1,         // 1 = outbound, -1 = returning
+    stepStartedAt: Date.now(),
     el: null,
     moveTimer: null
   };
@@ -281,10 +287,15 @@ function walkerStep(w) {
   var choices = forward.length > 0 ? forward : neighbors;
   var pick = choices[Math.floor(Math.random() * choices.length)];
 
+  // Remember the tile we're leaving + when this step started, so
+  // snapWalkersToZoom can interpolate the walker's mid-step visual
+  // position at the moment of zoom and re-anchor smoothly.
+  w.prevX = w.x; w.prevY = w.y;
   w.x = pick.x;
   w.y = pick.y;
   w.prevDir = pick.dir;
   w.steps++;
+  w.stepStartedAt = Date.now();
 
   applyWalkerPosition(w);
 
@@ -317,8 +328,10 @@ function collectorStep(w) {
 
   w.tourIdx = nextIdx;
   var pos = w.tour[w.tourIdx];
+  w.prevX = w.x; w.prevY = w.y;
   w.x = pos.x;
   w.y = pos.y;
+  w.stepStartedAt = Date.now();
   applyWalkerPosition(w);
   scheduleWalkerMove(w);
 }
@@ -613,16 +626,67 @@ export function renderWalkers() {
   }
 }
 
-// ── Zoom sync: snap walkers to new grid scale without transition ──
+// ── Zoom sync: re-anchor walkers without snapping to tile center ──
+// Each walker may be mid-step (transitioning between two tiles). Naively
+// snapping to its current destination tile center on zoom change is the
+// "everyone teleports" jank. The proper move:
+//
+//   1. Compute each walker's CURRENT visual tile-space position by
+//      interpolating between (prevX, prevY) and (x, y) using elapsed time
+//      vs WALKER_MOVE_MS.
+//   2. With transitions disabled, write that visual position in the NEW
+//      pixel scale to style.left/top. Walker stays right where it
+//      visually was, just rescaled to the new grid.
+//   3. Re-enable transitions and re-target the destination tile center
+//      in new pixels. CSS interpolates the remaining step smoothly.
+//
+// Walkers at rest (post-step) end up with visual = destination, so step
+// 3 is a no-op — they just snap silently to the new pixel scale.
 export function snapWalkersToZoom() {
   var layer = document.getElementById('walker-layer');
-  if (!layer) return;
+  var grid = document.getElementById('map-grid');
+  if (!layer || !grid) return;
+  var cols = state.gridCols || 15;
+  var gridW = grid.offsetWidth;
+  if (gridW === 0) return;
+  var cellSize = (gridW - (cols - 1)) / cols;
+  var gap = 1;
+  var minX = state.gridMinX || 0;
+  var minY = state.gridMinY || 0;
+  var now = Date.now();
+
+  function tilePixel(tx, ty) {
+    return {
+      left: (tx - minX) * (cellSize + gap) + cellSize * 0.5,
+      top:  (ty - minY) * (cellSize + gap) + cellSize * 0.5
+    };
+  }
+
+  // Phase 1: anchor each walker at its current visual position (in new
+  // pixel scale), with transitions disabled.
   layer.classList.add('no-transition');
   for (var i = 0; i < walkers.length; i++) {
-    applyWalkerPosition(walkers[i], true);
+    var w = walkers[i];
+    if (!w.el) continue;
+    var prevX = w.prevX !== undefined ? w.prevX : w.x;
+    var prevY = w.prevY !== undefined ? w.prevY : w.y;
+    var elapsed = w.stepStartedAt ? (now - w.stepStartedAt) : WALKER_MOVE_MS;
+    var progress = Math.min(1, Math.max(0, elapsed / WALKER_MOVE_MS));
+    var visX = prevX + (w.x - prevX) * progress;
+    var visY = prevY + (w.y - prevY) * progress;
+    var px = tilePixel(visX, visY);
+    w.el.style.left = px.left.toFixed(1) + 'px';
+    w.el.style.top  = px.top.toFixed(1) + 'px';
   }
-  void layer.offsetHeight;
+  void layer.offsetHeight;  // force the no-transition styles to flush
   layer.classList.remove('no-transition');
+
+  // Phase 2: write the destination in new pixel scale; CSS animates from
+  // the visual position above to here. For walkers already at rest the
+  // values match and no transition fires.
+  for (var j = 0; j < walkers.length; j++) {
+    applyWalkerPosition(walkers[j]);
+  }
 }
 
 // ── Pre-seed walkers so streets feel alive on first frame ──
