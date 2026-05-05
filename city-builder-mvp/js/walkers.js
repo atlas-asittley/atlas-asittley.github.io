@@ -613,17 +613,16 @@ export function renderWalkers() {
   }
 }
 
-// ── Zoom sync: smoothly retarget walkers to the new grid scale ──
-// Don't disable transitions — that would teleport every walker to its
-// destination tile center (the snap-on-zoom bug). Instead just write
-// the new pixel coords for each walker's current tile and let CSS
-// interpolate from the in-flight rendered position to the new value.
-// Walkers in the middle of a step keep walking smoothly, just slightly
-// re-aimed at the rescaled destination.
+// ── Zoom sync: snap walkers to new grid scale without transition ──
 export function snapWalkersToZoom() {
+  var layer = document.getElementById('walker-layer');
+  if (!layer) return;
+  layer.classList.add('no-transition');
   for (var i = 0; i < walkers.length; i++) {
-    applyWalkerPosition(walkers[i]);
+    applyWalkerPosition(walkers[i], true);
   }
+  void layer.offsetHeight;
+  layer.classList.remove('no-transition');
 }
 
 // ── Pre-seed walkers so streets feel alive on first frame ──
