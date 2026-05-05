@@ -169,3 +169,49 @@ def test_only_one_open_mission_per_trader(cur):
     _make_open_mission(cur, target=20)
     with pytest.raises(psycopg2.errors.UniqueViolation):
         _make_open_mission(cur, target=10)
+
+
+def test_get_active_missions_returns_open_and_quiet(make_player, cur):
+    """The Missions sub-tab needs to show both currently-open missions
+    and the traders mid-cooldown with their next-eligible-at timestamps."""
+    p = make_player(industry='timber')
+
+    # Pin every trader's clock to 'just resolved' so roll_trader_missions
+    # won't auto-fire one while we're checking the quiet list.
+    cur.execute("DELETE FROM public.trader_missions WHERE status = 'open'")
+    for tk in ('river_traders', 'desert_caravan', 'mountain_folk'):
+        cur.execute("""
+            INSERT INTO public.trader_missions
+                (trader_key, kind, resource_key, target_qty, current_qty,
+                 soft_deadline, expires_at, status, created_at, resolved_at)
+            VALUES (%s, 'deliver_resource', 'lumber', 10, 10,
+                    now(), now(), 'fulfilled',
+                    now() - interval '1 minute', now() - interval '1 minute')
+        """, (tk,))
+
+    # Open one mission directly (bypass cooldown).
+    cur.execute("""
+        INSERT INTO public.trader_missions
+            (trader_key, kind, resource_key, target_qty, current_qty,
+             soft_deadline, expires_at, status, created_at)
+        VALUES ('river_traders', 'deliver_resource', 'lumber', 25, 0,
+                now() + interval '60 minutes', now() + interval '6 hours',
+                'open', now())
+    """)
+
+    cur.execute("SELECT public.get_active_missions()")
+    data = cur.fetchone()[0]
+
+    assert 'open' in data and 'quiet' in data, 'shape must be {open: [], quiet: []}'
+    open_keys = [m['trader_key'] for m in data['open']]
+    quiet_keys = [q['trader_key'] for q in data['quiet']]
+
+    assert 'river_traders' in open_keys, 'open mission should appear in open list'
+    # The other two traders just resolved a mission and are mid-cooldown,
+    # so they should appear in the quiet list with a next_eligible_at.
+    for q in data['quiet']:
+        assert 'next_eligible_at' in q
+        assert 'trader_name' in q
+        assert 'cooldown_minutes' in q
+    # No trader appears in both lists.
+    assert not (set(open_keys) & set(quiet_keys))

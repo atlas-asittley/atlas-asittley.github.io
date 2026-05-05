@@ -1102,39 +1102,57 @@ function renderMissionsPanel() {
       panel.innerHTML = '<div class="trade-error">Failed to load missions: ' + escapeHtml(r.error.message) + '</div>';
       return;
     }
-    var missions = r.data || [];
-    if (missions.length === 0) {
-      panel.innerHTML = '<div class="trade-empty">No active requests right now. Traders post new requests every 30 minutes or so — check back.</div>';
+    var data = r.data || {};
+    var open = data.open || [];
+    var quiet = data.quiet || [];
+    if (open.length === 0 && quiet.length === 0) {
+      panel.innerHTML = '<div class="trade-empty">No traders are working with the city yet.</div>';
       return;
     }
-    var html = '<div class="missions-list">';
-    missions.forEach(function (m) {
-      var pct = Math.min(100, Math.round((m.current_qty / m.target_qty) * 100));
-      var youHave = Math.floor((state.inventory && state.inventory[m.resource_key]) || 0);
-      var remaining = m.target_qty - m.current_qty;
-      var disabled = youHave <= 0 || remaining <= 0;
-      var deadlineMs = new Date(m.soft_deadline).getTime() - Date.now();
-      var deadlineText = deadlineMs > 0
-        ? Math.max(1, Math.round(deadlineMs / 60000)) + ' min until soft deadline'
-        : 'past soft deadline (still accepting partial)';
-      html += '<div class="mission-card">'
-            + '<div class="mission-header">'
-            + '<span class="mission-trader">' + escapeHtml(m.trader_name) + ' wants</span>'
-            + '<span class="mission-deadline">' + deadlineText + '</span>'
-            + '</div>'
-            + '<div class="mission-target">' + m.target_qty + ' ' + escapeHtml(resourceName(m.resource_key)) + '</div>'
-            + '<div class="mission-progress"><div class="mission-progress-fill" style="width:' + pct + '%"></div></div>'
-            + '<div class="mission-meta">'
-            + '<span>' + m.current_qty + ' / ' + m.target_qty + '</span>'
-            + '<span>You: ' + (m.your_donated_qty || 0) + ' donated · have ' + youHave + '</span>'
-            + '</div>'
-            + '<div class="mission-actions">'
-            + '<input type="number" min="1" step="1" value="' + Math.min(remaining, youHave || 1) + '" class="mission-qty" data-mission="' + m.id + '">'
-            + '<button class="btn-mission-donate" data-mission="' + m.id + '"' + (disabled ? ' disabled' : '') + '>Donate</button>'
-            + '</div>'
-            + '</div>';
-    });
-    html += '</div>';
+    var html = '';
+    if (open.length) {
+      html += '<div class="missions-list">';
+      open.forEach(function (m) {
+        var pct = Math.min(100, Math.round((m.current_qty / m.target_qty) * 100));
+        var youHave = Math.floor((state.inventory && state.inventory[m.resource_key]) || 0);
+        var remaining = m.target_qty - m.current_qty;
+        var disabled = youHave <= 0 || remaining <= 0;
+        var deadlineMs = new Date(m.soft_deadline).getTime() - Date.now();
+        var deadlineText = deadlineMs > 0
+          ? Math.max(1, Math.round(deadlineMs / 60000)) + ' min until soft deadline'
+          : 'past soft deadline (still accepting partial)';
+        html += '<div class="mission-card">'
+              + '<div class="mission-header">'
+              + '<span class="mission-trader">' + escapeHtml(m.trader_name) + ' wants</span>'
+              + '<span class="mission-deadline">' + deadlineText + '</span>'
+              + '</div>'
+              + '<div class="mission-target">' + m.target_qty + ' ' + escapeHtml(resourceName(m.resource_key)) + '</div>'
+              + '<div class="mission-progress"><div class="mission-progress-fill" style="width:' + pct + '%"></div></div>'
+              + '<div class="mission-meta">'
+              + '<span>' + m.current_qty + ' / ' + m.target_qty + '</span>'
+              + '<span>You: ' + (m.your_donated_qty || 0) + ' donated · have ' + youHave + '</span>'
+              + '</div>'
+              + '<div class="mission-actions">'
+              + '<input type="number" min="1" step="1" value="' + Math.min(remaining, youHave || 1) + '" class="mission-qty" data-mission="' + m.id + '">'
+              + '<button class="btn-mission-donate" data-mission="' + m.id + '"' + (disabled ? ' disabled' : '') + '>Donate</button>'
+              + '</div>'
+              + '</div>';
+      });
+      html += '</div>';
+    }
+    if (quiet.length) {
+      html += '<div class="quiet-traders">';
+      html += '<div class="quiet-traders-title">Waiting on next request</div>';
+      quiet.forEach(function (q) {
+        var nextMs = new Date(q.next_eligible_at).getTime() - Date.now();
+        var nextText = nextMs <= 60000 ? 'soon' : '~' + Math.max(1, Math.round(nextMs / 60000)) + ' min';
+        html += '<div class="quiet-trader-card">'
+              + '<span class="quiet-trader-name">' + escapeHtml(q.trader_name) + '</span>'
+              + '<span class="quiet-trader-eta">Next request in ' + nextText + '</span>'
+              + '</div>';
+      });
+      html += '</div>';
+    }
     panel.innerHTML = html;
 
     panel.querySelectorAll('.btn-mission-donate').forEach(function (btn) {

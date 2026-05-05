@@ -1085,6 +1085,11 @@ body.inspector-open .map-canvas { margin-bottom: calc(50vh + 28px); }
 .btn-mission-donate { padding: 6px 14px; background: #2a6a48; border: 1px solid #3a8060; border-radius: 6px; color: #d8f0e4; font-size: 0.8rem; font-weight: 600; cursor: pointer; }
 .btn-mission-donate:hover { background: #348058; }
 .btn-mission-donate[disabled] { background: #1f3a2a; border-color: #2a4a36; color: #6a8474; cursor: not-allowed; }
+.quiet-traders { margin-top: 14px; padding-top: 12px; border-top: 1px solid #243447; }
+.quiet-traders-title { font-size: 0.74rem; font-weight: 700; color: #c8d4e0; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px; }
+.quiet-trader-card { display: flex; justify-content: space-between; align-items: center; padding: 7px 10px; background: #131c28; border: 1px solid #243447; border-radius: 6px; margin-bottom: 4px; }
+.quiet-trader-name { font-size: 0.84rem; color: #c8d4e0; }
+.quiet-trader-eta { font-size: 0.74rem; color: #7a8a9e; }
 
 /* Stats */
 .stats-period-row { display: flex; gap: 4px; margin-bottom: 12px; }
