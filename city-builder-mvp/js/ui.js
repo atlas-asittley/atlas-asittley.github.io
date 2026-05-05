@@ -40,7 +40,7 @@ export function updateMoney() {
   if (chunksEl) chunksEl.textContent = chunksOwned;
   var expandBtn = document.getElementById('g-expand-district');
   if (expandBtn) {
-    var nextCost = 500 * chunksOwned * chunksOwned;
+    var nextCost = 1000 * chunksOwned * chunksOwned;
     var canAfford = (state.profile.money || 0) >= nextCost;
     expandBtn.title = 'Buy the next chunk for $' + nextCost + (canAfford ? '' : ' (insufficient funds)');
     expandBtn.disabled = !canAfford;

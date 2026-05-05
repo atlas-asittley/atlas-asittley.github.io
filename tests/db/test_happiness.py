@@ -31,14 +31,17 @@ def test_initial_population_starts_at_5(make_player, cur):
     assert cur.fetchone()[0] == 5
 
 
-def test_population_drifts_up_when_happy(make_player, place, stamp_food_tile, cur, clear_resources):
-    """Happy player (food + services + tier1 housing) gains population over time."""
+def test_population_snaps_up_to_housing_capacity(make_player, place, stamp_food_tile, cur, clear_resources):
+    """When housing capacity exceeds current population, citizens fill
+    the empty homes immediately on the next tick. Happiness is purely
+    an emigration force in the asymmetric model — immigration is
+    independent of it."""
     p = make_player(industry='timber')
     clear_resources(p['id'])
     hx, hy = p['home_x'], p['home_y']
 
-    # Build the unlock-gate combo: extractor + food extractor + tier-1
-    # house. Tier-1 housing requires a well within range, so place one.
+    # Tier-1 housing requires a well within range. Tier-1 = 6 workers,
+    # so target population becomes 5 (base) + 6 = 11.
     place('timber_camp', hx + 1, hy - 1)
     stamp_food_tile('orchard_grove', hx + 1, hy + 1)
     place('orchard', hx + 1, hy + 1)
@@ -47,23 +50,12 @@ def test_population_drifts_up_when_happy(make_player, place, stamp_food_tile, cu
     cur.execute("UPDATE public.buildings SET housing_tier = 1 WHERE player_id = %s AND building_type_key = 'house'",
                 (str(p['id']),))
 
-    # Stock several food types so happiness is solid (high food variety).
-    for r, q in [('berries', 50), ('grain', 50), ('fish', 20), ('vegetables', 20)]:
-        cur.execute("""
-            INSERT INTO public.inventories (player_id, resource_key, quantity)
-            VALUES (%s, %s, %s)
-            ON CONFLICT (player_id, resource_key) DO UPDATE SET quantity = EXCLUDED.quantity
-        """, (str(p['id']), r, q))
-
-    # Pretend it's been 5 minutes since the last tick.
-    _backdate_population_tick(cur, p['id'], 300)
     cur.execute("SELECT public.process_production()")
     result = cur.fetchone()[0]
-
-    pop = result['population']
-    happy = result['happiness']
-    assert happy >= 50, f'expected happiness ≥ 50 with food + tier1 + services, got {happy}'
-    assert pop > 5, f'happy player should have grown above 5; got {pop}'
+    assert result['population'] == 11, (
+        f"population should snap from 5 → housing-capacity 11 in one tick; "
+        f"got {result['population']}"
+    )
 
 
 def test_population_clamped_at_housing_capacity(make_player, place, cur, clear_resources):
@@ -79,6 +71,36 @@ def test_population_clamped_at_housing_capacity(make_player, place, cur, clear_r
     cur.execute("SELECT public.process_production()")
     result = cur.fetchone()[0]
     assert result['population'] == 5, f'no-housing target = 5 should clamp; got {result["population"]}'
+
+
+def test_happiness_staffing_ratio_uses_capacity_vs_need(make_player, place, stamp_food_tile, cur, clear_resources):
+    """Regression for the staffing-ratio computation in compute_happiness:
+    earlier versions overwrote v_staffed and ended up measuring road
+    connectivity, not staffing health. The contribution should track
+    worker_capacity / workers_needed instead."""
+    p = make_player(industry='timber')
+    clear_resources(p['id'])
+    hx, hy = p['home_x'], p['home_y']
+
+    # No worker buildings yet → v_workers_needed=0 → staffing ratio = 1.0 → +20.
+    cur.execute("SELECT public.compute_happiness(%s)", (str(p['id']),))
+    base_breakdown = cur.fetchone()[0]['breakdown']
+    assert base_breakdown['workers_needed'] == 0
+    assert base_breakdown['staffing_ratio'] == 1.0
+
+    # Place an extractor + food extractor (both have worker_cost > 0).
+    place('timber_camp', hx + 1, hy - 1)
+    stamp_food_tile('orchard_grove', hx + 1, hy + 1)
+    place('orchard', hx + 1, hy + 1)
+    cur.execute("SELECT public.compute_happiness(%s)", (str(p['id']),))
+    bk = cur.fetchone()[0]['breakdown']
+    assert bk['workers_needed'] > 0
+    # Default starting capacity is 5 (population floor); workers_needed
+    # for two extractors is 20 (2 × 10). Ratio should be 5/20 = 0.25.
+    expected = bk['worker_capacity'] / bk['workers_needed']
+    assert abs(float(bk['staffing_ratio']) - min(1.0, expected)) < 0.01, (
+        f"staffing_ratio={bk['staffing_ratio']} expected≈{expected}"
+    )
 
 
 def test_worker_capacity_uses_floor_population(make_player, cur):

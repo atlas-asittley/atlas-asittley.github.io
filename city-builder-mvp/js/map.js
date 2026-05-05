@@ -695,7 +695,7 @@ function isInExpansionCandidate(x, y) {
 export function expandDistrict() {
   if (!state.profile) return Promise.resolve(null);
   var chunksOwned = state.profile.chunks_owned || 1;
-  var cost = 500 * chunksOwned * chunksOwned;
+  var cost = 1000 * chunksOwned * chunksOwned;
   if ((state.profile.money || 0) < cost) {
     showToast('Need $' + cost + ' to expand district', 'error');
     return Promise.resolve(null);

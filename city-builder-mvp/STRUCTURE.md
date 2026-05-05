@@ -34,10 +34,13 @@ Outside `city-builder-mvp/`:
 
 ```
 citybuilder/
-├── GAME_DESIGN.md          Canonical game mechanics (target state)
+├── GAME_DESIGN.md           Canonical game mechanics (target state)
+├── TODO.md                  Running task list — Up next + Done with dates
 ├── docs/
-│   └── ONBOARDING.md       Getting up and running locally
-└── archive/                Historical operational runbooks
+│   ├── ONBOARDING.md        Getting up and running locally
+│   ├── TRADE_PROGRESSION.md Trade gate + missions + city reputation design
+│   └── HAPPINESS.md         Per-player happiness + population dynamics design
+└── archive/                 Historical operational runbooks
     └── M1_M2_deployment_runbook.md
 ```
 
@@ -84,62 +87,67 @@ main.js
  └── game.js ──► config, state, ui, map, panels, realtime
       ├── map.js ──► config, state, ui, panels, map_roads
       ├── map_roads.js ──► state
-      ├── panels.js ──► config, state, ui, map
+      ├── panels.js ──► config, state, ui, map, players
+      ├── players.js ──► config, state, ui
       └── realtime.js ──► config, state, ui, map
 ```
 
-## Phase 2A: Trade Foundation
+## Trade
 
-### New Data Model
-- `trade_policies` — per-resource trade mode + reserve target per player
-- `trader_visits` — log of each trader visit with summary of what happened
-- `trader_prices.sell_price` — new column; what the trader charges the player to buy
+NPC trade is gated behind a per-player progression milestone (≥1 active
+extractor + ≥1 food extractor + ≥1 tier-1 housing). Once unlocked the
+player sees the city-level trader pool — "city" here means all districts
+in the world combined. Each trader periodically posts an open mission;
+players donate from inventory, faster fulfillment + larger contribution
+= more reputation, and a population-weighted city rep drives the trader's
+inventory expansion.
 
-### New RPCs
-- `save_trade_policy(resource_key, mode, reserve_target)` — upserts a policy row
-- `resolve_trader_visit(trader_key)` — lazy visit resolution; checks if a visit is due, executes trades if so
+Player-to-player trade is unchanged and not gated.
 
-### How Trader Visits Work
-- Uses **lazy resolution**: when the player opens the game or clicks "Check Now", the server checks whether enough time has passed since the last visit.
-- If due, the server: refreshes production, processes sell-surplus policies (earns money), then buy-to-reserve policies (spends money), respects capacity limits, and records a visit summary.
-- Visit interval: 10 minutes (configurable via `traders.visit_interval_minutes`).
-- Trader capacity: 20 goods per visit (configurable via `traders.visit_capacity`).
+Black market is always available but intentionally a worse deal (sell
+prices are ~35% below the original to amplify the gate's value).
 
-### Tuning
-- **Visit interval**: update `traders.visit_interval_minutes` for the starter_trader row.
-- **Capacity**: update `traders.visit_capacity`.
-- **Prices**: update `trader_prices.buy_price` (what trader pays) and `sell_price` (what trader charges).
+The Trade tab is split into 5 sub-tabs: Partners, Missions, Players,
+Resources (per-resource table + drilldown), Treasury (income/expenditure).
 
-## Housing & Labor System
+See `docs/TRADE_PROGRESSION.md` for the full design + schema + RPCs.
+
+## Housing, population & happiness
 
 ### Overview
-Housing buildings provide workers. Workers power production buildings.
-If worker supply is insufficient, the newest buildings go unstaffed and stop producing.
-This creates a Pharaoh-style tension between expansion and housing.
+Workers come from a stored `population` on `player_profiles`. Each tick the
+target population = 5 (base) + Σ housing-tier worker yields. Population
+drifts toward that target, gated asymmetrically by happiness:
 
-### Data Model
-- `building_types` — new `workers_provided` column (default 0; housing has 6)
-- `building_types` — new `'housing'` category; `output_resource_key` now nullable
-- Housing building type: `house` (industry `'common'`, available to all players)
+- Population **below target** (housing > current pop) → snaps up immediately.
+  Empty homes fill with new arrivals on the next tick — there's no
+  build-house-then-wait friction.
+- Population **above target** (housing demolished / devolved) → clamps down.
+- Population **at target** with happiness **< 50** → slowly drifts down at
+  `((50 − happiness)/50) × 1` citizen/min. So the lower the happiness, the
+  faster citizens leave.
 
-### Rules
-- **Base workers**: every player starts with 5 (from `choose_industry`)
-- **Housing workers**: each active house adds `workers_provided` (6) to supply
-- **Worker supply** = base (5) + sum of housing workers
-- **Labor allocation**: production buildings are staffed oldest-first (by `created_at`)
-- **Unstaffed buildings**: don't produce; their timestamp advances (no catch-up)
-- **Placement**: no hard worker gate — players can place buildings without workers,
-  but unstaffed buildings are visually marked and won't produce
+worker_capacity = `floor(population) + tavern_bonus`. Tavern still adds its
++10 service bonus on top.
 
-### UI
-- Topbar: workers display turns red during shortage
-- Build panel: housing appears first; warns when placing would cause understaffing
-- Inventory panel: Labor section shows supply / needed / employed / idle / shortage
-- Map: unstaffed buildings are dimmed with a `!` indicator
+### Happiness inputs (compute_happiness)
+Six weighted components, summed and clamped to 0..100:
 
-### Migration
-Run `housing_labor_migration.sql` after the Black Market migration.
-Updates `place_building` and `process_production` RPCs in-place.
+- 30 base
+- +3 per operational service type (well + tavern + bathhouse + school + temple, each counted once if active + road-connected + (for fed services) inputs in stock)
+- +2 × avg active housing tier
+- +min(15, distinct in-stock foods × 2)
+- −3 per active tax office
+- +20 × min(1, worker_capacity / workers_needed) — staffing health
+
+Visible in the topbar smiley (☹ / 😐 / 🙂 / 😊). Atlas's separate
+"productivity modifier" lives on TODO.md as a follow-up — distinct
+metric that affects per-building output, vs happiness which affects
+*who lives in the district*.
+
+### See also
+- `docs/HAPPINESS.md` — full design + math
+- `docs/TRADE_PROGRESSION.md` — NPC trade unlock gate + city-rep + missions
 
 ## Deployment
 
