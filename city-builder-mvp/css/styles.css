@@ -734,6 +734,121 @@ body.inspector-open .map-canvas { margin-bottom: calc(50vh + 28px); }
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 12'%3E%3Cpath d='M 2 4 L 8 4 L 7.5 11 L 2.5 11 Z' fill='%237a5a3a' stroke='%23402818' stroke-width='0.4'/%3E%3Cellipse cx='5' cy='4' rx='3' ry='0.7' fill='%2360a0c0'/%3E%3Cline x1='1.5' y1='3' x2='8.5' y2='3' stroke='%23606060' stroke-width='0.3'/%3E%3Cpath d='M 2 4 Q 5 1.5 8 4' fill='none' stroke='%23808080' stroke-width='0.4'/%3E%3C/svg%3E");
 }
 
+/* ── Pass 2: distinctive motion for buildings whose Pass 1 worker/smoke
+   was generic. Layers on top of Pass 1 — the .producing class still
+   gates everything, so .idle continues to suppress all of it. ── */
+@keyframes act-glow {
+  0%, 100% { opacity: 0.45; }
+  50%      { opacity: 1; }
+}
+@keyframes act-buzz {
+  0%, 100% { transform: translate(0, 0); }
+  25%      { transform: translate(220%, -120%); }
+  50%      { transform: translate(420%, 50%); }
+  75%      { transform: translate(180%, 200%); }
+}
+@keyframes act-flow {
+  from { background-position: 0% 0%; }
+  to   { background-position: -25% 0%; }
+}
+@keyframes act-sparks {
+  0%   { opacity: 1; transform: scale(1) translate(0, 0); }
+  100% { opacity: 0; transform: scale(0.4) translate(35%, -60%); }
+}
+@keyframes act-ripple {
+  0%, 100% { opacity: 0.25; transform: scale(0.7); }
+  50%      { opacity: 0.75; transform: scale(1.2); }
+}
+
+/* Iron Mine — warm lantern glow at the mine entrance. */
+.bldg.iron_mine.producing::before {
+  content: ''; position: absolute;
+  right: 26%; bottom: 32%; width: 16%; height: 16%;
+  background: radial-gradient(ellipse at center, rgba(255,180,80,0.7) 0%, rgba(255,130,30,0.3) 55%, transparent 100%);
+  border-radius: 50%;
+  filter: blur(1.5px);
+  animation: act-glow 1.8s ease-in-out infinite;
+  pointer-events: none; z-index: 2;
+}
+
+/* Smelter — orange forge glow under the chimney smoke. */
+.bldg.smelter.producing::before {
+  content: ''; position: absolute;
+  left: 30%; bottom: 22%; width: 30%; height: 30%;
+  background: radial-gradient(ellipse at center, rgba(255,140,60,0.75) 0%, rgba(220,80,40,0.3) 60%, transparent 100%);
+  border-radius: 50%;
+  filter: blur(2px);
+  animation: act-glow 1.3s ease-in-out infinite;
+  pointer-events: none; z-index: 2;
+}
+
+/* Glassworks — golden furnace glow under the (gold-tinted) smoke. */
+.bldg.glassworks.producing::before {
+  content: ''; position: absolute;
+  left: 32%; bottom: 25%; width: 30%; height: 28%;
+  background: radial-gradient(ellipse at center, rgba(255,200,90,0.8) 0%, rgba(220,140,50,0.35) 55%, transparent 100%);
+  border-radius: 50%;
+  filter: blur(2px);
+  animation: act-glow 1.5s ease-in-out infinite;
+  pointer-events: none; z-index: 2;
+}
+
+/* Nail Forge — sparks bursting up off the anvil, repeating. */
+.bldg.nail_forge.producing::before {
+  content: ''; position: absolute;
+  left: 38%; top: 28%; width: 22%; height: 22%;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Ccircle cx='3' cy='3' r='0.7' fill='%23ffe888'/%3E%3Ccircle cx='6' cy='4' r='0.5' fill='%23ffd060'/%3E%3Ccircle cx='4.5' cy='6' r='0.6' fill='%23ffa030'/%3E%3Ccircle cx='7' cy='2' r='0.4' fill='%23ffe888'/%3E%3C/svg%3E");
+  background-size: contain; background-repeat: no-repeat; background-position: center;
+  animation: act-sparks 0.7s ease-out infinite;
+  pointer-events: none; z-index: 2;
+}
+
+/* Apiary — a single bee wanders across the building, in addition to the keeper. */
+.bldg.apiary.producing::before {
+  content: ''; position: absolute;
+  left: 8%; top: 18%; width: 14%; height: 14%;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 6'%3E%3Cellipse cx='4' cy='3' rx='2' ry='1.5' fill='%23e8c038'/%3E%3Crect x='3' y='2' width='2' height='2' fill='%23202020' opacity='0.7'/%3E%3Cellipse cx='2' cy='1.5' rx='1.5' ry='0.6' fill='%23ddeeff' opacity='0.5'/%3E%3Cellipse cx='6' cy='1.5' rx='1.5' ry='0.6' fill='%23ddeeff' opacity='0.5'/%3E%3C/svg%3E");
+  background-size: contain; background-repeat: no-repeat; background-position: center;
+  animation: act-buzz 2.4s ease-in-out infinite;
+  pointer-events: none; z-index: 2;
+}
+
+/* Hatchery — a chick pecks beside the worker (faster bob than the keeper). */
+.bldg.hatchery.producing::before {
+  content: ''; position: absolute;
+  right: 8%; bottom: 8%; width: 18%; height: 22%;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Ccircle cx='4' cy='5' r='2.6' fill='%23f4d04a'/%3E%3Ccircle cx='4' cy='2.5' r='1.7' fill='%23f4d04a'/%3E%3Ccircle cx='4.6' cy='2.2' r='0.3' fill='%23202020'/%3E%3Cpolygon points='5.7,2.5 6.8,2.7 5.7,2.95' fill='%23ec8030'/%3E%3C/svg%3E");
+  background-size: contain; background-repeat: no-repeat; background-position: bottom center;
+  animation: act-bob 0.5s ease-in-out infinite;
+  pointer-events: none; z-index: 3;
+}
+
+/* Irrigation Channel — water shimmer flowing along the channel. */
+.bldg.irrigation_channel.producing::before {
+  content: ''; position: absolute;
+  left: 4%; bottom: 18%; width: 92%; height: 12%;
+  background-image: linear-gradient(90deg, transparent 0%, rgba(96,160,200,0.55) 50%, transparent 100%);
+  background-size: 25% 100%;
+  background-repeat: repeat-x;
+  animation: act-flow 1.5s linear infinite;
+  pointer-events: none; z-index: 2;
+}
+
+/* Fishing Pier — water ripple where the line meets the surface. */
+.bldg.fishing_pier.producing::before {
+  content: ''; position: absolute;
+  right: 6%; bottom: 22%; width: 22%; height: 9%;
+  background: radial-gradient(ellipse at center, rgba(96,160,200,0.55) 0%, rgba(96,160,200,0.2) 50%, transparent 100%);
+  border-radius: 50%;
+  animation: act-ripple 1.6s ease-in-out infinite;
+  pointer-events: none; z-index: 2;
+}
+
+/* Trees + plants — gentle full-building sway, transform-origin at the base. */
+.bldg.orchard.producing { animation: act-sway 3.2s ease-in-out infinite; transform-origin: bottom center; }
+.bldg.garden.producing  { animation: act-sway 3.5s ease-in-out infinite; transform-origin: bottom center; }
+.bldg.winery.producing  { animation: act-sway 4.0s ease-in-out infinite; transform-origin: bottom center; }
+
 /* ── Unstaffed / disconnected ── */
 /* ── Non-producing states ────────────────────────────────
    .idle is the umbrella class for any functional building (extractor,
