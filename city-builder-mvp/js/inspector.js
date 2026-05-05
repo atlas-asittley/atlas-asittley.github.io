@@ -433,9 +433,10 @@ function computeBuildingIssues(b, bt) {
   // would be the next thing to fix.
   if (!state.laborInfo.unstaffedIds[b.id] && (bt.category === 'extractor' ? false : !needsRoad || state.roadAccessIds[b.id])) {
     var inputs = [];
-    if (bt.category === 'processor' && bt.input_resource_key && bt.input_rate > 0) {
-      inputs.push(bt.input_resource_key);
-    } else if (bt.category === 'service') {
+    // Processors and services can have a 2nd input (cross-converter
+    // recipes like cabinets needing furniture + lime). Both inputs must
+    // be in stock for production to actually advance — flag either.
+    if (bt.category === 'processor' || bt.category === 'service') {
       if (bt.input_resource_key && bt.input_rate > 0) inputs.push(bt.input_resource_key);
       if (bt.input_resource_key_2 && bt.input_rate_2 > 0) inputs.push(bt.input_resource_key_2);
     }
@@ -599,10 +600,15 @@ function renderInspector() {
       html += '<div class="insp-row"><span class="insp-label">Output</span><span class="insp-value">' + bt.output_rate + ' ' + resName + '/min</span></div>';
       html += buildTradeValueRow(bt.output_resource_key, bt.output_rate);
     } else if (bt.category === 'processor') {
-      if (bt.input_resource_key) {
-        var inName = state.resources[bt.input_resource_key] ? state.resources[bt.input_resource_key].name : bt.input_resource_key;
-        html += '<div class="insp-row"><span class="insp-label">Input</span><span class="insp-value">' + bt.input_rate + ' ' + inName + '/min</span></div>';
-      }
+      // Processors can have a 2nd input (cross-recipe T4 buildings:
+      // cabinetmaker = furniture + lime, etc.). Display both rows.
+      var procInputs = [];
+      if (bt.input_resource_key && bt.input_rate > 0) procInputs.push({ key: bt.input_resource_key, rate: bt.input_rate });
+      if (bt.input_resource_key_2 && bt.input_rate_2 > 0) procInputs.push({ key: bt.input_resource_key_2, rate: bt.input_rate_2 });
+      procInputs.forEach(function (inp, i) {
+        var nm = state.resources[inp.key] ? state.resources[inp.key].name : inp.key;
+        html += '<div class="insp-row"><span class="insp-label">' + (i === 0 ? 'Input' : 'Input 2') + '</span><span class="insp-value">' + inp.rate + ' ' + nm + '/min</span></div>';
+      });
       if (bt.output_resource_key) {
         var outName = state.resources[bt.output_resource_key] ? state.resources[bt.output_resource_key].name : bt.output_resource_key;
         html += '<div class="insp-row"><span class="insp-label">Output</span><span class="insp-value">' + bt.output_rate + ' ' + outName + '/min</span></div>';
