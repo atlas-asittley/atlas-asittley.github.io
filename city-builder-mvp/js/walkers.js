@@ -331,33 +331,22 @@ function ensureWalkerEl(w) {
       w.wadMs = (parseInt(w.wadMs, 10) * 1.25).toFixed(0); // wider waddle
     }
   }
-  // Two-element structure:
-  //   .walker-pos  – outer wrapper, carries position via transform: translate()
-  //                  with a transition. Transforms are GPU-composited and
-  //                  immune to layout reflows (which is why the grid HTML
-  //                  rewrite in renderMap stops finalizing the transition).
-  //   .walker-dot  – inner sprite, handles centering, scale, bob, waddle.
-  //                  All existing animations / personas / overlays stay here.
-  el.className = 'walker-pos';
-  el.style.pointerEvents = 'auto';
-  el.addEventListener('click', function () {
-    if (onWalkerClick) onWalkerClick(buildWalkerInfo(w));
-  });
-  var inner = document.createElement('div');
   var classes = ['walker-dot', 'walker-' + (w.sourceType || 'citizen')];
   if (w.persona && w.persona.variant) classes.push(w.persona.variant);
   if (w.persona && w.persona.overlay) classes.push(w.persona.overlay);
-  inner.className = classes.join(' ');
-  inner.style.setProperty('--wk-scale', w.scale);
-  inner.style.setProperty('--wk-hue', w.hue + 'deg');
-  inner.style.setProperty('--wk-bob-ms', w.bobMs + 'ms');
-  inner.style.setProperty('--wk-waddle-ms', w.wadMs + 'ms');
-  inner.style.setProperty('--wk-bob-delay', '-' + (Math.random() * 0.7).toFixed(2) + 's');
-  inner.style.setProperty('--wk-waddle-delay', '-' + (Math.random() * 0.55).toFixed(2) + 's');
-  el.appendChild(inner);
+  el.className = classes.join(' ');
+  el.style.pointerEvents = 'auto';
+  el.style.setProperty('--wk-scale', w.scale);
+  el.style.setProperty('--wk-hue', w.hue + 'deg');
+  el.style.setProperty('--wk-bob-ms', w.bobMs + 'ms');
+  el.style.setProperty('--wk-waddle-ms', w.wadMs + 'ms');
+  el.style.setProperty('--wk-bob-delay', '-' + (Math.random() * 0.7).toFixed(2) + 's');
+  el.style.setProperty('--wk-waddle-delay', '-' + (Math.random() * 0.55).toFixed(2) + 's');
+  el.addEventListener('click', function () {
+    if (onWalkerClick) onWalkerClick(buildWalkerInfo(w));
+  });
   layer.appendChild(el);
   w.el = el;
-  w.inner = inner;
 }
 
 // ── Position a walker's element ──
@@ -373,23 +362,21 @@ function applyWalkerPosition(w, immediate) {
   var gap = 1;
   var gx = w.x - (state.gridMinX || 0);
   var gy = w.y - (state.gridMinY || 0);
-  var px = gx * (cellSize + gap) + cellSize * 0.5;
-  var py = gy * (cellSize + gap) + cellSize * 0.5;
-  // Position the outer .walker-pos wrapper via transform: translate().
-  // Transforms are composited and don't invalidate during layout reflows
-  // — that's the point of the wrapper, vs. the old left/top approach
-  // that snapped to the destination on every grid.innerHTML rewrite.
-  var t = 'translate(' + px.toFixed(1) + 'px, ' + py.toFixed(1) + 'px)';
+  var left = gx * (cellSize + gap) + cellSize * 0.5;
+  var top = gy * (cellSize + gap) + cellSize * 0.5;
   if (immediate) {
     var prev = w.el.style.transition;
     w.el.style.transition = 'none';
-    w.el.style.transform = t;
+    w.el.style.left = left.toFixed(1) + 'px';
+    w.el.style.top = top.toFixed(1) + 'px';
     void w.el.offsetHeight; // force reflow so the no-transition style applies
     w.el.style.transition = prev;
   } else {
-    w.el.style.transform = t;
+    w.el.style.left = left.toFixed(1) + 'px';
+    w.el.style.top = top.toFixed(1) + 'px';
   }
   w.el.style.opacity = '1';
+  w.el.style.setProperty('--wk-scale', (state.mapZoom || 1).toFixed(3));
 }
 
 // ── Spawn-only tick ──
