@@ -165,8 +165,12 @@ export function renderBuildPanel() {
       lastSection = thisSection;
     }
     var canAfford = state.profile.money >= bt.build_cost;
-    // Only money blocks placement now — workers are soft constraint
-    var disabled = !canAfford;
+    // Progressive unlock: gate buildings hide / lock until the player
+    // has reached the required housing tier at least once (sticky).
+    var unlockTier = bt.unlocks_at_housing_tier;
+    var maxTierEver = (state.profile && state.profile.highest_housing_tier_ever) || 0;
+    var unlocked = unlockTier == null || maxTierEver >= unlockTier;
+    var disabled = !canAfford || !unlocked;
     var selected = state.selectedBuildType === key;
 
     var bgColor = colors[key] || '#4a4a6a';
@@ -219,7 +223,11 @@ export function renderBuildPanel() {
       costStr = '$' + bt.build_cost + ' | ' + bt.worker_cost + ' worker';
     }
 
-    if (!canAfford) {
+    if (!unlocked) {
+      var tierName = (state.housingTierConfig && state.housingTierConfig[unlockTier] && state.housingTierConfig[unlockTier].name) || ('Tier ' + unlockTier);
+      costStr = 'Locked — reach ' + tierName + ' housing first';
+      costClass += ' warn';
+    } else if (!canAfford) {
       costStr = '$' + bt.build_cost + ' (need $' + (bt.build_cost - state.profile.money) + ' more)';
       costClass += ' warn';
     } else if (bt.category !== 'housing' && bt.category !== 'road' && li.workerSupply - li.workersNeeded < bt.worker_cost) {
