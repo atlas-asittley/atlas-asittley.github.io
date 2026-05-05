@@ -119,3 +119,29 @@ def test_common_buildings_allowed_for_any_industry(make_player, place, clear_res
         assert 'building_id' in result
         result = place('house', hx + 2, hy + 1)
         assert 'building_id' in result
+
+
+def test_workers_needed_includes_food_extractor(make_player, place, stamp_food_tile, cur, clear_resources):
+    """Regression: place_building's workers_needed query was missing the
+    food_extractor and booster categories, so the response immediately
+    after placement under-reported worker usage until the next
+    process_production tick corrected it."""
+    p = make_player(industry='timber')
+    clear_resources(p['id'])
+    hx, hy = p['home_x'], p['home_y']
+
+    stamp_food_tile('orchard_grove', hx + 1, hy + 1)
+    place('orchard', hx + 1, hy + 1)
+
+    cur.execute("SELECT worker_cost FROM public.building_types WHERE key = 'orchard'")
+    orchard_cost = cur.fetchone()[0]
+    cur.execute("SELECT worker_cost FROM public.building_types WHERE key = 'timber_camp'")
+    timber_cost = cur.fetchone()[0]
+
+    result = place('timber_camp', hx + 1, hy - 1)
+
+    assert result['workers_needed'] >= orchard_cost + timber_cost, (
+        f"workers_needed should include food_extractor cost; "
+        f"orchard={orchard_cost}, timber={timber_cost}, "
+        f"got={result['workers_needed']}"
+    )
