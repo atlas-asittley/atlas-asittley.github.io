@@ -173,21 +173,28 @@ function roadNeighbors(x, y) {
 }
 
 // ── Find eligible spawn buildings ──
-// Housing and staffed production buildings with road access
+// Includes both the current player's buildings AND every other player's
+// active buildings — so a multiplayer city's roads are alive with foot
+// traffic from neighbors. The current player's production buildings
+// also gate on staffing (we have laborInfo locally); for other players
+// we don't have their labor allocation, so we assume their active
+// buildings are operational.
 function getSpawnBuildings() {
   if (!state.currentUser) return [];
+  var myId = state.currentUser.id;
   return state.allBuildings.filter(function (b) {
-    if (b.player_id !== state.currentUser.id) return false;
     if (b.status !== 'active') return false;
     var bt = state.buildingTypes[b.building_type_key];
     if (!bt) return false;
     if (bt.category === 'road') return false;
     if (roadNeighbors(b.x, b.y).length === 0) return false;
-    // Housing spawns citizens unconditionally; production buildings
-    // (extractor/processor/service/tax/booster/food_extractor) only
-    // spawn while staffed.
+    // Housing spawns citizens unconditionally for everyone.
     if (bt.category === 'housing') return true;
-    if (state.laborInfo && state.laborInfo.unstaffedIds && state.laborInfo.unstaffedIds[b.id]) {
+    // Production buildings: only suppress for unstaffed if it's MY
+    // building (we don't have other players' labor info).
+    if (b.player_id === myId
+        && state.laborInfo && state.laborInfo.unstaffedIds
+        && state.laborInfo.unstaffedIds[b.id]) {
       return false;
     }
     return true;
@@ -433,7 +440,9 @@ function spawnTick() {
   var allActiveById = {};
   if (state.currentUser) {
     state.allBuildings.forEach(function (b) {
-      if (b.player_id === state.currentUser.id && b.status === 'active') {
+      // Track every active building (any player) so we can despawn
+      // walkers whose source was demolished or paused.
+      if (b.status === 'active') {
         allActiveById[b.id] = true;
       }
     });
@@ -481,8 +490,10 @@ export function syncCollectorWalkers() {
     existing[w.sourceId] = w;
   }
 
+  // Collector walkers shuttle between an extractor and its claimed
+  // resource tile. Include other players' extractors too — same as
+  // ambient walkers, this fills neighbor cities with motion.
   var myExtractors = state.allBuildings.filter(function (b) {
-    if (b.player_id !== state.currentUser.id) return false;
     if (b.status !== 'active') return false;
     var bt = state.buildingTypes[b.building_type_key];
     return bt && bt.category === 'extractor';
@@ -522,12 +533,15 @@ function computeCollectorTour(ext) {
   var ROAD_COST = 1;
   var OFFROAD_COST = 3;
 
+  // Collector walks through the EXTRACTOR'S OWN player's tiles (or any
+  // road, since roads are shared visual infrastructure).
+  var ownerId = ext.player_id;
   function walkable(x, y) {
     var k = x + ',' + y;
     if (roadSet[k]) return ROAD_COST;
     var tile = state.tileMap[k];
     if (!tile) return 0;
-    if (!state.currentUser || tile.owner_player_id !== state.currentUser.id) return 0;
+    if (tile.owner_player_id !== ownerId) return 0;
     if (tile.occupied_building_id) {
       // The target tile must be reachable even if the BFS sees it as
       // "occupied" by some claim status. Allow if it's our destination.
