@@ -139,6 +139,76 @@ function setMapZoom(nextZoom) {
   var clamped = Math.max(computeMinZoom(), Math.min(MAP_MAX_ZOOM, nextZoom));
   state.mapZoom = Math.round(clamped * 100) / 100;
   applyMapZoom();
+  scheduleSaveMapView();
+}
+
+// ── Map-view persistence ────────────────────────────────
+// Saves scroll + zoom per player to localStorage so reopening the game
+// returns to the last spot the player was looking at — otherwise they
+// land on (0,0) which can be wilderness for an established city or sit
+// far from another player's district.
+var VIEW_STORAGE_KEY_PREFIX = 'city_map_view_';
+var saveDebounce = null;
+
+function viewStorageKey() {
+  var uid = state.currentUser && state.currentUser.id;
+  return uid ? VIEW_STORAGE_KEY_PREFIX + uid : null;
+}
+
+function saveMapView() {
+  var key = viewStorageKey();
+  if (!key) return;
+  var vp = document.getElementById('map-viewport');
+  if (!vp) return;
+  try {
+    localStorage.setItem(key, JSON.stringify({
+      scrollLeft: vp.scrollLeft,
+      scrollTop: vp.scrollTop,
+      mapZoom: state.mapZoom
+    }));
+  } catch (e) { /* storage full / disabled — silent. */ }
+}
+
+function scheduleSaveMapView() {
+  if (saveDebounce) clearTimeout(saveDebounce);
+  saveDebounce = setTimeout(saveMapView, 400);
+}
+
+// Center the viewport on a tile coordinate at the current zoom.
+function scrollToTile(tx, ty) {
+  var vp = document.getElementById('map-viewport');
+  if (!vp) return;
+  var cellPx = CELL_BASE_SIZE * state.mapZoom;
+  var pxX = (tx - state.gridMinX + 0.5) * cellPx;
+  var pxY = (ty - state.gridMinY + 0.5) * cellPx;
+  vp.scrollLeft = Math.max(0, pxX - vp.clientWidth / 2);
+  vp.scrollTop  = Math.max(0, pxY - vp.clientHeight / 2);
+}
+
+// Restore the saved view (scroll + zoom). Falls back to centering on
+// the player's home tile if there's nothing saved yet.
+export function restoreMapView() {
+  var vp = document.getElementById('map-viewport');
+  if (!vp) return;
+  var key = viewStorageKey();
+  var saved = null;
+  if (key) {
+    try {
+      var raw = localStorage.getItem(key);
+      if (raw) saved = JSON.parse(raw);
+    } catch (e) { saved = null; }
+  }
+  if (saved && typeof saved.scrollLeft === 'number' && typeof saved.scrollTop === 'number') {
+    if (typeof saved.mapZoom === 'number' && saved.mapZoom > 0) {
+      // setMapZoom clamps to the current dynamic minimum, so a saved
+      // zoom from a smaller district adapts gracefully.
+      setMapZoom(saved.mapZoom);
+    }
+    vp.scrollLeft = saved.scrollLeft;
+    vp.scrollTop  = saved.scrollTop;
+  } else {
+    scrollToTile(getHomeX(), getHomeY());
+  }
 }
 
 function setMapZoomAtPoint(nextZoom, clientX, clientY) {
@@ -165,6 +235,7 @@ function setMapZoomAtPoint(nextZoom, clientX, clientY) {
 
   viewport.scrollLeft = Math.max(0, worldX * newZoom - (clientX - rect.left));
   viewport.scrollTop = Math.max(0, worldY * newZoom - (clientY - rect.top));
+  scheduleSaveMapView();
 }
 
 function touchDistance(touches) {
@@ -688,6 +759,10 @@ function selectExpansionChunk(cx, cy) {
 export function initMapEvents() {
   var grid = document.getElementById('map-grid');
   var viewport = document.getElementById('map-viewport');
+
+  // Persist scroll position (covers manual scroll, programmatic scroll
+  // from setMapZoomAtPoint, and clamps when the grid resizes).
+  viewport.addEventListener('scroll', scheduleSaveMapView, { passive: true });
 
   // Single-click: inspect existing buildings OR place new ones
   grid.addEventListener('click', function (e) {

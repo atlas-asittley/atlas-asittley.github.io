@@ -2,7 +2,7 @@
 import { sb } from './config.js';
 import { state, computeTraderUnlocks, computeLaborAllocation, computeGridBounds } from './state.js';
 import { showScreen, showToast, capitalize, updateMoney, updateWorkers } from './ui.js';
-import { renderMap, initMapEvents, expandDistrict } from './map.js';
+import { renderMap, initMapEvents, expandDistrict, restoreMapView } from './map.js';
 import { renderBuildPanel, renderInventory, renderTradePanel, initTabs, initPanelCollapse, checkAllTraderVisits } from './panels.js';
 import { subscribeRealtime } from './realtime.js';
 import { startWalkers, stopWalkers } from './walkers.js';
@@ -204,6 +204,10 @@ export function enterGame() {
     computeLaborAllocation();
     updateWorkers();
     renderMap();
+    // Restore the scroll + zoom from the player's last session, or center
+    // on home for a first-ever load. Must run AFTER renderMap so the grid
+    // is sized and scrollable.
+    restoreMapView();
     renderBuildPanel();
     renderInventory();
     renderTradePanel();
