@@ -210,11 +210,19 @@ body.inspector-open .map-canvas { margin-bottom: calc(50vh + 28px); }
 /* Multi-tile footprints. The anchor cell renders the .bldg with absolute
    positioning that overflows the cell boundary so the sprite spans its
    whole footprint. Interior cells render no .bldg sprite; they carry
-   .multi-tile-interior so map.js routes clicks back to the anchor. */
-.bldg.footprint-2x2 { position: absolute; left: 0; top: 0; width: 200%; height: 200%; z-index: 5; pointer-events: auto; }
-.bldg.footprint-2x1 { position: absolute; left: 0; top: 0; width: 200%; height: 100%; z-index: 5; pointer-events: auto; }
-.bldg.footprint-1x2 { position: absolute; left: 0; top: 0; width: 100%; height: 200%; z-index: 5; pointer-events: auto; }
-.bldg.footprint-3x3 { position: absolute; left: 0; top: 0; width: 300%; height: 300%; z-index: 5; pointer-events: auto; }
+   .multi-tile-interior so map.js routes clicks back to the anchor.
+
+   Figure overlays (schoolmaster on .bldg.school.producing::after, priest
+   on .bldg.temple.producing::before, etc.) sized as % of .bldg would
+   naturally scale up with the bigger footprint. To keep figures at the
+   same absolute size as on a 1x1 building, the pseudo-elements multiply
+   their dimensions by --bldg-fig-x / --bldg-fig-y. Those default to 1
+   and are halved per axis on multi-tile classes. */
+.bldg { --bldg-fig-x: 1; --bldg-fig-y: 1; }
+.bldg.footprint-2x2 { position: absolute; left: 0; top: 0; width: 200%; height: 200%; z-index: 5; pointer-events: auto; --bldg-fig-x: 0.5; --bldg-fig-y: 0.5; }
+.bldg.footprint-2x1 { position: absolute; left: 0; top: 0; width: 200%; height: 100%; z-index: 5; pointer-events: auto; --bldg-fig-x: 0.5; --bldg-fig-y: 1; }
+.bldg.footprint-1x2 { position: absolute; left: 0; top: 0; width: 100%; height: 200%; z-index: 5; pointer-events: auto; --bldg-fig-x: 1; --bldg-fig-y: 0.5; }
+.bldg.footprint-3x3 { position: absolute; left: 0; top: 0; width: 300%; height: 300%; z-index: 5; pointer-events: auto; --bldg-fig-x: 0.333; --bldg-fig-y: 0.333; }
 .cell.multi-tile-interior::before { display: none; }
 /* Multi-tile anchor cell needs a higher z-index than its sibling
    cells so the .bldg's absolute overflow (200% width/height) paints
@@ -575,7 +583,10 @@ body.inspector-open .map-canvas { margin-bottom: calc(50vh + 28px); }
 /* ── School: scholar near the door, scroll under arm ── */
 .bldg.school.producing::after {
   content: ''; position: absolute;
-  left: 6%; bottom: 5%; width: 28%; height: 40%;
+  left: calc(6% * var(--bldg-fig-x));
+  bottom: calc(5% * var(--bldg-fig-y));
+  width: calc(28% * var(--bldg-fig-x));
+  height: calc(40% * var(--bldg-fig-y));
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 13'%3E%3Ccircle cx='5' cy='2.5' r='2.5' fill='%23d8c3a0'/%3E%3Crect x='2' y='5' width='6' height='7' rx='2' fill='%234a3828'/%3E%3Crect x='7' y='6.5' width='2.4' height='3.2' rx='0.3' fill='%23e8d8a0' stroke='%23806838' stroke-width='0.2'/%3E%3Cline x1='7.3' y1='7.2' x2='9.1' y2='7.2' stroke='%23806838' stroke-width='0.2'/%3E%3Cline x1='7.3' y1='8' x2='9.1' y2='8' stroke='%23806838' stroke-width='0.2'/%3E%3Cline x1='7.3' y1='8.8' x2='9.1' y2='8.8' stroke='%23806838' stroke-width='0.2'/%3E%3C/svg%3E");
   background-size: contain; background-repeat: no-repeat; background-position: bottom center;
   animation: act-bob 1s ease-in-out infinite;
@@ -584,7 +595,10 @@ body.inspector-open .map-canvas { margin-bottom: calc(50vh + 28px); }
 /* ── Temple: priest between the columns + softly swaying robe ── */
 .bldg.temple.producing::before {
   content: ''; display: block; position: absolute;
-  left: 47%; bottom: 5%; width: 22%; height: 50%;
+  left: 47%;
+  bottom: calc(5% * var(--bldg-fig-y));
+  width: calc(22% * var(--bldg-fig-x));
+  height: calc(50% * var(--bldg-fig-y));
   transform: translateX(-50%);
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 13'%3E%3Ccircle cx='5' cy='2.5' r='2.5' fill='%23d8c3a0'/%3E%3Crect x='2' y='5' width='6' height='7.5' rx='2' fill='%23ece4d0'/%3E%3Crect x='2' y='7.2' width='6' height='1' fill='%23c8a040'/%3E%3Crect x='4.5' y='7.2' width='1' height='5' fill='%23c8a040' opacity='0.6'/%3E%3C/svg%3E");
   background-size: contain; background-repeat: no-repeat; background-position: bottom center;
