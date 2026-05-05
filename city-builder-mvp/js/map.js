@@ -594,12 +594,73 @@ export function renderMap() {
       html += '</div>';
     }
   }
-  grid.innerHTML = html;
+  applyGridHtml(grid, html);
   applyMapZoom();
   // Sync walker system with new road + extractor layout
   rebuildRoadSet();
   syncCollectorWalkers();
   renderWalkers();
+}
+
+// ── In-place grid update ──────────────────────────────────────
+// Wholesale `grid.innerHTML = html` was causing two visible problems:
+//   1. Walker tile-center snap: the major DOM mutation invalidates
+//      surrounding layout, and Chromium finalizes pending CSS
+//      transitions on absolute-positioned siblings (the walker layer)
+//      when that happens. Walkers jump to the destination of their
+//      in-flight step.
+//   2. Building animation restart: every .bldg DIV inside the grid is
+//      destroyed and recreated, so its CSS keyframes start at frame 0.
+// Both go away when we update only the cells whose content actually
+// changed and leave everything else alone.
+//
+// Strategy: parse the new HTML into a detached container, walk old vs.
+// new cells in parallel, patch className / data-* / innerHTML only when
+// they differ. If cell counts mismatch (chunk allocation, etc.) we fall
+// back to the full rebuild.
+var gridScratch = null;
+function applyGridHtml(grid, newHtml) {
+  if (!gridScratch) gridScratch = document.createElement('div');
+  if (!grid.firstChild || grid.children.length === 0) {
+    // Initial render — nothing to diff against.
+    grid.innerHTML = newHtml;
+    return;
+  }
+  gridScratch.innerHTML = newHtml;
+  var newCells = gridScratch.children;
+  var oldCells = grid.children;
+  if (newCells.length !== oldCells.length) {
+    grid.innerHTML = newHtml;
+    return;
+  }
+  for (var i = 0; i < newCells.length; i++) {
+    var nc = newCells[i];
+    var oc = oldCells[i];
+    if (oc.className !== nc.className) oc.className = nc.className;
+    var newAX = nc.getAttribute('data-anchor-x');
+    var oldAX = oc.getAttribute('data-anchor-x');
+    if (newAX !== oldAX) {
+      if (newAX === null) {
+        oc.removeAttribute('data-anchor-x');
+        oc.removeAttribute('data-anchor-y');
+      } else {
+        oc.setAttribute('data-anchor-x', newAX);
+        oc.setAttribute('data-anchor-y', nc.getAttribute('data-anchor-y'));
+      }
+    }
+    var newTid = nc.getAttribute('data-tile-id');
+    var oldTid = oc.getAttribute('data-tile-id');
+    if (newTid !== oldTid) {
+      if (newTid === null) oc.removeAttribute('data-tile-id');
+      else oc.setAttribute('data-tile-id', newTid);
+    }
+    // Only touch innerHTML when it actually differs. Skipping the
+    // write keeps each cell's existing .bldg DOM (and any in-flight
+    // CSS animation on it) alive across renders.
+    var newInner = nc.innerHTML;
+    if (oc.innerHTML !== newInner) oc.innerHTML = newInner;
+  }
+  gridScratch.innerHTML = '';
 }
 
 // ── Placement ──
