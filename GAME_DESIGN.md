@@ -240,13 +240,15 @@ Two modes coexist:
 
 Houses begin as Tier 0 (Shanty) and evolve up through Tier 8 (Palace) when their prerequisites are met for at least `upgrade_secs` (per-tier; see `housing_tier_config`). They devolve when prerequisites lapse for at least `devolve_secs`. Both checks are per-house and run inside `process_production`.
 
+Each upgrade adds **exactly one** new prerequisite — slow steady ladder. Lower tiers ignore higher-tier services even if present.
+
 | Tier | Name | Workers | Road | Well | Food | School | Temple | Luxury food | Industrial luxury | All 4 industrial |
 |---|---|---|---|---|---|---|---|---|---|---|
 | 0 | Shanty | 2 | — | — | — | — | — | — | — | — |
-| 1 | Mud Hut | 6 | ✓ | ✓ | ✓ | — | — | — | — | — |
-| 2 | Cottage | 10 | ✓ | ✓ | ✓ | — | — | — | — | — |
-| 3 | Townhouse | 16 | ✓ | ✓ | ✓ | ✓ | — | — | — | — |
-| 4 | Villa | 24 | ✓ | ✓ | ✓ | ✓ | ✓ | — | — | — |
+| 1 | Mud Hut | 6 | — | ✓ | — | — | — | — | — | — |
+| 2 | Cottage | 10 | — | ✓ | ✓ | — | — | — | — | — |
+| 3 | Townhouse | 16 | ✓ | ✓ | ✓ | — | — | — | — | — |
+| 4 | Villa | 24 | ✓ | ✓ | ✓ | ✓ | — | — | — | — |
 | 5 | Manor Estate | 34 | ✓ | ✓ | ✓ | ✓ | ✓ | — | — | — |
 | 6 | Mansion | 50 | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | — | — |
 | 7 | Estate | 70 | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | — |

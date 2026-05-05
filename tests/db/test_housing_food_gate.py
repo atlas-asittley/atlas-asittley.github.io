@@ -1,9 +1,10 @@
 """Tests for the housing food gate.
 
-Tier 1+ housing requires "any food" in inventory (resources.is_food = true).
-Today that's grain, flour, or bread. The check is presence-only — at least
-one food resource must be > 0. Without food, tier 1+ housing won't evolve
-and existing tier 1+ housing devolves.
+Tier 2+ housing requires "any food" in inventory (resources.is_food = true).
+Today that's grain, flour, bread, etc. The check is presence-only — at least
+one food resource must be > 0. Without food, tier 2+ housing won't evolve
+and existing tier 2+ housing devolves. Tier 1 (Mud Hut) only needs water
+(a well within range); food enters the picture at tier 2.
 """
 
 
@@ -24,8 +25,9 @@ def _backdate(cur, player_id, secs):
     """, (secs, str(player_id)))
 
 
-def test_shanty_to_mud_hut_blocked_without_food(make_player, place, cur, clear_resources):
-    """Tier 0 shanty cannot upgrade to tier 1 mud hut without any food."""
+def test_shanty_to_mud_hut_only_needs_water(make_player, place, cur, clear_resources):
+    """Tier 0 → tier 1 only requires a well within range. Food is not
+    needed at this step — tier 1 is the "water-only" rung."""
     p = make_player()
     clear_resources(p['id'])
     hx, hy = p['home_x'], p['home_y']
@@ -36,7 +38,22 @@ def test_shanty_to_mud_hut_blocked_without_food(make_player, place, cur, clear_r
 
     cur.execute("SELECT public.process_production()")
     cur.execute("SELECT housing_tier FROM public.buildings WHERE id = %s", (house_id,))
-    assert cur.fetchone()[0] == 0, "shanty upgraded to mud hut without food"
+    assert cur.fetchone()[0] == 1, "shanty should upgrade to mud hut on water alone"
+
+
+def test_mud_hut_to_cottage_blocked_without_food(make_player, place, cur, clear_resources):
+    """Tier 1 → 2 needs food (the gate that previously sat at tier 1)."""
+    p = make_player()
+    clear_resources(p['id'])
+    hx, hy = p['home_x'], p['home_y']
+    place('well', hx + 2, hy + 1)
+    house_id = place('house', hx + 1, hy + 2)['building_id']
+    cur.execute("UPDATE public.buildings SET housing_tier = 1 WHERE id = %s", (house_id,))
+    _set_inventory(cur, p['id'])
+    _backdate(cur, p['id'], 120)
+    cur.execute("SELECT public.process_production()")
+    cur.execute("SELECT housing_tier FROM public.buildings WHERE id = %s", (house_id,))
+    assert cur.fetchone()[0] == 1, "mud hut should not upgrade to cottage without food"
 
 
 def test_shanty_to_mud_hut_succeeds_with_grain_only(make_player, place, cur, clear_resources):
@@ -69,34 +86,38 @@ def test_shanty_to_mud_hut_succeeds_with_bread_only(make_player, place, cur, cle
 
 
 def test_non_food_resource_does_not_satisfy_food_gate(make_player, place, cur, clear_resources):
-    """Stockpiles of non-food resources (lumber, brick, etc.) shouldn't count."""
-    p = make_player()
-    clear_resources(p['id'])
-    hx, hy = p['home_x'], p['home_y']
-    place('well', hx + 2, hy + 1)
-    house_id = place('house', hx + 1, hy + 2)['building_id']
-    _set_inventory(cur, p['id'], lumber=100.0, brick=100.0, statuary=50.0)
-    _backdate(cur, p['id'], 60)
-
-    cur.execute("SELECT public.process_production()")
-    cur.execute("SELECT housing_tier FROM public.buildings WHERE id = %s", (house_id,))
-    assert cur.fetchone()[0] == 0, "non-food resources should not satisfy the food gate"
-
-
-def test_mud_hut_devolves_when_food_runs_out(make_player, place, cur, clear_resources):
-    """A tier-1 mud hut with no food in stock should devolve to tier 0 shanty."""
+    """Stockpiles of non-food resources (lumber, brick, etc.) shouldn't count.
+    Tier 1 (Mud Hut) doesn't need food, but tier 2 (Cottage) does — so a
+    tier-1 mud hut with only non-food items stays at tier 1, not upgrading
+    to cottage."""
     p = make_player()
     clear_resources(p['id'])
     hx, hy = p['home_x'], p['home_y']
     place('well', hx + 2, hy + 1)
     house_id = place('house', hx + 1, hy + 2)['building_id']
     cur.execute("UPDATE public.buildings SET housing_tier = 1 WHERE id = %s", (house_id,))
-    _set_inventory(cur, p['id'])  # no food
+    _set_inventory(cur, p['id'], lumber=100.0, brick=100.0, statuary=50.0)
     _backdate(cur, p['id'], 120)
 
     cur.execute("SELECT public.process_production()")
     cur.execute("SELECT housing_tier FROM public.buildings WHERE id = %s", (house_id,))
-    assert cur.fetchone()[0] == 0, "mud hut should devolve when food runs out"
+    assert cur.fetchone()[0] == 1, "non-food resources should not satisfy tier-2 food gate"
+
+
+def test_cottage_devolves_when_food_runs_out(make_player, place, cur, clear_resources):
+    """A tier-2 cottage with no food in stock should devolve to tier 1
+    mud hut. (Mud huts themselves are food-free now.)"""
+    p = make_player()
+    clear_resources(p['id'])
+    hx, hy = p['home_x'], p['home_y']
+    place('well', hx + 2, hy + 1)
+    house_id = place('house', hx + 1, hy + 2)['building_id']
+    cur.execute("UPDATE public.buildings SET housing_tier = 2 WHERE id = %s", (house_id,))
+    _set_inventory(cur, p['id'])  # no food
+    _backdate(cur, p['id'], 240)
+    cur.execute("SELECT public.process_production()")
+    cur.execute("SELECT housing_tier FROM public.buildings WHERE id = %s", (house_id,))
+    assert cur.fetchone()[0] == 1, "cottage should devolve to mud hut when food runs out"
 
 
 def test_shanty_does_not_need_food(make_player, place, cur, clear_resources):

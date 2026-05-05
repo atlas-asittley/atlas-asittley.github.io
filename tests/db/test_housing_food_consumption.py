@@ -47,8 +47,9 @@ def test_tier_0_house_drains_no_food(make_player, place, cur, clear_resources):
     assert float(cur.fetchone()[0]) == 10.0, "shanty should not drain food"
 
 
-def test_tier_1_house_drains_food(make_player, place, cur, clear_resources):
-    """Mud hut at 0.03/min should drain ~0.03 food over 60s."""
+def test_tier_1_house_does_not_drain_food(make_player, place, cur, clear_resources):
+    """Mud hut is now water-only — no food consumption (food_per_minute = 0).
+    Food drain begins at tier 2 (Cottage)."""
     p = make_player()
     clear_resources(p['id'])
     hx, hy = p['home_x'], p['home_y']
@@ -60,12 +61,11 @@ def test_tier_1_house_drains_food(make_player, place, cur, clear_resources):
     cur.execute("SELECT quantity FROM public.inventories WHERE player_id = %s AND resource_key = 'grain'",
                 (str(p['id']),))
     grain = float(cur.fetchone()[0])
-    # Expected drain: 1 house × 0.03/min × 1 min = 0.03
-    assert 9.95 < grain < 9.99, f"expected ~9.97 grain after 0.03 drain, got {grain}"
+    assert grain == 10.0, f"mud hut should not drain food, got {grain}"
 
 
-def test_tier_2_house_drains_more_than_tier_1(make_player, place, cur, clear_resources):
-    """Cottage (0.06/min) should drain twice as much as mud hut (0.03/min)."""
+def test_tier_2_house_drains_food(make_player, place, cur, clear_resources):
+    """Cottage at 0.06/min should drain ~0.06 food over 60s."""
     p = make_player()
     clear_resources(p['id'])
     hx, hy = p['home_x'], p['home_y']
@@ -110,16 +110,17 @@ def test_drain_proportional_across_food_resources(make_player, place, cur, clear
 # ── starvation devolve ───────────────────────────────────────
 
 def test_house_devolves_when_drain_empties_food(make_player, place, cur, clear_resources):
-    """A tier-1 house with barely-enough food should drain it in one tick,
-    fail the food gate next housing eval, and devolve."""
+    """A tier-2 cottage with barely-enough food drains it in one tick,
+    fails the food gate next housing eval, and devolves to tier 1
+    (mud hut, which doesn't need food)."""
     p = make_player()
     clear_resources(p['id'])
     hx, hy = p['home_x'], p['home_y']
     house_id = _make_tier_1_house(cur, place, p, hx, hy)
-    # 0.03 grain / min, give exactly enough for 60s = 0.03
-    _stock(cur, p['id'], grain=0.03)
+    cur.execute("UPDATE public.buildings SET housing_tier = 2 WHERE id = %s", (house_id,))
+    # 0.06 grain / min, give exactly enough for 60s = 0.06
+    _stock(cur, p['id'], grain=0.06)
     _backdate_food_tick(cur, p['id'], 60)
-    # Backdate house's last_processed_at so devolve_secs threshold passes
     cur.execute("""UPDATE public.buildings
                    SET last_processed_at = now() - interval '120 seconds'
                    WHERE id = %s""", (house_id,))
@@ -130,22 +131,21 @@ def test_house_devolves_when_drain_empties_food(make_player, place, cur, clear_r
     cur.execute("SELECT quantity FROM public.inventories WHERE player_id = %s AND resource_key = 'grain'",
                 (str(p['id']),))
     grain = float(cur.fetchone()[0])
-    # Grain should be ~0 (drained), house devolved to 0
     assert grain < 0.01, f"food should be drained to ~0, got {grain}"
-    assert tier == 0, f"house should have devolved from 1 to 0, got tier {tier}"
+    assert tier == 1, f"cottage should have devolved from 2 to 1, got tier {tier}"
 
 
 # ── rate scales with house count ─────────────────────────────
 
 def test_drain_scales_with_house_count(make_player, place, cur, clear_resources):
-    """Two tier-1 houses should drain twice as much as one."""
+    """Two tier-2 cottages should drain twice as much as one."""
     p = make_player()
     clear_resources(p['id'])
     hx, hy = p['home_x'], p['home_y']
     place('well', hx + 2, hy + 1)
     h1 = place('house', hx + 1, hy + 2)['building_id']
     h2 = place('house', hx + 3, hy + 2)['building_id']
-    cur.execute("UPDATE public.buildings SET housing_tier = 1 WHERE id IN (%s, %s)", (h1, h2))
+    cur.execute("UPDATE public.buildings SET housing_tier = 2 WHERE id IN (%s, %s)", (h1, h2))
     _stock(cur, p['id'], grain=10.0)
     _backdate_food_tick(cur, p['id'], 60)
 
@@ -153,8 +153,8 @@ def test_drain_scales_with_house_count(make_player, place, cur, clear_resources)
     cur.execute("SELECT quantity FROM public.inventories WHERE player_id = %s AND resource_key = 'grain'",
                 (str(p['id']),))
     grain = float(cur.fetchone()[0])
-    # 2 houses × 0.03 = 0.06 drained
-    assert 9.92 < grain < 9.96, f"expected ~9.94 grain after 2-house drain, got {grain}"
+    # 2 houses × 0.06 = 0.12 drained
+    assert 9.85 < grain < 9.91, f"expected ~9.88 grain after 2-house drain, got {grain}"
 
 
 # ── last_food_tick_at updates ────────────────────────────────

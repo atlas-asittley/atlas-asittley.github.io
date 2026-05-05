@@ -167,14 +167,11 @@ def test_tavern_adds_worker_capacity_when_fed(make_player, place, cur, clear_res
 
 # ── school gates townhouse (tier 3) ─────────────────────────────
 
-def test_school_required_for_tier_3_evolution(make_player, place, cur, clear_resources):
-    """A cottage (tier 2) cannot upgrade to townhouse (tier 3) without an
-    operating school within 5 tiles. With a fed school, it can.
-
-    Layout (highway runs through (hx, *) and (*, hy)):
-      house    (hx+1, hy+2) — picks up road access from highway at (hx, hy+2)
-      well     (hx+2, hy+1) — likewise via highway at (hx+2, hy)
-      school   (hx+1, hy+3) — likewise via highway at (hx, hy+3)
+def test_school_required_for_tier_4_evolution(make_player, place, cur, clear_resources):
+    """A townhouse (tier 3) cannot upgrade to villa (tier 4) without an
+    operating school within 5 tiles. With a fed school, it can. (School
+    moved from the tier-3 gate to the tier-4 gate as part of the slow-
+    steady upgrade ladder: T3 adds road, T4 adds school.)
     """
     p = make_player()
     clear_resources(p['id'])
@@ -182,15 +179,15 @@ def test_school_required_for_tier_3_evolution(make_player, place, cur, clear_res
     hx, hy = p['home_x'], p['home_y']
     place('well', hx + 2, hy + 1)
     house_id = place('house', hx + 1, hy + 2)['building_id']
-    cur.execute("UPDATE public.buildings SET housing_tier = 2 WHERE id = %s", (house_id,))
+    cur.execute("UPDATE public.buildings SET housing_tier = 3 WHERE id = %s", (house_id,))
     _give_lots_of_workers(cur, p['id'])
-    _stock(cur, p['id'], 'grain', 10.0)  # Food gate passes — isolates the school check
+    _stock(cur, p['id'], 'grain', 10.0)
     _backdate(cur, p['id'], 240)
 
-    # No school yet → should stay at tier 2.
+    # No school yet → should stay at tier 3.
     cur.execute("SELECT public.process_production()")
     cur.execute("SELECT housing_tier FROM public.buildings WHERE id = %s", (house_id,))
-    assert cur.fetchone()[0] == 2, "cottage upgraded past tier 2 without a school"
+    assert cur.fetchone()[0] == 3, "townhouse upgraded past tier 3 without a school"
 
     # Place + feed a school in range.
     place('school', hx + 1, hy + 3)
@@ -201,20 +198,20 @@ def test_school_required_for_tier_3_evolution(make_player, place, cur, clear_res
     _backdate(cur, p['id'], 240)
     cur.execute("SELECT public.process_production()")
     cur.execute("SELECT housing_tier FROM public.buildings WHERE id = %s", (house_id,))
-    assert cur.fetchone()[0] == 3, "cottage failed to upgrade with school in range"
+    assert cur.fetchone()[0] == 4, "townhouse failed to upgrade with school in range"
 
 
-def test_unfed_school_does_not_unlock_tier_3(make_player, place, cur, clear_resources):
+def test_unfed_school_does_not_unlock_tier_4(make_player, place, cur, clear_resources):
     """A school that's been built but has no inputs in stock should NOT
-    qualify housing for the tier-3 gate (even though it's staffed and on
-    a road)."""
+    qualify housing for the tier-4 gate (even though it's staffed and on
+    a road). School moved from T3 → T4."""
     p = make_player()
     clear_resources(p['id'])
     _give_money(cur, p['id'])
     hx, hy = p['home_x'], p['home_y']
     place('well', hx + 2, hy + 1)
     house_id = place('house', hx + 1, hy + 2)['building_id']
-    cur.execute("UPDATE public.buildings SET housing_tier = 2 WHERE id = %s", (house_id,))
+    cur.execute("UPDATE public.buildings SET housing_tier = 3 WHERE id = %s", (house_id,))
     place('school', hx + 1, hy + 3)
     _give_lots_of_workers(cur, p['id'])
     _stock(cur, p['id'], 'lumber', 0)
@@ -225,7 +222,7 @@ def test_unfed_school_does_not_unlock_tier_3(make_player, place, cur, clear_reso
 
     cur.execute("SELECT public.process_production()")
     cur.execute("SELECT housing_tier FROM public.buildings WHERE id = %s", (house_id,))
-    assert cur.fetchone()[0] == 2, "unfed school should not unlock tier 3"
+    assert cur.fetchone()[0] == 3, "unfed school should not unlock tier 4"
 
 
 # ── bathhouse blocks devolve ────────────────────────────────────
@@ -251,7 +248,9 @@ def _bathhouse_layout(make_player, place, cur, clear_resources):
     place('well', hx - 1, hy + 2)
     place('bathhouse', hx + 1, hy + 3)
     house_id = place('house', hx + 2, hy + 2)['building_id']
-    cur.execute("UPDATE public.buildings SET housing_tier = 1 WHERE id = %s", (house_id,))
+    # Use tier 3 (Townhouse) since that's the lowest tier that requires
+    # road access — pausing road1 then triggers a road-loss devolve.
+    cur.execute("UPDATE public.buildings SET housing_tier = 3 WHERE id = %s", (house_id,))
     return p, hx, hy, house_id
 
 
@@ -269,7 +268,7 @@ def test_bathhouse_blocks_devolve(make_player, place, cur, clear_resources):
 
     cur.execute("SELECT public.process_production()")
     cur.execute("SELECT housing_tier FROM public.buildings WHERE id = %s", (house_id,))
-    assert cur.fetchone()[0] == 1, "bathhouse should have prevented devolve"
+    assert cur.fetchone()[0] == 3, "bathhouse should have prevented devolve"
 
 
 def test_unfed_bathhouse_does_not_block_devolve(make_player, place, cur, clear_resources):
@@ -286,4 +285,4 @@ def test_unfed_bathhouse_does_not_block_devolve(make_player, place, cur, clear_r
 
     cur.execute("SELECT public.process_production()")
     cur.execute("SELECT housing_tier FROM public.buildings WHERE id = %s", (house_id,))
-    assert cur.fetchone()[0] == 0, "unfed bathhouse should not have prevented devolve"
+    assert cur.fetchone()[0] == 2, "unfed bathhouse should not have prevented devolve from 3 to 2"
