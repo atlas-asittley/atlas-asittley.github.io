@@ -22,13 +22,23 @@ export function subscribeRealtime() {
         .then(function (r) {
           if (!r.data) return;
           state.allBuildings.push(r.data);
-          var tile = state.tileMap[r.data.x + ',' + r.data.y];
-          if (tile) tile.occupied_building_id = r.data.id;
+          // Mark every footprint tile as occupied. For 1x1 buildings
+          // this is just the anchor; for 2x2 buildings (school / temple
+          // / tax_man) all four tiles need to know they're part of the
+          // building so renderMap renders them as multi-tile-interior
+          // and the anchor's .bldg.footprint-2x2 visually covers them.
+          var bt = state.buildingTypes[r.data.building_type_key];
+          var fw = (bt && bt.footprint_w) || 1;
+          var fh = (bt && bt.footprint_h) || 1;
+          for (var dx = 0; dx < fw; dx++) {
+            for (var dy = 0; dy < fh; dy++) {
+              var t = state.tileMap[(r.data.x + dx) + ',' + (r.data.y + dy)];
+              if (t) t.occupied_building_id = r.data.id;
+            }
+          }
           computeLaborAllocation();
           renderMap();
-          var btName = state.buildingTypes[r.data.building_type_key]
-            ? state.buildingTypes[r.data.building_type_key].name
-            : r.data.building_type_key;
+          var btName = bt ? bt.name : r.data.building_type_key;
           var pName = r.data.player_profiles
             ? r.data.player_profiles.display_name
             : 'Someone';
@@ -50,8 +60,16 @@ export function subscribeRealtime() {
         return true;
       });
       if (removed) {
-        var tile = state.tileMap[removed.x + ',' + removed.y];
-        if (tile) tile.occupied_building_id = null;
+        // Clear every footprint tile, not just the anchor.
+        var bt = state.buildingTypes[removed.building_type_key];
+        var fw = (bt && bt.footprint_w) || 1;
+        var fh = (bt && bt.footprint_h) || 1;
+        for (var dx = 0; dx < fw; dx++) {
+          for (var dy = 0; dy < fh; dy++) {
+            var t = state.tileMap[(removed.x + dx) + ',' + (removed.y + dy)];
+            if (t) t.occupied_building_id = null;
+          }
+        }
         computeLaborAllocation();
         renderMap();
       }
