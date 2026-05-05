@@ -155,34 +155,62 @@ function renderOfferCard(o, mode) {
   // The DB stores trade offers from the SENDER's perspective:
   //   give_*    = what the sender gives
   //   receive_* = what the sender receives in exchange
-  // The card always labels one side "They give" and the other "You give",
-  // so we map the columns based on which side of the offer the viewer is on.
-  var theyMoney, theyRes, youMoney, youRes;
+  // The card labels both sides from the VIEWER's perspective ("you'd give"
+  // / "you'd receive"), so we map the columns based on whether the viewer
+  // is the sender (outbox) or the recipient (inbox).
+  var youGiveMoney, youGiveRes, youGetMoney, youGetRes;
   if (mode === 'inbox') {
-    // Viewer is the recipient → sender is "they".
-    theyMoney = o.give_money;    theyRes = o.give_resources;
-    youMoney  = o.receive_money; youRes  = o.receive_resources;
+    // Viewer would give what the sender wants (receive_*) and get what
+    // the sender offers (give_*).
+    youGiveMoney = o.receive_money; youGiveRes = o.receive_resources;
+    youGetMoney  = o.give_money;    youGetRes  = o.give_resources;
   } else {
-    // Viewer is the sender → "you" gave; counterpart will give what we receive.
-    theyMoney = o.receive_money; theyRes = o.receive_resources;
-    youMoney  = o.give_money;    youRes  = o.give_resources;
+    // Outbox: viewer is the sender. They put up give_*, expect receive_*
+    // from the counterparty.
+    youGiveMoney = o.give_money;    youGiveRes = o.give_resources;
+    youGetMoney  = o.receive_money; youGetRes  = o.receive_resources;
   }
+
+  // Inbox-only pre-check: can the viewer actually fulfill this offer?
+  // Server re-validates at accept time, but surfacing the reason up front
+  // beats a generic toast. Outbox doesn't need this — at most you'd be
+  // flagging that the counterparty has changed inventory.
+  var blockers = [];
+  if (mode === 'inbox') {
+    var have = (state.profile && state.profile.money) || 0;
+    if (youGiveMoney > have) {
+      blockers.push('$' + (youGiveMoney - have) + ' more');
+    }
+    Object.keys(youGiveRes || {}).forEach(function (k) {
+      var need = Number(youGiveRes[k]) || 0;
+      var got  = Math.floor((state.inventory && state.inventory[k]) || 0);
+      if (got < need) {
+        blockers.push((need - got) + ' ' + resName(k));
+      }
+    });
+  }
+  var blockerNotice = blockers.length
+    ? '<div class="offer-warn">Can’t accept: missing ' + escapeHtml(blockers.join(', ')) + '</div>'
+    : '';
 
   var actions = '';
   if (mode === 'inbox') {
+    var disabledAttr = blockers.length ? ' disabled' : '';
     actions = '<button class="btn-offer-reject" data-offer-id="' + o.id + '">Reject</button>'
-            + '<button class="btn-offer-accept" data-offer-id="' + o.id + '">Accept</button>';
+            + '<button class="btn-offer-accept" data-offer-id="' + o.id + '"' + disabledAttr + '>Accept</button>';
   } else {
     actions = '<button class="btn-offer-cancel" data-offer-id="' + o.id + '">Cancel</button>';
   }
 
+  var directionLabel = mode === 'inbox' ? 'From ' : 'To ';
   var msg = o.message ? '<div class="offer-msg">' + escapeHtml(o.message) + '</div>' : '';
   return '<div class="offer-card">'
-       + '<div class="offer-header"><span class="offer-other">' + escapeHtml(otherName) + '</span>'
+       + '<div class="offer-header"><span class="offer-other">' + directionLabel + escapeHtml(otherName) + '</span>'
        + '<span class="offer-time">' + timeAgo(o.created_at) + '</span></div>'
        + '<div class="offer-body">'
-       + '<div class="offer-line"><span class="offer-label">They give:</span><span class="offer-value">' + fmtSide(theyMoney, theyRes) + '</span></div>'
-       + '<div class="offer-line"><span class="offer-label">You give:</span><span class="offer-value">' + fmtSide(youMoney, youRes) + '</span></div>'
+       + '<div class="offer-line"><span class="offer-label">You’d give:</span><span class="offer-value">' + fmtSide(youGiveMoney, youGiveRes) + '</span></div>'
+       + '<div class="offer-line"><span class="offer-label">You’d receive:</span><span class="offer-value">' + fmtSide(youGetMoney, youGetRes) + '</span></div>'
+       + blockerNotice
        + msg
        + '</div>'
        + '<div class="offer-actions">' + actions + '</div>'
@@ -218,9 +246,21 @@ function openTradeDialog(targetId, targetName) {
     giveResources: {},
     receiveMoney: 0,
     receiveResources: {},
-    message: ''
+    message: '',
+    targetMoney: null,        // populated async by get_player_trade_view
+    targetInventory: null
   };
   renderTradeDialog();
+  // Fetch the counterparty's tradeable inventory so the "they give"
+  // side can annotate availability. Re-render once it lands.
+  sb.rpc('get_player_trade_view', { p_player_id: targetId }).then(function (r) {
+    if (!dialogState || dialogState.targetId !== targetId) return; // dialog closed / swapped
+    if (r.error || !r.data) return;
+    dialogState.targetMoney = r.data.money;
+    dialogState.targetInventory = r.data.inventory || {};
+    persistDialogInputs();  // keep any qtys the user already typed
+    renderTradeDialog();
+  });
 }
 
 function closeTradeDialog() {
@@ -234,40 +274,86 @@ function renderTradeDialog() {
   if (existing) existing.remove();
   if (!dialogState) return;
 
-  // Resources I have (for give side).
+  var targetInv = dialogState.targetInventory;  // null while loading
+  var targetMoney = dialogState.targetMoney;    // null while loading
+  var targetLoaded = targetInv !== null && targetInv !== undefined;
+
+  // "You give" side: only resources you actually hold.
   var myResources = [];
   Object.keys(state.inventory || {}).forEach(function (k) {
     if ((state.inventory[k] || 0) > 0) myResources.push(k);
   });
   myResources.sort();
-  // All known resources excluding terrain (for receive side).
-  var allResources = [];
-  Object.keys(state.resources || {}).forEach(function (k) {
-    var r = state.resources[k];
-    if (r && r.kind !== 'terrain') allResources.push(k);
-  });
-  allResources.sort();
+  // "They give" side: only resources the counterparty actually has.
+  // Until the target's inventory loads, fall back to the full non-terrain
+  // catalogue so the dialog isn't empty during the round-trip.
+  var theirResources = [];
+  if (targetLoaded) {
+    Object.keys(targetInv).forEach(function (k) {
+      if ((targetInv[k] || 0) > 0) theirResources.push(k);
+    });
+  } else {
+    Object.keys(state.resources || {}).forEach(function (k) {
+      var r = state.resources[k];
+      if (r && r.kind !== 'terrain') theirResources.push(k);
+    });
+  }
+  theirResources.sort();
+
+  function rowHtml(k, qty, prefix) {
+    var avail, availLabel, exceeds;
+    if (prefix === 'give') {
+      avail = Math.floor((state.inventory && state.inventory[k]) || 0);
+      availLabel = 'you have ' + avail;
+      exceeds = qty > avail;
+    } else {
+      if (targetLoaded) {
+        avail = Math.floor((targetInv && targetInv[k]) || 0);
+        availLabel = 'they have ' + avail;
+        exceeds = qty > avail;
+      } else {
+        avail = null;
+        availLabel = 'loading…';
+        exceeds = false;
+      }
+    }
+    var availClass = exceeds ? 'trade-res-avail trade-res-avail-bad' : 'trade-res-avail';
+    return '<div class="trade-res-row" data-key="' + k + '">'
+         + '<span class="trade-res-name">' + resName(k) + '</span>'
+         + '<input type="number" min="1" step="1" value="' + qty + '" data-' + prefix + '-res="' + k + '" class="trade-res-qty">'
+         + '<span class="' + availClass + '">' + availLabel + '</span>'
+         + '<button class="trade-res-remove" data-' + prefix + '-remove="' + k + '">×</button>'
+         + '</div>';
+  }
 
   function sideHtml(side, label, resourceList, prefix) {
     var rows = '';
     Object.keys(side.resources).forEach(function (k) {
-      rows += '<div class="trade-res-row" data-key="' + k + '">'
-            + '<span class="trade-res-name">' + resName(k) + '</span>'
-            + '<input type="number" min="1" step="1" value="' + side.resources[k] + '" data-' + prefix + '-res="' + k + '" class="trade-res-qty">'
-            + '<button class="trade-res-remove" data-' + prefix + '-remove="' + k + '">×</button>'
-            + '</div>';
+      rows += rowHtml(k, side.resources[k], prefix);
     });
+    var moneyAvailLabel;
+    if (prefix === 'give') {
+      moneyAvailLabel = 'you have $' + ((state.profile && state.profile.money) || 0);
+    } else {
+      moneyAvailLabel = targetLoaded ? 'they have $' + (targetMoney || 0) : 'loading…';
+    }
+    var moneyAvailClass = (prefix === 'give' && side.money > ((state.profile && state.profile.money) || 0))
+      || (prefix === 'recv' && targetLoaded && side.money > (targetMoney || 0))
+      ? 'trade-res-avail trade-res-avail-bad' : 'trade-res-avail';
     var availOptions = '<option value="">+ Add resource…</option>'
       + resourceList.filter(function (k) { return !side.resources[k]; })
         .map(function (k) {
-          var have = state.inventory[k] || 0;
-          var note = prefix === 'give' && have > 0 ? ' (have ' + Math.floor(have) + ')' : '';
+          var have = prefix === 'give'
+            ? Math.floor((state.inventory && state.inventory[k]) || 0)
+            : (targetLoaded ? Math.floor(targetInv[k] || 0) : null);
+          var note = (have !== null && have > 0) ? ' (' + have + ')' : '';
           return '<option value="' + k + '">' + resName(k) + note + '</option>';
         }).join('');
     return '<div class="trade-side">'
          + '<div class="trade-side-label">' + label + '</div>'
          + '<div class="trade-money-row"><span class="trade-money-label">Money:</span>'
-         + '<input type="number" min="0" step="1" value="' + side.money + '" data-' + prefix + '-money class="trade-money-qty"></div>'
+         + '<input type="number" min="0" step="1" value="' + side.money + '" data-' + prefix + '-money class="trade-money-qty">'
+         + '<span class="' + moneyAvailClass + '">' + moneyAvailLabel + '</span></div>'
          + '<div class="trade-res-list">' + rows + '</div>'
          + '<select class="trade-res-add" data-' + prefix + '-add>' + availOptions + '</select>'
          + '</div>';
@@ -283,7 +369,7 @@ function renderTradeDialog() {
     + '</div>'
     + '<div class="trade-dialog-body">'
     + sideHtml(giveSide, 'You give', myResources, 'give')
-    + sideHtml(receiveSide, 'They give', allResources, 'recv')
+    + sideHtml(receiveSide, 'They give', theirResources, 'recv')
     + '<div class="trade-msg-row"><label class="trade-msg-label">Message (optional):</label>'
     + '<input type="text" maxlength="120" value="' + escapeAttr(dialogState.message) + '" id="trade-msg-input" class="trade-msg-input"></div>'
     + '</div>'
@@ -373,6 +459,22 @@ function sendOffer() {
     if (d.giveResources[k] > have) {
       showToast('You only have ' + have + ' ' + resName(k), 'error');
       return;
+    }
+  }
+  // If we've fetched the counterparty's tradeable view, refuse to ask
+  // for more than they actually have. (If still loading, skip — the
+  // server validates again at accept time.)
+  if (d.targetInventory) {
+    if (d.receiveMoney > (d.targetMoney || 0)) {
+      showToast(d.targetName + ' only has $' + (d.targetMoney || 0), 'error');
+      return;
+    }
+    for (var rk in d.receiveResources) {
+      var theyHave = Math.floor(d.targetInventory[rk] || 0);
+      if (d.receiveResources[rk] > theyHave) {
+        showToast(d.targetName + ' only has ' + theyHave + ' ' + resName(rk), 'error');
+        return;
+      }
     }
   }
   var btn = document.getElementById('btn-trade-send');

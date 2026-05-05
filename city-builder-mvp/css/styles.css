@@ -1009,9 +1009,12 @@ body.inspector-open .map-canvas { margin-bottom: calc(50vh + 28px); }
 .offer-label { color: #7a8a9e; min-width: 80px; flex-shrink: 0; }
 .offer-value { color: #e6eef6; }
 .offer-msg { margin-top: 6px; padding: 6px 8px; background: #0e1620; border-left: 2px solid #4fa3e0; font-style: italic; font-size: 0.8rem; color: #c8d4e0; border-radius: 0 4px 4px 0; }
+.offer-warn { margin-top: 6px; padding: 6px 8px; background: #2a1a1a; border-left: 2px solid #c8604a; font-size: 0.78rem; color: #f0c8b8; border-radius: 0 4px 4px 0; }
 .offer-actions { display: flex; gap: 6px; justify-content: flex-end; }
 .btn-offer-accept { padding: 6px 14px; background: #2a6a48; border: 1px solid #3a8060; border-radius: 6px; color: #d8f0e4; font-size: 0.8rem; font-weight: 600; cursor: pointer; }
 .btn-offer-accept:hover { background: #348058; }
+.btn-offer-accept[disabled] { background: #1f3a2a; border-color: #2a4a36; color: #6a8474; cursor: not-allowed; }
+.btn-offer-accept[disabled]:hover { background: #1f3a2a; }
 .btn-offer-reject, .btn-offer-cancel { padding: 6px 14px; background: #5a2a32; border: 1px solid #7a3a44; border-radius: 6px; color: #f0d8dc; font-size: 0.8rem; font-weight: 600; cursor: pointer; }
 .btn-offer-reject:hover, .btn-offer-cancel:hover { background: #6a3540; }
 
@@ -1031,7 +1034,9 @@ body.inspector-open .map-canvas { margin-bottom: calc(50vh + 28px); }
 .trade-res-list { display: flex; flex-direction: column; gap: 4px; margin-bottom: 6px; }
 .trade-res-row { display: flex; align-items: center; gap: 6px; padding: 4px 6px; background: #0e1620; border-radius: 6px; }
 .trade-res-name { flex: 1; color: #e6eef6; font-size: 0.84rem; }
-.trade-res-qty { width: 80px; padding: 4px 6px; background: #131a24; border: 1px solid #243447; border-radius: 4px; color: #c8d4e0; }
+.trade-res-qty { width: 64px; padding: 4px 6px; background: #131a24; border: 1px solid #243447; border-radius: 4px; color: #c8d4e0; }
+.trade-res-avail { font-size: 0.72rem; color: #7a8a9e; min-width: 80px; text-align: right; }
+.trade-res-avail-bad { color: #f0a090; }
 .trade-res-remove { background: none; border: none; color: #c84848; font-size: 1rem; cursor: pointer; padding: 0 6px; }
 .trade-res-remove:hover { color: #f08080; }
 .trade-res-add { width: 100%; padding: 6px 8px; background: #0e1620; border: 1px dashed #3a4858; border-radius: 6px; color: #7a8a9e; }
