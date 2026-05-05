@@ -606,6 +606,134 @@ body.inspector-open .map-canvas { margin-bottom: calc(50vh + 28px); }
   transform-origin: bottom center;
   pointer-events: none; z-index: 3;
 }
+/* ── Pass 1 fill: animations for previously-unanimated buildings ────────
+   Goal: every functional building (extractor / food_extractor / processor
+   / service / tax / booster) shows visible motion when .producing.
+   Suppression is centralized — .idle::before/::after kills these via
+   `animation: none !important`, so any rule below auto-respects the
+   issue gate.
+   Aesthetics: Pass 1 uses the established act-bob (worker overlay) and
+   act-smoke (rising puff) keyframes with per-building tinting. Pass 2
+   will replace shared patterns with distinctive motion where it matters
+   (apiary bees, glassworks glow, etc.). */
+
+/* Worker overlays — 1×1 buildings, bottom-left corner. */
+.bldg.iron_mine.producing::after,
+.bldg.fishing_pier.producing::after,
+.bldg.garden.producing::after,
+.bldg.orchard.producing::after,
+.bldg.toolmaker.producing::after,
+.bldg.nail_forge.producing::after,
+.bldg.winery.producing::after,
+.bldg.cabinetmaker.producing::after,
+.bldg.architect.producing::after,
+.bldg.mosaic_workshop.producing::after,
+.bldg.engineer_workshop.producing::after,
+.bldg.foresters_office.producing::after,
+.bldg.foreman_office.producing::after,
+.bldg.clay_master_hut.producing::after,
+.bldg.mine_office.producing::after,
+.bldg.apiary.producing::after,
+.bldg.hatchery.producing::after,
+.bldg.irrigation_channel.producing::after {
+  content: ''; position: absolute;
+  left: 4%; bottom: 5%; width: 30%; height: 42%;
+  background-size: contain; background-repeat: no-repeat; background-position: bottom center;
+  animation: act-bob 0.95s ease-in-out infinite;
+  pointer-events: none; z-index: 3;
+}
+
+/* Per-building worker outfit colors. */
+.bldg.iron_mine.producing::after          { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 13'%3E%3Ccircle cx='4' cy='2.5' r='2.5' fill='%23d8c3a0'/%3E%3Crect x='1' y='5' width='6' height='7' rx='2' fill='%234a4a4a'/%3E%3C/svg%3E"); }
+.bldg.fishing_pier.producing::after       { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 13'%3E%3Ccircle cx='4' cy='2.5' r='2.5' fill='%23d8c3a0'/%3E%3Crect x='1' y='5' width='6' height='7' rx='2' fill='%235078a0'/%3E%3C/svg%3E"); }
+.bldg.garden.producing::after             { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 13'%3E%3Ccircle cx='4' cy='2.5' r='2.5' fill='%23d8c3a0'/%3E%3Crect x='1' y='5' width='6' height='7' rx='2' fill='%236a8050'/%3E%3C/svg%3E"); }
+.bldg.orchard.producing::after            { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 13'%3E%3Ccircle cx='4' cy='2.5' r='2.5' fill='%23d8c3a0'/%3E%3Crect x='1' y='5' width='6' height='7' rx='2' fill='%23a06040'/%3E%3C/svg%3E"); }
+.bldg.toolmaker.producing::after          { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 13'%3E%3Ccircle cx='4' cy='2.5' r='2.5' fill='%23d8c3a0'/%3E%3Crect x='1' y='5' width='6' height='7' rx='2' fill='%235a4a40'/%3E%3C/svg%3E"); }
+.bldg.nail_forge.producing::after         { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 13'%3E%3Ccircle cx='4' cy='2.5' r='2.5' fill='%23d8c3a0'/%3E%3Crect x='1' y='5' width='6' height='7' rx='2' fill='%234a4a4a'/%3E%3C/svg%3E"); }
+.bldg.winery.producing::after             { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 13'%3E%3Ccircle cx='4' cy='2.5' r='2.5' fill='%23d8c3a0'/%3E%3Crect x='1' y='5' width='6' height='7' rx='2' fill='%238a4060'/%3E%3C/svg%3E"); }
+.bldg.cabinetmaker.producing::after       { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 13'%3E%3Ccircle cx='4' cy='2.5' r='2.5' fill='%23d8c3a0'/%3E%3Crect x='1' y='5' width='6' height='7' rx='2' fill='%237a6756'/%3E%3C/svg%3E"); }
+.bldg.architect.producing::after          { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 13'%3E%3Ccircle cx='4' cy='2.5' r='2.5' fill='%23d8c3a0'/%3E%3Crect x='1' y='5' width='6' height='7' rx='2' fill='%23c0b090'/%3E%3C/svg%3E"); }
+.bldg.mosaic_workshop.producing::after    { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 13'%3E%3Ccircle cx='4' cy='2.5' r='2.5' fill='%23d8c3a0'/%3E%3Crect x='1' y='5' width='6' height='7' rx='2' fill='%236a8a8a'/%3E%3C/svg%3E"); }
+.bldg.engineer_workshop.producing::after  { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 13'%3E%3Ccircle cx='4' cy='2.5' r='2.5' fill='%23d8c3a0'/%3E%3Crect x='1' y='5' width='6' height='7' rx='2' fill='%234a5a78'/%3E%3C/svg%3E"); }
+.bldg.foresters_office.producing::after   { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 13'%3E%3Ccircle cx='4' cy='2.5' r='2.5' fill='%23d8c3a0'/%3E%3Crect x='1' y='5' width='6' height='7' rx='2' fill='%234a6a40'/%3E%3C/svg%3E"); }
+.bldg.foreman_office.producing::after     { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 13'%3E%3Ccircle cx='4' cy='2.5' r='2.5' fill='%23d8c3a0'/%3E%3Crect x='1' y='5' width='6' height='7' rx='2' fill='%23707080'/%3E%3C/svg%3E"); }
+.bldg.clay_master_hut.producing::after    { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 13'%3E%3Ccircle cx='4' cy='2.5' r='2.5' fill='%23d8c3a0'/%3E%3Crect x='1' y='5' width='6' height='7' rx='2' fill='%238a6050'/%3E%3C/svg%3E"); }
+.bldg.mine_office.producing::after        { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 13'%3E%3Ccircle cx='4' cy='2.5' r='2.5' fill='%23d8c3a0'/%3E%3Crect x='1' y='5' width='6' height='7' rx='2' fill='%234a4a4a'/%3E%3C/svg%3E"); }
+.bldg.apiary.producing::after             { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 13'%3E%3Ccircle cx='4' cy='2.5' r='2.5' fill='%23d8c3a0'/%3E%3Crect x='1' y='5' width='6' height='7' rx='2' fill='%23c8a040'/%3E%3C/svg%3E"); }
+.bldg.hatchery.producing::after           { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 13'%3E%3Ccircle cx='4' cy='2.5' r='2.5' fill='%23d8c3a0'/%3E%3Crect x='1' y='5' width='6' height='7' rx='2' fill='%23c8a878'/%3E%3C/svg%3E"); }
+.bldg.irrigation_channel.producing::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 13'%3E%3Ccircle cx='4' cy='2.5' r='2.5' fill='%23d8c3a0'/%3E%3Crect x='1' y='5' width='6' height='7' rx='2' fill='%2360a0a8'/%3E%3C/svg%3E"); }
+
+/* Worker overlay on multi-tile tax_man (2×2) — uses --bldg-fig-* so the
+   figure stays at 1×1-equivalent visual size. */
+.bldg.tax_man.producing::after {
+  content: ''; position: absolute;
+  left: calc(6% * var(--bldg-fig-x));
+  bottom: calc(5% * var(--bldg-fig-y));
+  width: calc(28% * var(--bldg-fig-x));
+  height: calc(40% * var(--bldg-fig-y));
+  background-size: contain; background-repeat: no-repeat; background-position: bottom center;
+  animation: act-bob 1s ease-in-out infinite;
+  pointer-events: none; z-index: 3;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 13'%3E%3Ccircle cx='5' cy='2.5' r='2.5' fill='%23d8c3a0'/%3E%3Crect x='2' y='5' width='6' height='7' rx='2' fill='%234a5a78'/%3E%3Crect x='6.6' y='6.8' width='2.6' height='3' rx='0.3' fill='%23e6c660' stroke='%23806020' stroke-width='0.2'/%3E%3C/svg%3E");
+}
+
+/* Smoke/steam overlays — chimney smoke for kilns, forges, distillers. */
+.bldg.smelter.producing::after,
+.bldg.tile_maker.producing::after,
+.bldg.charcoal_kiln.producing::after,
+.bldg.lime_kiln.producing::after,
+.bldg.glassworks.producing::after,
+.bldg.smokehouse.producing::after,
+.bldg.curing_house.producing::after,
+.bldg.spicery.producing::after,
+.bldg.distillery.producing::after,
+.bldg.cannery.producing::after,
+.bldg.compost_heap.producing::after {
+  content: ''; position: absolute;
+  right: 8%; top: -12%; width: 28%; height: 50%;
+  background-size: contain; background-repeat: no-repeat; background-position: bottom center;
+  animation: act-smoke 2.4s ease-out infinite;
+  pointer-events: none; z-index: 3;
+}
+
+/* Per-building smoke colors: dark for charcoal/iron, white for lime/steam,
+   gold for glassworks (hot glass), warm earth for compost/spices. */
+.bldg.smelter.producing::after       { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 20'%3E%3Cellipse cx='5' cy='16' rx='3.5' ry='2.5' fill='%23606060' opacity='0.65'/%3E%3Cellipse cx='4' cy='9' rx='3' ry='2' fill='%23707070' opacity='0.45'/%3E%3Cellipse cx='6' cy='3' rx='2.5' ry='1.5' fill='%23808080' opacity='0.3'/%3E%3C/svg%3E"); }
+.bldg.tile_maker.producing::after    { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 20'%3E%3Cellipse cx='5' cy='16' rx='3.5' ry='2.5' fill='%23a0a0a0' opacity='0.55'/%3E%3Cellipse cx='4' cy='9' rx='3' ry='2' fill='%23b0b0b0' opacity='0.4'/%3E%3Cellipse cx='6' cy='3' rx='2.5' ry='1.5' fill='%23c0c0c0' opacity='0.25'/%3E%3C/svg%3E"); }
+.bldg.charcoal_kiln.producing::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 20'%3E%3Cellipse cx='5' cy='16' rx='3.5' ry='2.5' fill='%23404040' opacity='0.7'/%3E%3Cellipse cx='4' cy='9' rx='3' ry='2' fill='%23505050' opacity='0.5'/%3E%3Cellipse cx='6' cy='3' rx='2.5' ry='1.5' fill='%23606060' opacity='0.35'/%3E%3C/svg%3E"); }
+.bldg.lime_kiln.producing::after     { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 20'%3E%3Cellipse cx='5' cy='16' rx='3.5' ry='2.5' fill='%23dddddd' opacity='0.6'/%3E%3Cellipse cx='4' cy='9' rx='3' ry='2' fill='%23e8e8e8' opacity='0.4'/%3E%3Cellipse cx='6' cy='3' rx='2.5' ry='1.5' fill='%23f0f0f0' opacity='0.25'/%3E%3C/svg%3E"); }
+.bldg.glassworks.producing::after    { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 20'%3E%3Cellipse cx='5' cy='16' rx='3.5' ry='2.5' fill='%23c8a45a' opacity='0.55'/%3E%3Cellipse cx='4' cy='9' rx='3' ry='2' fill='%23a08050' opacity='0.4'/%3E%3Cellipse cx='6' cy='3' rx='2.5' ry='1.5' fill='%23806040' opacity='0.25'/%3E%3C/svg%3E"); }
+.bldg.smokehouse.producing::after    { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 20'%3E%3Cellipse cx='5' cy='16' rx='3.5' ry='2.5' fill='%23808080' opacity='0.7'/%3E%3Cellipse cx='4' cy='9' rx='3' ry='2' fill='%23909090' opacity='0.5'/%3E%3Cellipse cx='6' cy='3' rx='2.5' ry='1.5' fill='%23a0a0a0' opacity='0.3'/%3E%3C/svg%3E"); }
+.bldg.curing_house.producing::after  { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 20'%3E%3Cellipse cx='5' cy='16' rx='3.5' ry='2.5' fill='%23b0b0b0' opacity='0.6'/%3E%3Cellipse cx='4' cy='9' rx='3' ry='2' fill='%23c0c0c0' opacity='0.4'/%3E%3Cellipse cx='6' cy='3' rx='2.5' ry='1.5' fill='%23d0d0d0' opacity='0.25'/%3E%3C/svg%3E"); }
+.bldg.spicery.producing::after       { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 20'%3E%3Cellipse cx='5' cy='16' rx='3.5' ry='2.5' fill='%23a08868' opacity='0.55'/%3E%3Cellipse cx='4' cy='9' rx='3' ry='2' fill='%23b09878' opacity='0.4'/%3E%3Cellipse cx='6' cy='3' rx='2.5' ry='1.5' fill='%23c0a888' opacity='0.25'/%3E%3C/svg%3E"); }
+.bldg.distillery.producing::after    { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 20'%3E%3Cellipse cx='5' cy='16' rx='3.5' ry='2.5' fill='%23dddddd' opacity='0.65'/%3E%3Cellipse cx='4' cy='9' rx='3' ry='2' fill='%23e8e8e8' opacity='0.45'/%3E%3Cellipse cx='6' cy='3' rx='2.5' ry='1.5' fill='%23f0f0f0' opacity='0.3'/%3E%3C/svg%3E"); }
+.bldg.cannery.producing::after       { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 20'%3E%3Cellipse cx='5' cy='16' rx='3.5' ry='2.5' fill='%23cccccc' opacity='0.6'/%3E%3Cellipse cx='4' cy='9' rx='3' ry='2' fill='%23dddddd' opacity='0.4'/%3E%3Cellipse cx='6' cy='3' rx='2.5' ry='1.5' fill='%23e8e8e8' opacity='0.25'/%3E%3C/svg%3E"); }
+.bldg.compost_heap.producing::after  { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 20'%3E%3Cellipse cx='5' cy='16' rx='3.5' ry='2.5' fill='%239a8a70' opacity='0.55'/%3E%3Cellipse cx='4' cy='9' rx='3' ry='2' fill='%23a89880' opacity='0.4'/%3E%3Cellipse cx='6' cy='3' rx='2.5' ry='1.5' fill='%23b8a890' opacity='0.25'/%3E%3C/svg%3E"); }
+
+/* Multi-tile brewery (2×1) steam — uses --bldg-fig-* for chimney scaling. */
+.bldg.brewery.producing::after {
+  content: ''; position: absolute;
+  right: calc(8% * var(--bldg-fig-x));
+  top: calc(-12% * var(--bldg-fig-y));
+  width: calc(28% * var(--bldg-fig-x));
+  height: calc(50% * var(--bldg-fig-y));
+  background-size: contain; background-repeat: no-repeat; background-position: bottom center;
+  animation: act-smoke 2.6s ease-out infinite;
+  pointer-events: none; z-index: 3;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 20'%3E%3Cellipse cx='5' cy='16' rx='3.5' ry='2.5' fill='%23cccccc' opacity='0.6'/%3E%3Cellipse cx='4' cy='9' rx='3' ry='2' fill='%23dddddd' opacity='0.4'/%3E%3Cellipse cx='6' cy='3' rx='2.5' ry='1.5' fill='%23e8e8e8' opacity='0.25'/%3E%3C/svg%3E");
+}
+
+/* Well: water bucket bobbing on its rope (centered, vertical bob). */
+.bldg.well.producing::after {
+  content: ''; position: absolute;
+  left: 50%; top: 28%; width: 22%; height: 26%;
+  transform: translateX(-50%);
+  background-size: contain; background-repeat: no-repeat; background-position: center;
+  animation: act-bob 1.8s ease-in-out infinite;
+  pointer-events: none; z-index: 3;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 12'%3E%3Cpath d='M 2 4 L 8 4 L 7.5 11 L 2.5 11 Z' fill='%237a5a3a' stroke='%23402818' stroke-width='0.4'/%3E%3Cellipse cx='5' cy='4' rx='3' ry='0.7' fill='%2360a0c0'/%3E%3Cline x1='1.5' y1='3' x2='8.5' y2='3' stroke='%23606060' stroke-width='0.3'/%3E%3Cpath d='M 2 4 Q 5 1.5 8 4' fill='none' stroke='%23808080' stroke-width='0.4'/%3E%3C/svg%3E");
+}
+
 /* ── Unstaffed / disconnected ── */
 /* ── Non-producing states ────────────────────────────────
    .idle is the umbrella class for any functional building (extractor,
