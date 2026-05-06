@@ -258,11 +258,15 @@ body.inspector-open .map-canvas { margin-bottom: calc(50vh + 28px); }
    (see map.js). They share the .road-tile cell class for the base
    background. Nothing else needed — they should be visually
    indistinguishable from a normal road. */
-.cell.valid-placement { box-shadow: inset 0 0 0 2px #5ec49e; cursor: crosshair; }
+/* Valid-placement uses outline rather than inset box-shadow because the
+   heatmap overlays (pollution / crime / desirability) all apply their
+   tint via inset box-shadow with higher specificity, which would
+   otherwise hide the placement outline whenever a heatmap is active. */
+.cell.valid-placement { outline: 2px solid #5ec49e; outline-offset: -2px; cursor: crosshair; }
 .cell.valid-placement:hover { background: rgba(94,196,158,0.15); }
 .cell.empty-cell { background: transparent; cursor: default; pointer-events: none; }
 .cell.empty-cell::before { display: none; }
-.cell.drag-preview { background: rgba(40, 36, 26, 0.7) !important; box-shadow: inset 0 0 0 2px rgba(212, 170, 80, 0.6); cursor: crosshair; position: relative; }
+.cell.drag-preview { background: rgba(40, 36, 26, 0.7) !important; outline: 2px solid rgba(212, 170, 80, 0.6); outline-offset: -2px; cursor: crosshair; position: relative; }
 .cell.drag-preview::after { content: ''; position: absolute; inset: 20%; background: rgba(212,170,80,0.25); border-radius: 2px; }
 .res-dot { width: 4px; height: 4px; border-radius: 50%; animation: res-dot-pulse 3s ease-in-out infinite; position: relative; z-index: 1; opacity: 0.35; }
 .res-timber .res-dot { background: radial-gradient(circle, #7ed4ae 0%, #3a8a5a 100%); box-shadow: 0 0 2px rgba(94,196,158,0.22); }
