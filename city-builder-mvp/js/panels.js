@@ -187,16 +187,16 @@ export function renderBuildPanel() {
     } else if (bt.category === 'housing') {
       desc = 'Shanty \u2192 Hut \u2192 Cottage \u2192 Townhouse \u2192 Villa \u2192 Manor \u2192 Mansion \u2192 Estate \u2192 Palace. Workers: 2\u2013100 as conditions improve. Each tier adds one prereq: T1 well, T2 food, T3 road, T4 school, T5 temple. T6+ adds a luxury food (spirits/caviar/spices/ale), T7+ any industrial luxury, T8 ALL FOUR (cabinets, monuments, mosaics, machinery) \u2014 full trade network required.';
     } else if (bt.category === 'extractor') {
-      desc = 'Produces ' + bt.output_rate + ' ' + resourceName(bt.output_resource_key).toLowerCase() + '/min';
+      desc = 'Produces ' + bt.output_rate + ' ' + resourceName(bt.output_resource_key).toLowerCase() + '/min. Needs road access.';
     } else if (bt.category === 'food_extractor') {
       var tileLabel = bt.placement_resource_node_key
         ? resourceName(bt.placement_resource_node_key).toLowerCase() + ' tile'
         : 'any open tile';
-      desc = 'Produces ' + bt.output_rate + ' ' + resourceName(bt.output_resource_key).toLowerCase() + '/min (a food). Place on a ' + tileLabel + '.';
+      desc = 'Produces ' + bt.output_rate + ' ' + resourceName(bt.output_resource_key).toLowerCase() + '/min (a food). Place on a ' + tileLabel + '. Needs road access.';
     } else if (bt.category === 'booster') {
       var pct = Math.round(((bt.boost_multiplier || 1) - 1) * 100);
       var targetText = bt.boost_target === 'food_extractor' ? 'food extractors' : 'extractors';
-      desc = '+' + pct + '% output to your ' + targetText + ' within ' + (bt.boost_range || 2) + ' tiles. Must be staffed.';
+      desc = '+' + pct + '% output to your ' + targetText + ' within ' + (bt.boost_range || 2) + ' tiles. Must be staffed. Needs road access.';
     } else if (bt.category === 'service') {
       if (key === 'well') {
         desc = 'Lets housing within 4 tiles upgrade past tier 0. Needs road + 3 workers.';
@@ -217,7 +217,16 @@ export function renderBuildPanel() {
       desc = 'Covers nearby housing within ' + (bt.coverage_radius || 0) + ' tiles to reduce crime. Costs $'
            + (bt.upkeep_per_minute || 0) + '/min in upkeep while active. Needs road access.';
     } else {
-      desc = bt.input_rate + ' ' + resourceName(bt.input_resource_key).toLowerCase() + ' \u2192 ' + bt.output_rate + ' ' + resourceName(bt.output_resource_key).toLowerCase() + '/min (road required)';
+      // Processor (catchall): list every required input including the
+      // optional second input. Without this, dual-input processors like
+      // cabinetmaker (furniture + lime) and architect (statuary + glass)
+      // hide the second prereq from the player.
+      var inParts = [bt.input_rate + ' ' + resourceName(bt.input_resource_key).toLowerCase()];
+      if (bt.input_resource_key_2) {
+        var rate2 = (bt.input_rate_2 != null) ? bt.input_rate_2 : bt.input_rate;
+        inParts.push(rate2 + ' ' + resourceName(bt.input_resource_key_2).toLowerCase());
+      }
+      desc = inParts.join(' + ') + ' \u2192 ' + bt.output_rate + ' ' + resourceName(bt.output_resource_key).toLowerCase() + '/min. Needs road access.';
     }
 
     var costStr;
