@@ -40,6 +40,13 @@ export function updateMoney() {
   if (parcelsEl) parcelsEl.textContent = parcelsOwned;
 }
 
+export function updateIdentity() {
+  var cityEl = document.getElementById('g-city-name');
+  var distEl = document.getElementById('g-district-name');
+  if (cityEl) cityEl.textContent = state.cityName || '—';
+  if (distEl) distEl.textContent = (state.profile && state.profile.district_name) || (state.profile && state.profile.display_name) || '—';
+}
+
 export function updateWorkers() {
   var li = state.laborInfo;
   var el = document.getElementById('g-workers');

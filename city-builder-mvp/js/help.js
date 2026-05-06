@@ -10,6 +10,9 @@ import { state } from './state.js';
 import { colors, spriteIcons } from './sprites.js';
 import { expandDistrict } from './map.js';
 import { doLogout, doReset } from './auth.js';
+import { sb } from './config.js';
+import { updateIdentity } from './ui.js';
+import { addNotification } from './notifications.js';
 
 var openOverlay = null;
 
@@ -386,6 +389,8 @@ function openSettingsModal() {
   if (openOverlay) return;
   openOverlay = document.createElement('div');
   openOverlay.className = 'help-overlay';
+  var districtName = (state.profile && state.profile.district_name) || '—';
+  var cityName = state.cityName || '—';
   openOverlay.innerHTML =
     '<div class="stat-info-modal" role="dialog" aria-modal="true">' +
       '<div class="help-header">' +
@@ -393,6 +398,20 @@ function openSettingsModal() {
         '<button class="help-close" id="help-close" aria-label="Close">×</button>' +
       '</div>' +
       '<div class="help-body">' +
+        '<div class="settings-row">' +
+          '<div class="settings-row-text">' +
+            '<div class="settings-row-title">District name</div>' +
+            '<div class="settings-row-sub">Currently: ' + escapeHtml(districtName) + '</div>' +
+          '</div>' +
+          '<button class="btn-secondary" id="settings-rename-district-btn">Rename</button>' +
+        '</div>' +
+        '<div class="settings-row">' +
+          '<div class="settings-row-text">' +
+            '<div class="settings-row-title">City name</div>' +
+            '<div class="settings-row-sub">Shared with every player. Currently: ' + escapeHtml(cityName) + '</div>' +
+          '</div>' +
+          '<button class="btn-secondary" id="settings-rename-city-btn">Rename</button>' +
+        '</div>' +
         '<div class="settings-row">' +
           '<div class="settings-row-text">' +
             '<div class="settings-row-title">Reset district</div>' +
@@ -413,6 +432,40 @@ function openSettingsModal() {
   document.getElementById('help-close').addEventListener('click', closeHelpModal);
   openOverlay.addEventListener('click', function (e) {
     if (e.target === openOverlay) closeHelpModal();
+  });
+  document.getElementById('settings-rename-district-btn').addEventListener('click', function () {
+    var current = (state.profile && state.profile.district_name) || '';
+    var name = prompt('Rename your district', current);
+    if (name == null) return;
+    name = name.trim();
+    if (name.length < 2 || name.length > 40) {
+      addNotification('error', 'District name must be 2–40 characters.');
+      return;
+    }
+    sb.rpc('rename_district', { p_name: name }).then(function (r) {
+      if (r.error) { addNotification('error', 'Rename failed: ' + r.error.message); return; }
+      state.profile.district_name = r.data;
+      updateIdentity();
+      addNotification('success', 'District renamed to ' + r.data + '.');
+    });
+    closeHelpModal();
+  });
+  document.getElementById('settings-rename-city-btn').addEventListener('click', function () {
+    var current = state.cityName || '';
+    var name = prompt('Rename the city (shared with every player)', current);
+    if (name == null) return;
+    name = name.trim();
+    if (name.length < 2 || name.length > 40) {
+      addNotification('error', 'City name must be 2–40 characters.');
+      return;
+    }
+    sb.rpc('rename_city', { p_name: name }).then(function (r) {
+      if (r.error) { addNotification('error', 'Rename failed: ' + r.error.message); return; }
+      state.cityName = r.data;
+      updateIdentity();
+      addNotification('success', 'City renamed to ' + r.data + '.');
+    });
+    closeHelpModal();
   });
   document.getElementById('settings-reset-btn').addEventListener('click', function () {
     closeHelpModal();

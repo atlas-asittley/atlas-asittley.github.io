@@ -44,7 +44,17 @@ body {
 
 /* ── Game: top bar ─────────────────────────────────── */
 #screen-game { background: #0b0f14; }
-.topbar { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; background: #131a24; border-bottom: 1px solid #1e2a3a; flex-shrink: 0; }
+.topbar { display: flex; flex-direction: column; gap: 4px; padding: 6px 12px 8px; background: #131a24; border-bottom: 1px solid #1e2a3a; flex-shrink: 0; }
+.topbar-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.topbar-row-1 { justify-content: space-between; }
+.topbar-id { display: flex; align-items: baseline; gap: 6px; min-width: 0; flex: 1 1 auto; overflow: hidden; }
+.topbar-city { color: #e6eef6; font-size: 1rem; font-weight: 700; letter-spacing: 0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.topbar-divider { color: #4a5a6e; font-size: 0.9rem; flex-shrink: 0; }
+.topbar-district { color: #c8d4e0; font-size: 0.86rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.topbar-money { flex-shrink: 0; }
+.topbar-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.topbar-row-2 { gap: 8px; }
+/* Old .topbar-left / .topbar-right are unused now but kept harmless */
 .topbar-left { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .topbar-right { display: flex; align-items: center; gap: 6px; }
 #g-expand-district { background: linear-gradient(180deg, #2a3848 0%, #1f2a36 100%); color: #e6c65a; border-color: #3a4a5e; font-weight: 600; }

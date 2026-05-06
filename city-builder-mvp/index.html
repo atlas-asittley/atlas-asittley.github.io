@@ -104,6 +104,16 @@
       <input id="industry-name" type="text" maxlength="24" placeholder="Pick a name other players will see" autocomplete="off">
       <div class="field-hint">2–24 characters. This is your screen name; you can keep your email private.</div>
     </div>
+    <div class="field">
+      <label>District Name</label>
+      <input id="industry-district" type="text" maxlength="40" placeholder="e.g. Riverside, Old Town, Atlas's District" autocomplete="off">
+      <div class="field-hint">Your slice of the city. 2–40 characters. You can rename it later from Settings.</div>
+    </div>
+    <div class="field" id="industry-city-field" style="display:none;">
+      <label>City Name</label>
+      <input id="industry-city" type="text" maxlength="40" placeholder="What should the new city be called?" autocomplete="off">
+      <div class="field-hint">You're the first player here, so you get to name the city. 2–40 characters.</div>
+    </div>
     <div class="industry-grid">
       <div class="industry-card" data-industry="timber">
         <div class="ic-icon" style="color:#5ec49e;">&#9650;</div>
@@ -134,20 +144,26 @@
 <!-- ── Game ──────────────────────────────────────────── -->
 <div id="screen-game" class="screen">
   <div class="topbar">
-    <div class="topbar-left">
-      <span class="topbar-title">City Builder</span>
-      <span class="stat"><span class="v gold" id="g-money" style="cursor:pointer;" title="Triple-tap for a testing cheat">$500</span></span>
+    <div class="topbar-row topbar-row-1">
+      <div class="topbar-id">
+        <span class="topbar-city" id="g-city-name">—</span>
+        <span class="topbar-divider">›</span>
+        <span class="topbar-district" id="g-district-name">—</span>
+      </div>
+      <span class="topbar-money" title="Treasury — triple-tap for testing cheat"><span class="v gold" id="g-money" style="cursor:pointer;">$500</span></span>
+      <div class="topbar-actions">
+        <button class="btn-sm btn-icon" id="g-settings" title="Settings">⚙</button>
+        <button class="btn-sm btn-icon" id="g-notifications" title="Notifications">🔔</button>
+        <button class="btn-sm" id="g-help" title="Buildings reference">?</button>
+      </div>
+    </div>
+    <div class="topbar-row topbar-row-2">
       <span class="stat" id="g-workers-stat" title="Workers used / capacity"><span class="workers-icon">👷</span><span class="v workers" id="g-workers">0/5</span><span class="labor-badge" id="g-labor-badge" style="display:none;"> !</span></span>
       <span class="stat" id="g-parcels-stat" title="Parcels claimed"><span class="parcels-icon">🗺</span><span class="v" id="g-parcels">1</span></span>
-      <span class="stat" id="g-happiness-stat" title="Citizen happiness (0–100). Drives immigration / emigration."><span class="happiness-icon" id="g-happiness-icon">🙂</span><span class="v" id="g-happiness">50</span></span>
-      <span class="stat" id="g-crime-stat" title="Crime (0–100, lower is better). Reduces happiness; drop it by covering houses with police buildings."><span class="crime-icon" id="g-crime-icon">🚨</span><span class="v" id="g-crime">10</span></span>
-      <span class="stat" id="g-migration-stat" title="Net population change per minute. Positive = moving in, negative = leaving."><span class="migration-icon" id="g-migration-icon">→</span><span class="v" id="g-migration">0</span></span>
+      <span class="stat" id="g-happiness-stat" title="Citizen happiness (0–100)."><span class="happiness-icon" id="g-happiness-icon">🙂</span><span class="v" id="g-happiness">50</span></span>
+      <span class="stat" id="g-crime-stat" title="Crime (0–100, lower is better)."><span class="crime-icon" id="g-crime-icon">🚨</span><span class="v" id="g-crime">10</span></span>
+      <span class="stat" id="g-migration-stat" title="Net population change per minute."><span class="migration-icon" id="g-migration-icon">→</span><span class="v" id="g-migration">0</span></span>
       <span class="stat" id="g-productivity-stat" title="Production multiplier. 100% = baseline."><span class="productivity-icon">⚒</span><span class="v" id="g-productivity">100%</span></span>
-    </div>
-    <div class="topbar-right">
-      <button class="btn-sm btn-icon" id="g-settings" title="Settings">⚙</button>
-      <button class="btn-sm btn-icon" id="g-notifications" title="Notifications">🔔</button>
-      <button class="btn-sm" id="g-help" title="Buildings reference">?</button>
     </div>
   </div>
   <div class="info-bar">

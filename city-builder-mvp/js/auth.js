@@ -17,7 +17,7 @@ export function checkProfileAndRoute(user) {
       }
       if (r.data && r.data.industry_key) {
         state.profile = r.data;
-        enterGame();
+        loadCityName().then(enterGame);
       } else {
         enterIndustrySelect();
       }
@@ -25,18 +25,44 @@ export function checkProfileAndRoute(user) {
     .catch(function () { enterIndustrySelect(); });
 }
 
+// Pull the current player's city name into state. Cheap — single row read.
+export function loadCityName() {
+  if (!state.profile || !state.profile.city_id) {
+    state.cityName = null;
+    return Promise.resolve();
+  }
+  return sb.from('cities').select('name').eq('id', state.profile.city_id).maybeSingle()
+    .then(function (r) { state.cityName = (r.data && r.data.name) || null; })
+    .catch(function () { state.cityName = null; });
+}
+
 function enterIndustrySelect() {
   // Leave the screen-name field empty so the user actively chooses a
   // name. Previously this prefilled with the email's local part, which
   // exposed the email in their public display name by default.
   var nameInput = document.getElementById('industry-name');
+  var districtInput = document.getElementById('industry-district');
+  var cityInput = document.getElementById('industry-city');
+  var cityField = document.getElementById('industry-city-field');
   nameInput.value = '';
+  if (districtInput) districtInput.value = '';
+  if (cityInput) cityInput.value = '';
   selectedIndustry = null;
   document.querySelectorAll('.industry-card').forEach(function (c) { c.classList.remove('selected'); });
   document.getElementById('industry-confirm').disabled = true;
   clearError(document.getElementById('industry-error'));
   showScreen('screen-industry');
-  // Focus the name input so it's the first thing the user types into.
+
+  // Show the city-name field only if no city exists yet (first-player
+  // flow). Cheap probe — single row.
+  if (cityField) {
+    cityField.style.display = 'none';
+    sb.from('cities').select('id').limit(1).then(function (r) {
+      var noCity = !r.data || r.data.length === 0;
+      cityField.style.display = noCity ? '' : 'none';
+    });
+  }
+
   setTimeout(function () { nameInput.focus(); }, 60);
 }
 
@@ -54,21 +80,30 @@ export function initAuthEvents() {
   // Industry confirm
   document.getElementById('industry-confirm').addEventListener('click', function () {
     var name = document.getElementById('industry-name').value.trim();
+    var districtName = (document.getElementById('industry-district').value || '').trim();
+    var cityField = document.getElementById('industry-city-field');
+    var cityName = (document.getElementById('industry-city').value || '').trim();
     var errEl = document.getElementById('industry-error');
     clearError(errEl);
     if (!name || name.length < 2) { showError(errEl, 'Name must be at least 2 characters.'); return; }
+    if (!districtName || districtName.length < 2) { showError(errEl, 'District name must be at least 2 characters.'); return; }
+    if (cityField && cityField.style.display !== 'none') {
+      if (!cityName || cityName.length < 2) { showError(errEl, 'City name must be at least 2 characters.'); return; }
+    }
     if (!selectedIndustry) { showError(errEl, 'Choose an industry.'); return; }
 
     var btn = this;
     btn.disabled = true;
     btn.textContent = 'Setting up...';
 
-    sb.rpc('choose_industry', { p_display_name: name, p_industry_key: selectedIndustry })
+    sb.rpc('choose_industry', {
+      p_display_name: name,
+      p_industry_key: selectedIndustry,
+      p_district_name: districtName,
+      p_city_name: cityName || null
+    })
       .then(function (r) {
         if (r.error) {
-          // FK violation on player_profiles_id_fkey means the JWT references
-          // an auth.users row that no longer exists (account was deleted
-          // server-side). Sign out so the next reload starts clean.
           if (r.error.message && r.error.message.indexOf('player_profiles_id_fkey') !== -1) {
             showError(errEl, 'This session points to a deleted account. Signing you out — please register again.');
             sb.auth.signOut().then(function () { showScreen('screen-welcome'); });
@@ -80,7 +115,7 @@ export function initAuthEvents() {
           return;
         }
         state.profile = r.data;
-        enterGame();
+        loadCityName().then(enterGame);
       })
       .catch(function (err) {
         showError(errEl, err.message || 'Setup failed. Try again.');

@@ -1,7 +1,7 @@
 // ── Game entry, data loading, and production loop ──
 import { sb } from './config.js';
 import { state, computeTraderUnlocks, computeLaborAllocation, computeGridBounds } from './state.js';
-import { showScreen, showToast, capitalize, updateMoney, updateWorkers, updateHappiness, updateCrime, updateMigration, updateProductivity } from './ui.js';
+import { showScreen, showToast, capitalize, updateMoney, updateWorkers, updateHappiness, updateCrime, updateMigration, updateProductivity, updateIdentity } from './ui.js';
 import { addNotification, loadNotifications, initNotificationBell } from './notifications.js';
 import { renderMap, initMapEvents, restoreMapView } from './map.js';
 import { renderBuildPanel, renderTradePanel, refreshActiveDataPanel, initTabs, initPanelCollapse, checkAllTraderVisits } from './panels.js';
@@ -301,6 +301,7 @@ export function enterGame() {
   showScreen('screen-game');
   document.getElementById('g-industry').textContent = capitalize(state.profile.industry_key);
   document.getElementById('g-player-name').textContent = state.profile.display_name;
+  updateIdentity();
   updateMoney();
   updateWorkers();
   updateHappiness();
