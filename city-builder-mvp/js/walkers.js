@@ -639,30 +639,26 @@ function ensureWalkerEl(w) {
 
 // ── Position a walker's element ──
 // `immediate` skips the CSS transition (used for spawn placement and zoom snap).
-function applyWalkerPosition(w, immediate) {
+// `retryCount` is internal: tracks how many rAF retries have fired in the
+// CURRENT chain when the grid wasn't measurable. Each fresh external call
+// (renderWalkers, walker step, etc.) starts a new chain at 0.
+function applyWalkerPosition(w, immediate, retryCount) {
   if (!w.el) return;
   var grid = document.getElementById('map-grid');
   if (!grid) return;
   var cols = state.gridCols || 15;
   var gridW = grid.offsetWidth;
   if (gridW === 0) {
-    // Layout hasn't settled yet — common on first load when walkers
-    // spawn during enterGame() before the map screen has had a paint.
-    // Retry on the next frame so the walker doesn't get stuck at
-    // (0,0) until its next walkerStep tick fires.
-    //
-    // Hard-cap the retries so if the grid stays hidden indefinitely
-    // (e.g., user has the bottom panel in 'expanded' state, which
-    // sets `display: none` on .map-area) the walker doesn't keep
-    // firing rAF callbacks every frame forever — that pegs the CPU.
-    // Subsequent walker steps and the panel-collapse / enterGame
-    // hooks will re-position once the map becomes measurable.
-    w._posRetries = (w._posRetries || 0) + 1;
-    if (w._posRetries > 30) return;  // ~500ms at 60Hz; bail.
-    requestAnimationFrame(function () { applyWalkerPosition(w, immediate); });
+    // Layout hasn't settled, or the map is hidden via display:none
+    // (panel-expanded state). Retry next frame, but cap the chain so
+    // a permanently-hidden grid doesn't peg the CPU. External callers
+    // (renderWalkers, panel un-expand, walker steps) start a fresh
+    // chain when conditions might have changed.
+    var n = (retryCount || 0) + 1;
+    if (n > 30) return;  // ~500ms at 60Hz; bail.
+    requestAnimationFrame(function () { applyWalkerPosition(w, immediate, n); });
     return;
   }
-  w._posRetries = 0;
   // CSS sets `gap: 0px` on #map-grid, so cells fully tile the width.
   // (The earlier `gap = 1` constant accumulated ~1 column of pixel
   // drift across the grid — wrong.)
@@ -771,10 +767,20 @@ export function syncCollectorWalkers() {
   // Collector walkers shuttle between an extractor and its claimed
   // resource tile. Include other players' extractors too — same as
   // ambient walkers, this fills neighbor cities with motion.
+  // Only spawn for extractors that are ACTUALLY producing — an unstaffed
+  // clay pit with workers walking back and forth lies about the building
+  // being operational. For our own buildings we have fresh client-side
+  // staffing info (laborInfo.staffedIds, recomputed every renderMap);
+  // for others we trust the DB's is_staffed (updated each production tick).
   var myExtractors = state.allBuildings.filter(function (b) {
     if (b.status !== 'active') return false;
     var bt = state.buildingTypes[b.building_type_key];
-    return bt && bt.category === 'extractor';
+    if (!bt || bt.category !== 'extractor') return false;
+    if (b.player_id === state.currentUser.id) {
+      return !!(state.laborInfo && state.laborInfo.staffedIds
+                && state.laborInfo.staffedIds[b.id]);
+    }
+    return !!b.is_staffed;
   });
 
   var keepIds = {};
@@ -1044,6 +1050,34 @@ export function startWalkers() {
   stopWalkers();
   preseedWalkers();
   spawnTickTimer = setInterval(spawnTick, WALKER_SPAWN_TICK_MS);
+  ensureGridResizeObserver();
+}
+
+// Watch for the moment the grid transitions from zero-size to a real
+// measurable width — happens when the screen first lays out, or when
+// the bottom panel collapses out of its full-screen state. Re-render
+// walker positions so any walkers stranded by the position-retry cap
+// (gridW=0 path bailed after ~30 frames) get placed correctly.
+//
+// ResizeObserver only fires when the element actually has dimensions
+// (display:none parents suppress it), which is exactly the gate we
+// want — no point repositioning walkers while the grid is hidden.
+var gridResizeObserver = null;
+var lastGridW = 0;
+function ensureGridResizeObserver() {
+  if (gridResizeObserver || typeof ResizeObserver === 'undefined') return;
+  var grid = document.getElementById('map-grid');
+  if (!grid) return;
+  gridResizeObserver = new ResizeObserver(function (entries) {
+    var w = entries[0] && entries[0].contentRect ? entries[0].contentRect.width : 0;
+    if (lastGridW === 0 && w > 0) {
+      // First measurable size after being hidden — recover any walkers
+      // stuck unpositioned.
+      renderWalkers();
+    }
+    lastGridW = w;
+  });
+  gridResizeObserver.observe(grid);
 }
 
 export function stopWalkers() {
