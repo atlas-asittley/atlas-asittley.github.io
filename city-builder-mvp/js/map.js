@@ -372,7 +372,15 @@ function _doRenderMap() {
         classes.push('multi-tile-interior');
         dataAnchor = ' data-anchor-x="' + interiorBuilding.x + '" data-anchor-y="' + interiorBuilding.y + '"';
       }
-      html += '<div class="' + classes.join(' ') + '" data-x="' + x + '" data-y="' + y + '" data-tile-id="' + tile.id + '"' + dataAnchor + '>';
+      // Inline --pollution so the body.show-pollution heatmap CSS can
+      // scale the yellow tint per tile. Skip emitting on clean tiles
+      // to keep the HTML lean.
+      var pollStyle = '';
+      if (tile.pollution && tile.pollution > 0) {
+        classes.push('pollution-tinted');
+        pollStyle = ' style="--pollution:' + tile.pollution + '"';
+      }
+      html += '<div class="' + classes.join(' ') + '" data-x="' + x + '" data-y="' + y + '" data-tile-id="' + tile.id + '"' + dataAnchor + pollStyle + '>';
 
       if (building) {
         var mine = building.player_id === state.currentUser.id;
@@ -937,6 +945,22 @@ export function initMapEvents() {
     zoomResetBtn.addEventListener('click', function () {
       var rect = viewport.getBoundingClientRect();
       setMapZoomAtPoint(1, rect.left + rect.width / 2, rect.top + rect.height / 2);
+    });
+  }
+
+  // ── Pollution heatmap toggle ──
+  // body.show-pollution adds a yellow tint overlay scaled by --pollution
+  // (set per-cell in _doRenderMap). Persists across reloads.
+  var pollutionBtn = document.getElementById('pollution-toggle');
+  if (pollutionBtn) {
+    var saved;
+    try { saved = localStorage.getItem('city_show_pollution'); } catch (e) {}
+    if (saved === '1') document.body.classList.add('show-pollution');
+    pollutionBtn.classList.toggle('active', document.body.classList.contains('show-pollution'));
+    pollutionBtn.addEventListener('click', function () {
+      var on = document.body.classList.toggle('show-pollution');
+      pollutionBtn.classList.toggle('active', on);
+      try { localStorage.setItem('city_show_pollution', on ? '1' : '0'); } catch (e) {}
     });
   }
 

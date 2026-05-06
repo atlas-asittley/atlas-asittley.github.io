@@ -594,6 +594,16 @@ function renderInspector() {
       }
     }
 
+    // Pollution on this tile (the building's anchor tile). Surface
+    // when > 0 so the player understands why pollution-affected
+    // gameplay (housing tier cap, future devolve) is happening.
+    var btile = state.tileMap[b.x + ',' + b.y];
+    if (btile && btile.pollution && btile.pollution > 0) {
+      var pollLabel = btile.pollution < 30 ? 'light' : btile.pollution < 60 ? 'heavy' : 'toxic';
+      var pollClass = btile.pollution < 30 ? '' : 'insp-warn';
+      html += '<div class="insp-row"><span class="insp-label">Pollution</span><span class="insp-value ' + pollClass + '">' + Math.round(btile.pollution) + ' (' + pollLabel + ')</span></div>';
+    }
+
     // Production I/O
     if ((bt.category === 'extractor' || bt.category === 'food_extractor') && bt.output_resource_key) {
       var resName = state.resources[bt.output_resource_key] ? state.resources[bt.output_resource_key].name : bt.output_resource_key;
