@@ -649,9 +649,7 @@ function applyWalkerPosition(w, immediate) {
     // Layout hasn't settled yet — common on first load when walkers
     // spawn during enterGame() before the map screen has had a paint.
     // Retry on the next frame so the walker doesn't get stuck at
-    // (0,0) until its next walkerStep tick fires. The walker stays
-    // invisible (opacity: 0 in CSS) until this branch falls through
-    // and we set opacity: 1 below.
+    // (0,0) until its next walkerStep tick fires.
     requestAnimationFrame(function () { applyWalkerPosition(w, immediate); });
     return;
   }
