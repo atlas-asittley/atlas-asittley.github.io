@@ -412,11 +412,10 @@ export function renderTradePanel() {
       var visitLabel = '';
       if (nextVisit) {
         var diff = nextVisit.getTime() - Date.now();
-        if (diff <= 0) {
-          visitLabel = '<span class="partner-tab-due">Due!</span>';
-        } else {
+        if (diff > 0) {
           visitLabel = '<span class="partner-tab-timer">~' + Math.ceil(diff / 60000) + 'm</span>';
         }
+        // Don't show a "Due!" badge anymore — auto-resolve handles it.
       }
       html += '<button class="partner-tab' + (selected ? ' selected' : '') + '" data-trader="' + tk + '">';
       html += '<div class="partner-tab-name">' + t.name + '</div>';
@@ -429,34 +428,28 @@ export function renderTradePanel() {
   });
   html += '</div>';
 
-  // ── Check All Visits button (only unlocked traders) ──
+  // ── Visit status (auto-resolve) ──
+  // Trade visits are now resolved automatically every production tick by
+  // _pp_resolve_trader_visits on the server. The player's per-resource
+  // policies (City → Resources) decide what gets sold or bought; nothing
+  // to click here. Show the soonest next-visit time as ambient info.
   var unlockedKeys = traderKeys.filter(function (tk) {
     return !state.unlockedTraders[tk] || state.unlockedTraders[tk].unlocked;
   });
   html += '<div class="visit-status">';
-  var anyDue = unlockedKeys.some(function (tk) {
+  var soonest = null;
+  unlockedKeys.forEach(function (tk) {
     var nv = state.nextVisitAts[tk];
-    return nv && nv.getTime() <= Date.now();
-  });
-  if (anyDue) {
-    html += '<span class="visit-due">Trade visits available!</span>';
-  } else {
-    // Show time until next visit across unlocked traders
-    var soonest = null;
-    unlockedKeys.forEach(function (tk) {
-      var nv = state.nextVisitAts[tk];
-      if (nv && (!soonest || nv.getTime() < soonest)) {
-        soonest = nv.getTime();
-      }
-    });
-    if (soonest) {
-      var mins = Math.ceil((soonest - Date.now()) / 60000);
-      html += '<span class="visit-timer">Next visit in ~' + mins + ' min</span>';
-    } else {
-      html += '<span class="visit-timer">Next visit: soon</span>';
+    if (nv && (!soonest || nv.getTime() < soonest)) {
+      soonest = nv.getTime();
     }
+  });
+  if (soonest && soonest > Date.now()) {
+    var mins = Math.ceil((soonest - Date.now()) / 60000);
+    html += '<span class="visit-timer">Next auto-trade in ~' + mins + ' min</span>';
+  } else {
+    html += '<span class="visit-timer">Auto-trading on each production tick</span>';
   }
-  html += ' <button class="btn-check-visit" id="btn-check-visit">Check All</button>';
   html += '</div>';
 
   // ── Selected partner detail ──
@@ -464,15 +457,15 @@ export function renderTradePanel() {
   html += '<div class="trader-header">' + trader.name + '</div>';
   html += '<div class="trader-desc">' + (trader.description || '') + '</div>';
 
-  // Visit status for selected partner
+  // Visit status for selected partner — purely informational; no action.
   var selectedNextVisit = state.nextVisitAts[state.selectedTrader];
   if (selectedNextVisit) {
     var sdiff = selectedNextVisit.getTime() - Date.now();
     html += '<div class="partner-visit-info">';
     if (sdiff <= 0) {
-      html += '<span class="visit-due">Visit due now!</span>';
+      html += '<span class="visit-timer">Auto-trades on the next production tick</span>';
     } else {
-      html += '<span class="visit-timer">Next visit in ~' + Math.ceil(sdiff / 60000) + ' min</span>';
+      html += '<span class="visit-timer">Next auto-trade in ~' + Math.ceil(sdiff / 60000) + ' min</span>';
     }
     html += '</div>';
   }
@@ -573,15 +566,8 @@ export function renderTradePanel() {
     });
   });
 
-  // ── Wire check-all button ──
-  var checkBtn = document.getElementById('btn-check-visit');
-  if (checkBtn) {
-    checkBtn.addEventListener('click', function () {
-      checkBtn.disabled = true;
-      checkBtn.textContent = '...';
-      checkAllTraderVisits();
-    });
-  }
+  // (The Check All button is gone — visits auto-resolve every production
+  // tick via _pp_resolve_trader_visits on the server.)
 
   // ── Wire Black Market amount buttons ──
   panel.querySelectorAll('.bm-amt-btn').forEach(function (btn) {

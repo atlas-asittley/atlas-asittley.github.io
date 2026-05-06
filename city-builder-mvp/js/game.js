@@ -4,7 +4,7 @@ import { state, computeTraderUnlocks, computeLaborAllocation, computeGridBounds 
 import { showScreen, showToast, capitalize, updateMoney, updateWorkers, updateHappiness, updateCrime, updateMigration, updateProductivity, updateIdentity } from './ui.js';
 import { addNotification, loadNotifications, initNotificationBell } from './notifications.js';
 import { renderMap, initMapEvents, restoreMapView } from './map.js';
-import { renderBuildPanel, renderTradePanel, refreshActiveDataPanel, initTabs, initPanelCollapse, checkAllTraderVisits } from './panels.js';
+import { renderBuildPanel, renderTradePanel, refreshActiveDataPanel, initTabs, initPanelCollapse } from './panels.js';
 import { subscribeRealtime } from './realtime.js';
 import { startWalkers, stopWalkers, spawnImmigrantWalker, spawnEmigrantWalker, renderWalkers } from './walkers.js';
 import { initInspector } from './inspector.js';
@@ -327,7 +327,6 @@ export function enterGame() {
     // grid-not-measurable race (offsetWidth=0 if layout hadn't fully
     // committed). Re-render after a frame so they get correct positions.
     requestAnimationFrame(function () { renderWalkers(); });
-    checkAllTraderVisits();
     loadNotifications();
     initNotificationBell();
   }).catch(function (err) {
