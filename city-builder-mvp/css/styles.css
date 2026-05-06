@@ -1172,7 +1172,10 @@ body.app-hidden *::after {
 .panel-collapse-btn { display: flex; align-items: center; justify-content: center; width: 100%; height: 34px; background: linear-gradient(180deg, #18222f 0%, #131a24 100%); border: none; border-bottom: 1px solid #243447; color: #c8d4e0; font-size: 0.82rem; font-weight: 700; letter-spacing: 0.02em; cursor: pointer; flex-shrink: 0; padding: 0; transition: background 0.15s, color 0.15s; }
 .panel-collapse-btn:hover { background: linear-gradient(180deg, #1d2a3a 0%, #16202c 100%); color: #e6eef6; }
 .bottom-panel.collapsed .tab-bar,
-.bottom-panel.collapsed .panel-content { display: none; }
+.bottom-panel.collapsed .panel-content { display: none !important; }
+/* `!important` because `#panel-trade.active { display: flex }` further down
+   has higher specificity (1 ID + 1 class beats our 3 classes) and would
+   otherwise keep the Trade panel open even when collapsed. */
 .tab-bar { display: flex; border-bottom: 1px solid #1e2a3a; flex-shrink: 0; }
 .tab-btn { flex: 1; padding: 9px; text-align: center; font-size: 0.78rem; font-weight: 600; color: #7a8a9e; cursor: pointer; background: none; border: none; border-bottom: 2px solid transparent; transition: color 0.2s; }
 .tab-btn.active { color: #4fa3e0; border-bottom-color: #4fa3e0; }
@@ -1329,6 +1332,21 @@ body.app-hidden *::after {
 .stats-period-row { display: flex; gap: 4px; margin-bottom: 12px; }
 .stats-period-btn { flex: 1; padding: 6px 8px; background: #1a2332; border: 1px solid #243447; border-radius: 6px; color: #7a8a9e; font-size: 0.74rem; cursor: pointer; }
 .stats-period-btn.active { background: #243447; border-color: #4fa3e0; color: #4fa3e0; }
+.advisor-section { padding: 12px; background: linear-gradient(180deg, #182230 0%, #131a24 100%); border: 1px solid #2a3a52; border-radius: 8px; margin-bottom: 12px; }
+.advisor-title { font-size: 0.74rem; font-weight: 600; color: #4fa3e0; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
+.burn-rate-row { display: flex; align-items: baseline; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+.burn-rate-value { font-size: 1.05rem; font-weight: 700; }
+.burn-rate-value.good { color: #5ec49e; }
+.burn-rate-value.bad { color: #e0707a; }
+.burn-rate-value.neutral { color: #c2cfdc; }
+.burn-rate-projection { font-size: 0.78rem; color: #8a9bad; }
+.advisor-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.advisor-chip { font-size: 0.72rem; font-weight: 600; padding: 3px 8px; border-radius: 999px; background: #0e1620; border: 1px solid #243447; }
+.advisor-chip.good { color: #5ec49e; border-color: rgba(94, 196, 158, 0.4); }
+.advisor-chip.bad { color: #e0707a; border-color: rgba(224, 112, 122, 0.4); }
+.advisor-chart-label { font-size: 0.7rem; color: #6a7888; margin: 8px 0 2px; }
+.cashflow-chart { display: block; width: 100%; height: 56px; }
+
 .stats-summary { padding: 10px; background: #1a2332; border: 1px solid #243447; border-radius: 8px; margin-bottom: 12px; }
 .stats-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 0.84rem; }
 .stats-label { color: #7a8a9e; }

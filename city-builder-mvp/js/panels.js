@@ -1298,9 +1298,10 @@ function renderTreasuryPanel() {
   panel.innerHTML = renderPeriodToggleHtml(period) + '<div class="trade-loading">Loading…</div>';
   wirePeriodToggle(panel, function (p) { state.tradeStatsPeriod = p; renderTreasuryPanel(); });
 
-  Promise.all([fetchTradeFlows(period), fetchCashLedger(period)]).then(function (results) {
+  Promise.all([fetchTradeFlows(period), fetchCashLedger(period), fetchDailySeries(7)]).then(function (results) {
     var flows = results[0];
     var ledger = results[1];
+    var weekDays = results[2];
     var earnedBySource = Object.assign({}, flows.earnedBySource);
     var spentByDest = Object.assign({}, flows.spentByDest);
     // Merge cash-ledger entries — tax_revenue / build_cost / expansion_cost / etc.
@@ -1312,7 +1313,11 @@ function renderTreasuryPanel() {
     var totalIn = Object.keys(earnedBySource).reduce(function (s, k) { return s + earnedBySource[k]; }, 0);
     var totalOut = Object.keys(spentByDest).reduce(function (s, k) { return s + spentByDest[k]; }, 0);
 
-    var html = '<div class="stats-summary">';
+    // Advisor lives at the top — always shows the last 7 days regardless
+    // of the period toggle below (period only affects the totals/breakdown).
+    var html = renderTreasuryAdvisor(weekDays);
+
+    html += '<div class="stats-summary">';
     html += '<div class="stats-row"><span class="stats-label">Earned</span><span class="stats-val good">$' + totalIn + '</span></div>';
     html += '<div class="stats-row"><span class="stats-label">Spent</span><span class="stats-val bad">$' + totalOut + '</span></div>';
     html += '<div class="stats-row"><span class="stats-label">Net</span><span class="stats-val ' + ((totalIn - totalOut) >= 0 ? 'good' : 'bad') + '">$' + (totalIn - totalOut) + '</span></div>';
@@ -1342,6 +1347,177 @@ function renderTreasuryPanel() {
     replaceLoading(panel, '<div class="trade-error">Failed to load: ' + escapeHtml(err.message || err) + '</div>');
   });
 }
+
+// ── Treasury Advisor: 7-day burn rate / chart / chips ──
+
+function fetchDailySeries(days) {
+  var since = new Date(Date.now() - days * 86400000).toISOString();
+  return Promise.all([
+    sb.from('cash_transactions').select('source, amount, created_at').gte('created_at', since),
+    sb.from('trade_transactions').select('total_price, transaction_type, trader_key, created_at').gte('created_at', since)
+  ]).then(function (results) {
+    var buckets = {};
+    var dayKeys = [];
+    for (var i = days - 1; i >= 0; i--) {
+      var d = new Date(Date.now() - i * 86400000);
+      var k = d.toISOString().slice(0, 10);
+      dayKeys.push(k);
+      buckets[k] = { date: k, earned: 0, spent: 0, sources: {}, sinks: {} };
+    }
+    (results[0].data || []).forEach(function (row) {
+      var k = row.created_at.slice(0, 10);
+      if (!buckets[k]) return;
+      var amt = row.amount;
+      if (amt > 0) {
+        buckets[k].earned += amt;
+        buckets[k].sources[row.source] = (buckets[k].sources[row.source] || 0) + amt;
+      } else if (amt < 0) {
+        buckets[k].spent += -amt;
+        buckets[k].sinks[row.source] = (buckets[k].sinks[row.source] || 0) + (-amt);
+      }
+    });
+    (results[1].data || []).forEach(function (row) {
+      var k = row.created_at.slice(0, 10);
+      if (!buckets[k]) return;
+      var amt = row.total_price;
+      if (row.transaction_type === 'sell') {
+        buckets[k].earned += amt;
+        buckets[k].sources[row.trader_key] = (buckets[k].sources[row.trader_key] || 0) + amt;
+      } else {
+        buckets[k].spent += amt;
+        buckets[k].sinks[row.trader_key] = (buckets[k].sinks[row.trader_key] || 0) + amt;
+      }
+    });
+    return dayKeys.map(function (k) {
+      var b = buckets[k];
+      b.net = b.earned - b.spent;
+      return b;
+    });
+  });
+}
+
+function renderTreasuryAdvisor(days) {
+  var hasActivity = days.some(function (d) { return d.earned > 0 || d.spent > 0; });
+  if (!hasActivity) return '';  // nothing to chart yet
+
+  var weekNet = days.reduce(function (s, d) { return s + d.net; }, 0);
+  var avgDailyNet = weekNet / days.length;
+  var money = (state.profile && state.profile.money) || 0;
+
+  // Burn-rate / runway line.
+  var rateText, projText, rateClass;
+  if (avgDailyNet > 0.5) {
+    rateText = '+$' + Math.round(avgDailyNet) + '/day';
+    projText = '';
+    rateClass = 'good';
+  } else if (avgDailyNet < -0.5) {
+    var burn = -avgDailyNet;
+    rateText = '-$' + Math.round(burn) + '/day';
+    rateClass = 'bad';
+    if (money > 0) {
+      var runway = Math.floor(money / burn);
+      projText = 'cash runs out in ~' + runway + ' day' + (runway === 1 ? '' : 's') + ' at this rate';
+    } else {
+      projText = 'currently in deficit';
+    }
+  } else {
+    rateText = 'break-even';
+    projText = '';
+    rateClass = 'neutral';
+  }
+
+  // Top source / top sink across the 7-day window.
+  var sources = {}, sinks = {};
+  days.forEach(function (d) {
+    Object.keys(d.sources).forEach(function (k) { sources[k] = (sources[k] || 0) + d.sources[k]; });
+    Object.keys(d.sinks).forEach(function (k) { sinks[k] = (sinks[k] || 0) + d.sinks[k]; });
+  });
+  var topSource = Object.keys(sources).sort(function (a, b) { return sources[b] - sources[a]; })[0];
+  var topSink = Object.keys(sinks).sort(function (a, b) { return sinks[b] - sinks[a]; })[0];
+
+  var html = '<div class="advisor-section">';
+  html += '<div class="advisor-title">Treasury Advisor — last 7 days</div>';
+
+  html += '<div class="burn-rate-row">';
+  html += '<span class="burn-rate-value ' + rateClass + '">' + rateText + '</span>';
+  if (projText) html += '<span class="burn-rate-projection">· ' + escapeHtml(projText) + '</span>';
+  html += '</div>';
+
+  // Chips for top source / top sink.
+  if (topSource || topSink) {
+    html += '<div class="advisor-chips">';
+    if (topSource) {
+      html += '<span class="advisor-chip good">↑ ' + escapeHtml(prettySource(topSource)) + ' $' + sources[topSource] + '</span>';
+    }
+    if (topSink) {
+      html += '<span class="advisor-chip bad">↓ ' + escapeHtml(prettySource(topSink)) + ' $' + sinks[topSink] + '</span>';
+    }
+    html += '</div>';
+  }
+
+  // Daily net bars.
+  html += '<div class="advisor-chart-label">Daily net</div>';
+  html += renderDailyBars(days);
+
+  // Cumulative balance sparkline.
+  html += '<div class="advisor-chart-label">Cash balance</div>';
+  html += renderBalanceLine(days, money);
+
+  html += '</div>';
+  return html;
+}
+
+function renderDailyBars(days) {
+  var maxAbs = days.reduce(function (m, d) { return Math.max(m, Math.abs(d.net)); }, 1);
+  var n = days.length;
+  var pad = 0.6;
+  var slot = 100 / n;
+  var midY = 28;
+  var maxBar = 22;
+  var bars = days.map(function (d, i) {
+    var h = Math.abs(d.net) / maxAbs * maxBar;
+    var y = d.net >= 0 ? midY - h : midY;
+    var color = d.net >= 0 ? '#5ec49e' : '#e0707a';
+    return '<rect x="' + (i * slot + pad) + '" y="' + y + '" width="' + (slot - 2 * pad) + '" height="' + Math.max(0.4, h) + '" fill="' + color + '" rx="0.5"/>';
+  }).join('');
+  return '<svg class="cashflow-chart" viewBox="0 0 100 56" preserveAspectRatio="none">' +
+         '<line x1="0" y1="' + midY + '" x2="100" y2="' + midY + '" stroke="#3a4a5e" stroke-width="0.3"/>' +
+         bars +
+         '</svg>';
+}
+
+function renderBalanceLine(days, currentMoney) {
+  // Reconstruct per-day ending balance: start from currentMoney − sum(all nets),
+  // then accumulate. balances[i] = balance at end of day i.
+  var startBalance = currentMoney;
+  for (var i = 0; i < days.length; i++) startBalance -= days[i].net;
+  var balances = [];
+  var b = startBalance;
+  for (var j = 0; j < days.length; j++) {
+    b += days[j].net;
+    balances.push(b);
+  }
+  var minB = Math.min.apply(null, balances);
+  var maxB = Math.max.apply(null, balances);
+  if (maxB === minB) { maxB = minB + 1; }
+  var range = maxB - minB;
+  var pts = balances.map(function (v, i) {
+    var x = i / Math.max(1, balances.length - 1) * 100;
+    var y = 50 - ((v - minB) / range * 40 + 4);
+    return x.toFixed(2) + ',' + y.toFixed(2);
+  });
+  // Stroke color picks up the ending trend.
+  var stroke = balances[balances.length - 1] >= balances[0] ? '#5ec49e' : '#e0707a';
+  // Filled area below the line for visual weight.
+  var areaPts = pts.slice();
+  areaPts.push('100,56');
+  areaPts.push('0,56');
+  return '<svg class="cashflow-chart" viewBox="0 0 100 56" preserveAspectRatio="none">' +
+         '<polygon points="' + areaPts.join(' ') + '" fill="' + stroke + '" fill-opacity="0.12"/>' +
+         '<polyline points="' + pts.join(' ') + '" stroke="' + stroke + '" stroke-width="0.7" fill="none" stroke-linejoin="round" stroke-linecap="round"/>' +
+         '</svg>';
+}
+
 
 function prettySource(k) {
   if (k === 'black_market') return 'Black Market';
