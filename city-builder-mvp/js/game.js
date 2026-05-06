@@ -10,6 +10,38 @@ import { initInspector } from './inspector.js';
 import { initHelp } from './help.js';
 
 
+// After each production tick, fetch the player's tile pollution
+// (only the values that changed) and update the heatmap classes /
+// inspector data in place. Avoids a full renderMap rebuild — touches
+// only cells whose pollution actually changed.
+function refreshPollution() {
+  if (!state.currentUser) return;
+  sb.from('map_tiles')
+    .select('id, x, y, pollution')
+    .eq('owner_player_id', state.currentUser.id)
+    .then(function (r) {
+      if (!r.data) return;
+      r.data.forEach(function (row) {
+        var key = row.x + ',' + row.y;
+        var tile = state.tileMap[key];
+        if (!tile) return;
+        var oldP = Number(tile.pollution || 0);
+        var newP = Number(row.pollution || 0);
+        if (oldP === newP) return;
+        tile.pollution = newP;
+        var cell = document.querySelector('[data-tile-id="' + tile.id + '"]');
+        if (!cell) return;
+        if (newP > 0) {
+          cell.classList.add('pollution-tinted');
+          cell.style.setProperty('--pollution', newP);
+        } else {
+          cell.classList.remove('pollution-tinted');
+          cell.style.removeProperty('--pollution');
+        }
+      });
+    });
+}
+
 function processProduction() {
   return sb.rpc('process_production').then(function (r) {
     if (r.error) {
@@ -115,6 +147,12 @@ function processProduction() {
     if (producedWhole >= 1) {
       showToast('+' + producedWhole + ' goods produced', 'success');
     }
+
+    // Pull the latest tile pollution so the heatmap + building inspector
+    // reflect this tick's emit/dampen. Lightweight (only id/x/y/pollution
+    // for the player's own tiles) and only updates cells whose value
+    // actually changed.
+    refreshPollution();
   }).catch(function (err) {
     console.warn('Production fetch error:', err);
   });
