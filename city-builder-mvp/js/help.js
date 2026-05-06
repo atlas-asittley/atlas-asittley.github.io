@@ -7,6 +7,7 @@
 // affect the player's current selection / placement state.
 
 import { state } from './state.js';
+import { colors, spriteIcons } from './sprites.js';
 
 var openOverlay = null;
 
@@ -32,6 +33,54 @@ function tierName(tier) {
 function unlockBlurb(bt) {
   if (bt.unlocks_at_housing_tier == null) return null;
   return 'Locked until you reach ' + tierName(bt.unlocks_at_housing_tier) + ' housing.';
+}
+
+// Plain-language "what this building does for your city" line. Where
+// the gameplay effect is just "produces X" we lean on the existing
+// Output row; where it's a non-output effect (services, police,
+// boosters), spell it out.
+function benefitText(bt) {
+  if (bt.category === 'road') {
+    return 'Connects buildings to the city. Required for housing and most production.';
+  }
+  if (bt.category === 'housing') {
+    return 'Houses citizens, contributing workers to your city. Evolves through nine tiers as services + food + luxuries become available.';
+  }
+  if (bt.category === 'extractor') {
+    var r = resName(bt.output_resource_key).toLowerCase();
+    return 'Your district’s source of ' + r + '. Place near a matching resource patch.';
+  }
+  if (bt.category === 'food_extractor') {
+    var fr = resName(bt.output_resource_key).toLowerCase();
+    return 'Produces ' + fr + ' to feed your population. Higher-tier housing requires food in stock.';
+  }
+  if (bt.category === 'processor') {
+    var inText = resName(bt.input_resource_key).toLowerCase();
+    if (bt.input_resource_key_2) inText += ' + ' + resName(bt.input_resource_key_2).toLowerCase();
+    var outText = resName(bt.output_resource_key).toLowerCase();
+    return 'Refines ' + inText + ' into ' + outText + '.';
+  }
+  if (bt.category === 'booster') {
+    var pct = Math.round(((bt.boost_multiplier || 1) - 1) * 100);
+    var target = bt.boost_target === 'food_extractor' ? 'food extractors' : 'extractors';
+    return 'Boosts every ' + target + ' within ' + (bt.boost_range || 2) + ' tiles by +' + pct + '%. Stack one near each cluster.';
+  }
+  if (bt.category === 'service') {
+    if (bt.key === 'well')      return 'Lets housing within 4 tiles upgrade past Shanty.';
+    if (bt.key === 'tavern')    return 'Adds +10 worker capacity to the city while staffed. Consumes bread + pottery.';
+    if (bt.key === 'bathhouse') return 'Stops nearby housing from devolving when conditions slip.';
+    if (bt.key === 'school')    return 'Gates Townhouse (tier 3) evolution for any housing within 5 tiles.';
+    if (bt.key === 'temple')    return 'Gates Villa (tier 4) evolution for any housing within 6 tiles.';
+    return 'Service building.';
+  }
+  if (bt.category === 'tax') {
+    return 'Generates $' + (bt.output_rate || 0) + '/min in tax revenue while staffed and road-connected.';
+  }
+  if (bt.category === 'police') {
+    var radius = bt.coverage_radius || 0;
+    return 'Reduces crime in housing within ' + radius + ' tiles. Crime over 50 starts to push citizens out.';
+  }
+  return null;
 }
 
 // Section assignment mirrors panels.js but split by industry so each
@@ -124,12 +173,31 @@ function renderBuildingCard(bt) {
            '<div class="help-row"><span class="help-label">Build cost</span><span class="help-value">$' + (bt.build_cost || 0) + '</span></div>';
   }
 
+  // Icon: same inline-SVG sprite the build panel uses, scaled down.
+  // Fallback to a colored swatch with the BLDG_LABELS abbreviation when
+  // we don't have a sprite (none of the active buildings hit this in
+  // practice, but it's harmless).
+  var sprite = spriteIcons[bt.key];
+  var bg = colors[bt.key] || '#4a4a6a';
+  var iconHtml;
+  if (sprite) {
+    iconHtml = '<div class="help-building-icon" style="background-color:' + bg + ';background-image:url(&quot;' + sprite + '&quot;)"></div>';
+  } else {
+    iconHtml = '<div class="help-building-icon" style="background-color:' + bg + ';"></div>';
+  }
+
+  var benefit = benefitText(bt);
+  var benefitRow = benefit
+    ? '<div class="help-row help-row-benefit"><span class="help-label">Benefit</span><span class="help-value">' + escapeHtml(benefit) + '</span></div>'
+    : '';
+
   return '<div class="help-building" data-key="' + escapeHtml(bt.key) + '">' +
            '<div class="help-building-header">' +
+             iconHtml +
              '<span class="help-building-name">' + escapeHtml(bt.name) + nameSuffix + '</span>' +
              '<span class="help-building-chevron">▾</span>' +
            '</div>' +
-           '<div class="help-building-body">' + rows + '</div>' +
+           '<div class="help-building-body">' + benefitRow + rows + '</div>' +
          '</div>';
 }
 
