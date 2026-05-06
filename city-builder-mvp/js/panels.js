@@ -1384,20 +1384,12 @@ function renderTreasuryPanel() {
     html += '</div>';
 
     if (Object.keys(earnedBySource).length) {
-      html += '<div class="stats-section-title">Income sources</div><div class="stats-table">';
-      Object.keys(earnedBySource).sort(function (a, b) { return earnedBySource[b] - earnedBySource[a]; })
-        .forEach(function (k) {
-          html += '<div class="stats-tr"><span>' + escapeHtml(prettySource(k)) + '</span><span class="good">$' + earnedBySource[k] + '</span></div>';
-        });
-      html += '</div>';
+      html += '<div class="stats-section-title">Income sources</div>';
+      html += renderFlowBars(earnedBySource, 'good');
     }
     if (Object.keys(spentByDest).length) {
-      html += '<div class="stats-section-title">Spending</div><div class="stats-table">';
-      Object.keys(spentByDest).sort(function (a, b) { return spentByDest[b] - spentByDest[a]; })
-        .forEach(function (k) {
-          html += '<div class="stats-tr"><span>' + escapeHtml(prettySource(k)) + '</span><span class="bad">$' + spentByDest[k] + '</span></div>';
-        });
-      html += '</div>';
+      html += '<div class="stats-section-title">Spending</div>';
+      html += renderFlowBars(spentByDest, 'bad');
     }
     if (totalIn === 0 && totalOut === 0) {
       html += '<div class="trade-empty">No money has moved in this period.</div>';
@@ -1578,6 +1570,30 @@ function renderBalanceLine(days, currentMoney) {
          '</svg>';
 }
 
+
+// Horizontal proportional-bar table for income / spending breakdowns.
+// Each row's bar width = its share of the largest entry — so the top
+// row is always full-width and others scale below it. Gives a quick
+// visual read of "where's most of my money going" without needing
+// to mentally compare numbers.
+function renderFlowBars(byKey, kind) {
+  var keys = Object.keys(byKey).sort(function (a, b) { return byKey[b] - byKey[a]; });
+  if (keys.length === 0) return '';
+  var max = byKey[keys[0]];
+  if (!max || max <= 0) max = 1;
+  var html = '<div class="stats-flow">';
+  keys.forEach(function (k) {
+    var v = byKey[k];
+    var pct = Math.max(2, Math.round(v / max * 100));  // floor at 2% so tiny rows still render a sliver
+    html += '<div class="stats-flow-row stats-flow-' + kind + '" style="--bar-width:' + pct + '%">'
+         +    '<span class="stats-flow-bar"></span>'
+         +    '<span class="stats-flow-name">' + escapeHtml(prettySource(k)) + '</span>'
+         +    '<span class="stats-flow-val ' + kind + '">$' + v + '</span>'
+         +  '</div>';
+  });
+  html += '</div>';
+  return html;
+}
 
 function prettySource(k) {
   if (k === 'black_market') return 'Black Market';

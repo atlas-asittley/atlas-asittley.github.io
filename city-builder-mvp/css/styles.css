@@ -1388,6 +1388,20 @@ body.panel-expanded .map-area { display: none; }
 .stats-tr .good { color: #5ec49e; }
 .stats-tr .bad  { color: #e0a070; }
 
+/* Treasury flow bars — horizontal proportional bars behind each
+   income / spending row. `--bar-width` is set inline (% of the
+   largest entry) by renderFlowBars. The .stats-flow-bar absolute
+   pseudo-row sits at z-index 0; name + value sit on top. */
+.stats-flow { display: flex; flex-direction: column; gap: 3px; }
+.stats-flow-row { position: relative; display: grid; grid-template-columns: 1fr auto; gap: 10px; padding: 5px 10px; background: #131c2a; border-radius: 4px; font-size: 0.8rem; color: #c8d4e0; overflow: hidden; }
+.stats-flow-bar { position: absolute; left: 0; top: 0; bottom: 0; width: var(--bar-width, 0%); border-radius: 4px 0 0 4px; pointer-events: none; transition: width 0.3s ease; }
+.stats-flow-good .stats-flow-bar { background: linear-gradient(90deg, rgba(94,196,158,0.30) 0%, rgba(94,196,158,0.15) 100%); border-left: 2px solid rgba(94,196,158,0.7); }
+.stats-flow-bad  .stats-flow-bar { background: linear-gradient(90deg, rgba(224,112,122,0.30) 0%, rgba(224,112,122,0.15) 100%); border-left: 2px solid rgba(224,112,122,0.7); }
+.stats-flow-name { position: relative; z-index: 1; font-weight: 500; }
+.stats-flow-val  { position: relative; z-index: 1; font-weight: 700; }
+.stats-flow-val.good { color: #5ec49e; }
+.stats-flow-val.bad  { color: #e0a070; }
+
 .trade-loading, .trade-empty, .trade-error { padding: 20px; text-align: center; color: #7a8a9e; font-size: 0.82rem; }
 .trade-error { color: #f0a0a0; }
 
