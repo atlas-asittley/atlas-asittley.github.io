@@ -291,10 +291,10 @@ function escapeListener(e) {
 var STAT_INFO = {
   workers: {
     icon: '👷',
-    title: 'Unemployment',
-    what: 'Shown as a <b>percentage</b> of your worker capacity that is currently idle (capacity not staffing any building). 0% means every worker is employed somewhere.',
-    why: 'Some idle workers are healthy — productivity gets a small bonus when there\'s slack. But if every worker is employed AND buildings still sit unstaffed, the city has a <b>labor shortage</b> (a red ! badge appears). A shortage stalls production. Inverse problem: high unemployment means you have idle population and not enough production to put them to work.',
-    how: 'Reduce unemployment by building more production (extractors, processors, services). Fix a shortage by growing housing — bigger / more-evolved houses raise the population target, and population grows toward it. A <b>Tavern</b> boosts capacity directly while it\'s running. The population stat next to this one shows the underlying number.'
+    title: 'Workers Employed',
+    what: 'The number of citizens currently <b>working</b> at a building somewhere in your district. Compare against your population (👥 next to this) to see how many are idle.',
+    why: 'When this equals your population, every citizen has a job — productive and content. When it\'s well below population, you have idle workers and need more production. When the city actively can\'t fill its jobs, a red <b>!</b> badge appears: that\'s a labor shortage and production stalls.',
+    how: 'Want more workers employed? Build more production buildings (extractors, processors, services). Want to fix a shortage? Grow population — bigger / more-evolved houses raise the target, citizens move in when happiness is above 50. A <b>Tavern</b> directly boosts capacity while it\'s running.'
   },
   population: {
     icon: '👥',

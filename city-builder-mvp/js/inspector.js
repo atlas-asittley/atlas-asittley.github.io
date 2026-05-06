@@ -415,7 +415,7 @@ function computeBuildingIssues(b, bt) {
   // unstaffed (computeLaborAllocation already accounts for road access).
   var consumesWorkers = bt.category === 'extractor' || bt.category === 'food_extractor'
     || bt.category === 'processor' || bt.category === 'service' || bt.category === 'tax'
-    || bt.category === 'booster';
+    || bt.category === 'booster' || bt.category === 'police';
   if (consumesWorkers && state.laborInfo.unstaffedIds[b.id]) {
     var li = state.laborInfo;
     var hint = 'Needs ' + bt.worker_cost + ' worker' + (bt.worker_cost > 1 ? 's' : '')
@@ -560,7 +560,15 @@ function renderInspector() {
       var tierCfg = state.housingTierConfig[tier];
       var workers = tierCfg ? tierCfg.workers : (bt.workers_provided || 0);
       var providing = !(tierCfg && tierCfg.needs_road && !state.roadAccessIds[b.id]);
-      html += '<div class="insp-row"><span class="insp-label">Provides</span><span class="insp-value">' + (providing ? '+' + workers : '+0 / +' + workers) + ' workers</span></div>';
+      // Houses raise the *target* population the city grows toward;
+      // they don't directly drop a fixed worker count into the pool.
+      // Wording reflects that — "houses up to N people" rather than
+      // "provides N workers" — so a fresh hut doesn't read as instant
+      // capacity that hasn't actually arrived yet.
+      var capacityLabel = providing
+        ? 'Houses up to ' + workers + ' people'
+        : 'Houses up to ' + workers + ' people (none yet — needs road access)';
+      html += '<div class="insp-row"><span class="insp-label">Capacity</span><span class="insp-value">' + capacityLabel + '</span></div>';
 
       // Housing evolution / progression feedback
       var nextTierCfg = state.housingTierConfig[tier + 1];
@@ -689,8 +697,15 @@ function renderInspector() {
     // workers and don't have meaningful priority; pausing roads is
     // possible via the schema but the UX implications haven't been
     // designed, so omit for now).
-    var consumesWorkers = bt.category === 'extractor' || bt.category === 'processor'
-      || bt.category === 'service' || bt.category === 'tax';
+    // Every category whose worker_cost > 0 should be pause-able. The
+    // server's _pp_workers_needed counts all of these toward job
+    // openings, so leaving food_extractor / booster / police out of
+    // the pause UI was both inconsistent (you couldn't free up workers
+    // for higher priorities) and confusing (a paused-by-pretending-not-
+    // to-exist garden was still consuming the labor pool).
+    var consumesWorkers = bt.category === 'extractor' || bt.category === 'food_extractor'
+      || bt.category === 'processor' || bt.category === 'service' || bt.category === 'tax'
+      || bt.category === 'booster' || bt.category === 'police';
     if (consumesWorkers || bt.category === 'housing') {
       actHtml += '<div class="insp-controls">';
       if (consumesWorkers) {

@@ -217,14 +217,18 @@ function getSpawnBuildings() {
     if (roadNeighbors(b.x, b.y).length === 0) return false;
     // Housing spawns citizens unconditionally for everyone.
     if (bt.category === 'housing') return true;
-    // Production buildings: only suppress for unstaffed if it's MY
-    // building (we don't have other players' labor info).
-    if (b.player_id === myId
-        && state.laborInfo && state.laborInfo.unstaffedIds
-        && state.laborInfo.unstaffedIds[b.id]) {
-      return false;
+    // Production buildings: spawn only when the building is actually
+    // operational. For our own buildings we have fresh client-side
+    // staffing info; require staffedIds[b.id] truthy. Anything that
+    // isn't actively staffed (no workers, no road access, missing
+    // inputs, no reachable resource — any of which keeps it out of the
+    // labor allocation entirely) gets no walkers. For other players
+    // we don't have their labor info, so trust the server's is_staffed.
+    if (b.player_id === myId) {
+      return !!(state.laborInfo && state.laborInfo.staffedIds
+                && state.laborInfo.staffedIds[b.id]);
     }
-    return true;
+    return !!b.is_staffed;
   });
 }
 
@@ -699,23 +703,37 @@ function spawnTick() {
 
   var spawners = getSpawnBuildings();
 
-  // Index every active building (not just spawn-eligible) so we can tell
-  // "demolished/paused" (truly gone) apart from "transiently unstaffed"
-  // (still alive — its walkers should drain naturally, not be culled).
-  var allActiveById = {};
+  // Index sources that should still carry walkers. A walker survives the
+  // prune iff its source building is BOTH active AND (housing | currently
+  // staffed). The staffing predicate matches getSpawnBuildings, so
+  // walkers that were spawned while staffed get despawned promptly when
+  // the building falls out of staffing — instead of lingering for the
+  // ~20 seconds of natural lifecycle.
+  var liveSources = {};
+  var myId = state.currentUser && state.currentUser.id;
   if (state.currentUser) {
     state.allBuildings.forEach(function (b) {
-      // Track every active building (any player) so we can despawn
-      // walkers whose source was demolished or paused.
-      if (b.status === 'active') {
-        allActiveById[b.id] = true;
+      if (b.status !== 'active') return;
+      var bt = state.buildingTypes[b.building_type_key];
+      if (!bt || bt.category === 'road') return;
+      if (bt.category === 'housing') {
+        liveSources[b.id] = true;
+        return;
+      }
+      if (b.player_id === myId) {
+        if (state.laborInfo && state.laborInfo.staffedIds
+            && state.laborInfo.staffedIds[b.id]) {
+          liveSources[b.id] = true;
+        }
+      } else if (b.is_staffed) {
+        liveSources[b.id] = true;
       }
     });
   }
   for (var i = walkers.length - 1; i >= 0; i--) {
     var w = walkers[i];
     if (w.mode !== 'ambient') continue;
-    if (!allActiveById[w.sourceId]) {
+    if (!liveSources[w.sourceId]) {
       despawnWalker(w);
     }
   }

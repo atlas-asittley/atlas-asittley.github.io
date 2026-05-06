@@ -51,18 +51,18 @@ export function updateWorkers() {
   var li = state.laborInfo;
   var el = document.getElementById('g-workers');
   var supply = li.workerSupply || 0;
+  var used = Math.max(0, li.workersUsed || 0);
   var idle = Math.max(0, li.workersIdle || 0);
-  var pct = supply > 0 ? Math.round((idle / supply) * 100) : 0;
   var stat = document.getElementById('g-workers-stat');
   if (el) {
-    el.textContent = pct + '%';
+    el.textContent = used;
     el.className = 'v ' + (li.laborShortage ? 'shortage' : 'workers');
   }
   if (stat) {
     stat.title = li.laborShortage
       ? 'Labor shortage! ' + li.workersNeeded + ' workers needed, only ' + supply + ' available. Build more housing.'
       : idle > 0
-        ? pct + '% unemployed — ' + idle + ' of ' + supply + ' workers idle. Build more production to use them.'
+        ? used + ' of ' + supply + ' workers employed (' + idle + ' idle — build more production to use them).'
         : 'Fully employed — all ' + supply + ' workers staffed.';
   }
   var badge = document.getElementById('g-labor-badge');
