@@ -147,9 +147,14 @@ export function renderBuildPanel() {
     farming: 'Farming',
     civic: 'Civic & Services'
   };
-  var BUILD_COLLAPSE_KEY = 'city_build_sections_collapsed';
-  var collapsedSections = {};
-  try { collapsedSections = JSON.parse(localStorage.getItem(BUILD_COLLAPSE_KEY) || '{}'); } catch (e) {}
+  // Accordion behavior: at most one section is open at a time. Stored
+  // as a single string — section name when one is open, empty string
+  // when the user has explicitly closed all of them. Null on first
+  // load defaults to Infrastructure.
+  var BUILD_OPEN_KEY = 'city_build_section_open';
+  var openSection;
+  try { openSection = localStorage.getItem(BUILD_OPEN_KEY); } catch (e) { openSection = null; }
+  if (openSection === null) openSection = 'infra';
   var lastSection = null;
 
   available.forEach(function (key) {
@@ -159,7 +164,7 @@ export function renderBuildPanel() {
     var thisSection = sectionFor(bt);
     if (thisSection !== lastSection) {
       if (lastSection !== null) html += '</div></div>';
-      var isCollapsed = !!collapsedSections[thisSection];
+      var isCollapsed = thisSection !== openSection;
       html += '<div class="build-section' + (isCollapsed ? ' collapsed' : '') + '" data-section="' + thisSection + '">';
       html += '<div class="build-section-header">';
       html += '<span class="build-section-title">' + SECTION_TITLES[thisSection] + '</span>';
@@ -280,11 +285,20 @@ export function renderBuildPanel() {
   panel.querySelectorAll('.build-section-header').forEach(function (h) {
     h.addEventListener('click', function () {
       var sec = h.parentElement;
-      sec.classList.toggle('collapsed');
-      var c = {};
-      try { c = JSON.parse(localStorage.getItem(BUILD_COLLAPSE_KEY) || '{}'); } catch (e) {}
-      c[sec.dataset.section] = sec.classList.contains('collapsed');
-      try { localStorage.setItem(BUILD_COLLAPSE_KEY, JSON.stringify(c)); } catch (e) {}
+      var section = sec.dataset.section;
+      var allSections = panel.querySelectorAll('.build-section');
+      var nextOpen;
+      if (sec.classList.contains('collapsed')) {
+        // Open this section, collapse every other one.
+        allSections.forEach(function (s) { s.classList.add('collapsed'); });
+        sec.classList.remove('collapsed');
+        nextOpen = section;
+      } else {
+        // Clicked the open section — close it, leaves nothing open.
+        sec.classList.add('collapsed');
+        nextOpen = '';
+      }
+      try { localStorage.setItem(BUILD_OPEN_KEY, nextOpen); } catch (e) {}
     });
   });
 
