@@ -325,22 +325,18 @@ function _doRenderMap() {
       if (tile.resource_node_key) {
         classes.push('res-' + tile.resource_node_key);
       } else {
-        // Grass detail variations for plain ground tiles. Three orthogonal
-        // axes from a single deterministic hash:
-        //   nv0..nv3  — turbulence overlay (always applied)
-        //   gc0..gc3  — base grass color (always applied; widens the
-        //               palette so adjacent tiles don't all read as the
-        //               same #223322)
-        //   gv0..gv15 — small decoration sprite (~75% of tiles get one;
-        //               whether and which are independent bits, so the
-        //               full 16-variant pool is reachable)
-        var h = tileHash(x, y);
-        classes.push('nv' + (h & 3));
-        classes.push('gc' + ((h >>> 6) & 3));
+        // Grass detail variations for plain ground tiles. Variety comes
+        // exclusively from the gv decorations — small localized sprites
+        // (flowers, dirt patches, etc.) that don't create tile-boundary
+        // seams. Per-tile noise/color variants were removed because they
+        // made the grid read as patchwork (adjacent tiles never matched
+        // at their shared edge). Coverage is ~85% — most tiles show
+        // something, ~15% are pure grass for visual rest.
         if (!building && !interiorBuilding) {
-          var showDeco = ((h >>> 8) & 3) !== 0;  // 3/4 of tiles
+          var h = tileHash(x, y);
+          var showDeco = ((h >>> 8) & 7) !== 0;  // 7/8 of tiles
           if (showDeco) {
-            var dv = (h >>> 2) & 15;             // 0..15, all reachable
+            var dv = (h >>> 2) & 15;             // 0..15
             classes.push('gv' + dv);
           }
         }
