@@ -282,7 +282,6 @@ export function enterGame() {
     subscribeRealtime();
     startProdLoop();
     startWalkers();
-    initVisibilityPause();
     var expandBtn = document.getElementById('g-expand-district');
     if (expandBtn) {
       expandBtn.onclick = function () { expandDistrict(); };
@@ -314,4 +313,5 @@ export function initGameEvents() {
   initPanelCollapse();
   initInspector();
   initHelp();
+  initVisibilityPause();
 }
