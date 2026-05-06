@@ -1,5 +1,6 @@
 // ── UI helpers: screens, toasts, errors, topbar ──
 import { state } from './state.js';
+import { addNotification } from './notifications.js';
 
 var screens = document.querySelectorAll('.screen');
 
@@ -22,13 +23,13 @@ export function capitalize(s) {
   return s ? s.charAt(0).toUpperCase() + s.slice(1) : '';
 }
 
-var toastTimer = null;
+// All notification surface is now the bell-icon log. showToast() is kept
+// as a thin compatibility shim so the dozens of existing callers don't
+// each need a touch — empty / unknown types map to 'info'.
 export function showToast(msg, type) {
-  var t = document.getElementById('toast');
-  t.textContent = msg;
-  t.className = 'toast show' + (type ? ' ' + type : '');
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(function () { t.classList.remove('show'); }, 2500);
+  if (!msg) return;
+  var t = (type === 'success' || type === 'info' || type === 'warn' || type === 'error') ? type : 'info';
+  addNotification(t, msg);
 }
 
 // ── Topbar state display ──

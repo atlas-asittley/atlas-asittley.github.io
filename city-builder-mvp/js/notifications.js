@@ -186,8 +186,13 @@ function positionDropdown() {
   var bell = document.getElementById('g-notifications');
   if (!bell || !dropdownEl) return;
   var r = bell.getBoundingClientRect();
+  // Pin to the right edge of the viewport rather than aligning with the
+  // bell — the bell can sit deep inside topbar-right (with several other
+  // buttons after it on desktop, or near the right edge on mobile), and
+  // anchoring to it pushed the 320px panel off the left edge on phones.
   dropdownEl.style.top = (r.bottom + 6) + 'px';
-  dropdownEl.style.right = (window.innerWidth - r.right) + 'px';
+  dropdownEl.style.right = '8px';
+  dropdownEl.style.left = 'auto';
 }
 
 function renderDropdownBody() {

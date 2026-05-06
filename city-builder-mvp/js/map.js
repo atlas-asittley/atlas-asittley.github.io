@@ -525,7 +525,6 @@ function placeBuilding(tileId, btKey) {
     return;
   }
 
-  showToast('Placing...', '');
   sb.rpc('place_building', { p_tile_id: tileId, p_building_type_key: btKey })
     .then(function (r) {
       if (r.error) {
@@ -675,8 +674,6 @@ function executeDragPlacements() {
     tiles = tiles.slice(0, affordable);
     showToast('Can only afford ' + affordable + ' road' + (affordable > 1 ? 's' : ''), 'info');
   }
-
-  showToast('Placing ' + tiles.length + ' roads...', '');
 
   // Chain placement RPCs sequentially
   var chain = Promise.resolve();
