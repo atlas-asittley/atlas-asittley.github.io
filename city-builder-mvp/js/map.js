@@ -325,12 +325,19 @@ function _doRenderMap() {
       if (tile.resource_node_key) {
         classes.push('res-' + tile.resource_node_key);
       } else {
-        // Grass detail variations for plain ground tiles
+        // Grass detail variations for plain ground tiles. Three orthogonal
+        // axes from a single deterministic hash:
+        //   nv0..nv3  — turbulence overlay (always applied)
+        //   gc0..gc3  — base grass color (always applied; widens the
+        //               palette so adjacent tiles don't all read as the
+        //               same #223322)
+        //   gv0..gv15 — small decoration sprite (~75% of tiles)
         var h = tileHash(x, y);
-        classes.push('nv' + (h & 3));          // noise seed variant (0-3)
+        classes.push('nv' + (h & 3));
+        classes.push('gc' + ((h >>> 6) & 3));
         if (!building && !interiorBuilding) {
-          var dv = (h >>> 2) & 15;             // decoration variant (0-15)
-          if (dv < 8) classes.push('gv' + dv); // ~50% of tiles get a decoration
+          var dv = (h >>> 2) & 15;
+          if (dv < 12) classes.push('gv' + dv);
         }
       }
 
