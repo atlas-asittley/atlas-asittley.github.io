@@ -47,13 +47,6 @@ var MAP_ZOOM_STEP = 0.25;
 var EXPAND_THRESHOLD = 2;  // tiles from edge to trigger expansion
 var EXPAND_AMOUNT = 5;     // tiles added per expansion direction
 
-// Pinch zoom state
-var pinchStartDistance = null;
-var pinchStartZoom = 1;
-var pinchStartCenter = null;
-var pinchSuppressClickUntil = 0;
-var pinchGestureActive = false;
-
 // Drag-to-paint state (roads only)
 var dragState = {
   active: false,
@@ -237,21 +230,6 @@ function setMapZoomAtPoint(nextZoom, clientX, clientY) {
   viewport.scrollLeft = Math.max(0, worldX * newZoom - (clientX - rect.left));
   viewport.scrollTop = Math.max(0, worldY * newZoom - (clientY - rect.top));
   scheduleSaveMapView();
-}
-
-function touchDistance(touches) {
-  if (!touches || touches.length < 2) return 0;
-  var dx = touches[0].clientX - touches[1].clientX;
-  var dy = touches[0].clientY - touches[1].clientY;
-  return Math.sqrt(dx * dx + dy * dy);
-}
-
-function touchCenter(touches) {
-  if (!touches || touches.length < 2) return null;
-  return {
-    x: (touches[0].clientX + touches[1].clientX) / 2,
-    y: (touches[0].clientY + touches[1].clientY) / 2
-  };
 }
 
 // ── Map rendering ──
@@ -787,7 +765,6 @@ export function initMapEvents() {
 
   // Single-click: inspect existing buildings OR place new ones
   grid.addEventListener('click', function (e) {
-    if (Date.now() < pinchSuppressClickUntil) return;
     if (Date.now() < dragState.suppressClick) return;
     var cell = e.target.closest('.cell');
     if (!cell) return;
@@ -883,7 +860,10 @@ export function initMapEvents() {
 
   grid.addEventListener('touchstart', function (e) {
     if (e.touches.length !== 1) {
-      // Multi-touch: cancel any drag, let pinch zoom handle it
+      // Multi-touch: cancel any drag. Pinch zoom is gone — zoom uses
+      // the +/− buttons. The viewport-level touchstart below also
+      // preventDefaults a 2-finger gesture to keep iOS Safari from
+      // running its native page-zoom on top of the app.
       if (dragState.active) clearDragState();
       return;
     }
@@ -914,7 +894,6 @@ export function initMapEvents() {
     if (!dragState.active) return;
     dragState.active = false;
     dragState.suppressClick = Date.now() + 300;
-    pinchSuppressClickUntil = Date.now() + 300;
     executeDragPlacements();
   });
 
@@ -952,56 +931,17 @@ export function initMapEvents() {
     });
   }
 
-  // ── Pinch zoom ──
-  // touchstart MUST be passive:false so we can preventDefault() the
-  // moment a 2-finger gesture begins. iOS Safari decides whether the
-  // pinch belongs to us or the page-level zoom at touchstart — if we
-  // can't claim it then, calling preventDefault later in touchmove
-  // doesn't fully reclaim it (Safari's rubber-band on pinch-out
-  // specifically leaks through).
+  // ── Block Safari's native pinch-zoom ──
+  // We don't do app-level pinch zoom anymore (the +/− buttons are the
+  // zoom UI) but iOS Safari ignores `user-scalable=no` on the viewport
+  // meta and will run its own page-level pinch-zoom. Without these
+  // blocks the canvas would scale via Safari while walkers / sprites
+  // stay in their app-coordinate positions, causing visible drift.
+  // preventDefault on the proprietary `gesture*` events plus a 2-finger
+  // touchstart catch covers both code paths Safari uses.
   viewport.addEventListener('touchstart', function (e) {
-    if (e.touches.length === 2) {
-      e.preventDefault();
-      if (dragState.active) clearDragState();
-      pinchGestureActive = true;
-      pinchStartDistance = touchDistance(e.touches);
-      pinchStartZoom = state.mapZoom;
-      pinchStartCenter = touchCenter(e.touches);
-      pinchSuppressClickUntil = Date.now() + 400;
-    }
+    if (e.touches.length === 2) e.preventDefault();
   }, { passive: false });
-
-  viewport.addEventListener('touchmove', function (e) {
-    if (e.touches.length !== 2 || !pinchStartDistance) return;
-    var nextDistance = touchDistance(e.touches);
-    var center = touchCenter(e.touches) || pinchStartCenter;
-    if (!nextDistance || !center) return;
-    e.preventDefault();
-    setMapZoomAtPoint(pinchStartZoom * (nextDistance / pinchStartDistance), center.x, center.y);
-    pinchSuppressClickUntil = Date.now() + 400;
-  }, { passive: false });
-
-  viewport.addEventListener('touchend', function (e) {
-    if (e.touches.length < 2) {
-      pinchStartDistance = null;
-      pinchStartZoom = state.mapZoom;
-      pinchStartCenter = null;
-      if (pinchGestureActive) pinchSuppressClickUntil = Date.now() + 250;
-      pinchGestureActive = false;
-    }
-  });
-
-  // iOS Safari ignores `user-scalable=no` on the viewport meta tag for
-  // accessibility — it still runs its own page-level pinch-zoom on top
-  // of whatever the page does. Symptom: pinching to zoom in works, but
-  // pinching out doesn't fully back out (Safari's native zoom stays
-  // applied), and walkers appear to drift relative to roads because
-  // they're scaled by app zoom + page zoom simultaneously. The
-  // `touch-action: pan-x pan-y` on .map-viewport helps but isn't
-  // sufficient — Safari still fires `gesturestart` / `gesturechange` /
-  // `gestureend` proprietary events that default to page zoom.
-  // Cancel them at the document level so our own touch-based pinch
-  // handler is the only thing zooming.
   ['gesturestart', 'gesturechange', 'gestureend'].forEach(function (evt) {
     document.addEventListener(evt, function (e) { e.preventDefault(); }, { passive: false });
   });
