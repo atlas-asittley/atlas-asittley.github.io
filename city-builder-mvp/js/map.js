@@ -314,14 +314,14 @@ function _doRenderMap() {
         classes.push('owned-other');
       }
 
-      // Highlight the inspected extractor and its target resource tile so
-      // the pair reads as linked.
+      // Highlight the inspected extractor's target resource tile so the
+      // pair reads as linked. The building itself gets highlighted on
+      // its .bldg element below — applying to .bldg rather than the cell
+      // means multi-tile footprints get a single clean outline rather
+      // than four touching boxes.
       var ib = inspectedBuildingHolder.value;
       if (ib && ib.target_x === x && ib.target_y === y) {
         classes.push('inspected-target');
-      }
-      if (ib && ib.x === x && ib.y === y) {
-        classes.push('inspected-source');
       }
 
       // While placing an extractor, soft-pulse all unclaimed matching resource
@@ -471,7 +471,8 @@ function _doRenderMap() {
           var fw = (buildingBt && buildingBt.footprint_w) || 1;
           var fh = (buildingBt && buildingBt.footprint_h) || 1;
           var footprintClass = (fw !== 1 || fh !== 1) ? ' footprint-' + fw + 'x' + fh : '';
-          var bldgClasses = 'bldg ' + btk + housingTierClass + footprintClass + (mine ? ' mine' : '') + (isPaused ? ' paused' : '') + (isUnstaffed ? ' unstaffed' : '') + (isDisconnected ? ' disconnected' : '') + (isIdle ? ' idle' : '') + (isProducing ? ' producing' : '');
+          var isInspected = ib && ib.x === x && ib.y === y && ib.id === building.id;
+          var bldgClasses = 'bldg ' + btk + housingTierClass + footprintClass + (mine ? ' mine' : '') + (isPaused ? ' paused' : '') + (isUnstaffed ? ' unstaffed' : '') + (isDisconnected ? ' disconnected' : '') + (isIdle ? ' idle' : '') + (isProducing ? ' producing' : '') + (isInspected ? ' inspected-bldg' : '');
           var pausedBadge = isPaused ? '<span class="paused-overlay">⏸</span>' : '';
           html += '<div class="' + bldgClasses + '" title="' + titleText + '">' + label + pausedBadge + '</div>';
         }
