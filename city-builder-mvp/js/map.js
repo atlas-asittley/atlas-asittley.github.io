@@ -953,8 +953,15 @@ export function initMapEvents() {
   }
 
   // ── Pinch zoom ──
+  // touchstart MUST be passive:false so we can preventDefault() the
+  // moment a 2-finger gesture begins. iOS Safari decides whether the
+  // pinch belongs to us or the page-level zoom at touchstart — if we
+  // can't claim it then, calling preventDefault later in touchmove
+  // doesn't fully reclaim it (Safari's rubber-band on pinch-out
+  // specifically leaks through).
   viewport.addEventListener('touchstart', function (e) {
     if (e.touches.length === 2) {
+      e.preventDefault();
       if (dragState.active) clearDragState();
       pinchGestureActive = true;
       pinchStartDistance = touchDistance(e.touches);
@@ -962,7 +969,7 @@ export function initMapEvents() {
       pinchStartCenter = touchCenter(e.touches);
       pinchSuppressClickUntil = Date.now() + 400;
     }
-  }, { passive: true });
+  }, { passive: false });
 
   viewport.addEventListener('touchmove', function (e) {
     if (e.touches.length !== 2 || !pinchStartDistance) return;
