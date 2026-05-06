@@ -703,7 +703,7 @@ body.heatmap-issues .bldg.idle {
   right: 8%; top: -12%; width: 28%; height: 50%;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 20'%3E%3Cellipse cx='5' cy='16' rx='3.5' ry='2.5' fill='%23888' opacity='0.6'/%3E%3Cellipse cx='4' cy='9' rx='3' ry='2' fill='%23999' opacity='0.4'/%3E%3Cellipse cx='6' cy='3' rx='2.5' ry='1.5' fill='%23aaa' opacity='0.25'/%3E%3C/svg%3E");
   background-size: contain; background-repeat: no-repeat; background-position: bottom center;
-  animation: act-smoke 6s ease-out infinite;
+  animation: act-smoke 2s ease-out infinite;
   pointer-events: none; z-index: 3;
 }
 /* ── Smoke: pottery kiln (from dome top) ── */
@@ -712,7 +712,7 @@ body.heatmap-issues .bldg.idle {
   left: 32%; top: -15%; width: 28%; height: 50%;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 20'%3E%3Cellipse cx='5' cy='16' rx='3.5' ry='2.5' fill='%23888' opacity='0.6'/%3E%3Cellipse cx='4' cy='9' rx='3' ry='2' fill='%23999' opacity='0.4'/%3E%3Cellipse cx='6' cy='3' rx='2.5' ry='1.5' fill='%23aaa' opacity='0.25'/%3E%3C/svg%3E");
   background-size: contain; background-repeat: no-repeat; background-position: bottom center;
-  animation: act-smoke 7s ease-out infinite;
+  animation: act-smoke 2.5s ease-out infinite;
   pointer-events: none; z-index: 3;
 }
 /* ── Spinning sails: mill (swap to sailless body + rotating sail overlay) ── */
@@ -769,7 +769,7 @@ body.heatmap-issues .bldg.idle {
   right: 18%; top: -2%; width: 32%; height: 50%;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 20'%3E%3Cellipse cx='5' cy='16' rx='3.5' ry='2.5' fill='%23d0e0e8' opacity='0.7'/%3E%3Cellipse cx='4' cy='9' rx='3' ry='2' fill='%23e0eef2' opacity='0.5'/%3E%3Cellipse cx='6' cy='3' rx='2.5' ry='1.5' fill='%23f0f8fa' opacity='0.3'/%3E%3C/svg%3E");
   background-size: contain; background-repeat: no-repeat; background-position: bottom center;
-  animation: act-smoke 6.5s ease-out infinite;
+  animation: act-smoke 2.4s ease-out infinite;
   pointer-events: none; z-index: 3;
 }
 /* ── School: scholar near the door, scroll under arm ── */
@@ -884,7 +884,7 @@ body.heatmap-issues .bldg.idle {
   content: ''; position: absolute;
   right: 8%; top: -12%; width: 28%; height: 50%;
   background-size: contain; background-repeat: no-repeat; background-position: bottom center;
-  animation: act-smoke 6.5s ease-out infinite;
+  animation: act-smoke 2.4s ease-out infinite;
   pointer-events: none; z-index: 3;
 }
 
@@ -910,7 +910,7 @@ body.heatmap-issues .bldg.idle {
   width: calc(28% * var(--bldg-fig-x));
   height: calc(50% * var(--bldg-fig-y));
   background-size: contain; background-repeat: no-repeat; background-position: bottom center;
-  animation: act-smoke 7s ease-out infinite;
+  animation: act-smoke 2.6s ease-out infinite;
   pointer-events: none; z-index: 3;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 20'%3E%3Cellipse cx='5' cy='16' rx='3.5' ry='2.5' fill='%23cccccc' opacity='0.6'/%3E%3Cellipse cx='4' cy='9' rx='3' ry='2' fill='%23dddddd' opacity='0.4'/%3E%3Cellipse cx='6' cy='3' rx='2.5' ry='1.5' fill='%23e8e8e8' opacity='0.25'/%3E%3C/svg%3E");
 }
@@ -932,17 +932,6 @@ body.heatmap-issues .bldg.idle {
 @keyframes act-glow {
   0%, 100% { opacity: 0.45; }
   50%      { opacity: 1; }
-}
-/* One-shot glow pulse fired on each production tick. The continuous
-   act-glow above is no longer used on glow ::before pseudo-elements —
-   they sit at static opacity 0.65 (mid-pulse) and the JS-added
-   .tick-pulse class triggers this single 1.5s fade-up-and-down. Cuts
-   the per-frame compositor cost of `filter: blur()` glows from
-   continuous to ~5% duty cycle (1.5s out of every 30s tick). */
-@keyframes act-tick-glow {
-  0%   { opacity: 0.65; }
-  20%  { opacity: 1; }
-  100% { opacity: 0.65; }
 }
 @keyframes act-buzz {
   0%, 100% { transform: translate(0, 0); }
@@ -970,7 +959,7 @@ body.heatmap-issues .bldg.idle {
   background: radial-gradient(ellipse at center, rgba(255,180,80,0.7) 0%, rgba(255,130,30,0.3) 55%, transparent 100%);
   border-radius: 50%;
   filter: blur(1.5px);
-  opacity: 0.65;
+  animation: act-glow 1.8s ease-in-out infinite;
   pointer-events: none; z-index: 2;
 }
 
@@ -981,7 +970,7 @@ body.heatmap-issues .bldg.idle {
   background: radial-gradient(ellipse at center, rgba(255,140,60,0.75) 0%, rgba(220,80,40,0.3) 60%, transparent 100%);
   border-radius: 50%;
   filter: blur(2px);
-  opacity: 0.65;
+  animation: act-glow 1.3s ease-in-out infinite;
   pointer-events: none; z-index: 2;
 }
 
@@ -992,7 +981,7 @@ body.heatmap-issues .bldg.idle {
   background: radial-gradient(ellipse at center, rgba(255,200,90,0.8) 0%, rgba(220,140,50,0.35) 55%, transparent 100%);
   border-radius: 50%;
   filter: blur(2px);
-  opacity: 0.65;
+  animation: act-glow 1.5s ease-in-out infinite;
   pointer-events: none; z-index: 2;
 }
 
@@ -1002,7 +991,7 @@ body.heatmap-issues .bldg.idle {
   left: 38%; top: 28%; width: 22%; height: 22%;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Ccircle cx='3' cy='3' r='0.7' fill='%23ffe888'/%3E%3Ccircle cx='6' cy='4' r='0.5' fill='%23ffd060'/%3E%3Ccircle cx='4.5' cy='6' r='0.6' fill='%23ffa030'/%3E%3Ccircle cx='7' cy='2' r='0.4' fill='%23ffe888'/%3E%3C/svg%3E");
   background-size: contain; background-repeat: no-repeat; background-position: center;
-  animation: act-sparks 4s ease-out infinite;
+  animation: act-sparks 0.7s ease-out infinite;
   pointer-events: none; z-index: 2;
 }
 
@@ -1012,7 +1001,7 @@ body.heatmap-issues .bldg.idle {
   left: 8%; top: 18%; width: 14%; height: 14%;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 6'%3E%3Cellipse cx='4' cy='3' rx='2' ry='1.5' fill='%23e8c038'/%3E%3Crect x='3' y='2' width='2' height='2' fill='%23202020' opacity='0.7'/%3E%3Cellipse cx='2' cy='1.5' rx='1.5' ry='0.6' fill='%23ddeeff' opacity='0.5'/%3E%3Cellipse cx='6' cy='1.5' rx='1.5' ry='0.6' fill='%23ddeeff' opacity='0.5'/%3E%3C/svg%3E");
   background-size: contain; background-repeat: no-repeat; background-position: center;
-  animation: act-buzz 12s ease-in-out infinite;
+  animation: act-buzz 2.4s ease-in-out infinite;
   pointer-events: none; z-index: 2;
 }
 
@@ -1053,7 +1042,7 @@ body.heatmap-issues .bldg.idle {
   left: 8%; top: 22%; width: 12%; height: 12%;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Cpath d='M4 1 Q6.5 3 4 7 Q1.5 3 4 1 Z' fill='%2348a040'/%3E%3Cpath d='M4 1 L4 7' stroke='%23306028' stroke-width='0.3'/%3E%3C/svg%3E");
   background-size: contain; background-repeat: no-repeat; background-position: center;
-  animation: act-buzz 15s ease-in-out infinite;
+  animation: act-buzz 3.6s ease-in-out infinite;
   pointer-events: none; z-index: 2;
 }
 
@@ -1064,7 +1053,7 @@ body.heatmap-issues .bldg.idle {
   background: radial-gradient(ellipse at center, rgba(255,230,140,0.75) 0%, rgba(220,180,80,0.3) 55%, transparent 100%);
   border-radius: 50%;
   filter: blur(1.5px);
-  opacity: 0.65;
+  animation: act-glow 2.0s ease-in-out infinite;
   pointer-events: none; z-index: 2;
 }
 
@@ -1085,7 +1074,7 @@ body.heatmap-issues .bldg.idle {
   background: radial-gradient(ellipse at center, rgba(255,180,80,0.7) 0%, rgba(255,130,30,0.3) 55%, transparent 100%);
   border-radius: 50%;
   filter: blur(1.5px);
-  opacity: 0.65;
+  animation: act-glow 1.9s ease-in-out infinite;
   pointer-events: none; z-index: 2;
 }
 
@@ -1095,7 +1084,7 @@ body.heatmap-issues .bldg.idle {
   left: 30%; top: 32%; width: 26%; height: 22%;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Crect x='1' y='1' width='2' height='2' fill='%23e8a838'/%3E%3Crect x='4' y='1.5' width='2' height='2' fill='%2348a8c0'/%3E%3Crect x='7' y='1' width='2' height='2' fill='%23c84858'/%3E%3Crect x='2.5' y='4' width='2' height='2' fill='%2360c878'/%3E%3Crect x='5.5' y='4.5' width='2' height='2' fill='%23a058c0'/%3E%3Crect x='8.5' y='4' width='2' height='2' fill='%23e8d038'/%3E%3C/svg%3E");
   background-size: contain; background-repeat: no-repeat; background-position: center;
-  opacity: 0.75;
+  animation: act-glow 1.3s ease-in-out infinite;
   pointer-events: none; z-index: 2;
 }
 
@@ -1116,7 +1105,7 @@ body.heatmap-issues .bldg.idle {
   background: radial-gradient(ellipse at center, rgba(255,170,90,0.65) 0%, rgba(220,120,60,0.3) 55%, transparent 100%);
   border-radius: 50%;
   filter: blur(2px);
-  opacity: 0.65;
+  animation: act-glow 1.7s ease-in-out infinite;
   pointer-events: none; z-index: 2;
 }
 
@@ -1131,7 +1120,7 @@ body.heatmap-issues .bldg.idle {
   background: radial-gradient(ellipse at center, rgba(255,210,90,0.7) 0%, rgba(220,160,40,0.3) 55%, transparent 100%);
   border-radius: 50%;
   filter: blur(1.2px);
-  opacity: 0.65;
+  animation: act-glow 1.5s ease-in-out infinite;
   pointer-events: none; z-index: 2;
 }
 
@@ -1141,7 +1130,7 @@ body.heatmap-issues .bldg.idle {
   left: 36%; top: 38%; width: 20%; height: 20%;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M2 6 Q3 4.5 4 6' fill='none' stroke='%23d8b070' stroke-width='0.5'/%3E%3Cpath d='M5 5 Q6 3.5 7 5' fill='none' stroke='%23c89060' stroke-width='0.5'/%3E%3Cpath d='M3.5 7.5 Q4.5 6 5.5 7.5' fill='none' stroke='%23a87850' stroke-width='0.4'/%3E%3C/svg%3E");
   background-size: contain; background-repeat: no-repeat; background-position: center;
-  animation: act-sparks 5s ease-out infinite;
+  animation: act-sparks 0.9s ease-out infinite;
   pointer-events: none; z-index: 2;
 }
 
@@ -1162,7 +1151,7 @@ body.app-hidden *::after {
   left: 47%; top: 53%; width: 12%; height: 12%;
   background: radial-gradient(ellipse at center, rgba(255,240,140,0.85) 0%, rgba(220,180,40,0.4) 50%, transparent 100%);
   border-radius: 50%; filter: blur(1.5px);
-  opacity: 0.7;
+  animation: act-glow 1.6s ease-in-out infinite;
   pointer-events: none; z-index: 2;
 }
 .bldg.police_station.producing::after {
@@ -1224,41 +1213,6 @@ body.app-hidden *::after {
 .walker-dot.walker-offscreen,
 .walker-dot.walker-offscreen::before,
 .walker-dot.walker-offscreen::after { animation-play-state: paused !important; }
-/* Same idea for building activity animations — IntersectionObserver in
-   map.js toggles .bldg-offscreen as buildings scroll out of #map-viewport.
-   On a phone, the visible window is ~30% of a developed city; killing
-   the other ~70% saves a lot of compositor work for free.
-
-   We hide the decorative pseudo-elements (smoke, glow, sparks, worker
-   overlays) entirely instead of pausing their animations. Pausing
-   freezes the animation mid-cycle, and when the element re-enters the
-   viewport the animation resumes from that frozen frame — which looks
-   visibly glitchy on zoom in/out. `display: none` on the pseudo means
-   no compositor work AND a fresh animation start when it reappears.
-
-   The .bldg itself is NOT paused, so the few building-level animations
-   (act-sway on orchard/garden/winery/grain_farm) keep running smoothly
-   even offscreen. That's a tiny constant cost for not-glitchy zoom. */
-.bldg.bldg-offscreen::before,
-.bldg.bldg-offscreen::after { display: none !important; }
-
-/* Tick-pulse: JS in game.js adds .tick-pulse to every .producing building
-   on each successful production tick (then removes it after ~1.7s).
-   Buildings whose continuous infinite glow was converted to a static
-   "lit" opacity above use this to flash a single act-tick-glow cycle —
-   one big visible "I just produced" pulse every 30s instead of constant
-   compositor work. */
-.bldg.tick-pulse.iron_mine.producing::before,
-.bldg.tick-pulse.smelter.producing::before,
-.bldg.tick-pulse.glassworks.producing::before,
-.bldg.tick-pulse.foreman_office.producing::before,
-.bldg.tick-pulse.mine_office.producing::before,
-.bldg.tick-pulse.mosaic_workshop.producing::before,
-.bldg.tick-pulse.distillery.producing::before,
-.bldg.tick-pulse.brewery.producing::before,
-.bldg.tick-pulse.watch_house.producing::after {
-  animation: act-tick-glow 1.5s ease-in-out 1;
-}
 .walker-dot {
   position: absolute; width: 10px; height: 14px;
   --wk-scale: 1; --wk-hue: 0deg;

@@ -155,27 +155,9 @@ function processProduction() {
     // + inspector reflect this tick. Only updates cells whose values
     // actually changed.
     refreshTileMetrics();
-
-    // Visual tick: flash a one-shot pulse on every producing building.
-    // The glow ::before pseudo-elements (forges, lanterns, etc.) used to
-    // run continuous infinite animations; now they sit at static opacity
-    // and pulse once per tick via the .tick-pulse class. ~5% duty cycle
-    // (1.5s out of 30s) instead of 100% — kills the blur+opacity hot
-    // spot that was the heaviest item on the mobile compositor.
-    pulseProducingBuildings();
   }).catch(function (err) {
     console.warn('Production fetch error:', err);
   });
-}
-
-function pulseProducingBuildings() {
-  var nodes = document.querySelectorAll('#map-grid .bldg.producing');
-  nodes.forEach(function (el) { el.classList.add('tick-pulse'); });
-  setTimeout(function () {
-    document.querySelectorAll('#map-grid .bldg.tick-pulse').forEach(function (el) {
-      el.classList.remove('tick-pulse');
-    });
-  }, 1700);
 }
 
 function startProdLoop() {

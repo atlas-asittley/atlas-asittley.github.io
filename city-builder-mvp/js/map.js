@@ -489,39 +489,6 @@ function _doRenderMap() {
   rebuildRoadSet();
   syncCollectorWalkers();
   renderWalkers();
-  observeBuildings();
-}
-
-// Pause building activity animations when offscreen. Mirrors the walker
-// IntersectionObserver pattern. Mobile compositors burn cycles drawing
-// every animated ::before/::after even for buildings the player can't
-// see — most of the map at any given moment on a phone viewport. Toggling
-// `.bldg-offscreen` flips animation-play-state via CSS.
-//
-// renderMap rebuilds #map-grid via innerHTML, so the previous .bldg nodes
-// are discarded; we disconnect and re-observe on each render.
-var bldgObserver = null;
-function ensureBldgObserver() {
-  if (bldgObserver) return bldgObserver;
-  if (typeof IntersectionObserver === 'undefined') return null;
-  var root = document.getElementById('map-viewport');
-  if (!root) return null;
-  bldgObserver = new IntersectionObserver(function (entries) {
-    for (var i = 0; i < entries.length; i++) {
-      var e = entries[i];
-      if (e.isIntersecting) e.target.classList.remove('bldg-offscreen');
-      else e.target.classList.add('bldg-offscreen');
-    }
-  }, { root: root, rootMargin: '60px', threshold: 0 });
-  return bldgObserver;
-}
-function observeBuildings() {
-  var obs = ensureBldgObserver();
-  if (!obs) return;
-  obs.disconnect();
-  document.querySelectorAll('#map-grid .bldg').forEach(function (el) {
-    obs.observe(el);
-  });
 }
 
 // ── Placement ──
