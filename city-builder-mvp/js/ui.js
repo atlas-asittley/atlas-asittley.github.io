@@ -84,6 +84,35 @@ export function updateHappiness() {
   }
 }
 
+export function updateMigration() {
+  var rate = Number((state.profile && state.profile.migration_rate) || 0);
+  var v = document.getElementById('g-migration');
+  var icon = document.getElementById('g-migration-icon');
+  if (!v || !icon) return;
+  var rounded = Math.round(rate * 100) / 100;
+  if (rounded > 0.01) {
+    icon.textContent = '↑';
+    v.textContent = '+' + rounded.toFixed(2);
+    v.className = 'v migration-up';
+  } else if (rounded < -0.01) {
+    icon.textContent = '↓';
+    v.textContent = rounded.toFixed(2);
+    v.className = 'v migration-down';
+  } else {
+    icon.textContent = '→';
+    v.textContent = '0';
+    v.className = 'v migration-steady';
+  }
+  var stat = document.getElementById('g-migration-stat');
+  if (stat) {
+    stat.title = rounded > 0.01
+      ? 'Citizens moving in: ' + rounded.toFixed(2) + '/min'
+      : rounded < -0.01
+        ? 'Citizens leaving: ' + Math.abs(rounded).toFixed(2) + '/min'
+        : 'Population steady';
+  }
+}
+
 export function updateCrime() {
   var c = Math.round((state.profile && state.profile.crime) || 0);
   var v = document.getElementById('g-crime');

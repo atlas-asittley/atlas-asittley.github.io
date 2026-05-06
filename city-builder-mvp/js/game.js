@@ -1,7 +1,7 @@
 // ── Game entry, data loading, and production loop ──
 import { sb } from './config.js';
 import { state, computeTraderUnlocks, computeLaborAllocation, computeGridBounds } from './state.js';
-import { showScreen, showToast, capitalize, updateMoney, updateWorkers, updateHappiness, updateCrime } from './ui.js';
+import { showScreen, showToast, capitalize, updateMoney, updateWorkers, updateHappiness, updateCrime, updateMigration } from './ui.js';
 import { renderMap, initMapEvents, expandDistrict, restoreMapView } from './map.js';
 import { renderBuildPanel, renderInventory, renderTradePanel, initTabs, initPanelCollapse, checkAllTraderVisits } from './panels.js';
 import { subscribeRealtime } from './realtime.js';
@@ -44,6 +44,7 @@ function processProduction() {
     if (data.happiness !== undefined) state.profile.happiness = data.happiness;
     if (data.population !== undefined) state.profile.population = data.population;
     if (data.crime !== undefined) state.profile.crime = data.crime;
+    if (data.migration_rate !== undefined) state.profile.migration_rate = data.migration_rate;
     var newPopFloor = Math.floor(data.population || prevPopFloor);
     var popDelta = newPopFloor - prevPopFloor;
     if (popDelta > 0) {
@@ -58,6 +59,7 @@ function processProduction() {
     updateWorkers();
     updateHappiness();
     updateCrime();
+    updateMigration();
     renderInventory();
 
     if (document.getElementById('panel-trade').classList.contains('active')) {
@@ -249,6 +251,7 @@ export function enterGame() {
   updateWorkers();
   updateHappiness();
   updateCrime();
+  updateMigration();
 
   loadGameData().then(function () {
     computeLaborAllocation();

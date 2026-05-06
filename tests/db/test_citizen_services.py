@@ -23,8 +23,13 @@ def _backdate(cur, player_id, secs):
 
 
 def _give_lots_of_workers(cur, player_id):
-    """Bypass housing-driven worker supply for tests that just want enough workers."""
-    cur.execute("UPDATE public.player_profiles SET worker_capacity = 100 WHERE id = %s",
+    """Bypass housing-driven worker supply for tests that just want enough workers.
+    process_production reads population (not worker_capacity) for staffing decisions,
+    so set both. process_production will clamp population down to actual target each
+    tick — by that time staffing has already been decided for the current tick."""
+    cur.execute("""UPDATE public.player_profiles
+                   SET worker_capacity = 100, population = 100
+                   WHERE id = %s""",
                 (str(player_id),))
 
 
@@ -251,6 +256,10 @@ def _bathhouse_layout(make_player, place, cur, clear_resources):
     # Use tier 3 (Townhouse) since that's the lowest tier that requires
     # road access — pausing road1 then triggers a road-loss devolve.
     cur.execute("UPDATE public.buildings SET housing_tier = 3 WHERE id = %s", (house_id,))
+    # Force pop high so well + bathhouse stay staffed (the symmetric
+    # population model fills gradually, but tests want immediate
+    # staffing — process_production will clamp to actual target).
+    cur.execute("UPDATE public.player_profiles SET population = 100 WHERE id = %s", (str(p['id']),))
     return p, hx, hy, house_id
 
 

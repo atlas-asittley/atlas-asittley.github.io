@@ -2,9 +2,11 @@
 
 Coverage:
 - Initial happiness is between 0 and 100.
-- Population dynamic: happy player drifts UP toward 5+housing capacity.
-  Unhappy player (no housing built, max-tax) drifts DOWN.
-- Population is clamped at the housing-capacity target (no overflow).
+- Population dynamic is symmetric: max ±1 citizen/min in either
+  direction, scaled by distance from happiness=50. Hard floor at
+  population=5 (citizens never leave below baseline, even at
+  happiness=0 — prevents the death spiral).
+- Population clamps DOWN to housing capacity when housing is lost.
 - worker_capacity reflects floor(population) + tavern_bonus.
 """
 import pytest
@@ -31,30 +33,37 @@ def test_initial_population_starts_at_5(make_player, cur):
     assert cur.fetchone()[0] == 5
 
 
-def test_population_snaps_up_to_housing_capacity(make_player, place, stamp_food_tile, cur, clear_resources):
-    """When housing capacity exceeds current population, citizens fill
-    the empty homes immediately on the next tick. Happiness is purely
-    an emigration force in the asymmetric model — immigration is
-    independent of it."""
+def test_population_grows_toward_capacity_when_happy(make_player, place, cur, clear_resources):
+    """When housing capacity exceeds population AND happiness ≥ 50,
+    citizens immigrate gradually. Backdate a long time and verify pop
+    grew toward target (instead of snapping there instantly like the
+    old asymmetric model). Exact rate depends on the happiness math
+    so we just check the direction."""
     p = make_player(industry='timber')
     clear_resources(p['id'])
     hx, hy = p['home_x'], p['home_y']
 
-    # Tier-1 housing requires a well within range. Tier-1 = 6 workers,
-    # so target population becomes 5 (base) + 6 = 11.
-    place('timber_camp', hx + 1, hy - 1)
-    stamp_food_tile('orchard_grove', hx + 1, hy + 1)
-    place('orchard', hx + 1, hy + 1)
+    # Tier-1 housing → target = 5 + 6 = 11. No production buildings,
+    # so workers_needed = 0 and staffing_ratio = 1.0 (full +20). With
+    # the well counting as a service (+3) and avg_tier=1 (+2), happiness
+    # lands well above 50 → immigration fires.
     place('well', hx + 3, hy + 1)
     place('house', hx + 2, hy + 1)
     cur.execute("UPDATE public.buildings SET housing_tier = 1 WHERE player_id = %s AND building_type_key = 'house'",
                 (str(p['id']),))
 
+    # Backdate 10 hours — at any positive rate that's enough to fill 6 slots.
+    _backdate_population_tick(cur, p['id'], 10 * 60 * 60)
     cur.execute("SELECT public.process_production()")
     result = cur.fetchone()[0]
-    assert result['population'] == 11, (
-        f"population should snap from 5 → housing-capacity 11 in one tick; "
-        f"got {result['population']}"
+    assert result['population'] > 5, (
+        f"happy long tick should grow pop above starting 5; got {result['population']}"
+    )
+    assert result['population'] <= 11, (
+        f"pop should never exceed target 11; got {result['population']}"
+    )
+    assert result['migration_rate'] >= 0, (
+        f"migration_rate should be non-negative when filling; got {result['migration_rate']}"
     )
 
 
@@ -105,6 +114,73 @@ def test_happiness_staffing_ratio_uses_capacity_vs_need(make_player, place, stam
     expected = bk['worker_capacity'] / bk['workers_needed']
     assert abs(float(bk['staffing_ratio']) - min(1.0, expected)) < 0.01, (
         f"staffing_ratio={bk['staffing_ratio']} expected≈{expected}"
+    )
+
+
+def test_population_floor_at_5_blocks_death_spiral(make_player, cur, clear_resources):
+    """Death-spiral prevention: if population somehow drops below the
+    baseline of 5 (e.g. fresh player or a regression), the next tick
+    refills toward 5 at full rate REGARDLESS of happiness. Atlas asked
+    to verify that an unhappy city can always recover — keeping ≥5
+    workers means the player can always staff a Well or Watch House
+    to start clawing back."""
+    p = make_player(industry='timber')
+    clear_resources(p['id'])
+    # Force pop below floor and simulate a long tick.
+    cur.execute("""
+        UPDATE public.player_profiles
+        SET population = 2, last_population_tick_at = now() - interval '60 minutes'
+        WHERE id = %s
+    """, (str(p['id']),))
+    cur.execute("SELECT public.process_production()")
+    result = cur.fetchone()[0]
+    # Under-floor branch refills at max_rate=1/min × 60min, capped at floor=5.
+    assert result['population'] >= 5, (
+        f"population should refill to floor=5 from below; got {result['population']}"
+    )
+
+
+def test_emigration_caps_at_floor(make_player, place, cur, clear_resources):
+    """Same floor enforced from the other direction: with housing but
+    happiness < 50, emigration should drain pop only to floor=5,
+    never below. Combined with the under-floor refill, this guarantees
+    the player always has at least 5 workers to recover from."""
+    p = make_player(industry='timber')
+    clear_resources(p['id'])
+    hx, hy = p['home_x'], p['home_y']
+
+    # Tier-1 housing → target = 5 + 6 = 11.
+    place('well', hx + 3, hy + 1)
+    place('house', hx + 2, hy + 1)
+    cur.execute("UPDATE public.buildings SET housing_tier = 1 WHERE player_id = %s AND building_type_key = 'house'",
+                (str(p['id']),))
+    # Three tax offices (-9 happiness) push us below 50 into the
+    # emigration branch. Insert directly to bypass place_building's
+    # tile / road checks (which fight the random highway placement).
+    # Pick three unoccupied owned tiles by query.
+    cur.execute("""SELECT id, x, y FROM public.map_tiles
+                   WHERE owner_player_id = %s
+                     AND occupied_building_id IS NULL
+                     AND resource_node_key IS NULL
+                     AND buildable = true
+                   LIMIT 3""", (str(p['id']),))
+    tiles = cur.fetchall()
+    assert len(tiles) >= 3, "test fixture needs 3 free tiles"
+    for tid, tx, ty in tiles:
+        cur.execute("""INSERT INTO public.buildings
+                       (player_id, building_type_key, x, y, status, tile_id)
+                       VALUES (%s, 'tax_man', %s, %s, 'active', %s)""",
+                    (str(p['id']), tx, ty, str(tid)))
+        cur.execute("UPDATE public.map_tiles SET occupied_building_id = (SELECT id FROM public.buildings WHERE tile_id = %s) WHERE id = %s",
+                    (str(tid), str(tid)))
+    cur.execute("UPDATE public.player_profiles SET population = 11 WHERE id = %s", (str(p['id']),))
+    # Backdate 24 hours — at 1/min emigration that would drain 11 → -1429
+    # without a floor. Floor caps at 5.
+    _backdate_population_tick(cur, p['id'], 24 * 60 * 60)
+    cur.execute("SELECT public.process_production()")
+    result = cur.fetchone()[0]
+    assert result['population'] >= 5, (
+        f"long unhappy spell should not drain below floor=5; got {result['population']}"
     )
 
 

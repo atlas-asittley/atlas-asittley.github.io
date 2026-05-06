@@ -63,7 +63,7 @@ def test_tax_man_credits_money_when_staffed(make_player, place, cur, clear_resou
     # Force the house to tier 2 (cottage = 10 workers) so the tax_man can be staffed.
     cur.execute("UPDATE public.buildings SET housing_tier = 2 WHERE id = %s", (house_id,))
     cur.execute(
-        "UPDATE public.player_profiles SET money = 1000 WHERE id = %s",
+        "UPDATE public.player_profiles SET money = 1000, population = 200 WHERE id = %s",
         (str(p['id']),),
     )
     place('tax_man', hx + 1, hy + 3)

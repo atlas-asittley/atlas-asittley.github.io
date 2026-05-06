@@ -56,6 +56,10 @@ body {
 .crime-icon { display: inline-block; margin-right: 3px; font-size: 0.85rem; line-height: 1; vertical-align: middle; filter: saturate(0.6); }
 .workers-icon { display: inline-block; margin-right: 3px; font-size: 0.85rem; line-height: 1; vertical-align: middle; }
 .chunks-icon { display: inline-block; margin-right: 3px; font-size: 0.9rem; line-height: 1; vertical-align: middle; }
+.migration-icon { display: inline-block; margin-right: 3px; font-size: 0.85rem; line-height: 1; vertical-align: middle; font-weight: 700; }
+.v.migration-up { color: #5ec49e; }
+.v.migration-down { color: #e0707a; }
+.v.migration-steady { color: #7a8a9e; }
 .v.crime-low  { color: #5ec49e; }
 .v.crime-mid  { color: #e6c65a; }
 .v.crime-high { color: #e0707a; }

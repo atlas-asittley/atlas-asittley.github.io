@@ -161,7 +161,9 @@ def test_orchard_output_satisfies_food_gate(make_player, place, stamp_food_tile,
     cur.execute("""UPDATE public.buildings
                    SET last_processed_at = now() - interval '60 seconds'
                    WHERE player_id = %s""", (str(p['id']),))
-    cur.execute("""UPDATE public.player_profiles SET last_food_tick_at = now() - interval '60 seconds'
+    cur.execute("""UPDATE public.player_profiles
+                   SET last_food_tick_at = now() - interval '60 seconds',
+                       population = 100
                    WHERE id = %s""", (str(p['id']),))
 
     cur.execute("SELECT public.process_production()")

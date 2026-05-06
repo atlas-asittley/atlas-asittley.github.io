@@ -64,6 +64,12 @@ def _setup_tier5_ready_house(cur, make_player, place, clear_resources, starting_
     house_id = place('house', hx + 1, hy + 2)['building_id']
     cur.execute("UPDATE public.buildings SET housing_tier = %s WHERE id = %s",
                 (starting_tier, house_id))
+    # The new symmetric population model fills gradually. These tests
+    # assume the school/temple/well are all staffed so the housing
+    # prereqs are met. Force pop high enough to staff everything; the
+    # next process_production tick will clamp it down to actual target.
+    cur.execute("UPDATE public.player_profiles SET population = 200 WHERE id = %s",
+                (str(p['id']),))
     return p, house_id
 
 
