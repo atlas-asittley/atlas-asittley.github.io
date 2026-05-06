@@ -17,7 +17,7 @@
     var u = new URL(window.location.href);
     var cb = u.searchParams.get('_cb');
     var q = cb ? '?_cb=' + cb : '';
-    var modules = ['ui','auth','game','config','state','map','map_roads','inspector','panels','reports','walkers','realtime','version','players','help','sprites'];
+    var modules = ['ui','auth','game','config','state','map','map_roads','inspector','panels','reports','walkers','realtime','version','players','help','sprites','notifications'];
 
     var link = document.createElement('link');
     link.rel = 'stylesheet';
@@ -145,6 +145,7 @@
       <span class="stat" id="g-productivity-stat" title="Production multiplier. 100% = baseline."><span class="productivity-icon">⚒</span><span class="v" id="g-productivity">100%</span></span>
     </div>
     <div class="topbar-right">
+      <button class="btn-sm btn-icon" id="g-notifications" title="Notifications">🔔</button>
       <button class="btn-sm" id="g-help" title="Buildings reference">?</button>
       <button class="btn-sm" id="g-expand-district" title="Pick an adjacent chunk to claim">+ Expand</button>
       <button class="btn-sm" id="g-reset" title="Wipe your district and start over">Reset</button>

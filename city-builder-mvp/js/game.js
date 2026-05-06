@@ -2,6 +2,7 @@
 import { sb } from './config.js';
 import { state, computeTraderUnlocks, computeLaborAllocation, computeGridBounds } from './state.js';
 import { showScreen, showToast, capitalize, updateMoney, updateWorkers, updateHappiness, updateCrime, updateMigration, updateProductivity } from './ui.js';
+import { addNotification, loadNotifications, initNotificationBell } from './notifications.js';
 import { renderMap, initMapEvents, expandDistrict, restoreMapView } from './map.js';
 import { renderBuildPanel, renderInventory, renderTradePanel, refreshActiveDataPanel, initTabs, initPanelCollapse, checkAllTraderVisits } from './panels.js';
 import { subscribeRealtime } from './realtime.js';
@@ -107,15 +108,18 @@ function processProduction() {
     renderInventory();
 
     // Bankruptcy alert: fire on the tick where money first crosses
-    // into negative territory. Single toast — don't keep nagging.
+    // into negative territory. Single toast + log entry — don't nag.
     if (prevMoney >= 0 && data.money !== undefined && data.money < 0) {
-      showToast('You\'re running a deficit — sell goods or pause buildings.', 'error');
+      var bankruptMsg = 'You\'re running a deficit — sell goods or pause buildings.';
+      showToast(bankruptMsg, 'error');
+      addNotification('error', bankruptMsg);
     }
     // Crime cascade warning: when crime crosses 70 going up. Same
-    // single-shot rule. Helps players see the problem before it
-    // pushes happiness below 50 and triggers emigration.
+    // single-shot rule. Toast + log so the warning survives a refresh.
     if (data.crime !== undefined && data.crime >= 70 && (prevCrime || 0) < 70) {
-      showToast('Crime is high — build / staff police buildings near housing.', 'error');
+      var crimeMsg = 'Crime is high — build / staff police buildings near housing.';
+      showToast(crimeMsg, 'error');
+      addNotification('warn', crimeMsg);
     }
 
     // Refresh the visible top-level panel if it's data-driven (Trade
@@ -137,26 +141,17 @@ function processProduction() {
       });
       data.evolution_events.forEach(function (ev) {
         // Server emits { event: 'upgrade'|'devolve', from_tier, to_tier }.
-        // Look up tier names client-side from housingTierConfig.
+        // Use the full tier name (label is a 1–2 letter map abbreviation).
         var fromCfg = state.housingTierConfig[ev.from_tier];
         var toCfg = state.housingTierConfig[ev.to_tier];
-        var fromName = (fromCfg && (fromCfg.label || fromCfg.name)) || ('Tier ' + ev.from_tier);
-        var toName = (toCfg && (toCfg.label || toCfg.name)) || ('Tier ' + ev.to_tier);
+        var fromName = (fromCfg && fromCfg.name) || ('Tier ' + ev.from_tier);
+        var toName = (toCfg && toCfg.name) || ('Tier ' + ev.to_tier);
         if (ev.event === 'upgrade') {
-          showToast(fromName + ' upgraded to ' + toName + '!', 'success');
+          addNotification('success', fromName + ' upgraded to ' + toName);
         } else {
-          showToast(fromName + ' devolved to ' + toName, 'info');
+          addNotification('warn', fromName + ' devolved to ' + toName);
         }
       });
-    }
-
-    // total_produced is a numeric — per-minute rate × elapsed seconds —
-    // so it's almost always a fraction. Floor to whole goods (sub-1
-    // production carries over to the next tick anyway) and skip the
-    // toast entirely if it's less than 1.
-    var producedWhole = Math.floor(data.total_produced || 0);
-    if (producedWhole >= 1) {
-      showToast('+' + producedWhole + ' goods produced', 'success');
     }
 
     // Pull the latest tile metrics (pollution + desirability) so heatmaps
@@ -336,23 +331,12 @@ export function enterGame() {
       expandBtn.onclick = function () { expandDistrict(); };
     }
     checkAllTraderVisits();
-    showTapHintOnce();
+    loadNotifications();
+    initNotificationBell();
   }).catch(function (err) {
     console.error('Game load failed:', err);
     showToast('Failed to load game data', 'error');
   });
-}
-
-// Show a one-time hint that buildings are tappable (only on first session)
-function showTapHintOnce() {
-  var key = 'city_tap_hint_shown';
-  try {
-    if (localStorage.getItem(key)) return;
-    localStorage.setItem(key, '1');
-  } catch (e) { return; }
-  setTimeout(function () {
-    showToast('Tap any building or citizen to inspect it', 'info');
-  }, 2500);
 }
 
 // Wire up map and tab events once

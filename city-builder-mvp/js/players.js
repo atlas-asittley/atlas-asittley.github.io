@@ -13,6 +13,7 @@
 import { sb } from './config.js';
 import { state } from './state.js';
 import { showToast, updateMoney } from './ui.js';
+import { addNotification } from './notifications.js';
 import { renderInventory } from './panels.js';
 
 var otherPlayers = [];     // [{id, display_name, industry_key, color_hex}]
@@ -707,7 +708,9 @@ export function onTradeOfferChange() {
       // Show a toast for offers we haven't seen yet (created in last 5s).
       if (Date.now() - new Date(newest.created_at).getTime() < 5000) {
         var fromP = otherPlayers.find(function (p) { return p.id === newest.from_player_id; });
-        showToast('New trade offer from ' + (fromP ? fromP.display_name : 'a player'), 'success');
+        var msg = 'New trade offer from ' + (fromP ? fromP.display_name : 'a player');
+        showToast(msg, 'success');
+        addNotification('info', msg);
       }
     }
     renderPlayersPanel();
