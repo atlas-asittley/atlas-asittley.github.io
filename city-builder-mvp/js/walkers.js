@@ -650,9 +650,19 @@ function applyWalkerPosition(w, immediate) {
     // spawn during enterGame() before the map screen has had a paint.
     // Retry on the next frame so the walker doesn't get stuck at
     // (0,0) until its next walkerStep tick fires.
+    //
+    // Hard-cap the retries so if the grid stays hidden indefinitely
+    // (e.g., user has the bottom panel in 'expanded' state, which
+    // sets `display: none` on .map-area) the walker doesn't keep
+    // firing rAF callbacks every frame forever — that pegs the CPU.
+    // Subsequent walker steps and the panel-collapse / enterGame
+    // hooks will re-position once the map becomes measurable.
+    w._posRetries = (w._posRetries || 0) + 1;
+    if (w._posRetries > 30) return;  // ~500ms at 60Hz; bail.
     requestAnimationFrame(function () { applyWalkerPosition(w, immediate); });
     return;
   }
+  w._posRetries = 0;
   // CSS sets `gap: 0px` on #map-grid, so cells fully tile the width.
   // (The earlier `gap = 1` constant accumulated ~1 column of pixel
   // drift across the grid — wrong.)
