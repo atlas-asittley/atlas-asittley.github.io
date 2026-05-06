@@ -505,6 +505,12 @@ export function renderTradePanel() {
     flour:  { buy: 5, sell: 16 }
   };
 
+  // The City-tab refactor (e2562dc) removed the surrounding tradeResources
+  // array but left this loop pointing at it, throwing a silent ReferenceError
+  // mid-render and leaving the entire Partners panel blank. Restore the list
+  // (display order matches the prior version: raw → processed by industry).
+  var tradeResources = ['timber', 'lumber', 'stone', 'brick', 'grain', 'flour'];
+
   tradeResources.forEach(function (rk) {
     var bmp = bmPrices[rk];
     var stock = Math.floor(state.inventory[rk] || 0);
