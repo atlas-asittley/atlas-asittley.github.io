@@ -352,8 +352,8 @@ export function initHelp() {
     el.style.cursor = 'pointer';
     el.addEventListener('click', function () { openStatInfo(infoKey); });
   };
-  wireStat('g-workers', 'workers');
-  wireStat('g-chunks', 'chunks');
+  wireStat('g-workers-stat', 'workers');
+  wireStat('g-chunks-stat', 'chunks');
   wireStat('g-happiness-stat', 'happiness');
   wireStat('g-crime-stat', 'crime');
 }
