@@ -3910,7 +3910,7 @@ CREATE TABLE public.player_profiles (
     id uuid NOT NULL,
     display_name text NOT NULL,
     industry_key text NOT NULL,
-    money integer DEFAULT 500 NOT NULL,
+    money integer DEFAULT 1000 NOT NULL,
     worker_capacity integer DEFAULT 5 NOT NULL,
     workers_used integer DEFAULT 0 NOT NULL,
     color_hex text,
