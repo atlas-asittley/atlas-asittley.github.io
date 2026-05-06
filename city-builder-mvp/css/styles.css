@@ -1302,8 +1302,8 @@ body.app-hidden *::after {
    - expanded:            takes ALL remaining height in game-body. The
                           body.panel-expanded class also hides .map-area
                           so there's no peek-through of the map. */
-.bottom-panel { flex-shrink: 0; background: #131a24; border-top: 1px solid #243447; max-height: 50vh; display: flex; flex-direction: column; box-shadow: 0 -1px 0 rgba(255,255,255,0.06); transition: max-height 0.2s ease, flex-grow 0.2s ease; }
-.bottom-panel.expanded { max-height: none; flex: 1; }
+.bottom-panel { flex-shrink: 0; background: #131a24; border-top: 1px solid #243447; max-height: 50vh; display: flex; flex-direction: column; min-height: 0; box-shadow: 0 -1px 0 rgba(255,255,255,0.06); transition: max-height 0.2s ease, flex-grow 0.2s ease; }
+.bottom-panel.expanded { max-height: none; flex: 1; min-height: 0; }
 .bottom-panel.collapsed { max-height: 34px; }
 body.panel-expanded .map-area { display: none; }
 .panel-controls { display: flex; height: 34px; flex-shrink: 0; border-bottom: 1px solid #243447; background: linear-gradient(180deg, #18222f 0%, #131a24 100%); }
@@ -1439,7 +1439,7 @@ body.panel-expanded .map-area { display: none; }
 .btn-trade-send { padding: 8px 18px; background: #2a4a78; border: 1px solid #3a5e92; border-radius: 6px; color: #fff; font-weight: 700; cursor: pointer; }
 .btn-trade-send:hover { background: #345a8a; }
 .btn-trade-send:disabled { opacity: 0.6; cursor: wait; }
-.panel-content { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 12px; display: none; }
+.panel-content { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 12px; display: none; }
 .panel-content.active { display: block; }
 
 /* ── Trade sub-tabs ─────────────────────────────────── */
@@ -1448,7 +1448,7 @@ body.panel-expanded .map-area { display: none; }
 .trade-subtabs { display: flex; border-bottom: 1px solid #1e2a3a; padding: 6px 8px 0; gap: 2px; flex-shrink: 0; background: #0e1620; }
 .trade-subtab { flex: 1; padding: 6px 4px; font-size: 0.74rem; font-weight: 600; color: #7a8a9e; cursor: pointer; background: none; border: none; border-bottom: 2px solid transparent; transition: color 0.2s; position: relative; }
 .trade-subtab.active { color: #4fa3e0; border-bottom-color: #4fa3e0; }
-.trade-subpanels { flex: 1; overflow-y: auto; }
+.trade-subpanels { flex: 1; min-height: 0; overflow-y: auto; }
 .trade-subpanel { display: none; padding: 12px; }
 .trade-subpanel.active { display: block; }
 
