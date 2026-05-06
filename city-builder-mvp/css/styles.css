@@ -141,15 +141,16 @@ body.inspector-open .map-canvas { margin-bottom: calc(50vh + 28px); }
 .cell.nv2::before { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='34' height='34'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' seed='73'/%3E%3C/filter%3E%3Crect width='34' height='34' filter='url(%23n)' opacity='0.35'/%3E%3C/svg%3E"); }
 .cell.nv3::before { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='34' height='34'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' seed='91'/%3E%3C/filter%3E%3Crect width='34' height='34' filter='url(%23n)' opacity='0.35'/%3E%3C/svg%3E"); }
 /* Grass detail overlays — subtle bushes, clumps, rocks to break grid uniformity */
-/* Grass color variants — 4 base tints applied via class. The map.js
-   tileHash maps (x,y) deterministically to gc0..gc3 so neighbors vary
-   without flickering between renders. The wilderness/owned-other
-   filters still apply on top, so the palette stays unified across
-   ownership states. */
+/* Grass color variants — variation lives in a soft INTERIOR blob,
+   leaving every tile's outer band as the same #223322 neutral. That
+   way adjacent tiles share an edge color and the map stops reading
+   as patchwork. gc0 = no blob (~25% of tiles). gc1..gc3 each have a
+   blob in a slightly different position so the overall texture
+   doesn't pulse at the grid frequency. */
 .cell.gc0 { background: #223322; }
-.cell.gc1 { background: #2a3a26; }
-.cell.gc2 { background: #1c2c1d; }
-.cell.gc3 { background: #2c3e2a; }
+.cell.gc1 { background: radial-gradient(circle at 38% 44%, #2a4a26 0%, rgba(42,74,38,0.85) 18%, rgba(34,51,34,0) 55%), #223322; }
+.cell.gc2 { background: radial-gradient(circle at 62% 32%, #1c2c1d 0%, rgba(28,44,29,0.85) 18%, rgba(34,51,34,0) 55%), #223322; }
+.cell.gc3 { background: radial-gradient(circle at 48% 64%, #2c3e2a 0%, rgba(44,62,42,0.85) 18%, rgba(34,51,34,0) 55%), #223322; }
 
 .cell.gv0::after, .cell.gv1::after, .cell.gv2::after, .cell.gv3::after,
 .cell.gv4::after, .cell.gv5::after, .cell.gv6::after, .cell.gv7::after,
@@ -1535,21 +1536,20 @@ body.app-hidden *::after {
 .toast.info { border-color: #4fa3e0; color: #a0d0f0; }
 
 /* ── Version badge ─────────────────────────────────── */
-/* Pinned to upper-left of the map area, just below the info bar, so
-   it doesn't collide with the placement cancel button at the bottom. */
+/* Pinned to the lower-right corner of the screen — just the latest
+   commit SHA, small enough to stay out of the way. Tap to cache-bust. */
 .version-badge {
-  position: fixed; top: 78px; left: 12px;
-  font-size: 0.72rem; color: #d7e7ff; font-family: monospace;
+  position: fixed; bottom: 6px; right: 8px;
+  font-size: 0.6rem; color: #6f8ba8; font-family: monospace;
   z-index: 300; pointer-events: auto; user-select: none;
-  background: rgba(8, 14, 22, 0.88); border: 1px solid rgba(79,163,224,0.45);
-  border-radius: 999px; padding: 4px 10px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.35);
-  letter-spacing: 0.04em; cursor: pointer;
-  transition: transform 0.12s ease, border-color 0.12s ease, background 0.12s ease;
+  background: rgba(8, 14, 22, 0.7); border: 1px solid rgba(79,163,224,0.25);
+  border-radius: 4px; padding: 1px 5px;
+  letter-spacing: 0.03em; cursor: pointer; opacity: 0.65;
+  transition: opacity 0.12s ease, border-color 0.12s ease;
 }
-.version-badge:hover { border-color: rgba(120,190,255,0.75); background: rgba(10, 18, 28, 0.95); }
-.version-badge:active { transform: scale(0.98); }
-.version-badge.copied { border-color: rgba(94,196,158,0.85); color: #d8fff0; }
+.version-badge:hover { opacity: 1; border-color: rgba(120,190,255,0.6); }
+.version-badge:active { opacity: 1; }
+.version-badge.copied { border-color: rgba(94,196,158,0.85); color: #d8fff0; opacity: 1; }
 
 /* ── Building Inspector ───────────────────────────── */
 /* Backdrop is transparent so the map stays bright behind the panel; the

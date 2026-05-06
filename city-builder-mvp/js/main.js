@@ -1,13 +1,13 @@
 // ── Entry point: bootstrap the app ──
-import { PAGE_BUILD, REPO_OWNER, REPO_NAME } from './version.js';
+import { REPO_OWNER, REPO_NAME } from './version.js';
 import { sb } from './config.js';
 import { showScreen } from './ui.js';
 import { checkProfileAndRoute, initAuthEvents } from './auth.js';
 import { initGameEvents } from './game.js';
 
 var versionBadge = document.getElementById('version-badge');
-versionBadge.textContent = PAGE_BUILD + ' • checking repo…';
-versionBadge.title = 'Tap to bust cache & reload';
+versionBadge.textContent = '…';
+versionBadge.title = 'Latest commit on main — tap to bust cache & reload';
 
 function setBadgeText(text) {
   versionBadge.textContent = text;
@@ -42,13 +42,13 @@ fetch('https://api.github.com/repos/' + REPO_OWNER + '/' + REPO_NAME + '/commits
   .then(function (r) { return r.ok ? r.json() : null; })
   .then(function (data) {
     if (!data || !data.sha) {
-      setBadgeText(PAGE_BUILD + ' • REPO unknown');
+      setBadgeText('?');
       return;
     }
-    setBadgeText(PAGE_BUILD + ' • REPO ' + data.sha.slice(0, 7));
+    setBadgeText(data.sha.slice(0, 7));
   })
   .catch(function () {
-    setBadgeText(PAGE_BUILD + ' • REPO unknown');
+    setBadgeText('?');
   });
 
 // Wire up all event listeners
