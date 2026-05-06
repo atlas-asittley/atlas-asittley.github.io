@@ -649,16 +649,20 @@ function applyWalkerPosition(w, immediate) {
     // Layout hasn't settled yet — common on first load when walkers
     // spawn during enterGame() before the map screen has had a paint.
     // Retry on the next frame so the walker doesn't get stuck at
-    // (0,0) until its next walkerStep tick fires.
+    // (0,0) until its next walkerStep tick fires. The walker stays
+    // invisible (opacity: 0 in CSS) until this branch falls through
+    // and we set opacity: 1 below.
     requestAnimationFrame(function () { applyWalkerPosition(w, immediate); });
     return;
   }
-  var cellSize = (gridW - (cols - 1)) / cols;
-  var gap = 1;
+  // CSS sets `gap: 0px` on #map-grid, so cells fully tile the width.
+  // (The earlier `gap = 1` constant accumulated ~1 column of pixel
+  // drift across the grid — wrong.)
+  var cellSize = gridW / cols;
   var gx = w.x - (state.gridMinX || 0);
   var gy = w.y - (state.gridMinY || 0);
-  var left = gx * (cellSize + gap) + cellSize * 0.5;
-  var top = gy * (cellSize + gap) + cellSize * 0.5;
+  var left = gx * cellSize + cellSize * 0.5;
+  var top = gy * cellSize + cellSize * 0.5;
   if (immediate) {
     var prev = w.el.style.transition;
     w.el.style.transition = 'none';
@@ -902,16 +906,16 @@ export function snapWalkersToZoom() {
   var cols = state.gridCols || 15;
   var gridW = grid.offsetWidth;
   if (gridW === 0) return;
-  var cellSize = (gridW - (cols - 1)) / cols;
-  var gap = 1;
+  // Match CSS `gap: 0px` — cells fully tile the width.
+  var cellSize = gridW / cols;
   var minX = state.gridMinX || 0;
   var minY = state.gridMinY || 0;
   var now = Date.now();
 
   function tilePixel(tx, ty) {
     return {
-      left: (tx - minX) * (cellSize + gap) + cellSize * 0.5,
-      top:  (ty - minY) * (cellSize + gap) + cellSize * 0.5
+      left: (tx - minX) * cellSize + cellSize * 0.5,
+      top:  (ty - minY) * cellSize + cellSize * 0.5
     };
   }
 

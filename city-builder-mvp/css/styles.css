@@ -1203,6 +1203,10 @@ body.app-hidden *::after {
   --wk-bob-ms: 700ms;
   --wk-bob-delay: 0s;
   transform: translate(-50%, -50%) scale(var(--wk-scale));
+  /* Hidden until applyWalkerPosition successfully runs (which sets
+     opacity: 1). Otherwise a freshly-spawned walker briefly renders
+     at the top-left corner if the grid hasn't laid out yet. */
+  opacity: 0;
   transition: left 1.4s linear, top 1.4s linear;
   animation: walker-bob var(--wk-bob-ms) ease-in-out infinite alternate;
   animation-delay: var(--wk-bob-delay);
