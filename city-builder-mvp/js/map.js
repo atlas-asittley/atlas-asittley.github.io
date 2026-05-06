@@ -267,6 +267,27 @@ function _doRenderMap() {
   var buildingById = {};
   state.allBuildings.forEach(function (b) { buildingById[b.id] = b; });
 
+  // Police coverage for the crime-risk heatmap: precompute the set of
+  // (x,y) keys covered by any of THIS player's staffed police buildings.
+  // Only computed in crime mode — cheap (a few police × small radius²).
+  var policeCovered = {};
+  if (state.heatmapMode === 'crime' && state.currentUser) {
+    state.allBuildings.forEach(function (b) {
+      if (b.player_id !== state.currentUser.id) return;
+      if (b.status !== 'active' || !b.is_staffed) return;
+      var bt = state.buildingTypes[b.building_type_key];
+      if (!bt || bt.category !== 'police') return;
+      var r = bt.coverage_radius || 0;
+      for (var dx = -r; dx <= r; dx++) {
+        for (var dy = -r; dy <= r; dy++) {
+          if (Math.abs(dx) + Math.abs(dy) <= r) {
+            policeCovered[(b.x + dx) + ',' + (b.y + dy)] = true;
+          }
+        }
+      }
+    });
+  }
+
   // Dynamic grid columns based on current bounds
   grid.style.gridTemplateColumns = 'repeat(' + state.gridCols + ', 1fr)';
 
@@ -350,6 +371,7 @@ function _doRenderMap() {
       }
       if (building && buildingBt && buildingBt.category === 'housing') {
         classes.push('has-house');
+        if (policeCovered[x + ',' + y]) classes.push('police-covered');
       }
       // Multi-tile anchor: lift the cell's z-index so the .bldg's
       // overflow into adjacent cells paints ABOVE those cells'
@@ -948,19 +970,55 @@ export function initMapEvents() {
     });
   }
 
-  // ── Pollution heatmap toggle ──
-  // body.show-pollution adds a yellow tint overlay scaled by --pollution
-  // (set per-cell in _doRenderMap). Persists across reloads.
-  var pollutionBtn = document.getElementById('pollution-toggle');
-  if (pollutionBtn) {
-    var saved;
-    try { saved = localStorage.getItem('city_show_pollution'); } catch (e) {}
-    if (saved === '1') document.body.classList.add('show-pollution');
-    pollutionBtn.classList.toggle('active', document.body.classList.contains('show-pollution'));
-    pollutionBtn.addEventListener('click', function () {
-      var on = document.body.classList.toggle('show-pollution');
-      pollutionBtn.classList.toggle('active', on);
-      try { localStorage.setItem('city_show_pollution', on ? '1' : '0'); } catch (e) {}
+  // ── Heatmap mode toggle ──
+  // Click the button → small popup lists the available overlays. Picking
+  // one applies a `body.heatmap-<mode>` class; CSS gates the right
+  // visualization (yellow tint for pollution, red for crime risk, red
+  // outline for unstaffed/idle buildings, etc.). One mode at a time so
+  // the colors don't fight. Persisted across reloads.
+  var heatmapBtn = document.getElementById('heatmap-toggle');
+  var heatmapPopup = document.getElementById('heatmap-popup');
+  var HEATMAP_MODES = ['none', 'pollution', 'crime', 'issues'];
+
+  function applyHeatmapMode(mode) {
+    HEATMAP_MODES.forEach(function (m) {
+      document.body.classList.toggle('heatmap-' + m, m === mode && m !== 'none');
+    });
+    if (heatmapBtn) heatmapBtn.classList.toggle('active', mode !== 'none');
+    if (heatmapPopup) {
+      heatmapPopup.querySelectorAll('.heatmap-option').forEach(function (opt) {
+        opt.classList.toggle('active', opt.dataset.mode === mode);
+      });
+    }
+    state.heatmapMode = mode;
+    try { localStorage.setItem('city_heatmap_mode', mode); } catch (e) {}
+    // Re-render the map so police-cover class + bldg.idle markers
+    // reflect the new mode (CSS-only modes don't strictly need this,
+    // but crime mode does for the .police-covered class).
+    if (mode === 'crime') renderMap();
+  }
+
+  if (heatmapBtn && heatmapPopup) {
+    var savedMode;
+    try { savedMode = localStorage.getItem('city_heatmap_mode'); } catch (e) {}
+    if (HEATMAP_MODES.indexOf(savedMode) === -1) savedMode = 'none';
+    applyHeatmapMode(savedMode);
+
+    heatmapBtn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      heatmapPopup.classList.toggle('show');
+    });
+    heatmapPopup.addEventListener('click', function (e) {
+      e.stopPropagation();
+      var opt = e.target.closest('.heatmap-option');
+      if (!opt) return;
+      applyHeatmapMode(opt.dataset.mode);
+      heatmapPopup.classList.remove('show');
+    });
+    document.addEventListener('click', function (e) {
+      if (!heatmapPopup.classList.contains('show')) return;
+      if (heatmapPopup.contains(e.target) || heatmapBtn.contains(e.target)) return;
+      heatmapPopup.classList.remove('show');
     });
   }
 

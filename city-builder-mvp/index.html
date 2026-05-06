@@ -165,7 +165,14 @@
       <div class="zoom-controls">
         <button id="zoom-in" type="button" aria-label="Zoom in">+</button>
         <button id="zoom-out" type="button" aria-label="Zoom out">&minus;</button>
-        <button id="pollution-toggle" type="button" aria-label="Toggle pollution heatmap" title="Show pollution heatmap" style="font-size:18px">🌫</button>
+        <button id="heatmap-toggle" type="button" aria-label="Heatmap overlay" title="Heatmap overlays" style="font-size:18px">🗺</button>
+      </div>
+      <div class="heatmap-popup" id="heatmap-popup">
+        <div class="heatmap-popup-title">Heatmap</div>
+        <button class="heatmap-option" data-mode="none">— Off —</button>
+        <button class="heatmap-option" data-mode="pollution"><span class="heatmap-swatch heatmap-swatch-pollution"></span>Pollution</button>
+        <button class="heatmap-option" data-mode="crime"><span class="heatmap-swatch heatmap-swatch-crime"></span>Crime risk</button>
+        <button class="heatmap-option" data-mode="issues"><span class="heatmap-swatch heatmap-swatch-issues"></span>Building issues</button>
       </div>
     </div>
     <div class="bottom-panel" id="bottom-panel">
