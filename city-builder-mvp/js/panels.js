@@ -5,6 +5,7 @@ import { showToast, updateMoney } from './ui.js';
 import { BLDG_LABELS, renderMap, cancelPlacement } from './map.js';
 import { renderPlayersPanel, openTradeDialog } from './players.js';
 import { renderResourcesPanel, renderTreasuryPanel } from './reports.js';
+import { renderWalkers } from './walkers.js';
 
 export function resourceName(key) {
   if (state.resources[key]) return state.resources[key].name;
@@ -835,6 +836,7 @@ export function initPanelCollapse() {
   if (current !== 'collapsed' && current !== 'expanded' && current !== 'half') current = 'half';
 
   function apply(state) {
+    var wasHidden = current === 'expanded';
     panel.classList.remove('collapsed', 'expanded');
     document.body.classList.toggle('panel-expanded', state === 'expanded');
     if (state === 'collapsed') {
@@ -850,6 +852,15 @@ export function initPanelCollapse() {
     }
     current = state;
     try { localStorage.setItem(STORAGE_KEY, state); } catch (e) {}
+    // If the map area was hidden (panel-expanded → display:none on
+    // .map-area) and we're now showing it again, walkers that spawned
+    // while it was hidden have their position-retry chain stuck — the
+    // rAF loop keeps reading offsetWidth=0. Re-render after the next
+    // frame so the layer has measurable width and walkers find their
+    // tiles.
+    if (wasHidden && state !== 'expanded') {
+      requestAnimationFrame(function () { renderWalkers(); });
+    }
   }
 
   apply(current);

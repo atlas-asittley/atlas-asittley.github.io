@@ -6,7 +6,7 @@ import { addNotification, loadNotifications, initNotificationBell } from './noti
 import { renderMap, initMapEvents, restoreMapView } from './map.js';
 import { renderBuildPanel, renderTradePanel, refreshActiveDataPanel, initTabs, initPanelCollapse, checkAllTraderVisits } from './panels.js';
 import { subscribeRealtime } from './realtime.js';
-import { startWalkers, stopWalkers, spawnImmigrantWalker, spawnEmigrantWalker } from './walkers.js';
+import { startWalkers, stopWalkers, spawnImmigrantWalker, spawnEmigrantWalker, renderWalkers } from './walkers.js';
 import { initInspector } from './inspector.js';
 import { initHelp } from './help.js';
 
@@ -323,6 +323,10 @@ export function enterGame() {
     subscribeRealtime();
     startProdLoop();
     startWalkers();
+    // Defensive: walkers spawned during enterGame may have hit the
+    // grid-not-measurable race (offsetWidth=0 if layout hadn't fully
+    // committed). Re-render after a frame so they get correct positions.
+    requestAnimationFrame(function () { renderWalkers(); });
     checkAllTraderVisits();
     loadNotifications();
     initNotificationBell();
