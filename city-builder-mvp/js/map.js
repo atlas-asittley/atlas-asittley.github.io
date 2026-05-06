@@ -983,4 +983,19 @@ export function initMapEvents() {
       pinchGestureActive = false;
     }
   });
+
+  // iOS Safari ignores `user-scalable=no` on the viewport meta tag for
+  // accessibility — it still runs its own page-level pinch-zoom on top
+  // of whatever the page does. Symptom: pinching to zoom in works, but
+  // pinching out doesn't fully back out (Safari's native zoom stays
+  // applied), and walkers appear to drift relative to roads because
+  // they're scaled by app zoom + page zoom simultaneously. The
+  // `touch-action: pan-x pan-y` on .map-viewport helps but isn't
+  // sufficient — Safari still fires `gesturestart` / `gesturechange` /
+  // `gestureend` proprietary events that default to page zoom.
+  // Cancel them at the document level so our own touch-based pinch
+  // handler is the only thing zooming.
+  ['gesturestart', 'gesturechange', 'gestureend'].forEach(function (evt) {
+    document.addEventListener(evt, function (e) { e.preventDefault(); }, { passive: false });
+  });
 }
