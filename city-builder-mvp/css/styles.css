@@ -1210,11 +1210,21 @@ body.app-hidden *::after {
 .walker-dot.walker-offscreen::after { animation-play-state: paused !important; }
 /* Same idea for building activity animations — IntersectionObserver in
    map.js toggles .bldg-offscreen as buildings scroll out of #map-viewport.
-   On a phone, the visible window is ~30% of a developed city; pausing
-   the other ~70% kills a lot of compositor work for free. */
-.bldg.bldg-offscreen,
+   On a phone, the visible window is ~30% of a developed city; killing
+   the other ~70% saves a lot of compositor work for free.
+
+   We hide the decorative pseudo-elements (smoke, glow, sparks, worker
+   overlays) entirely instead of pausing their animations. Pausing
+   freezes the animation mid-cycle, and when the element re-enters the
+   viewport the animation resumes from that frozen frame — which looks
+   visibly glitchy on zoom in/out. `display: none` on the pseudo means
+   no compositor work AND a fresh animation start when it reappears.
+
+   The .bldg itself is NOT paused, so the few building-level animations
+   (act-sway on orchard/garden/winery/grain_farm) keep running smoothly
+   even offscreen. That's a tiny constant cost for not-glitchy zoom. */
 .bldg.bldg-offscreen::before,
-.bldg.bldg-offscreen::after { animation-play-state: paused !important; }
+.bldg.bldg-offscreen::after { display: none !important; }
 
 /* Tick-pulse: JS in game.js adds .tick-pulse to every .producing building
    on each successful production tick (then removes it after ~1.7s).
