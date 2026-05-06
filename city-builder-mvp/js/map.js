@@ -331,13 +331,18 @@ function _doRenderMap() {
         //   gc0..gc3  — base grass color (always applied; widens the
         //               palette so adjacent tiles don't all read as the
         //               same #223322)
-        //   gv0..gv15 — small decoration sprite (~75% of tiles)
+        //   gv0..gv15 — small decoration sprite (~75% of tiles get one;
+        //               whether and which are independent bits, so the
+        //               full 16-variant pool is reachable)
         var h = tileHash(x, y);
         classes.push('nv' + (h & 3));
         classes.push('gc' + ((h >>> 6) & 3));
         if (!building && !interiorBuilding) {
-          var dv = (h >>> 2) & 15;
-          if (dv < 12) classes.push('gv' + dv);
+          var showDeco = ((h >>> 8) & 3) !== 0;  // 3/4 of tiles
+          if (showDeco) {
+            var dv = (h >>> 2) & 15;             // 0..15, all reachable
+            classes.push('gv' + dv);
+          }
         }
       }
 

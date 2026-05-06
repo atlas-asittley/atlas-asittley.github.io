@@ -153,7 +153,8 @@ body.inspector-open .map-canvas { margin-bottom: calc(50vh + 28px); }
 
 .cell.gv0::after, .cell.gv1::after, .cell.gv2::after, .cell.gv3::after,
 .cell.gv4::after, .cell.gv5::after, .cell.gv6::after, .cell.gv7::after,
-.cell.gv8::after, .cell.gv9::after, .cell.gv10::after, .cell.gv11::after {
+.cell.gv8::after, .cell.gv9::after, .cell.gv10::after, .cell.gv11::after,
+.cell.gv12::after, .cell.gv13::after, .cell.gv14::after, .cell.gv15::after {
   content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 0;
   background-size: cover; background-repeat: no-repeat;
 }
