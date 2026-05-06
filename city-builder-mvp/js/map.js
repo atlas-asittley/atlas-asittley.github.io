@@ -24,7 +24,8 @@ export var BLDG_LABELS = {
   distillery: 'DT', curing_house: 'CHo', spicery: 'SP', brewery: 'BR',
   charcoal_kiln: 'CK', lime_kiln: 'LK', glassworks: 'GW', nail_forge: 'NF',
   cabinetmaker: 'CB', architect: 'AR', mosaic_workshop: 'MW', engineer_workshop: 'EW',
-  watch_house: 'WH', police_station: 'PS', constabulary: 'CON'
+  watch_house: 'WH', police_station: 'PS', constabulary: 'CON',
+  park: 'PK', tree_grove: 'TG'
 };
 
 // Housing tier label overrides (keyed by tier number)

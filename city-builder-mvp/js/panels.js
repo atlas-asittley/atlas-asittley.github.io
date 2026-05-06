@@ -36,7 +36,7 @@ export function renderBuildPanel() {
   //              luxury food T3 + food boosters)
   //   civic    — services + tax (common to everyone)
   // Each section collapses independently; state persists in localStorage.
-  var CATEGORY_ORDER = { road: 0, housing: 1, extractor: 2, food_extractor: 3, processor: 4, booster: 5, service: 6, tax: 7, police: 8 };
+  var CATEGORY_ORDER = { road: 0, housing: 1, extractor: 2, food_extractor: 3, processor: 4, booster: 5, service: 6, tax: 7, police: 8, park: 9 };
   var SECTION_RANK = { infra: 0, industry: 1, farming: 2, civic: 3 };
   function isFoodOutput(bt) {
     if (!bt.output_resource_key || !state.resources) return false;
@@ -162,6 +162,10 @@ export function renderBuildPanel() {
     } else if (bt.category === 'police') {
       desc = 'Covers nearby housing within ' + (bt.coverage_radius || 0) + ' tiles to reduce crime. Costs $'
            + (bt.upkeep_per_minute || 0) + '/min in upkeep while active. Needs road access.';
+    } else if (bt.category === 'park') {
+      var dampen = Math.abs(bt.pollution_emit || 0);
+      desc = 'Reduces pollution by ' + dampen + ' within ' + (bt.pollution_radius || 0) + ' tiles. Costs $'
+           + (bt.upkeep_per_minute || 0) + '/min upkeep. No workers needed.';
     } else {
       // Processor (catchall): list every required input including the
       // optional second input. Without this, dual-input processors like
