@@ -16,6 +16,12 @@ function resourceName(key) {
 //    rebuilt for every row of every render — ~150KB of SVG data URLs each). ──
 import { colors, spriteIcons } from './sprites.js';
 
+// Per-resource debounce timer for the trade-policy reserve inputs.
+// Module-scope so panel re-renders don't fragment the debounce — a
+// re-render could otherwise leave an old timer hanging that the new
+// render's input handler can't clear. Keyed by resource_key.
+var policyDebounceTimers = {};
+
 export function renderBuildPanel() {
   var panel = document.getElementById('panel-build');
   var html = '';
@@ -706,16 +712,25 @@ export function renderTradePanel() {
   });
 
   // ── Wire reserve inputs ──
+  // Debounce per-resource at module scope (policyDebounceTimers below)
+  // so a panel re-render doesn't lose the cancel reference. Read the
+  // current DOM values at fire time instead of capturing them at input
+  // time — if the panel was re-rendered, this picks up the latest edit
+  // instead of writing a stale captured value.
   panel.querySelectorAll('.policy-reserve-input').forEach(function (inp) {
-    var debounceTimer = null;
     inp.addEventListener('input', function () {
       var rk = inp.dataset.resource;
-      var reserve = Math.max(0, parseInt(inp.value) || 0);
-      var row = inp.closest('.policy-row');
-      var mode = row.querySelector('.policy-mode-select').value;
-      clearTimeout(debounceTimer);
-      debounceTimer = setTimeout(function () {
-        saveTradePolicy(rk, mode, reserve);
+      if (policyDebounceTimers[rk]) clearTimeout(policyDebounceTimers[rk]);
+      policyDebounceTimers[rk] = setTimeout(function () {
+        delete policyDebounceTimers[rk];
+        var liveInp = document.querySelector('.policy-reserve-input[data-resource="' + rk + '"]');
+        if (!liveInp) return;  // panel unmounted (subtab change) — bail
+        var row = liveInp.closest('.policy-row');
+        if (!row) return;
+        var modeSel = row.querySelector('.policy-mode-select');
+        if (!modeSel) return;
+        var reserve = Math.max(0, parseInt(liveInp.value) || 0);
+        saveTradePolicy(rk, modeSel.value, reserve);
       }, 600);
     });
   });

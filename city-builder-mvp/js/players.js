@@ -573,10 +573,13 @@ function sendOffer() {
   }
   // If we've fetched the counterparty's tradeable view, refuse to ask
   // for more than they actually have. (If still loading, skip — the
-  // server validates again at accept time.)
+  // server validates again at accept time.) Skip the money check
+  // entirely when receiveMoney is 0 — otherwise a counterparty with
+  // negative cash (e.g. upkeep deficit) blocks an offer that doesn't
+  // actually ask them for any money.
   if (d.targetInventory) {
-    if (d.receiveMoney > (d.targetMoney || 0)) {
-      showToast(d.targetName + ' only has $' + (d.targetMoney || 0), 'error');
+    if (d.receiveMoney > 0 && (d.targetMoney || 0) < d.receiveMoney) {
+      showToast(d.targetName + ' only has $' + Math.max(0, d.targetMoney || 0), 'error');
       return;
     }
     for (var rk in d.receiveResources) {
