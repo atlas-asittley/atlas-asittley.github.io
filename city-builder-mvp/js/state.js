@@ -201,29 +201,20 @@ export function computeLaborAllocation() {
     return b.player_id === state.currentUser.id;
   });
 
-  // Count workers from housing using tier-aware config
-  // Tier 0 (shanty): provides workers without road access
-  // Tier 1 (mud hut): provides workers only with road access
-  var housingWorkers = 0;
-  myBuildings.forEach(function (b) {
-    var bt = state.buildingTypes[b.building_type_key];
-    if (bt && bt.category === 'housing' && b.status === 'active') {
-      var tier = b.housing_tier !== undefined ? b.housing_tier : 1;
-      var tierCfg = state.housingTierConfig[tier];
-      if (tierCfg) {
-        if (!tierCfg.needs_road || state.roadAccessIds[b.id]) {
-          housingWorkers += tierCfg.workers;
-        }
-      } else {
-        // Fallback: use building_types.workers_provided with road requirement
-        if (state.roadAccessIds[b.id]) {
-          housingWorkers += (bt.workers_provided || 0);
-        }
-      }
-    }
-  });
-
-  var workerSupply = 5 + housingWorkers; // base 5 + housing
+  // Worker supply is server-authoritative. The server uses
+  //   worker_capacity = floor(population) + tavern_bonus
+  // where housing_tier_config.workers determines the *target* population
+  // a city grows toward, NOT the current worker pool. Population grows
+  // toward the target as conditions permit (food, happiness, etc.) — so
+  // a brand-new tier-1 hut doesn't immediately hand you 6 workers.
+  //
+  // We previously computed `5 + sum(housing_tier_config.workers)` here,
+  // which gave the *target* and made every panel optimistically claim
+  // the city was fully staffed long before the population had actually
+  // arrived. Trust the server's worker_capacity (refreshed each 30s
+  // production tick) so the top bar, inspector, and unstaffedIds all
+  // reflect the actual current workforce.
+  var workerSupply = (state.profile && state.profile.worker_capacity) || 5;
 
   // Get worker-consuming buildings sorted by priority DESC, then created_at ASC.
   // Mirrors the server's staffing loop in process_production: every
