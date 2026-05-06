@@ -1207,6 +1207,13 @@ body.app-hidden *::after {
 .trade-msg-row { margin-top: 6px; }
 .trade-msg-label { display: block; font-size: 0.74rem; color: #7a8a9e; margin-bottom: 4px; }
 .trade-msg-input { width: 100%; padding: 6px 8px; background: #0e1620; border: 1px solid #243447; border-radius: 6px; color: #e6eef6; box-sizing: border-box; }
+.trade-recurring-row { margin-top: 8px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 0.78rem; color: #c2cfdc; }
+.trade-recurring-label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+.trade-recurring-cadence { color: #7a8a9e; }
+.trade-recurring-mins { width: 60px; padding: 4px 6px; background: #0e1620; border: 1px solid #243447; border-radius: 6px; color: #e6eef6; }
+.agreement-status { font-size: 0.7rem; padding: 2px 8px; border-radius: 8px; font-weight: 600; }
+.agreement-status.agreement-pending { background: #2a3a5a; color: #b8c8e0; }
+.agreement-status.agreement-active { background: #2a5a48; color: #b8e0c8; }
 .trade-dialog-actions { display: flex; gap: 8px; padding: 12px 14px; border-top: 1px solid #243447; justify-content: flex-end; }
 .btn-trade-cancel { padding: 8px 16px; background: #1e2a3a; border: 1px solid #2a3a4e; border-radius: 6px; color: #c8d4e0; font-weight: 600; cursor: pointer; }
 .btn-trade-cancel:hover { background: #243447; }
