@@ -3,7 +3,7 @@ import { sb } from './config.js';
 import { state, computeTraderUnlocks, computeLaborAllocation, computeGridBounds } from './state.js';
 import { showScreen, showToast, capitalize, updateMoney, updateWorkers, updateHappiness, updateCrime, updateMigration } from './ui.js';
 import { renderMap, initMapEvents, expandDistrict, restoreMapView } from './map.js';
-import { renderBuildPanel, renderInventory, renderTradePanel, initTabs, initPanelCollapse, checkAllTraderVisits } from './panels.js';
+import { renderBuildPanel, renderInventory, renderTradePanel, refreshActiveDataPanel, initTabs, initPanelCollapse, checkAllTraderVisits } from './panels.js';
 import { subscribeRealtime } from './realtime.js';
 import { startWalkers, stopWalkers, spawnImmigrantWalker, spawnEmigrantWalker } from './walkers.js';
 import { initInspector } from './inspector.js';
@@ -116,9 +116,10 @@ function processProduction() {
       showToast('Crime is high — build / staff police buildings near housing.', 'error');
     }
 
-    if (document.getElementById('panel-trade').classList.contains('active')) {
-      renderTradePanel();
-    }
+    // Refresh the visible top-level panel if it's data-driven (Trade
+    // or Reports). Build / Inventory have their own update paths via
+    // updateMoney / renderInventory above.
+    refreshActiveDataPanel();
 
     // Handle housing evolution events
     if (data.evolution_events && data.evolution_events.length > 0) {

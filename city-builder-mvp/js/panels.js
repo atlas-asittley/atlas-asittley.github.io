@@ -1048,6 +1048,11 @@ export function initPanelCollapse() {
 }
 
 // ── Tab system ──
+// Top-level tabs: Build / Inventory / Trade / Reports. Trade and Reports
+// each have their own .trade-subtabs row + .trade-subpanels container,
+// so sub-tab clicks must scope to the LOCAL container — clearing the
+// global .trade-subtab set would also clear the inactive panel's
+// remembered sub-state.
 export function initTabs() {
   document.querySelectorAll('.tab-btn').forEach(function (btn) {
     btn.addEventListener('click', function () {
@@ -1059,31 +1064,56 @@ export function initTabs() {
 
       if (btn.dataset.tab === 'inventory') renderInventory();
       else if (btn.dataset.tab === 'trade') renderTradeTab();
+      else if (btn.dataset.tab === 'reports') renderReportsTab();
       else if (btn.dataset.tab === 'build') renderBuildPanel();
     });
   });
 
-  // Sub-tab switching inside the Trade tab.
+  // Sub-tab clicks: scope to the parent .trade-subtabs row + sibling
+  // .trade-subpanels container. Same handler works for both Trade and
+  // Reports tabs.
   document.querySelectorAll('.trade-subtab').forEach(function (btn) {
     btn.addEventListener('click', function () {
-      document.querySelectorAll('.trade-subtab').forEach(function (b) { b.classList.remove('active'); });
-      document.querySelectorAll('.trade-subpanel').forEach(function (p) { p.classList.remove('active'); });
+      var subtabs = btn.closest('.trade-subtabs');
+      if (!subtabs) return;
+      var container = subtabs.parentElement;
+      container.querySelectorAll('.trade-subtab').forEach(function (b) { b.classList.remove('active'); });
+      container.querySelectorAll('.trade-subpanel').forEach(function (p) { p.classList.remove('active'); });
       btn.classList.add('active');
       var subId = 'panel-trade-' + btn.dataset.subtab;
-      document.getElementById(subId).classList.add('active');
-      renderTradeSubpanel(btn.dataset.subtab);
+      var sub = document.getElementById(subId);
+      if (sub) sub.classList.add('active');
+      renderSubpanel(btn.dataset.subtab);
     });
   });
 }
 
-// Render the trade tab + currently-active sub-panel.
+// Render Trade's currently-active sub-panel.
 export function renderTradeTab() {
-  var active = document.querySelector('.trade-subtab.active');
-  var sub = active ? active.dataset.subtab : 'partners';
-  renderTradeSubpanel(sub);
+  var trade = document.getElementById('panel-trade');
+  var active = trade ? trade.querySelector('.trade-subtab.active') : null;
+  renderSubpanel(active ? active.dataset.subtab : 'partners');
 }
 
-function renderTradeSubpanel(sub) {
+// Render Reports' currently-active sub-panel.
+export function renderReportsTab() {
+  var reports = document.getElementById('panel-reports');
+  var active = reports ? reports.querySelector('.trade-subtab.active') : null;
+  renderSubpanel(active ? active.dataset.subtab : 'treasury');
+}
+
+// Re-render whichever data-driven panel is currently visible. Called
+// from game.js after each production tick so the panel reflects the
+// latest server state.
+export function refreshActiveDataPanel() {
+  if (document.getElementById('panel-trade').classList.contains('active')) {
+    renderTradeTab();
+  } else if (document.getElementById('panel-reports').classList.contains('active')) {
+    renderReportsTab();
+  }
+}
+
+function renderSubpanel(sub) {
   if (sub === 'partners') renderTradePanel();
   else if (sub === 'missions') renderMissionsPanel();
   else if (sub === 'players') renderPlayersPanel();

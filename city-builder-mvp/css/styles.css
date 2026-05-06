@@ -1420,7 +1420,8 @@ body.panel-expanded .map-area { display: none; }
 .panel-content.active { display: block; }
 
 /* ── Trade sub-tabs ─────────────────────────────────── */
-#panel-trade.active { display: flex; flex-direction: column; padding: 0; }
+#panel-trade.active,
+#panel-reports.active { display: flex; flex-direction: column; padding: 0; }
 .trade-subtabs { display: flex; border-bottom: 1px solid #1e2a3a; padding: 6px 8px 0; gap: 2px; flex-shrink: 0; background: #0e1620; }
 .trade-subtab { flex: 1; padding: 6px 4px; font-size: 0.74rem; font-weight: 600; color: #7a8a9e; cursor: pointer; background: none; border: none; border-bottom: 2px solid transparent; transition: color 0.2s; position: relative; }
 .trade-subtab.active { color: #4fa3e0; border-bottom-color: #4fa3e0; }
