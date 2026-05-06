@@ -1,13 +1,34 @@
 # Migration patches
 
-Small standalone SQL files that fix bugs in already-shipped migrations. Each file rebuilds one function or adds one missing policy and is safe to re-run.
+Inbox for new migration patches as features ship. Each `.sql` file in this directory is a small, idempotent diff applied against the live database (typically via the Supabase web SQL editor or — when on mobile — by copying the raw GitHub URL).
 
-These were originally born from a single problem: pasting a 700-line migration into the Supabase mobile SQL editor sometimes silently truncates and a function never gets created. Splitting fixes into tiny standalone files makes each one easy to copy from a raw GitHub URL on a phone.
+After every rebaseline, this directory is emptied: the patches get folded into `city-builder-mvp/baseline_schema.sql` (regenerated via `pg_dump` against the live DB) and the individual files move to `city-builder-mvp/migrations-archive/`. See the archive README for history.
 
-| File | What it fixes |
-|---|---|
-| `fix_buildings_delete_policy.sql` | The original `mvp_schema.sql` enabled RLS on `buildings` but only created INSERT/SELECT/UPDATE policies. Without DELETE, every demolish silently failed. |
-| `fix_place_building_vpath.sql` | The `place_building` function declared `v_path` as `record` but only assigned it for extractors. Reading it from the RETURN's CASE expression crashed for all non-extractor placements. |
-| `fix_verify_extractor_path.sql` | M2's `resource_collection_migration.sql` defines this function but mobile-paste truncation occasionally drops it. Standalone copy for re-application. |
+## Adding a new patch
 
-Apply order doesn't matter — each is independent. They are also already merged into the canonical migration files (`mvp_schema.sql`, `resource_collection_migration.sql`), so a fresh setup that runs all the migrations in order from scratch picks them up automatically. The patches exist for already-deployed databases that need targeted fixes without re-running multi-hundred-line files.
+1. Write the SQL as a standalone, idempotent file (`CREATE OR REPLACE FUNCTION`, `CREATE TABLE IF NOT EXISTS`, `DROP POLICY IF EXISTS` before `CREATE POLICY`, etc.).
+2. Apply it to the live DB via the Supabase SQL editor.
+3. Commit the file here.
+4. Add or update a regression test under `tests/`.
+
+## Rebaselining
+
+When the inbox grows uncomfortable (~30+ files) or the schema state is hard to reason about from layered patches alone:
+
+```bash
+# 1. Dump current live schema
+pg_dump "$(cat ~/.citybuilder_db_url)" --schema-only --schema=public --no-owner > /tmp/schema.sql
+
+# 2. Dump catalog seed data
+pg_dump "$(cat ~/.citybuilder_db_url)" --data-only --no-owner --column-inserts \
+  -t public.resources -t public.building_types -t public.housing_tier_config \
+  -t public.traders -t public.trader_prices -t public.external_trade_partners \
+  > /tmp/seed.sql
+
+# 3. Splice into baseline_schema.sql with a `DROP SCHEMA IF EXISTS public CASCADE;` preamble.
+# 4. Move all migration_patches/*.sql to migrations-archive/.
+# 5. Run ./tests/run.sh to confirm the test fixtures still match.
+# 6. Commit + push.
+```
+
+`pg_dump` must match the server's major version. Live runs on PG 17, so install `postgresql-client-17` from the PGDG apt repo.

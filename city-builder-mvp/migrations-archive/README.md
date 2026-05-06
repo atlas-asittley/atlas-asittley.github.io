@@ -1,14 +1,14 @@
 # Migrations archive
 
-These are the layered migration files that built up the schema incrementally as features shipped: trade phases, housing/labor, roads, four resource chains, M1 districts, M2 distance-based collection, etc.
+These are the layered migration files that built up the schema incrementally as features shipped: trade phases, housing/labor, roads, four resource chains, M1 districts, M2 distance-based collection, then post-M2 the second wave (multi-tile buildings, food chains, happiness, trade progression, crime + police, progressive unlocks, cash ledger, …).
 
-They were **applied to the live production database** in the order documented in each file's "Run AFTER..." header, and to the chronology recorded in git.
+They were **applied to the live production database** in the order they were authored (for the M0–M2 era, see the original-order list at the bottom of this file; for the post-M2 patches, follow `git log` on each file).
 
 ## Why they're archived
 
 Layering N+1 migrations creates real maintenance debt. By the time we reached M2, `place_building` had been redefined **8 times** across these files, `process_production` 5 times, `choose_industry` 5 times. Bug fixes had to find the latest version, layer on top, and remember to keep all the prior checks intact. The `upgrade_secs` typo in M2's `process_production` is a concrete example — the bug was easy to introduce because the function had to be rewritten from scratch instead of patched in place.
 
-We collapsed the lot into a single canonical `city-builder-mvp/baseline_schema.sql` generated from the live DB. New deployments run **only** the baseline.
+We collapsed the lot into a single canonical `city-builder-mvp/baseline_schema.sql` generated from the live DB. New deployments run **only** the baseline. The baseline is periodically rebaselined (see `city-builder-mvp/migration_patches/README.md`) to fold accumulated patches in.
 
 ## Are these still useful?
 
@@ -37,4 +37,4 @@ Run order documented in `docs/ONBOARDING.md` and `city-builder-mvp/STRUCTURE.md`
 15. `resource_collection_migration.sql` *(M2)*
 16. `worker_cost_tuning_migration.sql`
 
-Plus standalone patches in `city-builder-mvp/migration_patches/` that fixed bugs found post-deployment. Those are now merged into `baseline_schema.sql`.
+Plus the post-M2 wave of patches (multi-tile buildings, food chains, housing tiers expansion, trade progression, happiness, immigration walkers, crime + police, progressive unlocks, cash ledger, …) — also archived here, all merged into `baseline_schema.sql`.
