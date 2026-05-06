@@ -349,92 +349,10 @@ export function computeNetRates() {
   return rates;
 }
 
-function rateLabel(rate) {
-  if (!rate) return '';
-  var sign = rate > 0 ? '+' : '';
-  var color = rate > 0 ? '#5ec49e' : '#f0a0a0';
-  var val = Math.round(rate * 100) / 100;
-  return ' <span style="font-size:0.68rem;color:' + color + '">' + sign + val + '/m</span>';
-}
-
-export function renderInventory() {
-  var panel = document.getElementById('panel-inventory');
-  var html = '';
-  var rates = computeNetRates();
-
-  // Build resource lists dynamically from loaded resources
-  var rawKeys = [];
-  var processedKeys = [];
-  Object.keys(state.resources).forEach(function (k) {
-    var r = state.resources[k];
-    if (r.kind === 'raw') rawKeys.push(k);
-    else if (r.kind === 'processed') processedKeys.push(k);
-  });
-
-  html += '<div class="inv-section">Raw Materials</div>';
-  rawKeys.forEach(function (k) {
-    var qty = Math.floor(state.inventory[k] || 0);
-    html += '<div class="inv-row"><span class="inv-name">' + resourceName(k) + rateLabel(rates[k]) + '</span><span class="inv-qty' + (qty === 0 ? ' zero' : '') + '">' + qty + '</span></div>';
-  });
-
-  html += '<div class="inv-section">Processed Goods</div>';
-  processedKeys.forEach(function (k) {
-    var qty = Math.floor(state.inventory[k] || 0);
-    html += '<div class="inv-row"><span class="inv-name">' + resourceName(k) + rateLabel(rates[k]) + '</span><span class="inv-qty' + (qty === 0 ? ' zero' : '') + '">' + qty + '</span></div>';
-  });
-
-  html += '<div class="inv-section">Economy</div>';
-  html += '<div class="inv-row"><span class="inv-name">Money</span><span class="inv-qty" style="color:#e6c65a;">$' + state.profile.money + '</span></div>';
-
-  var myBldgs = state.allBuildings.filter(function (b) { return b.player_id === state.currentUser.id; });
-  html += '<div class="inv-row"><span class="inv-name">Your Buildings</span><span class="inv-qty">' + myBldgs.length + '</span></div>';
-
-  // ── Housing tiers section ──
-  var tierCounts = {};
-  var totalHouses = 0;
-  myBldgs.forEach(function (b) {
-    var bt = state.buildingTypes[b.building_type_key];
-    if (bt && bt.category === 'housing') {
-      var t = b.housing_tier !== undefined ? b.housing_tier : 1;
-      tierCounts[t] = (tierCounts[t] || 0) + 1;
-      totalHouses++;
-    }
-  });
-  if (totalHouses > 0) {
-    html += '<div class="inv-section">Housing</div>';
-    Object.keys(tierCounts).sort().forEach(function (t) {
-      var cfg = state.housingTierConfig[t];
-      var tierName = cfg ? cfg.name : 'Tier ' + t;
-      var tierWorkers = cfg ? cfg.workers : '?';
-      html += '<div class="inv-row"><span class="inv-name">' + tierName + ' (' + tierWorkers + 'w each)</span><span class="inv-qty">' + tierCounts[t] + '</span></div>';
-    });
-  }
-
-  // ── Roads section ──
-  var disconnectedCount = Object.keys(state.noRoadAccessIds).length;
-  if (disconnectedCount > 0) {
-    html += '<div class="inv-section">Roads</div>';
-    html += '<div class="inv-row labor-shortage-row"><span class="inv-name" style="color:#d4a040;">Disconnected Buildings</span><span class="inv-qty" style="color:#d4a040;">' + disconnectedCount + '</span></div>';
-    html += '<div class="labor-shortage-hint" style="color:#8a7a5a;">Place roads next to buildings that need them.</div>';
-  }
-
-  // ── Labor section ──
-  var li = state.laborInfo;
-  html += '<div class="inv-section">Labor</div>';
-  html += '<div class="inv-row"><span class="inv-name">Worker Supply</span><span class="inv-qty" style="color:#5ec49e;">' + li.workerSupply + '</span></div>';
-  html += '<div class="inv-row"><span class="inv-name">Workers Needed</span><span class="inv-qty">' + li.workersNeeded + '</span></div>';
-  html += '<div class="inv-row"><span class="inv-name">Employed</span><span class="inv-qty">' + li.workersUsed + '</span></div>';
-  if (li.workersIdle > 0) {
-    html += '<div class="inv-row"><span class="inv-name">Idle</span><span class="inv-qty" style="color:#e6c65a;">' + li.workersIdle + '</span></div>';
-  }
-  if (li.laborShortage) {
-    var shortage = li.workersNeeded - li.workerSupply;
-    html += '<div class="inv-row labor-shortage-row"><span class="inv-name" style="color:#f06060;">Labor Shortage!</span><span class="inv-qty" style="color:#f06060;">' + shortage + ' workers short</span></div>';
-    html += '<div class="labor-shortage-hint">Build housing to increase worker supply.</div>';
-  }
-
-  panel.innerHTML = html;
-}
+// renderInventory removed: the Inventory tab was folded into City →
+// Resources, which carries the same rate/stock data alongside trade-flow
+// context. Other Inventory sections (housing tiers / labor) live in the
+// topbar + per-building inspector now.
 
 // ── Trade panel (Phase 2B: multi-partner trade) ──
 export function renderTradePanel() {
@@ -566,64 +484,9 @@ export function renderTradePanel() {
 
   html += '</div>';
 
-  // ── Trade Policies (global, with selected partner prices) ──
-  html += '<div class="trade-section-label">Trade Policies</div>';
-  html += '<div class="trade-policy-note">Policies apply to all partners. Each partner only trades goods they support.</div>';
-  var tradeResources = ['timber', 'lumber', 'stone', 'brick', 'grain', 'flour'];
-  tradeResources.forEach(function (rk) {
-    var stock = Math.floor(state.inventory[rk] || 0);
-    var policy = state.tradePolicies[rk] || { mode: 'keep', reserve_target: 0 };
-    var supportingPartners = [];
-    var bestBuyPrice = null;   // what a partner pays player
-    var bestSellPrice = null;  // what a partner charges player
-
-    // Only count unlocked partners for best prices and "Handled by"
-    unlockedKeys.forEach(function (tk) {
-      var partnerPrices = state.allTraderPrices[tk] || {};
-      var partnerPrice = partnerPrices[rk];
-      if (!partnerPrice) return;
-
-      supportingPartners.push(state.traders[tk] ? state.traders[tk].name : tk);
-
-      if (partnerPrice.buy_price && (bestBuyPrice === null || partnerPrice.buy_price > bestBuyPrice)) {
-        bestBuyPrice = partnerPrice.buy_price;
-      }
-      if (partnerPrice.sell_price && (bestSellPrice === null || partnerPrice.sell_price < bestSellPrice)) {
-        bestSellPrice = partnerPrice.sell_price;
-      }
-    });
-
-    html += '<div class="policy-row" data-resource="' + rk + '">';
-    html += '<div class="policy-header">';
-    html += '<span class="policy-res">' + resourceName(rk) + '</span>';
-    html += '<span class="policy-stock">Stock: ' + stock + '</span>';
-    html += '</div>';
-
-    html += '<div class="policy-prices">';
-    if (bestBuyPrice !== null) html += '<span class="policy-price sell-price">Best partner buy: ' + bestBuyPrice + 'g</span>';
-    if (bestSellPrice !== null) html += '<span class="policy-price buy-price">Best partner sell: ' + bestSellPrice + 'g</span>';
-    if (supportingPartners.length === 0) {
-      html += '<span class="policy-price not-traded-label">No active partner currently trades this</span>';
-    }
-    html += '</div>';
-
-    if (supportingPartners.length > 0) {
-      html += '<div class="policy-prices"><span class="policy-price not-traded-label">Handled by: ' + supportingPartners.join(', ') + '</span></div>';
-    }
-
-    html += '<div class="policy-controls">';
-    html += '<select class="policy-mode-select" data-resource="' + rk + '">';
-    html += '<option value="keep"' + (policy.mode === 'keep' ? ' selected' : '') + '>Keep</option>';
-    html += '<option value="sell_surplus"' + (policy.mode === 'sell_surplus' ? ' selected' : '') + '>Sell Surplus</option>';
-    html += '<option value="buy_to_reserve"' + (policy.mode === 'buy_to_reserve' ? ' selected' : '') + '>Buy to Reserve</option>';
-    html += '</select>';
-    html += '<div class="policy-reserve-wrap">';
-    html += '<label class="policy-reserve-label">Reserve:</label>';
-    html += '<input type="number" class="policy-reserve-input" data-resource="' + rk + '" min="0" max="999" value="' + policy.reserve_target + '"' + (policy.mode === 'keep' ? ' disabled' : '') + '>';
-    html += '</div>';
-    html += '</div>';
-    html += '</div>';
-  });
+  // Trade-policy controls live in City → Resources now (per-resource,
+  // alongside stock + rate + flow), so the Partners view is just the
+  // partner picker + selected partner's goods + Black Market.
 
   // ── Black Market section (separate from partner trade) ──
   html += '<div class="bm-section">';
@@ -700,43 +563,6 @@ export function renderTradePanel() {
       state.selectedTrader = tab.dataset.trader;
       state.traderPrices = state.allTraderPrices[state.selectedTrader] || {};
       renderTradePanel();
-    });
-  });
-
-  // ── Wire policy mode selects ──
-  panel.querySelectorAll('.policy-mode-select').forEach(function (sel) {
-    sel.addEventListener('change', function () {
-      var rk = sel.dataset.resource;
-      var mode = sel.value;
-      var row = sel.closest('.policy-row');
-      var reserveInput = row.querySelector('.policy-reserve-input');
-      reserveInput.disabled = (mode === 'keep');
-      var reserve = parseInt(reserveInput.value) || 0;
-      saveTradePolicy(rk, mode, reserve);
-    });
-  });
-
-  // ── Wire reserve inputs ──
-  // Debounce per-resource at module scope (policyDebounceTimers below)
-  // so a panel re-render doesn't lose the cancel reference. Read the
-  // current DOM values at fire time instead of capturing them at input
-  // time — if the panel was re-rendered, this picks up the latest edit
-  // instead of writing a stale captured value.
-  panel.querySelectorAll('.policy-reserve-input').forEach(function (inp) {
-    inp.addEventListener('input', function () {
-      var rk = inp.dataset.resource;
-      if (policyDebounceTimers[rk]) clearTimeout(policyDebounceTimers[rk]);
-      policyDebounceTimers[rk] = setTimeout(function () {
-        delete policyDebounceTimers[rk];
-        var liveInp = document.querySelector('.policy-reserve-input[data-resource="' + rk + '"]');
-        if (!liveInp) return;  // panel unmounted (subtab change) — bail
-        var row = liveInp.closest('.policy-row');
-        if (!row) return;
-        var modeSel = row.querySelector('.policy-mode-select');
-        if (!modeSel) return;
-        var reserve = Math.max(0, parseInt(liveInp.value) || 0);
-        saveTradePolicy(rk, modeSel.value, reserve);
-      }, 600);
     });
   });
 
@@ -843,7 +669,8 @@ function renderPartnerGoods(traderKey) {
   return html;
 }
 
-function saveTradePolicy(resourceKey, mode, reserveTarget) {
+// Called by reports.js's resource-row policy controls.
+export function saveTradePolicy(resourceKey, mode, reserveTarget) {
   state.tradePolicies[resourceKey] = { mode: mode, reserve_target: reserveTarget };
   sb.rpc('save_trade_policy', {
     p_resource_key: resourceKey,
@@ -885,7 +712,7 @@ export function checkAllTraderVisits() {
         showToast(msg, 'success');
       }
       updateMoney();
-      renderInventory();
+      refreshActiveDataPanel();
       renderTradePanel();
       state.visitChecked = true;
       return;
@@ -973,7 +800,7 @@ function blackMarketTrade(resourceKey, quantity, direction, btn) {
     var bmKey = 'bm-' + direction + '-' + resourceKey;
     state.blackMarketAmounts[bmKey] = 0;
 
-    renderInventory();
+    refreshActiveDataPanel();
     renderTradePanel();
 
     var verb = direction === 'sell' ? 'Sold' : 'Bought';
@@ -1049,11 +876,15 @@ export function initPanelCollapse() {
 }
 
 // ── Tab system ──
-// Top-level tabs: Build / Inventory / Trade / Reports. Trade and Reports
-// each have their own .trade-subtabs row + .trade-subpanels container,
-// so sub-tab clicks must scope to the LOCAL container — clearing the
-// global .trade-subtab set would also clear the inactive panel's
-// remembered sub-state.
+// Top-level tabs: Build / City / Trade. City and Trade each have their
+// own .trade-subtabs row + .trade-subpanels container, so sub-tab clicks
+// scope to the LOCAL container — a global selector would also clear the
+// inactive sibling tab's remembered sub-state.
+//
+// Sub-panel containers are named panel-trade-<sub> for the Trade tab
+// (partners / missions / players) and panel-city-<sub> for the City tab
+// (resources / treasury). The sub-tab click handler uses the dataset
+// to figure out which prefix to look for.
 export function initTabs() {
   document.querySelectorAll('.tab-btn').forEach(function (btn) {
     btn.addEventListener('click', function () {
@@ -1063,16 +894,12 @@ export function initTabs() {
       var tabId = 'panel-' + btn.dataset.tab;
       document.getElementById(tabId).classList.add('active');
 
-      if (btn.dataset.tab === 'inventory') renderInventory();
-      else if (btn.dataset.tab === 'trade') renderTradeTab();
-      else if (btn.dataset.tab === 'reports') renderReportsTab();
+      if (btn.dataset.tab === 'trade') renderTradeTab();
+      else if (btn.dataset.tab === 'city') renderCityTab();
       else if (btn.dataset.tab === 'build') renderBuildPanel();
     });
   });
 
-  // Sub-tab clicks: scope to the parent .trade-subtabs row + sibling
-  // .trade-subpanels container. Same handler works for both Trade and
-  // Reports tabs.
   document.querySelectorAll('.trade-subtab').forEach(function (btn) {
     btn.addEventListener('click', function () {
       var subtabs = btn.closest('.trade-subtabs');
@@ -1081,8 +908,10 @@ export function initTabs() {
       container.querySelectorAll('.trade-subtab').forEach(function (b) { b.classList.remove('active'); });
       container.querySelectorAll('.trade-subpanel').forEach(function (p) { p.classList.remove('active'); });
       btn.classList.add('active');
-      var subId = 'panel-trade-' + btn.dataset.subtab;
-      var sub = document.getElementById(subId);
+      // Sub-panel ID prefix depends on which top-level tab owns it.
+      var parentPanel = container.closest('.panel-content');
+      var prefix = parentPanel && parentPanel.id === 'panel-city' ? 'panel-city-' : 'panel-trade-';
+      var sub = document.getElementById(prefix + btn.dataset.subtab);
       if (sub) sub.classList.add('active');
       renderSubpanel(btn.dataset.subtab);
     });
@@ -1096,11 +925,11 @@ export function renderTradeTab() {
   renderSubpanel(active ? active.dataset.subtab : 'partners');
 }
 
-// Render Reports' currently-active sub-panel.
-export function renderReportsTab() {
-  var reports = document.getElementById('panel-reports');
-  var active = reports ? reports.querySelector('.trade-subtab.active') : null;
-  renderSubpanel(active ? active.dataset.subtab : 'treasury');
+// Render City's currently-active sub-panel.
+export function renderCityTab() {
+  var city = document.getElementById('panel-city');
+  var active = city ? city.querySelector('.trade-subtab.active') : null;
+  renderSubpanel(active ? active.dataset.subtab : 'resources');
 }
 
 // Re-render whichever data-driven panel is currently visible. Called
@@ -1109,8 +938,8 @@ export function renderReportsTab() {
 export function refreshActiveDataPanel() {
   if (document.getElementById('panel-trade').classList.contains('active')) {
     renderTradeTab();
-  } else if (document.getElementById('panel-reports').classList.contains('active')) {
-    renderReportsTab();
+  } else if (document.getElementById('panel-city').classList.contains('active')) {
+    renderCityTab();
   }
 }
 
@@ -1252,7 +1081,7 @@ function renderMissionsPanel() {
           sb.from('inventories').select('resource_key, quantity').eq('player_id', state.currentUser.id).then(function (q) {
             state.inventory = {};
             (q.data || []).forEach(function (row) { state.inventory[row.resource_key] = row.quantity; });
-            renderInventory();
+            refreshActiveDataPanel();
           });
           renderMissionsPanel();
         });

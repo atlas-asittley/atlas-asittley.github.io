@@ -3,7 +3,7 @@ import { sb } from './config.js';
 import { state, computeLaborAllocation, inspectedBuildingHolder } from './state.js';
 import { showToast, updateMoney, updateWorkers } from './ui.js';
 import { renderMap } from './map.js';
-import { renderBuildPanel, renderInventory } from './panels.js';
+import { renderBuildPanel, refreshActiveDataPanel } from './panels.js';
 import { setWalkerClickHandler } from './walkers.js';
 
 var inspectedBuilding = null;
@@ -755,7 +755,7 @@ function toggleBuildingPaused(building) {
       computeLaborAllocation();
       renderInspector();
       renderMap();
-      renderInventory();
+      refreshActiveDataPanel();
       updateWorkers();
     });
 }
@@ -834,7 +834,7 @@ function executeDemolish(building) {
 
       renderMap();
       renderBuildPanel();
-      renderInventory();
+      refreshActiveDataPanel();
       closeInspector();
 
       var name = bt ? bt.name : 'Building';

@@ -1,19 +1,68 @@
-// ── Reports tab: Treasury + Resources sub-panels ──
+// ── City tab: Treasury + Resources sub-panels ──
 //
 // Extracted from panels.js (2026-05-06) to slim that file down. The
-// two sub-panels share period toggle, trade-flow aggregation, and the
-// proportional-bar / chart helpers — all gathered here.
+// two sub-panels share the period toggle, trade-flow aggregation, and
+// the proportional-bar / chart helpers — all gathered here.
 
 import { sb } from './config.js';
 import { state } from './state.js';
-import { computeNetRates, resourceName } from './panels.js';
+import { computeNetRates, resourceName, saveTradePolicy } from './panels.js';
 import { openTradeDialog } from './players.js';
 
 
 // ── Resources sub-panel ──
+//
+// Resources are grouped into collapsible categories (raw / processed /
+// food / cross-goods / luxuries). Each row shows stock + rate + net
+// trade $; expand a row to see partner breakdown plus inline NPC trade
+// policy (mode + reserve threshold). Persisted-collapse state lives in
+// localStorage so the user's preferred layout sticks across reloads.
+
+var CATEGORY_ORDER = ['raw', 'processed', 'cross', 'industrial_luxury', 'food_staple', 'food_processed', 'food_luxury'];
+var CATEGORY_LABELS = {
+  raw: 'Raw materials',
+  processed: 'Processed goods',
+  cross: 'Cross-industry goods',
+  industrial_luxury: 'Industrial luxuries',
+  food_staple: 'Food — staples',
+  food_processed: 'Food — processed',
+  food_luxury: 'Food — luxuries'
+};
+var CROSS_GOODS = { charcoal: 1, lime: 1, glass: 1, nails: 1 };
+
+function categorize(rk, r) {
+  if (!r) return 'processed';
+  if (r.is_industrial_luxury) return 'industrial_luxury';
+  if (r.is_luxury_food)        return 'food_luxury';
+  if (r.is_food && r.kind === 'raw')        return 'food_staple';
+  if (r.is_food && r.kind === 'processed')  return 'food_processed';
+  if (CROSS_GOODS[rk])         return 'cross';
+  if (r.kind === 'raw')        return 'raw';
+  return 'processed';
+}
+
+var COLLAPSE_KEY = 'city_resources_collapsed';
+function loadCollapsedSet() {
+  try {
+    var raw = localStorage.getItem(COLLAPSE_KEY);
+    var arr = raw ? JSON.parse(raw) : [];
+    var s = {};
+    arr.forEach(function (k) { s[k] = true; });
+    return s;
+  } catch (e) { return {}; }
+}
+function saveCollapsedSet(s) {
+  try { localStorage.setItem(COLLAPSE_KEY, JSON.stringify(Object.keys(s))); } catch (e) {}
+}
+
+// Per-resource debounce for the reserve-target input. Module-scope
+// (vs render-scope) so a re-render doesn't lose the cancel reference
+// and write a stale value.
+var policyTimers = {};
 
 export function renderResourcesPanel() {
-  var panel = document.getElementById('panel-trade-resources');
+  var panel = document.getElementById('panel-city-resources');
+  if (!panel) return;
   var period = state.tradeStatsPeriod || 'today';
   panel.innerHTML = renderPeriodToggleHtml(period) + '<div class="trade-loading">Loading…</div>';
   wirePeriodToggle(panel, function (p) { state.tradeStatsPeriod = p; renderResourcesPanel(); });
@@ -22,31 +71,64 @@ export function renderResourcesPanel() {
     var rates = computeNetRates();
     var rows = buildResourceRows(rates, flows);
     if (rows.length === 0) {
-      replaceLoading(panel, '<div class="trade-empty">No resources or trade activity yet.</div>');
+      replaceLoading(panel, '<div class="trade-empty">No resources yet.</div>');
       return;
     }
-    var html = '<div class="rsrc-table">'
-      + '<div class="rsrc-tr rsrc-thead">'
-      + '<span class="rsrc-icon"></span>'
-      + '<span class="rsrc-name">Resource</span>'
-      + '<span class="rsrc-rate">Rate</span>'
-      + '<span class="rsrc-stock">Stock</span>'
-      + '<span class="rsrc-net">Net $</span>'
-      + '</div>';
+    var collapsed = loadCollapsedSet();
+    var byCat = {};
     rows.forEach(function (row) {
-      var netClass = row.net > 0 ? 'good' : row.net < 0 ? 'bad' : '';
-      html += '<div class="rsrc-tr" data-resource="' + escapeHtml(row.key) + '">'
-            + '<span class="rsrc-icon ' + resIconClass(row.key) + '"></span>'
-            + '<span class="rsrc-name">' + escapeHtml(row.name) + '</span>'
-            + '<span class="rsrc-rate">' + (row.rate ? formatRate(row.rate) : '—') + '</span>'
-            + '<span class="rsrc-stock">' + row.stock + '</span>'
-            + '<span class="rsrc-net ' + netClass + '">' + (row.net === 0 ? '—' : (row.net > 0 ? '+$' : '−$') + Math.abs(row.net)) + '</span>'
-            + '</div>'
-            + '<div class="rsrc-detail" id="rsrc-detail-' + escapeHtml(row.key) + '" style="display:none;"></div>';
+      (byCat[row.category] = byCat[row.category] || []).push(row);
     });
-    html += '</div>';
+
+    var html = '';
+    CATEGORY_ORDER.forEach(function (cat) {
+      var catRows = byCat[cat];
+      if (!catRows || catRows.length === 0) return;
+      var isCollapsed = !!collapsed[cat];
+      var totalStock = catRows.reduce(function (s, r) { return s + r.stock; }, 0);
+      html += '<div class="rsrc-cat' + (isCollapsed ? ' collapsed' : '') + '" data-cat="' + cat + '">'
+           +    '<button class="rsrc-cat-header" type="button">'
+           +      '<span class="rsrc-cat-caret">▾</span>'
+           +      '<span class="rsrc-cat-label">' + escapeHtml(CATEGORY_LABELS[cat] || cat) + '</span>'
+           +      '<span class="rsrc-cat-meta">' + catRows.length + ' · ' + totalStock + ' total</span>'
+           +    '</button>'
+           +    '<div class="rsrc-cat-body">'
+           +      '<div class="rsrc-tr rsrc-thead">'
+           +        '<span class="rsrc-icon"></span>'
+           +        '<span class="rsrc-name">Resource</span>'
+           +        '<span class="rsrc-rate">Rate</span>'
+           +        '<span class="rsrc-stock">Stock</span>'
+           +        '<span class="rsrc-net">Net $</span>'
+           +      '</div>';
+      catRows.forEach(function (row) {
+        var netClass = row.net > 0 ? 'good' : row.net < 0 ? 'bad' : '';
+        html +=   '<div class="rsrc-tr" data-resource="' + escapeHtml(row.key) + '">'
+              +     '<span class="rsrc-icon ' + resIconClass(row.key) + '"></span>'
+              +     '<span class="rsrc-name">' + escapeHtml(row.name) + '</span>'
+              +     '<span class="rsrc-rate">' + (row.rate ? formatRate(row.rate) : '—') + '</span>'
+              +     '<span class="rsrc-stock">' + row.stock + '</span>'
+              +     '<span class="rsrc-net ' + netClass + '">' + (row.net === 0 ? '—' : (row.net > 0 ? '+$' : '−$') + Math.abs(row.net)) + '</span>'
+              +   '</div>'
+              +   '<div class="rsrc-detail" id="rsrc-detail-' + escapeHtml(row.key) + '" style="display:none;"></div>';
+      });
+      html +=    '</div>'
+           +  '</div>';
+    });
     replaceLoading(panel, html);
 
+    // Wire category collapse
+    panel.querySelectorAll('.rsrc-cat-header').forEach(function (h) {
+      h.addEventListener('click', function () {
+        var catEl = h.closest('.rsrc-cat');
+        var cat = catEl.dataset.cat;
+        var s = loadCollapsedSet();
+        if (s[cat]) { delete s[cat]; catEl.classList.remove('collapsed'); }
+        else        { s[cat] = true; catEl.classList.add('collapsed'); }
+        saveCollapsedSet(s);
+      });
+    });
+
+    // Wire row expand / collapse
     panel.querySelectorAll('.rsrc-tr[data-resource]').forEach(function (tr) {
       tr.addEventListener('click', function () {
         var rk = tr.dataset.resource;
@@ -56,12 +138,7 @@ export function renderResourcesPanel() {
           detail.innerHTML = renderResourceDrilldownHtml(rk, flows);
           detail.style.display = 'block';
           tr.classList.add('expanded');
-          detail.querySelectorAll('.btn-rsrc-trade').forEach(function (btn) {
-            btn.addEventListener('click', function (e) {
-              e.stopPropagation();
-              openTradeDialog(btn.dataset.playerId, btn.dataset.playerName);
-            });
-          });
+          wireDrilldown(detail, rk);
         } else {
           detail.style.display = 'none';
           tr.classList.remove('expanded');
@@ -71,6 +148,38 @@ export function renderResourcesPanel() {
   }).catch(function (err) {
     replaceLoading(panel, '<div class="trade-error">Failed to load: ' + escapeHtml(err.message || err) + '</div>');
   });
+}
+
+function wireDrilldown(detail, rk) {
+  detail.querySelectorAll('.btn-rsrc-trade').forEach(function (btn) {
+    btn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      openTradeDialog(btn.dataset.playerId, btn.dataset.playerName);
+    });
+  });
+  var modeSel = detail.querySelector('.policy-mode-select');
+  var reserveInp = detail.querySelector('.policy-reserve-input');
+  if (modeSel) {
+    modeSel.addEventListener('click', function (e) { e.stopPropagation(); });
+    modeSel.addEventListener('change', function () {
+      var reserve = reserveInp ? (parseInt(reserveInp.value, 10) || 0) : 0;
+      if (reserveInp) reserveInp.disabled = (modeSel.value === 'keep');
+      saveTradePolicy(rk, modeSel.value, reserve);
+    });
+  }
+  if (reserveInp) {
+    reserveInp.addEventListener('click', function (e) { e.stopPropagation(); });
+    reserveInp.addEventListener('input', function () {
+      if (policyTimers[rk]) clearTimeout(policyTimers[rk]);
+      policyTimers[rk] = setTimeout(function () {
+        delete policyTimers[rk];
+        var live = document.querySelector('.policy-reserve-input[data-resource="' + rk + '"]');
+        var mode = document.querySelector('.policy-mode-select[data-resource="' + rk + '"]');
+        if (!live || !mode) return;
+        saveTradePolicy(rk, mode.value, Math.max(0, parseInt(live.value, 10) || 0));
+      }, 600);
+    });
+  }
 }
 
 function buildResourceRows(rates, flows) {
@@ -96,9 +205,12 @@ function buildResourceRows(rates, flows) {
       export_qty: f.export_qty,
       export_money: f.export_money,
       net: (f.export_money || 0) - (f.import_money || 0),
-      kind: r.kind || 'other'
+      kind: r.kind || 'other',
+      category: categorize(k, r)
     };
   });
+  // Sort within the eventual category bucket: active rows first, then
+  // alphabetical. The category grouping itself is applied at render time.
   rows.sort(function (a, b) {
     var aActive = a.stock > 0 || a.rate !== 0 || a.import_qty > 0 || a.export_qty > 0;
     var bActive = b.stock > 0 || b.rate !== 0 || b.import_qty > 0 || b.export_qty > 0;
@@ -109,12 +221,35 @@ function buildResourceRows(rates, flows) {
 }
 
 function renderResourceDrilldownHtml(resourceKey, flows) {
+  var html = '';
+
+  // ── NPC trade policy ──
+  // Sets how the NPC trader visit RPC treats this resource:
+  //   keep — never sell, never buy
+  //   sell_surplus — sell anything above the reserve threshold
+  //   buy_to_reserve — buy from NPCs until you hit the reserve threshold
+  var policy = (state.tradePolicies && state.tradePolicies[resourceKey])
+             || { mode: 'keep', reserve_target: 0 };
+  html += '<div class="rsrc-policy">';
+  html += '<div class="rsrc-policy-label">NPC trade policy</div>';
+  html += '<div class="rsrc-policy-row">';
+  html += '<select class="policy-mode-select" data-resource="' + escapeHtml(resourceKey) + '">';
+  html += '<option value="keep"' + (policy.mode === 'keep' ? ' selected' : '') + '>Keep (don\'t trade)</option>';
+  html += '<option value="sell_surplus"' + (policy.mode === 'sell_surplus' ? ' selected' : '') + '>Sell surplus above</option>';
+  html += '<option value="buy_to_reserve"' + (policy.mode === 'buy_to_reserve' ? ' selected' : '') + '>Buy to reserve of</option>';
+  html += '</select>';
+  html += '<input type="number" class="policy-reserve-input" data-resource="' + escapeHtml(resourceKey) + '" min="0" max="9999" value="' + (policy.reserve_target || 0) + '"' + (policy.mode === 'keep' ? ' disabled' : '') + '>';
+  html += '</div>';
+  html += '</div>';
+
+  // ── Recent trade activity by partner ──
   var byPartner = (flows.byPartner[resourceKey] || []).slice();
   byPartner.sort(function (a, b) { return (b.export_qty + b.import_qty) - (a.export_qty + a.import_qty); });
   if (byPartner.length === 0) {
-    return '<div class="rsrc-detail-empty">No trade activity for this resource in the selected period.</div>';
+    html += '<div class="rsrc-detail-empty">No trade activity for this resource in the selected period.</div>';
+    return html;
   }
-  var html = '<div class="rsrc-detail-table">';
+  html += '<div class="rsrc-detail-table">';
   html += '<div class="rsrc-detail-tr rsrc-detail-thead"><span>Partner</span><span>You sent</span><span>You got</span><span class="rsrc-detail-act"></span></div>';
   byPartner.forEach(function (p) {
     var act = '';
@@ -133,7 +268,8 @@ function renderResourceDrilldownHtml(resourceKey, flows) {
 // ── Treasury sub-panel ──
 
 export function renderTreasuryPanel() {
-  var panel = document.getElementById('panel-trade-treasury');
+  var panel = document.getElementById('panel-city-treasury');
+  if (!panel) return;
   var period = state.tradeStatsPeriod || 'today';
   panel.innerHTML = renderPeriodToggleHtml(period) + '<div class="trade-loading">Loading…</div>';
   wirePeriodToggle(panel, function (p) { state.tradeStatsPeriod = p; renderTreasuryPanel(); });

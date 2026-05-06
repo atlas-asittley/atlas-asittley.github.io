@@ -4,7 +4,7 @@ import { state, computeTraderUnlocks, computeLaborAllocation, computeGridBounds 
 import { showScreen, showToast, capitalize, updateMoney, updateWorkers, updateHappiness, updateCrime, updateMigration, updateProductivity } from './ui.js';
 import { addNotification, loadNotifications, initNotificationBell } from './notifications.js';
 import { renderMap, initMapEvents, restoreMapView } from './map.js';
-import { renderBuildPanel, renderInventory, renderTradePanel, refreshActiveDataPanel, initTabs, initPanelCollapse, checkAllTraderVisits } from './panels.js';
+import { renderBuildPanel, renderTradePanel, refreshActiveDataPanel, initTabs, initPanelCollapse, checkAllTraderVisits } from './panels.js';
 import { subscribeRealtime } from './realtime.js';
 import { startWalkers, stopWalkers, spawnImmigrantWalker, spawnEmigrantWalker } from './walkers.js';
 import { initInspector } from './inspector.js';
@@ -105,7 +105,6 @@ function processProduction() {
     updateCrime();
     updateMigration();
     updateProductivity();
-    renderInventory();
 
     // Bankruptcy alert: fire on the tick where money first crosses
     // into negative territory. Single toast + log entry — don't nag.
@@ -122,9 +121,7 @@ function processProduction() {
       addNotification('warn', crimeMsg);
     }
 
-    // Refresh the visible top-level panel if it's data-driven (Trade
-    // or Reports). Build / Inventory have their own update paths via
-    // updateMoney / renderInventory above.
+    // Refresh the visible data-driven panel (Trade or City).
     refreshActiveDataPanel();
 
     // Handle housing evolution events
@@ -135,8 +132,8 @@ function processProduction() {
           state.allBuildings = r.data;
           computeLaborAllocation();
           renderMap();
-          renderInventory();
           updateWorkers();
+          refreshActiveDataPanel();
         }
       });
       data.evolution_events.forEach(function (ev) {
@@ -320,7 +317,6 @@ export function enterGame() {
     // is sized and scrollable.
     restoreMapView();
     renderBuildPanel();
-    renderInventory();
     renderTradePanel();
     processProduction();
     subscribeRealtime();

@@ -14,7 +14,7 @@ import { sb } from './config.js';
 import { state } from './state.js';
 import { showToast, updateMoney } from './ui.js';
 import { addNotification } from './notifications.js';
-import { renderInventory } from './panels.js';
+import { refreshActiveDataPanel } from './panels.js';
 
 var otherPlayers = [];     // [{id, display_name, industry_key, color_hex}]
 var myOffers = [];         // both incoming and outgoing — filtered for render
@@ -649,7 +649,7 @@ function acceptOffer(offerId) {
       .then(function (rr) {
         state.inventory = {};
         (rr.data || []).forEach(function (row) { state.inventory[row.resource_key] = parseFloat(row.quantity); });
-        renderInventory();
+        refreshActiveDataPanel();
       });
     renderPlayersPanel();
   });
