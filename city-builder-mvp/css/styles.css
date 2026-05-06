@@ -90,7 +90,23 @@ body.inspector-open .map-canvas { margin-bottom: calc(50vh + 28px); }
 
 /* ── Map grid ──────────────────────────────────────── */
 #map-grid { display: grid; gap: 0px; width: 520px; margin: 0 auto; background: #223322; position: relative; overflow: visible; }
-.cell { aspect-ratio: 1; background: #223322; border-radius: 0; display: flex; align-items: center; justify-content: center; cursor: pointer; position: relative; overflow: visible; user-select: none; transition: box-shadow 0.15s, filter 0.15s; box-shadow: none; }
+.cell {
+  aspect-ratio: 1; background: #223322; border-radius: 0;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; position: relative; overflow: visible; user-select: none;
+  transition: box-shadow 0.15s, filter 0.15s; box-shadow: none;
+  /* Containment hints — browsers can skip layout/paint of cells whose
+     internal state hasn't changed and that aren't on screen. Big perf
+     win for districts of 3+ chunks (~675+ cells) on mid-range phones.
+     `contain: layout paint` isolates each cell so a sibling's change
+     doesn't trigger a parent reflow. `content-visibility: auto` lets
+     the browser skip rendering offscreen cells entirely until they
+     scroll into view. `contain-intrinsic-size` reserves layout space
+     so scroll position is stable while skipping. */
+  contain: layout paint;
+  content-visibility: auto;
+  contain-intrinsic-size: 35px 35px;
+}
 .cell.has-house { z-index: 6; }
 .cell:hover { filter: brightness(1.08); }
 
