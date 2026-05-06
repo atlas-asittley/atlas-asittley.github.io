@@ -1,7 +1,7 @@
 // ── Build, Inventory, and Trade panels ──
 import { sb } from './config.js';
 import { state, computeTraderUnlocks } from './state.js';
-import { showToast, updateMoney } from './ui.js';
+import { showToast, updateMoney, tutorialAllowsBuilding } from './ui.js';
 import { BLDG_LABELS, renderMap, cancelPlacement } from './map.js';
 import { renderPlayersPanel, openTradeDialog } from './players.js';
 import { renderResourcesPanel, renderTreasuryPanel } from './reports.js';
@@ -61,7 +61,10 @@ export function renderBuildPanel() {
   }
   var available = Object.keys(state.buildingTypes).filter(function (k) {
     var bt = state.buildingTypes[k];
-    return bt.industry_key === state.profile.industry_key || bt.industry_key === 'common';
+    if (bt.industry_key !== state.profile.industry_key && bt.industry_key !== 'common') return false;
+    // Tutorial gate: until step 3, hide everything that isn't part of
+    // the current step's allowed set (road / housing / well / food).
+    return tutorialAllowsBuilding(bt);
   }).sort(function (a, b) {
     var btA = state.buildingTypes[a];
     var btB = state.buildingTypes[b];
@@ -955,48 +958,35 @@ function renderSubpanel(sub) {
 }
 
 // ── Trade-unlock gate (client-side mirror of is_trade_unlocked) ──
-// Cheap local check; the server is authoritative on actual RPC calls.
+// Trade unlocks once during the tutorial (after the player places their
+// first food extractor) and STAYS unlocked. Demolishing buildings
+// later doesn't lock it back. Server keeps the same flag in
+// player_profiles.trade_unlocked.
 function computeTradeUnlockState() {
-  var mine = (state.allBuildings || []).filter(function (b) {
-    return b.player_id === state.currentUser.id && b.status === 'active';
-  });
-  var hasExtractor = mine.some(function (b) {
-    var bt = state.buildingTypes[b.building_type_key];
-    return bt && bt.category === 'extractor';
-  });
-  var hasFoodExt = mine.some(function (b) {
-    var bt = state.buildingTypes[b.building_type_key];
-    return bt && bt.category === 'food_extractor';
-  });
-  var hasTier1 = mine.some(function (b) {
-    var bt = state.buildingTypes[b.building_type_key];
-    return bt && bt.category === 'housing' && (b.housing_tier || 0) >= 1;
-  });
+  var unlocked = !!(state.profile && state.profile.trade_unlocked);
   return {
-    unlocked: hasExtractor && hasFoodExt && hasTier1,
-    hasExtractor: hasExtractor,
-    hasFoodExt: hasFoodExt,
-    hasTier1: hasTier1
+    unlocked: unlocked,
+    // Legacy fields kept so renderLockedTradeHtml doesn't crash if
+    // it gets called for any reason — they all read true once unlocked.
+    hasExtractor: unlocked,
+    hasFoodExt: unlocked,
+    hasTier1: unlocked
   };
 }
 
 function renderLockedTradeHtml(info) {
-  function row(ok, label) {
-    return '<div class="trade-lock-row">'
-         + '<span class="trade-lock-icon">' + (ok ? '✔' : '○') + '</span>'
-         + '<span class="trade-lock-label">' + label + '</span>'
-         + '</div>';
-  }
+  // Trade is locked until the new player finishes the tutorial. The
+  // panel just points back at the active tutorial step.
+  var step = (state.profile && state.profile.tutorial_step) || 0;
+  var hint;
+  if (step === 0) hint = 'Build a House (see the tutorial banner at the top of the screen).';
+  else if (step === 1) hint = 'Build a Well next to your house to provide water service.';
+  else if (step === 2) hint = 'Build a food producer (Garden, Orchard, Fishing Pier, or Grain Farm) — that\'s the last tutorial step before trade opens up.';
+  else hint = 'Finishing the tutorial will unlock trade.';
   return '<div class="trade-lock">'
-       + '<div class="trade-lock-title">Develop your district to unlock trade</div>'
-       + '<div class="trade-lock-body">'
-       + 'Outside cities won’t come trading until your district can produce on its own. '
-       + 'You need:'
-       + '</div>'
-       + row(info.hasExtractor, 'Build at least one resource extractor')
-       + row(info.hasFoodExt, 'Build at least one food extractor (orchard, fishing pier, garden, or grain farm)')
-       + row(info.hasTier1, 'Upgrade a house to tier 1 (Hut)')
-       + '<div class="trade-lock-hint">The black market is always open if you really need to offload goods, but its rates are intentionally bad.</div>'
+       + '<div class="trade-lock-title">Trade unlocks after the tutorial</div>'
+       + '<div class="trade-lock-body">' + hint + '</div>'
+       + '<div class="trade-lock-hint">Once trade opens it stays open — even if you demolish buildings later.</div>'
        + '</div>';
 }
 

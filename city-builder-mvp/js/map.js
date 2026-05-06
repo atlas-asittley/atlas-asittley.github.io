@@ -1,7 +1,7 @@
 // ── Map rendering, placement logic, drag-to-paint roads, and map expansion ──
 import { sb } from './config.js';
 import { state, CITY_CENTER_X, CITY_CENTER_Y, getHomeX, getHomeY, isMyTile, isWildernessTile, inspectedBuildingHolder, computeLaborAllocation, computeGridBounds } from './state.js';
-import { showToast, updateMoney, updateWorkers } from './ui.js';
+import { showToast, updateMoney, updateWorkers, updateTutorialBanner } from './ui.js';
 import { renderBuildPanel } from './panels.js';
 import { rebuildRoadSet, renderWalkers, snapWalkersToZoom, syncCollectorWalkers } from './walkers.js';
 import { openInspector, openResourceInspector } from './inspector.js';
@@ -502,6 +502,32 @@ export function cancelPlacement() {
 }
 
 
+// Refresh tutorial_step + trade_unlocked from the server. Called after
+// every successful place_building so the AFTER INSERT trigger's update
+// to player_profiles is reflected in the UI immediately. Lightweight
+// — selects only the two columns. If the step advances, re-render the
+// banner and build panel so the next instruction shows.
+function refreshTutorialState() {
+  if (!state.currentUser || !state.profile) return;
+  sb.from('player_profiles')
+    .select('tutorial_step, trade_unlocked')
+    .eq('id', state.currentUser.id)
+    .maybeSingle()
+    .then(function (r) {
+      if (!r.data || !state.profile) return;
+      var prevStep = state.profile.tutorial_step;
+      state.profile.tutorial_step = r.data.tutorial_step;
+      state.profile.trade_unlocked = r.data.trade_unlocked;
+      updateTutorialBanner();
+      if (r.data.tutorial_step !== prevStep) {
+        renderBuildPanel();
+        if (r.data.tutorial_step >= 3 && (prevStep || 0) < 3) {
+          showToast('Tutorial complete! Trade is now open in the Trade tab.', 'success');
+        }
+      }
+    });
+}
+
 function reloadMapData() {
   return Promise.all([
     sb.from('buildings').select('*, player_profiles(display_name, color_hex)'),
@@ -554,6 +580,10 @@ function placeBuilding(tileId, btKey) {
       cancelPlacement();
 
       reloadMapData();
+      // The AFTER INSERT trigger may have advanced tutorial_step /
+      // flipped trade_unlocked. Refetch those two so the banner +
+      // build panel + trade gate see the new state immediately.
+      refreshTutorialState();
     })
     .catch(function (err) {
       showToast(err.message || 'Placement failed', 'error');

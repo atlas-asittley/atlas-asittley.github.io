@@ -82,6 +82,20 @@ body {
 .crime-icon { display: inline-block; margin-right: 3px; font-size: 0.85rem; line-height: 1; vertical-align: middle; filter: saturate(0.6); }
 .workers-icon { display: inline-block; margin-right: 3px; font-size: 0.85rem; line-height: 1; vertical-align: middle; }
 .population-icon { display: inline-block; margin-right: 3px; font-size: 0.85rem; line-height: 1; vertical-align: middle; }
+
+/* Tutorial banner — sits above the topbar while a new player is in
+   the guided tutorial sequence. Hidden once tutorial_step >= 3.
+   Yellow accent so it's clearly distinct from the dark game UI. */
+.tutorial-banner {
+  background: #2a2210; border-bottom: 2px solid #c8a040;
+  color: #f0d890; padding: 10px 14px;
+  font-size: 0.85rem; line-height: 1.4;
+}
+.tutorial-banner-title {
+  font-weight: 700; color: #ffe080; font-size: 0.92rem;
+  margin-bottom: 3px;
+}
+.tutorial-banner-body { color: #d8c890; }
 .chunks-icon { display: inline-block; margin-right: 3px; font-size: 0.9rem; line-height: 1; vertical-align: middle; }
 .migration-icon { display: inline-block; margin-right: 3px; font-size: 0.85rem; line-height: 1; vertical-align: middle; font-weight: 700; }
 .v.migration-up { color: #5ec49e; }

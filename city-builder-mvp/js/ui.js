@@ -4,6 +4,58 @@ import { addNotification } from './notifications.js';
 
 var screens = document.querySelectorAll('.screen');
 
+// Tutorial step copy. Step 0..2 are active instructions; step 3 means
+// the tutorial is complete and the banner stays hidden.
+var TUTORIAL_STEPS = [
+  {
+    title: 'Step 1 of 3 — Build a House',
+    body: 'Tap the Build tab and place a House. Houses raise the target population your city grows toward — citizens move in over time, and they become the workers who staff every other building.'
+  },
+  {
+    title: 'Step 2 of 3 — Build a Well',
+    body: 'Place a Well on a tile next to a road, near your house. Wells supply water service to nearby housing — without one, houses stay at the lowest tier and barely hold anyone. The Well also takes 3 workers when staffed.'
+  },
+  {
+    title: 'Step 3 of 3 — Build a Food Producer',
+    body: 'Pick a food extractor: Garden, Orchard, Fishing Pier, or Grain Farm — each needs its own type of resource tile. Food keeps your citizens alive. Once a food is in stock, happiness rises, and citizens immigrate at a rate that scales with how happy your city is — happier city, more arrivals per tick. Variety helps too: every different food type stacks +2 happiness.'
+  }
+];
+
+export function updateTutorialBanner() {
+  var banner = document.getElementById('tutorial-banner');
+  if (!banner) return;
+  var step = (state.profile && state.profile.tutorial_step) || 0;
+  if (step >= 3) {
+    banner.style.display = 'none';
+    return;
+  }
+  var copy = TUTORIAL_STEPS[step];
+  if (!copy) {
+    banner.style.display = 'none';
+    return;
+  }
+  document.getElementById('tutorial-banner-title').textContent = copy.title;
+  document.getElementById('tutorial-banner-body').textContent = copy.body;
+  banner.style.display = '';
+}
+
+// Tutorial gating helper — used by the build panel to filter what's
+// available, and (indirectly) by the trade panel via trade_unlocked.
+export function tutorialAllowsBuilding(bt) {
+  var step = (state.profile && state.profile.tutorial_step) || 0;
+  if (step >= 3) return true;            // tutorial done
+  if (!bt) return false;
+  if (bt.category === 'road') return true; // roads always allowed
+  if (step === 0) return bt.category === 'housing';
+  if (step === 1) return bt.category === 'housing' || bt.key === 'well';
+  if (step === 2) {
+    return bt.category === 'housing'
+      || bt.key === 'well'
+      || bt.category === 'food_extractor';
+  }
+  return false;
+}
+
 export function showScreen(id) {
   screens.forEach(function (s) { s.classList.remove('active'); });
   document.getElementById(id).classList.add('active');
