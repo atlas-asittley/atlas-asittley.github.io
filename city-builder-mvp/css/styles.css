@@ -277,7 +277,17 @@ body.inspector-open .map-canvas { margin-bottom: calc(50vh + 28px); }
 /* Multi-tile anchor cell needs a higher z-index than its sibling
    cells so the .bldg's absolute overflow (200% width/height) paints
    above the interior cells' backgrounds rather than under them. */
-.cell.multi-tile-anchor { z-index: 6; }
+.cell.multi-tile-anchor {
+  z-index: 6;
+  /* Multi-tile buildings use `width: 200%` (or 300%) on the .bldg child
+     to overflow into adjacent cells. The default .cell rule applies
+     `contain: layout paint` + `content-visibility: auto` for perf —
+     paint containment CLIPS overflow at the box boundary, which would
+     hide the right and bottom halves of a 2x2 sprite. Disable it for
+     the few cells per district that actually need overflow. */
+  contain: none;
+  content-visibility: visible;
+}
 
 /* Well: kiln-style stone-ring + thatched roof + bucket-on-rope SVG,
    sized to the cell like the other inline-SVG buildings. */

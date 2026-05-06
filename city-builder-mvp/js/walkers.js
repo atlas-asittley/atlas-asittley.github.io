@@ -612,7 +612,14 @@ function applyWalkerPosition(w, immediate) {
   if (!grid) return;
   var cols = state.gridCols || 15;
   var gridW = grid.offsetWidth;
-  if (gridW === 0) return;
+  if (gridW === 0) {
+    // Layout hasn't settled yet — common on first load when walkers
+    // spawn during enterGame() before the map screen has had a paint.
+    // Retry on the next frame so the walker doesn't get stuck at
+    // (0,0) until its next walkerStep tick fires.
+    requestAnimationFrame(function () { applyWalkerPosition(w, immediate); });
+    return;
+  }
   var cellSize = (gridW - (cols - 1)) / cols;
   var gap = 1;
   var gx = w.x - (state.gridMinX || 0);
