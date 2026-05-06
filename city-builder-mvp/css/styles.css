@@ -859,6 +859,104 @@ body.inspector-open .map-canvas { margin-bottom: calc(50vh + 28px); }
   pointer-events: none; z-index: 2;
 }
 
+/* Forester's Office — a leaf flutters across the building. */
+.bldg.foresters_office.producing::before {
+  content: ''; position: absolute;
+  left: 8%; top: 22%; width: 12%; height: 12%;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Cpath d='M4 1 Q6.5 3 4 7 Q1.5 3 4 1 Z' fill='%2348a040'/%3E%3Cpath d='M4 1 L4 7' stroke='%23306028' stroke-width='0.3'/%3E%3C/svg%3E");
+  background-size: contain; background-repeat: no-repeat; background-position: center;
+  animation: act-buzz 3.6s ease-in-out infinite;
+  pointer-events: none; z-index: 2;
+}
+
+/* Foreman's Office — desk-lamp glow at the front window. */
+.bldg.foreman_office.producing::before {
+  content: ''; position: absolute;
+  left: 32%; bottom: 30%; width: 16%; height: 14%;
+  background: radial-gradient(ellipse at center, rgba(255,230,140,0.75) 0%, rgba(220,180,80,0.3) 55%, transparent 100%);
+  border-radius: 50%;
+  filter: blur(1.5px);
+  animation: act-glow 2.0s ease-in-out infinite;
+  pointer-events: none; z-index: 2;
+}
+
+/* Clay Master's Hut — a small pottery wheel spinning beside the worker. */
+.bldg.clay_master_hut.producing::before {
+  content: ''; position: absolute;
+  left: 14%; bottom: 14%; width: 16%; height: 16%;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Ccircle cx='5' cy='5' r='4.5' fill='%238a6050' stroke='%234a3018' stroke-width='0.3'/%3E%3Cpath d='M5 0.5 L5.6 5 L5 9.5 L4.4 5 Z' fill='%23c89880' opacity='0.6'/%3E%3Ccircle cx='5' cy='5' r='1.2' fill='%234a3018'/%3E%3C/svg%3E");
+  background-size: contain; background-repeat: no-repeat; background-position: center;
+  animation: act-spin 1.8s linear infinite;
+  pointer-events: none; z-index: 2;
+}
+
+/* Mine Office — warm lantern glow at the entrance. */
+.bldg.mine_office.producing::before {
+  content: ''; position: absolute;
+  left: 38%; bottom: 16%; width: 18%; height: 18%;
+  background: radial-gradient(ellipse at center, rgba(255,180,80,0.7) 0%, rgba(255,130,30,0.3) 55%, transparent 100%);
+  border-radius: 50%;
+  filter: blur(1.5px);
+  animation: act-glow 1.9s ease-in-out infinite;
+  pointer-events: none; z-index: 2;
+}
+
+/* Mosaic Workshop — multicolored tiles glint on the workbench. */
+.bldg.mosaic_workshop.producing::before {
+  content: ''; position: absolute;
+  left: 30%; top: 32%; width: 26%; height: 22%;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Crect x='1' y='1' width='2' height='2' fill='%23e8a838'/%3E%3Crect x='4' y='1.5' width='2' height='2' fill='%2348a8c0'/%3E%3Crect x='7' y='1' width='2' height='2' fill='%23c84858'/%3E%3Crect x='2.5' y='4' width='2' height='2' fill='%2360c878'/%3E%3Crect x='5.5' y='4.5' width='2' height='2' fill='%23a058c0'/%3E%3Crect x='8.5' y='4' width='2' height='2' fill='%23e8d038'/%3E%3C/svg%3E");
+  background-size: contain; background-repeat: no-repeat; background-position: center;
+  animation: act-glow 1.3s ease-in-out infinite;
+  pointer-events: none; z-index: 2;
+}
+
+/* Engineer's Workshop — a gear rotating beside the worker. */
+.bldg.engineer_workshop.producing::before {
+  content: ''; position: absolute;
+  right: 14%; top: 32%; width: 18%; height: 18%;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M6 1 L6.7 2.5 L8.4 2.2 L8.7 3.9 L10.2 4.7 L9.4 6.2 L10 7.8 L8.5 8.4 L8.2 10.1 L6.5 9.8 L5.4 11 L4.4 9.7 L2.7 9.6 L2.5 7.9 L1 7.2 L1.7 5.6 L1 4 L2.5 3.4 L2.7 1.7 L4.5 1.9 Z' fill='%237088a0' stroke='%23304050' stroke-width='0.3'/%3E%3Ccircle cx='6' cy='6' r='1.5' fill='%23304050'/%3E%3C/svg%3E");
+  background-size: contain; background-repeat: no-repeat; background-position: center;
+  animation: act-spin 3.4s linear infinite;
+  pointer-events: none; z-index: 2;
+}
+
+/* Distillery — copper still glow underneath the steam plume. */
+.bldg.distillery.producing::before {
+  content: ''; position: absolute;
+  left: 28%; bottom: 26%; width: 22%; height: 22%;
+  background: radial-gradient(ellipse at center, rgba(255,170,90,0.65) 0%, rgba(220,120,60,0.3) 55%, transparent 100%);
+  border-radius: 50%;
+  filter: blur(2px);
+  animation: act-glow 1.7s ease-in-out infinite;
+  pointer-events: none; z-index: 2;
+}
+
+/* Brewery — golden tankard glint on the spout side. Multi-tile,
+   so positions use the --bldg-fig-* scale like the steam plume above. */
+.bldg.brewery.producing::before {
+  content: ''; position: absolute;
+  left: calc(34% * var(--bldg-fig-x, 1));
+  bottom: calc(22% * var(--bldg-fig-y, 1));
+  width: calc(14% * var(--bldg-fig-x, 1));
+  height: calc(18% * var(--bldg-fig-y, 1));
+  background: radial-gradient(ellipse at center, rgba(255,210,90,0.7) 0%, rgba(220,160,40,0.3) 55%, transparent 100%);
+  border-radius: 50%;
+  filter: blur(1.2px);
+  animation: act-glow 1.5s ease-in-out infinite;
+  pointer-events: none; z-index: 2;
+}
+
+/* Cabinetmaker — wood shavings sparks off the bench. */
+.bldg.cabinetmaker.producing::before {
+  content: ''; position: absolute;
+  left: 36%; top: 38%; width: 20%; height: 20%;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M2 6 Q3 4.5 4 6' fill='none' stroke='%23d8b070' stroke-width='0.5'/%3E%3Cpath d='M5 5 Q6 3.5 7 5' fill='none' stroke='%23c89060' stroke-width='0.5'/%3E%3Cpath d='M3.5 7.5 Q4.5 6 5.5 7.5' fill='none' stroke='%23a87850' stroke-width='0.4'/%3E%3C/svg%3E");
+  background-size: contain; background-repeat: no-repeat; background-position: center;
+  animation: act-sparks 0.9s ease-out infinite;
+  pointer-events: none; z-index: 2;
+}
+
 /* App-hidden pause: when the page is backgrounded (tab switch / phone
    locked / app minimized), pause every running CSS animation so the
    GPU compositor doesn't keep drawing frames the user can't see.
