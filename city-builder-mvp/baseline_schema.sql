@@ -3921,7 +3921,7 @@ CREATE TABLE public.player_profiles (
     home_y integer,
     reserved_row integer,
     last_food_tick_at timestamp with time zone DEFAULT now() NOT NULL,
-    population numeric DEFAULT 5 NOT NULL,
+    population numeric DEFAULT 15 NOT NULL,
     happiness numeric DEFAULT 50 NOT NULL,
     last_population_tick_at timestamp with time zone DEFAULT now() NOT NULL,
     highest_housing_tier_ever integer DEFAULT 0 NOT NULL,
