@@ -17,7 +17,7 @@
     var u = new URL(window.location.href);
     var cb = u.searchParams.get('_cb');
     var q = cb ? '?_cb=' + cb : '';
-    var modules = ['ui','auth','game','config','state','map','map_roads','inspector','panels','walkers','realtime','version','players'];
+    var modules = ['ui','auth','game','config','state','map','map_roads','inspector','panels','walkers','realtime','version','players','help'];
 
     var link = document.createElement('link');
     link.rel = 'stylesheet';
@@ -143,6 +143,7 @@
       <span class="stat" id="g-crime-stat" title="Crime (0–100, lower is better). Reduces happiness; drop it by covering houses with police buildings."><span class="crime-icon" id="g-crime-icon">🚨</span><span class="v" id="g-crime">10</span></span>
     </div>
     <div class="topbar-right">
+      <button class="btn-sm" id="g-help" title="Buildings reference">?</button>
       <button class="btn-sm" id="g-expand-district" title="Pick an adjacent chunk to claim">+ Expand</button>
       <button class="btn-sm" id="g-reset" title="Wipe your district and start over">Reset</button>
       <button class="btn-sm" id="g-logout">Logout</button>

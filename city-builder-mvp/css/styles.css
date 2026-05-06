@@ -1183,6 +1183,31 @@ body.app-hidden *::after {
 .btn-offer-reject:hover, .btn-offer-cancel:hover { background: #6a3540; }
 
 /* ── Trade dialog ─────────────────────────────────── */
+/* ── Buildings reference modal ── */
+.help-overlay { position: fixed; inset: 0; background: rgba(8,12,18,0.82); z-index: 250; display: flex; align-items: center; justify-content: center; padding: 16px; }
+.help-modal { background: #131a24; border: 1px solid #243447; border-radius: 10px; max-width: 560px; width: 100%; max-height: 92vh; display: flex; flex-direction: column; box-shadow: 0 6px 24px rgba(0,0,0,0.5); }
+.help-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; border-bottom: 1px solid #243447; }
+.help-title { font-weight: 700; color: #e6eef6; font-size: 1.05rem; }
+.help-close { background: none; border: none; color: #7a8a9e; font-size: 1.5rem; cursor: pointer; line-height: 1; padding: 0 6px; }
+.help-close:hover { color: #e6eef6; }
+.help-body { padding: 12px 14px; overflow-y: auto; flex: 1; }
+.help-intro { color: #8a9bad; font-size: 0.78rem; margin-bottom: 12px; line-height: 1.4; }
+.help-section { margin-bottom: 14px; }
+.help-section-title { font-weight: 700; color: #4fa3e0; font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; padding-bottom: 4px; border-bottom: 1px solid #1e2a3a; }
+.help-building { background: #0e1620; border: 1px solid #1e2a3a; border-radius: 6px; margin-bottom: 4px; overflow: hidden; }
+.help-building-header { display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; cursor: pointer; user-select: none; -webkit-tap-highlight-color: transparent; }
+.help-building-header:hover { background: #182230; }
+.help-building-name { color: #d8e0e8; font-weight: 600; font-size: 0.86rem; }
+.help-building-name small { color: #7a8a9e; font-weight: 500; font-size: 0.7rem; margin-left: 6px; }
+.help-building-chevron { color: #5a6878; font-size: 0.8rem; transition: transform 0.15s; }
+.help-building.expanded .help-building-chevron { transform: rotate(180deg); }
+.help-building-body { display: none; padding: 8px 12px 10px; border-top: 1px solid #1e2a3a; background: #0a1018; }
+.help-building.expanded .help-building-body { display: block; }
+.help-row { display: flex; gap: 10px; font-size: 0.78rem; padding: 3px 0; align-items: baseline; }
+.help-label { color: #6a7888; min-width: 84px; flex-shrink: 0; }
+.help-value { color: #d8e0e8; flex: 1; }
+.help-row-warn .help-value { color: #e8b070; }
+
 .trade-dialog-overlay { position: fixed; inset: 0; background: rgba(8,12,18,0.78); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 16px; }
 .trade-dialog { background: #131a24; border: 1px solid #243447; border-radius: 10px; max-width: 460px; width: 100%; max-height: 92vh; display: flex; flex-direction: column; box-shadow: 0 6px 24px rgba(0,0,0,0.5); }
 .trade-dialog-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; border-bottom: 1px solid #243447; }

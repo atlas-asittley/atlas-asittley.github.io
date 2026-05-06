@@ -7,6 +7,7 @@ import { renderBuildPanel, renderInventory, renderTradePanel, initTabs, initPane
 import { subscribeRealtime } from './realtime.js';
 import { startWalkers, stopWalkers, spawnImmigrantWalker, spawnEmigrantWalker } from './walkers.js';
 import { initInspector } from './inspector.js';
+import { initHelp } from './help.js';
 
 
 function processProduction() {
@@ -295,4 +296,5 @@ export function initGameEvents() {
   initTabs();
   initPanelCollapse();
   initInspector();
+  initHelp();
 }
