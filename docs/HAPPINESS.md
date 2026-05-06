@@ -1,7 +1,7 @@
 # Happiness — Design
 
-Status: **proposed**, in active implementation.
-Last updated: 2026-05-05.
+Status: **shipped**. Symmetric model since 2026-05-06 (the v1 design below described an *asymmetric* model that was replaced — see "Population dynamics: shipped behavior" further down).
+Last updated: 2026-05-06.
 
 ## Goals
 
@@ -18,35 +18,47 @@ Last updated: 2026-05-05.
 - **Happiness**: 0–100, computed each tick from district state. 50 is the steady-state pivot.
 - **Worker capacity**: `floor(population) + tavern_bonus`. Tavern still acts as a +10 bump on top of population (it's a service, not an immigration boost).
 
-## Population dynamics
+## Population dynamics: shipped behavior (2026-05-06)
 
-**Asymmetric model.** Immigration is *fast* (citizens fill empty homes the moment new housing appears). Emigration is *slow* (citizens are reluctant to leave but will if conditions are bad enough). This matches builder-game intuition — building a house should produce workers — and only requires happiness to gate the *exit* side of the loop.
-
-Each call to `process_production`:
+The v1 design called for an asymmetric model (instant immigration, gradual emigration). After observation, that was replaced with a **symmetric model** where both directions are gradual, capped at ±1 citizen/min and scaled by distance from happiness=50.
 
 ```
-v_target = 5 + housing_workers
+v_target = v_floor (5) + housing_workers
 v_pop    = current population
 v_happiness = compute_happiness(uid)
 
-if v_target > v_pop:
-  v_pop := v_target              -- empty homes fill instantly
-elif v_happiness < 50:
-  delta := (50 - v_happiness)/50 * 1.0 citizens/min × elapsed_minutes
-  v_pop := max(0, v_pop − delta)  -- slow emigration when miserable
-else:
-  v_pop := min(v_target, v_pop)   -- happy + at capacity → stay
+if v_pop > v_target:
+  v_pop := v_target                       -- housing destroyed: snap down
+elif v_pop < v_floor:
+  v_pop := min(v_floor, v_pop + 1.0/min)  -- under-floor refill ALWAYS,
+                                            -- regardless of happiness
+                                            -- (death-spiral safeguard)
+elif v_pop < v_target AND v_happiness >= 50:
+  rate := ((v_happiness - 50) / 50) * 1.0 citizens/min
+  v_pop := min(v_target, v_pop + rate × elapsed_minutes)
+elif v_happiness < 50 AND v_pop > v_floor:
+  rate := -((50 - v_happiness) / 50) * 1.0 citizens/min
+  v_pop := max(v_floor, v_pop + rate × elapsed_minutes)
 ```
 
 Effects:
 
-- **Build a house**: workers appear in the same tick. (target jumps; pop snaps to target.)
-- **Demolish a house / housing devolves**: pop clamps down to the new lower target. (Surplus citizens emigrate immediately — no homes for them.)
-- **Happiness ≥ 50, at capacity**: stays full.
+- **Build a house when happy**: empty homes fill at up to 1/min (faster the higher happiness goes). At happiness=100 a Tier-1 Hut (6 capacity) fills in ~6 minutes from a base of 5.
+- **Demolish a house / housing devolves**: pop clamps down to new target instantly (homes gone, no gradual emigration).
+- **Happiness ≥ 50, at capacity**: no change.
 - **Happiness < 50, at capacity**: -((50-h)/50) citizens/min. At h=0 that's -1/min; at h=49 that's -0.02/min.
-- **Happiness < 50, below capacity**: still drifts down (citizens leave even with empty homes — they don't immigrate to a miserable city).
+- **Happiness ≥ 50, below capacity**: +((h-50)/50) citizens/min — citizens move in at a happiness-scaled rate.
+- **Hard floor at population = 5**: the under-floor branch refills toward 5 at full max_rate REGARDLESS of happiness. Means even a happiness-zero city always has 5 workers to staff a Well or Watch House and start clawing back. This is the death-spiral safeguard — see `memory/feedback_balance_invariants.md`.
 
-The asymmetry means happiness gates the *retention* of citizens, not the *arrival* of citizens. The arrival is purely housing-driven.
+A new `migration_rate` numeric on `player_profiles` exposes the current rate (signed citizens/min) for the topbar indicator. Returned in `process_production` JSON.
+
+## Population dynamics: original v1 design (asymmetric — historical)
+
+Below is the original v1 design that was implemented and then replaced. Kept here for historical context.
+
+**Asymmetric model.** Immigration was instant when housing > pop, emigration drifted at ((50-h)/50)/min when at capacity and unhappy. The asymmetry meant happiness gated retention, not arrival.
+
+Replaced because (a) population oscillated weirdly when housing exceeded pop AND happiness was low — the snap-up immediately undid the drift-down, (b) it made happiness less important than intended, since growth was happiness-independent.
 
 ## Happiness formula (v1)
 
