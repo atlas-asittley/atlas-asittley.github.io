@@ -966,21 +966,65 @@ function blackMarketTrade(resourceKey, quantity, direction, btn) {
   });
 }
 
-// ── Panel collapse toggle ──
+// ── Panel state toggle (three states: collapsed / half / expanded) ──
+//
+// Two buttons in the header:
+//   panel-collapse — toggles open ↔ closed (preserves the half/expanded
+//                    sub-state so re-opening returns to whatever size
+//                    the user had before hiding).
+//   panel-size     — toggles half ↔ full when open (hidden when closed).
+//
+// State is persisted in localStorage so reloading the game returns to
+// the same layout.
 export function initPanelCollapse() {
-  var btn = document.getElementById('panel-collapse');
+  var collapseBtn = document.getElementById('panel-collapse');
+  var sizeBtn = document.getElementById('panel-size');
   var panel = document.getElementById('bottom-panel');
-  if (!btn || !panel) return;
+  if (!collapseBtn || !panel) return;
 
-  function syncLabel() {
-    btn.textContent = panel.classList.contains('collapsed') ? 'Show panel ▴' : 'Hide panel ▾';
+  var STORAGE_KEY = 'city_panel_state';
+  var current;
+  try { current = localStorage.getItem(STORAGE_KEY); } catch (e) {}
+  if (current !== 'collapsed' && current !== 'expanded' && current !== 'half') current = 'half';
+
+  function apply(state) {
+    panel.classList.remove('collapsed', 'expanded');
+    if (state === 'collapsed') {
+      panel.classList.add('collapsed');
+      collapseBtn.textContent = 'Show ▴';
+    } else if (state === 'expanded') {
+      panel.classList.add('expanded');
+      collapseBtn.textContent = 'Hide ▾';
+      if (sizeBtn) { sizeBtn.textContent = '⤡'; sizeBtn.title = 'Shrink to half'; }
+    } else {
+      collapseBtn.textContent = 'Hide ▾';
+      if (sizeBtn) { sizeBtn.textContent = '⤢'; sizeBtn.title = 'Full-screen panel'; }
+    }
+    current = state;
+    try { localStorage.setItem(STORAGE_KEY, state); } catch (e) {}
   }
 
-  syncLabel();
-  btn.addEventListener('click', function () {
-    panel.classList.toggle('collapsed');
-    syncLabel();
+  apply(current);
+
+  collapseBtn.addEventListener('click', function () {
+    if (current === 'collapsed') {
+      // Re-open at whatever the previous open size was. We track only
+      // the active state in storage; default to 'half' on first open.
+      var resume;
+      try { resume = localStorage.getItem(STORAGE_KEY + '_resume'); } catch (e) {}
+      apply(resume === 'expanded' ? 'expanded' : 'half');
+    } else {
+      // Remember the size we're collapsing FROM, so re-opening restores it.
+      try { localStorage.setItem(STORAGE_KEY + '_resume', current); } catch (e) {}
+      apply('collapsed');
+    }
   });
+
+  if (sizeBtn) {
+    sizeBtn.addEventListener('click', function () {
+      apply(current === 'expanded' ? 'half' : 'expanded');
+    });
+  }
 }
 
 // ── Tab system ──
