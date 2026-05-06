@@ -989,16 +989,17 @@ export function initPanelCollapse() {
 
   function apply(state) {
     panel.classList.remove('collapsed', 'expanded');
+    document.body.classList.toggle('panel-expanded', state === 'expanded');
     if (state === 'collapsed') {
       panel.classList.add('collapsed');
       collapseBtn.textContent = 'Show ▴';
     } else if (state === 'expanded') {
       panel.classList.add('expanded');
       collapseBtn.textContent = 'Hide ▾';
-      if (sizeBtn) { sizeBtn.textContent = '⤡'; sizeBtn.title = 'Shrink to half'; }
+      if (sizeBtn) { sizeBtn.textContent = 'Half ▾'; sizeBtn.title = 'Shrink to half-screen'; }
     } else {
       collapseBtn.textContent = 'Hide ▾';
-      if (sizeBtn) { sizeBtn.textContent = '⤢'; sizeBtn.title = 'Full-screen panel'; }
+      if (sizeBtn) { sizeBtn.textContent = 'Full ▴'; sizeBtn.title = 'Expand to full-screen'; }
     }
     current = state;
     try { localStorage.setItem(STORAGE_KEY, state); } catch (e) {}

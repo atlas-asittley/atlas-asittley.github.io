@@ -1168,13 +1168,20 @@ body.app-hidden *::after {
 }
 
 /* ── Bottom panel ──────────────────────────────────── */
-.bottom-panel { flex-shrink: 0; background: #131a24; border-top: 1px solid #243447; max-height: 50vh; display: flex; flex-direction: column; box-shadow: 0 -1px 0 rgba(255,255,255,0.06); transition: max-height 0.2s ease; }
-.bottom-panel.expanded { max-height: 92vh; }
+/* Three states:
+   - default  (half):     max-height ~50% of the viewport
+   - collapsed:           just the 34px control bar
+   - expanded:            takes ALL remaining height in game-body. The
+                          body.panel-expanded class also hides .map-area
+                          so there's no peek-through of the map. */
+.bottom-panel { flex-shrink: 0; background: #131a24; border-top: 1px solid #243447; max-height: 50vh; display: flex; flex-direction: column; box-shadow: 0 -1px 0 rgba(255,255,255,0.06); transition: max-height 0.2s ease, flex-grow 0.2s ease; }
+.bottom-panel.expanded { max-height: none; flex: 1; }
 .bottom-panel.collapsed { max-height: 34px; }
+body.panel-expanded .map-area { display: none; }
 .panel-controls { display: flex; height: 34px; flex-shrink: 0; border-bottom: 1px solid #243447; background: linear-gradient(180deg, #18222f 0%, #131a24 100%); }
 .panel-collapse-btn { flex: 1; display: flex; align-items: center; justify-content: center; background: none; border: none; color: #c8d4e0; font-size: 0.82rem; font-weight: 700; letter-spacing: 0.02em; cursor: pointer; padding: 0; transition: background 0.15s, color 0.15s; }
 .panel-collapse-btn:hover { background: rgba(79, 163, 224, 0.08); color: #e6eef6; }
-.panel-size-btn { width: 48px; flex-shrink: 0; background: none; border: none; border-left: 1px solid #243447; color: #c8d4e0; font-size: 1.1rem; cursor: pointer; padding: 0; line-height: 1; transition: background 0.15s, color 0.15s; }
+.panel-size-btn { width: 78px; flex-shrink: 0; background: none; border: none; border-left: 1px solid #243447; color: #c8d4e0; font-size: 0.82rem; font-weight: 700; cursor: pointer; padding: 0; transition: background 0.15s, color 0.15s; }
 .panel-size-btn:hover { background: rgba(79, 163, 224, 0.08); color: #e6eef6; }
 .bottom-panel.collapsed .panel-size-btn { display: none; }
 .bottom-panel.collapsed .tab-bar,
@@ -1663,7 +1670,7 @@ body.app-hidden *::after {
   .map-canvas { margin: 12px 18px 18px; }
   /* grain/mill sprites scale with cell naturally */
   .bottom-panel { max-height: 45vh; }
-  .bottom-panel.expanded { max-height: 92vh; }
+  .bottom-panel.expanded { max-height: none; flex: 1; }
   .bottom-panel.collapsed { max-height: 34px; }
 }
 
