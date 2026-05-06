@@ -23,6 +23,8 @@ function processProduction() {
         state.inventory[k] = Number(data.inventory[k]);
       });
     }
+    var prevMoney = state.profile.money;
+    var prevCrime = state.profile.crime;
     if (data.money !== undefined) state.profile.money = data.money;
     if (data.workers_used !== undefined) state.profile.workers_used = data.workers_used;
     if (data.worker_capacity !== undefined) state.profile.worker_capacity = data.worker_capacity;
@@ -61,6 +63,18 @@ function processProduction() {
     updateCrime();
     updateMigration();
     renderInventory();
+
+    // Bankruptcy alert: fire on the tick where money first crosses
+    // into negative territory. Single toast — don't keep nagging.
+    if (prevMoney >= 0 && data.money !== undefined && data.money < 0) {
+      showToast('You\'re running a deficit — sell goods or pause buildings.', 'error');
+    }
+    // Crime cascade warning: when crime crosses 70 going up. Same
+    // single-shot rule. Helps players see the problem before it
+    // pushes happiness below 50 and triggers emigration.
+    if (data.crime !== undefined && data.crime >= 70 && (prevCrime || 0) < 70) {
+      showToast('Crime is high — build / staff police buildings near housing.', 'error');
+    }
 
     if (document.getElementById('panel-trade').classList.contains('active')) {
       renderTradePanel();

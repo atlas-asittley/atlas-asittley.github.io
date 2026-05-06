@@ -178,6 +178,12 @@ export function renderBuildPanel() {
     } else {
       costStr = '$' + bt.build_cost + ' | ' + bt.worker_cost + ' worker';
     }
+    // Surface ongoing upkeep (police, future buildings) so the player
+    // sees the running cost before they place. Otherwise it's an
+    // invisible drain \u2014 the police-upkeep trap that bankrupted Jill.
+    if (bt.upkeep_per_minute && bt.upkeep_per_minute > 0) {
+      costStr += ' | $' + bt.upkeep_per_minute + '/min upkeep';
+    }
 
     if (!unlocked) {
       var tierName = (state.housingTierConfig && state.housingTierConfig[unlockTier] && state.housingTierConfig[unlockTier].name) || ('Tier ' + unlockTier);
