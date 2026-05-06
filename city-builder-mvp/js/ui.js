@@ -50,16 +50,33 @@ export function updateIdentity() {
 export function updateWorkers() {
   var li = state.laborInfo;
   var el = document.getElementById('g-workers');
-  el.textContent = li.workersUsed + '/' + li.workerSupply;
-  el.className = 'v ' + (li.laborShortage ? 'shortage' : 'workers');
-  el.title = li.laborShortage
-    ? 'Labor shortage! ' + li.workersNeeded + ' workers needed, only ' + li.workerSupply + ' available. Build more housing.'
-    : li.workersIdle > 0
-      ? li.workersUsed + ' of ' + li.workerSupply + ' workers employed (' + li.workersIdle + ' idle — build more production to use them)'
-      : 'All ' + li.workerSupply + ' workers employed';
+  var supply = li.workerSupply || 0;
+  var idle = Math.max(0, li.workersIdle || 0);
+  var pct = supply > 0 ? Math.round((idle / supply) * 100) : 0;
+  var stat = document.getElementById('g-workers-stat');
+  if (el) {
+    el.textContent = pct + '%';
+    el.className = 'v ' + (li.laborShortage ? 'shortage' : 'workers');
+  }
+  if (stat) {
+    stat.title = li.laborShortage
+      ? 'Labor shortage! ' + li.workersNeeded + ' workers needed, only ' + supply + ' available. Build more housing.'
+      : idle > 0
+        ? pct + '% unemployed — ' + idle + ' of ' + supply + ' workers idle. Build more production to use them.'
+        : 'Fully employed — all ' + supply + ' workers staffed.';
+  }
   var badge = document.getElementById('g-labor-badge');
   if (badge) {
     badge.style.display = li.laborShortage ? 'inline' : 'none';
+  }
+
+  // Total population — server-authoritative current pop, separate from
+  // worker capacity so the player can see the underlying number drive
+  // the workforce. Capacity = floor(population) + tavern bonus.
+  var popEl = document.getElementById('g-population');
+  if (popEl) {
+    var pop = Math.floor((state.profile && state.profile.population) || 0);
+    popEl.textContent = pop;
   }
 }
 

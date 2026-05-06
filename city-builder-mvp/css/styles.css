@@ -81,6 +81,7 @@ body {
 .happiness-icon { display: inline-block; margin-right: 3px; font-size: 0.95rem; line-height: 1; vertical-align: middle; }
 .crime-icon { display: inline-block; margin-right: 3px; font-size: 0.85rem; line-height: 1; vertical-align: middle; filter: saturate(0.6); }
 .workers-icon { display: inline-block; margin-right: 3px; font-size: 0.85rem; line-height: 1; vertical-align: middle; }
+.population-icon { display: inline-block; margin-right: 3px; font-size: 0.85rem; line-height: 1; vertical-align: middle; }
 .chunks-icon { display: inline-block; margin-right: 3px; font-size: 0.9rem; line-height: 1; vertical-align: middle; }
 .migration-icon { display: inline-block; margin-right: 3px; font-size: 0.85rem; line-height: 1; vertical-align: middle; font-weight: 700; }
 .v.migration-up { color: #5ec49e; }

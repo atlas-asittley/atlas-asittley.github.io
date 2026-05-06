@@ -291,10 +291,17 @@ function escapeListener(e) {
 var STAT_INFO = {
   workers: {
     icon: '👷',
-    title: 'Workers',
-    what: 'Shown as <b>used / capacity</b>. Used = how many workers your buildings need right now. Capacity = how many your city can supply.',
-    why: 'If you need more workers than you have, some buildings will sit <b>unstaffed</b> — grayed out and not producing. A labor shortage stalls everything, so keep capacity ahead of demand.',
-    how: 'Build more housing — bigger and more-evolved houses hold more workers. Evolve them past Shanty by satisfying the gates (well, food, road, services). A <b>Tavern</b> also boosts your worker capacity while it\'s running. Don\'t over-build production until your housing can keep up.'
+    title: 'Unemployment',
+    what: 'Shown as a <b>percentage</b> of your worker capacity that is currently idle (capacity not staffing any building). 0% means every worker is employed somewhere.',
+    why: 'Some idle workers are healthy — productivity gets a small bonus when there\'s slack. But if every worker is employed AND buildings still sit unstaffed, the city has a <b>labor shortage</b> (a red ! badge appears). A shortage stalls production. Inverse problem: high unemployment means you have idle population and not enough production to put them to work.',
+    how: 'Reduce unemployment by building more production (extractors, processors, services). Fix a shortage by growing housing — bigger / more-evolved houses raise the population target, and population grows toward it. A <b>Tavern</b> boosts capacity directly while it\'s running. The population stat next to this one shows the underlying number.'
+  },
+  population: {
+    icon: '👥',
+    title: 'Population',
+    what: 'Total citizens living in your district. The <b>worker pool</b> equals floor(population) + tavern bonus, so this number directly drives how many buildings you can staff.',
+    why: 'Population is the bottleneck on city size. Houses set a <b>target</b>; population grows toward it slowly when conditions are right. Until citizens actually move in, capacity sits at the floor.',
+    how: 'Grow population by raising happiness above 50 — citizens move in. They need <b>food</b> (food extractors + variety), <b>services</b> (well, tavern, bathhouse, school, temple covering houses), and <b>low crime</b>. Below 50 happiness, citizens leave instead. Population can\'t exceed the target set by your housing supply, so build more / better housing to raise the ceiling.'
   },
   parcels: {
     icon: '🗺',
@@ -492,6 +499,7 @@ export function initHelp() {
     el.addEventListener('click', function () { openStatInfo(infoKey); });
   };
   wireStat('g-workers-stat', 'workers');
+  wireStat('g-population-stat', 'population');
   wireStat('g-parcels-stat', 'parcels');
   wireStat('g-happiness-stat', 'happiness');
   wireStat('g-crime-stat', 'crime');
