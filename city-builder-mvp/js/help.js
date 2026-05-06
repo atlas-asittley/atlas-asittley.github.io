@@ -315,9 +315,9 @@ var STAT_INFO = {
   migration: {
     icon: '↕',
     title: 'Migration',
-    what: 'Net population change <b>per minute</b>. Positive (↑ green) means citizens are moving in, negative (↓ red) means they\'re leaving, → (gray) is steady. Capped at <b>±1 citizen/min</b> in either direction, scaled by how far your happiness is from 50.',
-    why: 'Drives whether your city is growing or shrinking. Below 50 happiness, citizens leave at up to 1/min. At ≥ 50 with empty housing, citizens move in at up to 1/min. <b>Hard floor at population = 5</b> — citizens NEVER leave below baseline, so even a happiness-zero city can recover.',
-    how: 'To pull citizens in: keep happiness above 50 (services, food variety, low crime, low tax) AND have empty housing capacity (build more houses). To stop emigration: get happiness back to 50 or above. The floor at 5 means you always have workers to staff a Well or Watch House to start the recovery.'
+    what: 'Whether citizens are <b>moving in</b> (↑ green), <b>leaving</b> (↓ red), or the city is <b>steady</b> (→). The number is the rate of change per minute.',
+    why: 'Tells you at a glance whether your city is growing, shrinking, or holding steady. A shrinking city won\'t fill new houses or staff new buildings — pay attention when it goes red.',
+    how: 'Citizens move in when your city is <b>happy</b> and there\'s <b>empty housing</b> waiting for them. They start leaving when happiness drops too far. Improve happiness with services (well, tavern, bathhouse, school, temple), stock a variety of food, keep crime down, and don\'t over-tax. Build more housing to give new arrivals somewhere to live.'
   }
 };
 
