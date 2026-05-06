@@ -1,6 +1,6 @@
-# Productivity (design doc — pre-implementation)
+# Productivity
 
-Status: **draft, awaiting Atlas review.** Not implemented yet. The TODO entry explicitly called for a design discussion before code, and the open questions below are gameplay-balance calls rather than code-shape calls.
+Status: **v2 shipped 2026-05-06.** All five levers from the original recommendation are live. Tools v2 ship as a soft incentive (no consumption); the four open design questions below were resolved by going with the doc's recommendations on each one.
 
 ## Problem
 
@@ -36,15 +36,12 @@ New column `player_profiles.productivity` (numeric, default 1.0). Recomputed eve
 
 Topbar indicator next to the happiness emoji: `⚒︎ 1.18×` color-coded (red <0.9 / amber 0.9–1.1 / green >1.1). Clicking opens a tooltip with the breakdown of contributors.
 
-## Open design questions (need Atlas input)
+## Open design questions — RESOLVED
 
-1. **Single number or per-category?** Per-category (extractor / processor / food) gives more design surface but doubles the UI and makes the topbar harder to read. The recommendation above is single-number for simplicity. Atlas: keep single, or split?
-
-2. **Tools as a hard requirement or soft?** Recommendation makes them soft (no tools = no productivity boost, but you don't lose anything). A harder model would idle production when out of tools, more like the existing input-resource model. Hard would couple the toolmaker chain into every player's progression — that's a big push.
-
-3. **Crime penalty: stack on happiness penalty or replace?** Crime already feeds happiness via `-floor(crime/5)`. Adding a separate productivity penalty (recommendation) means crime hits twice, reinforcing it as a real problem. Atlas: too punishing, or feels right?
-
-4. **How visible should the breakdown be?** Recommendation is "tooltip on the topbar indicator." Could also surface per-building ("This Mason Workshop is producing 1.2× because of the city productivity bonus") in the building inspector. Atlas: keep the breakdown city-level, or thread it into the inspector?
+1. **Single number or per-category?** → Single. Shipped as one global multiplier; the topbar shows one ⚒ value.
+2. **Tools as a hard requirement or soft?** → Soft. Tools are a stockpile incentive only; not consumed. If we want to harden later, the lever exists.
+3. **Crime penalty: stack on happiness penalty or replace?** → Stack. Crime already drags happiness; productivity adds a second pressure to keep police covering housing.
+4. **How visible should the breakdown be?** → City-level only (topbar tooltip). Per-building inspector annotation deferred — not required to feel the system.
 
 ## Implementation cost (rough)
 
@@ -58,6 +55,20 @@ If recommendation is approved as-is:
 
 Ballpark: half a session.
 
-## Why this is paused
+## Shipped form (v2)
 
-The four open questions above are gameplay calls, not code calls. Picking blind risks shipping a system that feels wrong (too punishing, too generous, too noisy on the topbar) and then unwinding it. Cheaper to align on the design first.
+Implemented in `migration_patches/productivity_v2.sql` as a single helper, `_pp_compute_productivity(uid)`, called once per tick from `process_production` (after staffing — so tavern's `is_staffed` is fresh — and before the production phases that read it). Five levers, summed and clamped:
+
+```
+score = (crime drag, capped −0.10)
+      + (tavern bonus, +0.05 when fed)
+      + (education coverage, +0.03 per 10% of houses near a staffed school, capped +0.10)
+      + (tools stockpile, +0.10 ≥ pop·0.5 / +0.05 ≥ pop·0.2)
+      + (worker buffer penalty, −0.05 when workers_used ≥ worker_capacity)
+
+clamp score to ±0.30; productivity = clamp(1.0 + score, 0.7, 1.3)
+```
+
+Net swing: −0.15 to +0.25. The cap at ±0.30 is defensive — no current combination reaches it — but leaves room for a 6th lever without re-doing the formula.
+
+Multiplied into output by `_pp_run_extractors`, `_pp_run_food_extractors`, `_pp_run_processors`, and `_pp_run_tax`. Boosters (per-tile multiplier on adjacent extractors) layer on top — this stacks multiplicatively with them, which means a Forester's Office + 1.2 productivity gives `0.5 × 1.2 × 1.30 = 0.78` instead of additive `0.5 × 1.5 = 0.75`. Small difference, intentional: makes city-level productivity worth investing in even when boosters are saturated.
