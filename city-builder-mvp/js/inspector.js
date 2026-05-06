@@ -594,14 +594,35 @@ function renderInspector() {
       }
     }
 
-    // Pollution on this tile (the building's anchor tile). Surface
-    // when > 0 so the player understands why pollution-affected
-    // gameplay (housing tier cap, future devolve) is happening.
+    // Pollution + desirability on the building's anchor tile.
     var btile = state.tileMap[b.x + ',' + b.y];
     if (btile && btile.pollution && btile.pollution > 0) {
       var pollLabel = btile.pollution < 30 ? 'light' : btile.pollution < 60 ? 'heavy' : 'toxic';
       var pollClass = btile.pollution < 30 ? '' : 'insp-warn';
       html += '<div class="insp-row"><span class="insp-label">Pollution</span><span class="insp-value ' + pollClass + '">' + Math.round(btile.pollution) + ' (' + pollLabel + ')</span></div>';
+    }
+    // Desirability for housing — the gate that decides whether the
+    // house can upgrade. Show what tier the current desirability
+    // qualifies for.
+    if (bt.category === 'housing' && btile && btile.desirability != null) {
+      var d = Math.round(btile.desirability);
+      var qualTier = 0;
+      var nextThreshold = null;
+      if (state.housingTierConfig) {
+        for (var t = 0; t <= 8; t++) {
+          var cfg = state.housingTierConfig[t];
+          if (!cfg || cfg.min_desirability == null) continue;
+          if (d >= cfg.min_desirability) qualTier = t;
+          else { nextThreshold = cfg; break; }
+        }
+      }
+      var qualName = (state.housingTierConfig && state.housingTierConfig[qualTier])
+        ? state.housingTierConfig[qualTier].name : ('Tier ' + qualTier);
+      var dHint = 'qualifies for ' + qualName;
+      if (nextThreshold) dHint += ' — ' + nextThreshold.name + ' needs ' + nextThreshold.min_desirability;
+      var dClass = d < 30 ? 'insp-warn' : '';
+      html += '<div class="insp-row"><span class="insp-label">Desirability</span><span class="insp-value ' + dClass + '">' + d + '/100</span></div>';
+      html += '<div class="insp-hint insp-hint-muted">' + dHint + '</div>';
     }
 
     // Production I/O

@@ -10,14 +10,14 @@ import { initInspector } from './inspector.js';
 import { initHelp } from './help.js';
 
 
-// After each production tick, fetch the player's tile pollution
-// (only the values that changed) and update the heatmap classes /
-// inspector data in place. Avoids a full renderMap rebuild — touches
-// only cells whose pollution actually changed.
-function refreshPollution() {
+// After each production tick, fetch the player's tile metrics
+// (pollution + desirability) and update the heatmap classes /
+// inspector data in place. Avoids a full renderMap rebuild —
+// touches only cells whose values actually changed.
+function refreshTileMetrics() {
   if (!state.currentUser) return;
   sb.from('map_tiles')
-    .select('id, x, y, pollution')
+    .select('id, x, y, pollution, desirability')
     .eq('owner_player_id', state.currentUser.id)
     .then(function (r) {
       if (!r.data) return;
@@ -27,16 +27,24 @@ function refreshPollution() {
         if (!tile) return;
         var oldP = Number(tile.pollution || 0);
         var newP = Number(row.pollution || 0);
-        if (oldP === newP) return;
+        var oldD = Number(tile.desirability == null ? 50 : tile.desirability);
+        var newD = Number(row.desirability == null ? 50 : row.desirability);
+        if (oldP === newP && oldD === newD) return;
         tile.pollution = newP;
+        tile.desirability = newD;
         var cell = document.querySelector('[data-tile-id="' + tile.id + '"]');
         if (!cell) return;
-        if (newP > 0) {
-          cell.classList.add('pollution-tinted');
-          cell.style.setProperty('--pollution', newP);
-        } else {
-          cell.classList.remove('pollution-tinted');
-          cell.style.removeProperty('--pollution');
+        if (newP !== oldP) {
+          if (newP > 0) {
+            cell.classList.add('pollution-tinted');
+            cell.style.setProperty('--pollution', newP);
+          } else {
+            cell.classList.remove('pollution-tinted');
+            cell.style.removeProperty('--pollution');
+          }
+        }
+        if (newD !== oldD) {
+          cell.style.setProperty('--desirability', newD);
         }
       });
     });
@@ -148,11 +156,10 @@ function processProduction() {
       showToast('+' + producedWhole + ' goods produced', 'success');
     }
 
-    // Pull the latest tile pollution so the heatmap + building inspector
-    // reflect this tick's emit/dampen. Lightweight (only id/x/y/pollution
-    // for the player's own tiles) and only updates cells whose value
+    // Pull the latest tile metrics (pollution + desirability) so heatmaps
+    // + inspector reflect this tick. Only updates cells whose values
     // actually changed.
-    refreshPollution();
+    refreshTileMetrics();
   }).catch(function (err) {
     console.warn('Production fetch error:', err);
   });

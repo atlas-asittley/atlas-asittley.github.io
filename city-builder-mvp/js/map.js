@@ -394,15 +394,18 @@ function _doRenderMap() {
         classes.push('multi-tile-interior');
         dataAnchor = ' data-anchor-x="' + interiorBuilding.x + '" data-anchor-y="' + interiorBuilding.y + '"';
       }
-      // Inline --pollution so the body.show-pollution heatmap CSS can
-      // scale the yellow tint per tile. Skip emitting on clean tiles
-      // to keep the HTML lean.
-      var pollStyle = '';
+      // Inline metric custom properties so heatmap CSS can scale tints
+      // per tile. Skip emitting on default values to keep the HTML lean.
+      var styleParts = [];
       if (tile.pollution && tile.pollution > 0) {
         classes.push('pollution-tinted');
-        pollStyle = ' style="--pollution:' + tile.pollution + '"';
+        styleParts.push('--pollution:' + tile.pollution);
       }
-      html += '<div class="' + classes.join(' ') + '" data-x="' + x + '" data-y="' + y + '" data-tile-id="' + tile.id + '"' + dataAnchor + pollStyle + '>';
+      if (tile.desirability !== undefined && tile.desirability !== null) {
+        styleParts.push('--desirability:' + tile.desirability);
+      }
+      var inlineStyle = styleParts.length ? ' style="' + styleParts.join(';') + '"' : '';
+      html += '<div class="' + classes.join(' ') + '" data-x="' + x + '" data-y="' + y + '" data-tile-id="' + tile.id + '"' + dataAnchor + inlineStyle + '>';
 
       if (building) {
         var mine = building.player_id === state.currentUser.id;
@@ -978,7 +981,7 @@ export function initMapEvents() {
   // the colors don't fight. Persisted across reloads.
   var heatmapBtn = document.getElementById('heatmap-toggle');
   var heatmapPopup = document.getElementById('heatmap-popup');
-  var HEATMAP_MODES = ['none', 'pollution', 'crime', 'issues'];
+  var HEATMAP_MODES = ['none', 'pollution', 'crime', 'issues', 'desirability'];
 
   function applyHeatmapMode(mode) {
     HEATMAP_MODES.forEach(function (m) {
