@@ -60,6 +60,10 @@ body {
 .v.migration-up { color: #5ec49e; }
 .v.migration-down { color: #e0707a; }
 .v.migration-steady { color: #7a8a9e; }
+.productivity-icon { display: inline-block; margin-right: 3px; font-size: 0.85rem; line-height: 1; vertical-align: middle; }
+.v.productivity-up { color: #5ec49e; }
+.v.productivity-down { color: #e0a070; }
+.v.productivity-neutral { color: #c2cfdc; }
 .v.crime-low  { color: #5ec49e; }
 .v.crime-mid  { color: #e6c65a; }
 .v.crime-high { color: #e0707a; }

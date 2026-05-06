@@ -318,6 +318,13 @@ var STAT_INFO = {
     what: 'Whether citizens are <b>moving in</b> (↑ green), <b>leaving</b> (↓ red), or the city is <b>steady</b> (→). The number is the rate of change per minute.',
     why: 'Tells you at a glance whether your city is growing, shrinking, or holding steady. A shrinking city won\'t fill new houses or staff new buildings — pay attention when it goes red.',
     how: 'Citizens move in when your city is <b>happy</b> and there\'s <b>empty housing</b> waiting for them. They start leaving when happiness drops too far. Improve happiness with services (well, tavern, bathhouse, school, temple), stock a variety of food, keep crime down, and don\'t over-tax. Build more housing to give new arrivals somewhere to live.'
+  },
+  productivity: {
+    icon: '⚒',
+    title: 'Productivity',
+    what: 'A multiplier on every production building\'s output. <b>100%</b> is baseline. Above 100% your buildings produce more; below 100% they produce less. Same building, different output rate.',
+    why: 'A city running at 110% productivity is meaningfully more profitable than one at 90%. The multiplier compounds across every extractor, processor, food building, and tax office at the same time.',
+    how: 'A staffed <b>Tavern</b> gives a small boost. <b>High crime</b> drags it down. Keep your district safe and your tavern fed.'
   }
 };
 
@@ -364,4 +371,5 @@ export function initHelp() {
   wireStat('g-happiness-stat', 'happiness');
   wireStat('g-crime-stat', 'crime');
   wireStat('g-migration-stat', 'migration');
+  wireStat('g-productivity-stat', 'productivity');
 }

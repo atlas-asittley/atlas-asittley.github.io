@@ -113,6 +113,21 @@ export function updateMigration() {
   }
 }
 
+export function updateProductivity() {
+  var p = (state.profile && state.profile.productivity != null) ? Number(state.profile.productivity) : 1.0;
+  var pct = Math.round(p * 100);
+  var v = document.getElementById('g-productivity');
+  if (!v) return;
+  v.textContent = pct + '%';
+  v.className = 'v ' + (pct >= 105 ? 'productivity-up' : pct < 100 ? 'productivity-down' : 'productivity-neutral');
+  var stat = document.getElementById('g-productivity-stat');
+  if (stat) {
+    stat.title = pct === 100 ? 'Production multiplier — at baseline (100%).'
+      : pct > 100 ? 'Production +' + (pct - 100) + '% above baseline.'
+      : 'Production ' + (pct - 100) + '% below baseline.';
+  }
+}
+
 export function updateCrime() {
   var c = Math.round((state.profile && state.profile.crime) || 0);
   var v = document.getElementById('g-crime');

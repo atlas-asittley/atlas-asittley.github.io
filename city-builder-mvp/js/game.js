@@ -1,7 +1,7 @@
 // ── Game entry, data loading, and production loop ──
 import { sb } from './config.js';
 import { state, computeTraderUnlocks, computeLaborAllocation, computeGridBounds } from './state.js';
-import { showScreen, showToast, capitalize, updateMoney, updateWorkers, updateHappiness, updateCrime, updateMigration } from './ui.js';
+import { showScreen, showToast, capitalize, updateMoney, updateWorkers, updateHappiness, updateCrime, updateMigration, updateProductivity } from './ui.js';
 import { renderMap, initMapEvents, expandDistrict, restoreMapView } from './map.js';
 import { renderBuildPanel, renderInventory, renderTradePanel, refreshActiveDataPanel, initTabs, initPanelCollapse, checkAllTraderVisits } from './panels.js';
 import { subscribeRealtime } from './realtime.js';
@@ -87,6 +87,7 @@ function processProduction() {
     if (data.population !== undefined) state.profile.population = data.population;
     if (data.crime !== undefined) state.profile.crime = data.crime;
     if (data.migration_rate !== undefined) state.profile.migration_rate = data.migration_rate;
+    if (data.productivity !== undefined) state.profile.productivity = data.productivity;
     var newPopFloor = Math.floor(data.population || prevPopFloor);
     var popDelta = newPopFloor - prevPopFloor;
     if (popDelta > 0) {
@@ -102,6 +103,7 @@ function processProduction() {
     updateHappiness();
     updateCrime();
     updateMigration();
+    updateProductivity();
     renderInventory();
 
     // Bankruptcy alert: fire on the tick where money first crosses
@@ -312,6 +314,7 @@ export function enterGame() {
   updateHappiness();
   updateCrime();
   updateMigration();
+  updateProductivity();
 
   loadGameData().then(function () {
     computeLaborAllocation();
