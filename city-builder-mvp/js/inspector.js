@@ -378,9 +378,17 @@ function computeBuildingIssues(b, bt) {
   if (b.status === 'paused') return [];
   var issues = [];
 
-  // Road access
+  // Road access — must match the staffing rule in computeLaborAllocation
+  // (state.js): every worker-consuming production category requires a road
+  // for staffing, including extractor / food_extractor / booster which
+  // previously didn't. Without this, a road-less garden was excluded from
+  // the labor accounting entirely, neither flagged as "Not staffed" nor
+  // "No road access", so its inspector status read as "Operational" while
+  // the server (correctly) marked it is_staffed=false.
   var needsRoad = false;
-  if (bt.category === 'processor' || bt.category === 'service' || bt.category === 'tax') {
+  if (bt.category === 'processor' || bt.category === 'service' || bt.category === 'tax'
+      || bt.category === 'extractor' || bt.category === 'food_extractor'
+      || bt.category === 'booster') {
     needsRoad = true;
   } else if (bt.category === 'housing') {
     var tier0 = b.housing_tier !== undefined ? b.housing_tier : 1;
