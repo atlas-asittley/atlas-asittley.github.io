@@ -130,6 +130,33 @@ function getWalkerJob(building) {
 var walkers = [];                // active walker objects
 var spawnTickTimer = null;
 var spawnCooldowns = {};         // building_id -> ticks remaining
+var spawnTickCounter = 0;        // for round-robin rotation under the global cap
+
+// Cap total walker count district-wide. Each building still has its
+// own roster target (per getWalkerTarget), but when total walkers
+// reach this cap we stop spawning until existing ones despawn. Round-
+// robin rotation in spawnTick keeps the cap fair — buildings late in
+// the list still get walkers, just on later ticks.
+var WALKER_GLOBAL_CAP = 60;
+
+// Pause walker CSS animations when offscreen. IntersectionObserver
+// flips the .walker-offscreen class on/off as walkers scroll in/out
+// of the map viewport. CSS pauses animation-play-state for those.
+var walkerObserver = null;
+function ensureWalkerObserver() {
+  if (walkerObserver) return walkerObserver;
+  if (typeof IntersectionObserver === 'undefined') return null;
+  var root = document.getElementById('map-viewport');
+  if (!root) return null;
+  walkerObserver = new IntersectionObserver(function (entries) {
+    for (var i = 0; i < entries.length; i++) {
+      var e = entries[i];
+      if (e.isIntersecting) e.target.classList.remove('walker-offscreen');
+      else e.target.classList.add('walker-offscreen');
+    }
+  }, { root: root, rootMargin: '40px', threshold: 0 });
+  return walkerObserver;
+}
 
 // ── Road tile lookup (rebuilt on each map change) ──
 var roadSet = {};                // "x,y" -> true
@@ -543,7 +570,11 @@ function despawnWalker(w) {
   }
   var idx = walkers.indexOf(w);
   if (idx >= 0) walkers.splice(idx, 1);
-  if (w.el && w.el.parentNode) w.el.parentNode.removeChild(w.el);
+  if (w.el) {
+    var obs = walkerObserver;  // reuse — don't construct just to unobserve
+    if (obs) try { obs.unobserve(w.el); } catch (e) {}
+    if (w.el.parentNode) w.el.parentNode.removeChild(w.el);
+  }
   w.el = null;
 }
 
@@ -602,6 +633,8 @@ function ensureWalkerEl(w) {
   });
   layer.appendChild(el);
   w.el = el;
+  var obs = ensureWalkerObserver();
+  if (obs) obs.observe(el);
 }
 
 // ── Position a walker's element ──
@@ -688,7 +721,16 @@ function spawnTick() {
 
   // Spawn at most one walker per building per tick — staggers respawns
   // so a building's cohort doesn't all vanish and reappear in unison.
+  // Also: rotate the spawner list each tick so the global cap below
+  // doesn't always starve the same buildings; over WALKER_SPAWN_TICK_MS
+  // ticks every building gets a fair turn at the head.
+  spawnTickCounter++;
+  if (spawners.length > 0) {
+    var rot = spawnTickCounter % spawners.length;
+    spawners = spawners.slice(rot).concat(spawners.slice(0, rot));
+  }
   for (var s = 0; s < spawners.length; s++) {
+    if (walkers.length >= WALKER_GLOBAL_CAP) break;  // soft cap — district-wide
     var b = spawners[s];
     if (spawnCooldowns[b.id]) continue;
     var target = getWalkerTarget(b);

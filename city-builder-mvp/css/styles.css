@@ -1098,6 +1098,13 @@ body.app-hidden *::after {
 /* ── Walker overlay ─────────────────────────────────── */
 #walker-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2; }
 #walker-layer.no-transition .walker-dot { transition: none !important; }
+/* IntersectionObserver in walkers.js flips this class when a walker
+   scrolls out of the map viewport. Pause its animations so the GPU
+   compositor isn't running ~60 walker animations every frame for
+   things the player can't see. Free perf, especially on big districts. */
+.walker-dot.walker-offscreen,
+.walker-dot.walker-offscreen::before,
+.walker-dot.walker-offscreen::after { animation-play-state: paused !important; }
 .walker-dot {
   position: absolute; width: 10px; height: 14px;
   --wk-scale: 1; --wk-hue: 0deg;
