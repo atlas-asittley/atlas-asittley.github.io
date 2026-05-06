@@ -10,7 +10,23 @@ body {
 /* ── Screen system ─────────────────────────────────── */
 .screen { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; flex-direction: column; }
 .screen.active { display: flex; }
-.screen-center { justify-content: center; align-items: center; padding: 24px; }
+/* Vertical-centered screens (welcome, login, register, industry pick).
+   On a phone, the industry-pick form (3 inputs + 4 industry cards + button)
+   is taller than the viewport. Plain `justify-content: center` with no
+   overflow makes the button fall off the bottom unreachable.
+   `safe center` falls back to flex-start when the content overflows the
+   container, so short screens still center and tall ones scroll. The
+   double declaration (center first, safe center second) gives a graceful
+   fallback for older browsers that don't understand `safe`. */
+.screen-center {
+  justify-content: center;
+  justify-content: safe center;
+  align-items: center;
+  align-items: safe center;
+  padding: 24px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
 
 /* ── Shared UI ─────────────────────────────────────── */
 .card { width: 100%; max-width: 380px; background: #131a24; border: 1px solid #1e2a3a; border-radius: 12px; padding: 32px 24px; }
