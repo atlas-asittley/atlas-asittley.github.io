@@ -8,6 +8,8 @@
 
 import { state } from './state.js';
 import { colors, spriteIcons } from './sprites.js';
+import { expandDistrict } from './map.js';
+import { doLogout, doReset } from './auth.js';
 
 var openOverlay = null;
 
@@ -291,12 +293,12 @@ var STAT_INFO = {
     why: 'If you need more workers than you have, some buildings will sit <b>unstaffed</b> — grayed out and not producing. A labor shortage stalls everything, so keep capacity ahead of demand.',
     how: 'Build more housing — bigger and more-evolved houses hold more workers. Evolve them past Shanty by satisfying the gates (well, food, road, services). A <b>Tavern</b> also boosts your worker capacity while it\'s running. Don\'t over-build production until your housing can keep up.'
   },
-  chunks: {
+  parcels: {
     icon: '🗺',
-    title: 'Chunks',
-    what: 'Number of 15×15 territory chunks you\'ve claimed. Each chunk gives ~225 buildable tiles plus a few resource patches in your industry.',
-    why: 'More chunks = more room to grow, but the cost scales steeply: <b>$1,000 × chunks²</b> for the next one — $1,000 for the 2nd, $4,000 for the 3rd, $9,000 for the 4th, $16,000 for the 5th. Expand faster than your economy and you\'ll go broke.',
-    how: 'Tap <b>+ Expand</b> in the topbar. Highlighted chunks adjacent to your district become buyable; tap one to allocate it.'
+    title: 'Parcels',
+    what: 'A parcel is a 15×15 piece of land you\'ve claimed. Each gives ~225 buildable tiles plus a few resource patches in your industry. Multiple parcels stitched together make your district.',
+    why: 'More parcels = more room to grow, but the cost scales steeply: <b>$1,000 × parcels²</b> for the next one — $1,000 for the 2nd, $4,000 for the 3rd, $9,000 for the 4th, $16,000 for the 5th. Expand faster than your economy and you\'ll go broke.',
+    how: 'Use the <b>Expand district</b> button below. Highlighted parcels adjacent to your district become buyable; tap one to allocate it.'
   },
   happiness: {
     icon: '🙂',
@@ -333,6 +335,19 @@ function openStatInfo(key) {
   if (!info || openOverlay) return;
   openOverlay = document.createElement('div');
   openOverlay.className = 'help-overlay';
+  var actionHtml = '';
+  if (key === 'parcels') {
+    var owned = (state.profile && state.profile.chunks_owned) || 1;
+    var nextCost = 1000 * owned * owned;
+    var canAfford = (state.profile && state.profile.money || 0) >= nextCost;
+    actionHtml =
+      '<div class="stat-info-actions">' +
+        '<button class="btn-primary" id="stat-expand-btn"' + (canAfford ? '' : ' disabled') + '>' +
+          'Expand district — $' + nextCost.toLocaleString() +
+        '</button>' +
+        (canAfford ? '' : '<div class="stat-info-hint">You need $' + nextCost.toLocaleString() + ' for the next parcel.</div>') +
+      '</div>';
+  }
   openOverlay.innerHTML =
     '<div class="stat-info-modal" role="dialog" aria-modal="true">' +
       '<div class="help-header">' +
@@ -343,12 +358,69 @@ function openStatInfo(key) {
         '<div class="stat-info-section"><div class="stat-info-label">What it measures</div><div class="stat-info-text">' + info.what + '</div></div>' +
         '<div class="stat-info-section"><div class="stat-info-label">Why it matters</div><div class="stat-info-text">' + info.why + '</div></div>' +
         '<div class="stat-info-section"><div class="stat-info-label">How to improve it</div><div class="stat-info-text">' + info.how + '</div></div>' +
+        actionHtml +
       '</div>' +
     '</div>';
   document.body.appendChild(openOverlay);
   document.getElementById('help-close').addEventListener('click', closeHelpModal);
   openOverlay.addEventListener('click', function (e) {
     if (e.target === openOverlay) closeHelpModal();
+  });
+  if (key === 'parcels') {
+    var btn = document.getElementById('stat-expand-btn');
+    if (btn) btn.addEventListener('click', function () {
+      closeHelpModal();
+      expandDistrict();
+    });
+  }
+  document.addEventListener('keydown', escapeListener);
+}
+
+
+// ── Settings modal ──
+//
+// Opened from the ⚙ topbar button. Holds destructive / session actions
+// (Reset district, Log out) so they're not constantly visible.
+
+function openSettingsModal() {
+  if (openOverlay) return;
+  openOverlay = document.createElement('div');
+  openOverlay.className = 'help-overlay';
+  openOverlay.innerHTML =
+    '<div class="stat-info-modal" role="dialog" aria-modal="true">' +
+      '<div class="help-header">' +
+        '<span class="help-title">⚙ Settings</span>' +
+        '<button class="help-close" id="help-close" aria-label="Close">×</button>' +
+      '</div>' +
+      '<div class="help-body">' +
+        '<div class="settings-row">' +
+          '<div class="settings-row-text">' +
+            '<div class="settings-row-title">Reset district</div>' +
+            '<div class="settings-row-sub">Wipe every parcel, building, and resource and start over from industry selection. Cannot be undone.</div>' +
+          '</div>' +
+          '<button class="btn-danger" id="settings-reset-btn">Reset</button>' +
+        '</div>' +
+        '<div class="settings-row">' +
+          '<div class="settings-row-text">' +
+            '<div class="settings-row-title">Log out</div>' +
+            '<div class="settings-row-sub">Sign out of this browser. Your district stays saved.</div>' +
+          '</div>' +
+          '<button class="btn-secondary" id="settings-logout-btn">Log out</button>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(openOverlay);
+  document.getElementById('help-close').addEventListener('click', closeHelpModal);
+  openOverlay.addEventListener('click', function (e) {
+    if (e.target === openOverlay) closeHelpModal();
+  });
+  document.getElementById('settings-reset-btn').addEventListener('click', function () {
+    closeHelpModal();
+    doReset();
+  });
+  document.getElementById('settings-logout-btn').addEventListener('click', function () {
+    closeHelpModal();
+    doLogout();
   });
   document.addEventListener('keydown', escapeListener);
 }
@@ -367,9 +439,12 @@ export function initHelp() {
     el.addEventListener('click', function () { openStatInfo(infoKey); });
   };
   wireStat('g-workers-stat', 'workers');
-  wireStat('g-chunks-stat', 'chunks');
+  wireStat('g-parcels-stat', 'parcels');
   wireStat('g-happiness-stat', 'happiness');
   wireStat('g-crime-stat', 'crime');
   wireStat('g-migration-stat', 'migration');
   wireStat('g-productivity-stat', 'productivity');
+
+  var settingsBtn = document.getElementById('g-settings');
+  if (settingsBtn) settingsBtn.addEventListener('click', openSettingsModal);
 }

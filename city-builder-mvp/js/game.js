@@ -3,7 +3,7 @@ import { sb } from './config.js';
 import { state, computeTraderUnlocks, computeLaborAllocation, computeGridBounds } from './state.js';
 import { showScreen, showToast, capitalize, updateMoney, updateWorkers, updateHappiness, updateCrime, updateMigration, updateProductivity } from './ui.js';
 import { addNotification, loadNotifications, initNotificationBell } from './notifications.js';
-import { renderMap, initMapEvents, expandDistrict, restoreMapView } from './map.js';
+import { renderMap, initMapEvents, restoreMapView } from './map.js';
 import { renderBuildPanel, renderInventory, renderTradePanel, refreshActiveDataPanel, initTabs, initPanelCollapse, checkAllTraderVisits } from './panels.js';
 import { subscribeRealtime } from './realtime.js';
 import { startWalkers, stopWalkers, spawnImmigrantWalker, spawnEmigrantWalker } from './walkers.js';
@@ -326,10 +326,6 @@ export function enterGame() {
     subscribeRealtime();
     startProdLoop();
     startWalkers();
-    var expandBtn = document.getElementById('g-expand-district');
-    if (expandBtn) {
-      expandBtn.onclick = function () { expandDistrict(); };
-    }
     checkAllTraderVisits();
     loadNotifications();
     initNotificationBell();

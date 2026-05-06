@@ -748,7 +748,7 @@ export function expandDistrict() {
       return { chunk_x: row.chunk_x, chunk_y: row.chunk_y };
     });
     if (candidates.length === 0) {
-      showToast('No adjacent chunks available to claim', 'error');
+      showToast('No adjacent parcels available to claim', 'error');
       return null;
     }
     state.expansionCandidates = candidates;
@@ -756,7 +756,7 @@ export function expandDistrict() {
     computeGridBounds();
     renderMap();
     var bar = document.getElementById('expansion-bar');
-    bar.querySelector('#expansion-text').textContent = 'Tap a highlighted chunk to claim it ($' + cost + ')';
+    bar.querySelector('#expansion-text').textContent = 'Tap a highlighted parcel to claim it ($' + cost + ')';
     bar.classList.add('active');
     return null;
   }).catch(function (err) {
@@ -782,7 +782,7 @@ function selectExpansionChunk(cx, cy) {
     state.profile.money = data.money;
     state.profile.chunks_owned = data.chunks_owned;
     updateMoney();
-    showToast('District expanded! +1 chunk at (' + data.chunk_x + ', ' + data.chunk_y + ')', 'success');
+    showToast('District expanded — claimed a new parcel.', 'success');
     state.expansionCandidates = [];
     state.expansionCost = 0;
     document.getElementById('expansion-bar').classList.remove('active');
