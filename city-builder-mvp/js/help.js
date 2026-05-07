@@ -237,9 +237,12 @@ function renderBuildingCard(bt) {
         'Per house, per hour: Cottage ~14 · Townhouse 24 · Villa 36 · Manor 60 · Mansion 96 · Estate 144 · Palace 216.' +
       '</span></div>' +
       '<div class="help-row help-row-section"><span class="help-label">Lifestyle goods</span><span class="help-value">' +
-        'Higher tiers also need a non-food luxury in stock to upgrade and to keep from sliding back:<br>' +
-        '<b>Cottage</b>: pottery · <b>Townhouse</b>: bread · <b>Villa</b>: furniture · <b>Manor</b>: statuary.<br>' +
-        'Each consumes 1 per 10 minutes per house from your shared inventory.' +
+        'Higher tiers need non-food luxuries in stock to upgrade <i>and</i> to keep from devolving. Goods stack — once your residents acquire a taste, they keep wanting it forever:<br>' +
+        '<b>Cottage</b>: pottery.<br>' +
+        '<b>Townhouse</b>: pottery + bread.<br>' +
+        '<b>Villa</b>: pottery + bread + furniture.<br>' +
+        '<b>Manor &amp; up</b>: pottery + bread + furniture + statuary.<br>' +
+        'Per-house consumption scales with tier — a Manor uses ~2.5× as much pottery as a Cottage. Plan multiple production chains, or trade for what you can\'t make.' +
       '</span></div>';
   }
 
