@@ -208,11 +208,13 @@ export function computeLaborAllocation() {
   // staffed long before the population had actually arrived.
   var workerSupply = (state.profile && state.profile.worker_capacity) || 5;
 
-  // Total housing capacity — sum of tier capacities across active
-  // houses with their road/well prereqs satisfied. Used by the top
-  // bar to render "population/capacity". This IS the server's
-  // _pp_housing_supply, mirrored client-side.
-  var housingCapacity = 0;
+  // Total housing capacity = population floor + housing supply. The
+  // floor (post-tutorial 15, in-tutorial 0) is the baseline of
+  // citizens that exist regardless of housing — without including it
+  // here, the top bar shows pop=95 / capacity=80 when in fact
+  // server target = floor + supply = 15 + 80 = 95 and pop is exactly
+  // at target. Including the floor keeps pop ≤ capacity always.
+  var housingSupply = 0;
   myBuildings.forEach(function (b) {
     var bt = state.buildingTypes[b.building_type_key];
     if (!bt || bt.category !== 'housing' || b.status !== 'active') return;
@@ -221,8 +223,12 @@ export function computeLaborAllocation() {
     if (!tierCfg) return;
     var hasRoad = !tierCfg.needs_road || state.roadAccessIds[b.id];
     if (!hasRoad) return;
-    housingCapacity += tierCfg.workers || 0;
+    housingSupply += tierCfg.workers || 0;
   });
+  var inTutorial = state.profile && state.profile.tutorial_step != null
+    && state.profile.tutorial_step < 4;
+  var popFloor = inTutorial ? 0 : 15;
+  var housingCapacity = popFloor + housingSupply;
 
   // Get worker-consuming buildings sorted by priority DESC, then created_at ASC.
   // Mirrors the server's staffing loop in process_production: every
