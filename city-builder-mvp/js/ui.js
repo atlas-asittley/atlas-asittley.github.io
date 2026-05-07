@@ -1,6 +1,7 @@
 // ── UI helpers: screens, toasts, errors, topbar ──
 import { state } from './state.js';
 import { addNotification } from './notifications.js';
+import { computeCityRunway, formatRunway } from './panels.js';
 
 var screens = document.querySelectorAll('.screen');
 
@@ -232,5 +233,29 @@ export function updateCrime() {
                + (c <= 25 ? 'Streets are quiet.'
                   : c <= 50 ? 'Some unrest — consider more police coverage.'
                   : 'High crime is dragging down happiness — cover more housing with police.');
+  }
+}
+
+// Topbar "city runway" indicator. Green when nothing is depleting
+// faster than it's being produced; yellow when the bottleneck runs
+// out within 4 hours; red within 1 hour.
+export function updateCityRunway() {
+  var stat = document.getElementById('g-runway-stat');
+  var v = document.getElementById('g-runway');
+  if (!stat || !v) return;
+  var r = computeCityRunway();
+  v.textContent = formatRunway(r.minutes);
+  stat.classList.remove('runway-stable', 'runway-warn', 'runway-bad');
+  if (!isFinite(r.minutes)) {
+    stat.classList.add('runway-stable');
+    stat.title = 'Reserves are sustainable — production keeps up with consumption indefinitely.';
+  } else if (r.minutes < 60) {
+    stat.classList.add('runway-bad');
+    stat.title = 'CRITICAL: ' + (state.resources && state.resources[r.bottleneck] ? state.resources[r.bottleneck].name : r.bottleneck === 'food' ? 'Food' : r.bottleneck) + ' depletes in ' + formatRunway(r.minutes) + '. Tap for breakdown.';
+  } else if (r.minutes < 4 * 60) {
+    stat.classList.add('runway-warn');
+    stat.title = (state.resources && state.resources[r.bottleneck] ? state.resources[r.bottleneck].name : r.bottleneck === 'food' ? 'Food' : r.bottleneck) + ' depletes in ' + formatRunway(r.minutes) + '. Tap for breakdown.';
+  } else {
+    stat.title = 'Reserves last ' + formatRunway(r.minutes) + ' (bottleneck: ' + (state.resources && state.resources[r.bottleneck] ? state.resources[r.bottleneck].name : r.bottleneck === 'food' ? 'Food' : r.bottleneck) + '). Tap for breakdown.';
   }
 }

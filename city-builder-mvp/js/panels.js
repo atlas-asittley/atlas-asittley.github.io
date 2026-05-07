@@ -496,6 +496,135 @@ export function computeResourceFlow(resourceKey) {
 // context. Other Inventory sections (housing tiers / labor) live in the
 // topbar + per-building inspector now.
 
+// ── City runway: how long can current reserves support the city? ──
+//
+// "If I go to bed for 8 hours, will my city survive?" — the question
+// this metric answers. Computes how long until the first devolve-
+// triggering resource runs out, using current stock and net production
+// vs consumption rates.
+//
+// Tracks two classes of devolve-triggering resources:
+//   1) Aggregate food. Houses drain food proportionally across all
+//      is_food resources, and stop when total = 0 — so the meaningful
+//      number is total_food / max(0, total_drain - total_production).
+//   2) Each lifestyle good (pottery / bread / furniture / statuary)
+//      independently. With cumulative demand a single lifestyle good
+//      running out kicks every house at its tier-or-above into devolve
+//      grace.
+//
+// computeResourceFlow already gives net production/consumption per
+// resource (production + imports - processing - services - exports -
+// citizens), so we lean on it for lifestyle goods.
+//
+// Returns:
+//   { minutes, bottleneck, perResource: {key: minutes_or_Infinity} }
+//   - minutes:    minutes until the bottleneck resource depletes; Infinity
+//                 means everything is sustainable.
+//   - bottleneck: which resource depletes first (key in perResource).
+//   - perResource: per-resource runway in minutes (Infinity when sustainable).
+//
+// Special key 'food' aggregates over all is_food resources.
+export function computeCityRunway() {
+  var perResource = {};
+  var bottleneck = null;
+  var bottleneckMin = Infinity;
+
+  function consider(key, stock, production, drain) {
+    var net = production - drain;
+    if (net >= 0 || drain <= 0) {
+      perResource[key] = Infinity;
+      return;
+    }
+    var minutes = stock / -net;
+    perResource[key] = minutes;
+    if (minutes < bottleneckMin) {
+      bottleneckMin = minutes;
+      bottleneck = key;
+    }
+  }
+
+  if (!state.currentUser) {
+    return { minutes: Infinity, bottleneck: null, perResource: perResource };
+  }
+
+  var myActive = state.allBuildings.filter(function (b) {
+    return b.player_id === state.currentUser.id && b.status === 'active';
+  });
+
+  // ── 1) Food (aggregate) ──
+  var foodKeys = Object.keys(state.resources || {}).filter(function (k) {
+    return state.resources[k].is_food;
+  });
+  var totalFoodStock = foodKeys.reduce(function (s, k) {
+    return s + (state.inventory[k] || 0);
+  }, 0);
+  var totalFoodDrain = 0;
+  myActive.forEach(function (b) {
+    var bt = state.buildingTypes[b.building_type_key];
+    if (!bt || bt.category !== 'housing') return;
+    var tier = b.housing_tier !== undefined ? b.housing_tier : 1;
+    var cfg = state.housingTierConfig[tier];
+    if (cfg && cfg.food_per_minute) totalFoodDrain += Number(cfg.food_per_minute);
+  });
+  var totalFoodProduction = 0;
+  myActive.forEach(function (b) {
+    var bt = state.buildingTypes[b.building_type_key];
+    if (!bt || bt.category !== 'food_extractor') return;
+    if (state.laborInfo.unstaffedIds && state.laborInfo.unstaffedIds[b.id]) return;
+    if (bt.output_resource_key && bt.output_rate > 0) {
+      totalFoodProduction += Number(bt.output_rate);
+    }
+  });
+  consider('food', totalFoodStock, totalFoodProduction, totalFoodDrain);
+
+  // ── 2) Lifestyle goods ──
+  if (state.housingLifestyleDemands) {
+    var seen = {};
+    Object.keys(state.housingLifestyleDemands).forEach(function (tier) {
+      state.housingLifestyleDemands[tier].forEach(function (d) {
+        seen[d.resource_key] = true;
+      });
+    });
+    Object.keys(seen).forEach(function (key) {
+      var stock = state.inventory[key] || 0;
+      var flow = computeResourceFlow(key);
+      var production = flow.production.reduce(function (s, x) { return s + x.rate; }, 0)
+                     + flow.imports.reduce(function (s, x) { return s + x.rate; }, 0);
+      // For lifestyle goods, food.citizens (computed in flow) includes
+      // ONLY the lifestyle-tier drain (since this resource isn't a
+      // food). processing/services/exports come from the same
+      // computeResourceFlow output.
+      var drain = flow.processing.reduce(function (s, x) { return s + x.rate; }, 0)
+                + flow.services.reduce(function (s, x) { return s + x.rate; }, 0)
+                + (flow.citizens || 0)
+                + flow.exports.reduce(function (s, x) { return s + x.rate; }, 0);
+      consider(key, stock, production, drain);
+    });
+  }
+
+  return {
+    minutes: bottleneckMin,
+    bottleneck: bottleneck,
+    perResource: perResource
+  };
+}
+
+// Format a minute count for display: "8h 30m", "45m", "3d", or "∞".
+export function formatRunway(minutes) {
+  if (!isFinite(minutes)) return '∞';
+  if (minutes < 1) return '<1m';
+  var min = Math.floor(minutes);
+  if (min < 60) return min + 'm';
+  if (min < 24 * 60) {
+    var hr = Math.floor(min / 60);
+    var rem = min % 60;
+    return rem > 0 ? hr + 'h ' + rem + 'm' : hr + 'h';
+  }
+  var days = Math.floor(min / (24 * 60));
+  var hrs = Math.floor((min % (24 * 60)) / 60);
+  return hrs > 0 ? days + 'd ' + hrs + 'h' : days + 'd';
+}
+
 // ── Trade panel (Phase 2B: multi-partner trade) ──
 export function renderTradePanel() {
   // Renders the Partners sub-panel of the Trade tab. The Trade tab also

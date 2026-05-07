@@ -69,6 +69,25 @@ body {
 .topbar-district { color: #c8d4e0; font-size: 0.86rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .topbar-money { flex-shrink: 0; }
 .topbar-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.topbar-runway { flex-shrink: 0; display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 12px; background: #1a2230; cursor: pointer; font-size: 0.85rem; }
+.topbar-runway .runway-icon { font-size: 0.85rem; }
+.topbar-runway .v { font-weight: 600; color: #d8e0e8; }
+.topbar-runway.runway-warn { background: #2a2316; }
+.topbar-runway.runway-warn .v { color: #e8b070; }
+.topbar-runway.runway-bad { background: #2a1620; }
+.topbar-runway.runway-bad .v { color: #f0a0a0; }
+.topbar-runway.runway-stable .v { color: #86c98a; }
+.runway-breakdown { display: flex; flex-direction: column; gap: 6px; }
+.runway-row { display: grid; grid-template-columns: 2fr 1fr auto; gap: 8px; align-items: baseline; padding: 6px 8px; border-radius: 6px; background: #0f1620; font-size: 0.85rem; }
+.runway-row-name { color: #d8e0e8; }
+.runway-row-stock { color: #6a7888; font-size: 0.78rem; text-align: right; }
+.runway-row-time { color: #d8e0e8; font-weight: 600; }
+.runway-row.runway-row-stable { background: #11261a; }
+.runway-row.runway-row-stable .runway-row-time { color: #86c98a; }
+.runway-row.runway-row-warn { background: #2a2316; }
+.runway-row.runway-row-warn .runway-row-time { color: #e8b070; }
+.runway-row.runway-row-bad { background: #2a1620; }
+.runway-row.runway-row-bad .runway-row-time { color: #f0a0a0; }
 .topbar-row-2 { gap: 8px; }
 /* Old .topbar-left / .topbar-right are unused now but kept harmless */
 .topbar-left { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }

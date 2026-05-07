@@ -13,6 +13,7 @@ import { doLogout, doReset } from './auth.js';
 import { sb } from './config.js';
 import { updateIdentity } from './ui.js';
 import { addNotification } from './notifications.js';
+import { computeCityRunway, formatRunway } from './panels.js';
 
 var openOverlay = null;
 
@@ -405,6 +406,13 @@ var STAT_INFO = {
     what: 'A multiplier on every production building\'s output. <b>100%</b> is baseline. Above 100% your buildings produce more; below 100% they produce less. Same building, different output rate.',
     why: 'A city running at 110% productivity is meaningfully more profitable than one at 90%. The multiplier compounds across every extractor, processor, food building, and tax office at the same time.',
     how: 'Multiple levers feed the multiplier. <b>+ </b>: a staffed Tavern (+5%); a stockpile of <b>Tools</b> (+5% / +10%); active houses near a staffed <b>School</b> (up to +10%). <b>− </b>: high crime above 50 (down to −10%); no idle workers (−5% — keep a small buffer above what your buildings need).'
+  },
+  runway: {
+    icon: '⏳',
+    title: 'City Runway',
+    what: 'How long your <b>current reserves</b> can support the city before something runs out and houses start devolving. Computed from current stock minus net consumption (production − drain) for every resource that drives a devolve gate: aggregate food, plus each lifestyle good (pottery, bread, furniture, statuary).',
+    why: 'Answers "if I go to bed for 8 hours, will my city still be there when I wake up?" When the number is high, your supply chains are sustainable — production keeps up with consumption indefinitely. When it ticks down, you have a real countdown to act.',
+    how: 'Build more producers for whatever\'s the bottleneck — the breakdown below shows which resource depletes first. For lifestyle goods, the producer chain is the relevant industry (Pottery Kiln → pottery, Bakery → bread, Woodcarver → furniture, Sculptor → statuary). For food, build more food extractors (Grain Farm / Garden / Orchard / Fishing Pier). NPC trade can also fill gaps — set a Buy-to-reserve policy on a missing good.'
   }
 };
 
@@ -425,6 +433,46 @@ function openStatInfo(key) {
         '</button>' +
         (canAfford ? '' : '<div class="stat-info-hint">You need $' + nextCost.toLocaleString() + ' for the next parcel.</div>') +
       '</div>';
+  }
+  if (key === 'runway') {
+    // Per-resource breakdown: stock + runway minutes for everything
+    // computeCityRunway tracked. Sort so the bottleneck comes first
+    // and infinity entries (sustainable) sit at the bottom.
+    var runwayInfo = computeCityRunway();
+    var rows = Object.keys(runwayInfo.perResource).map(function (rk) {
+      return { key: rk, minutes: runwayInfo.perResource[rk] };
+    }).sort(function (a, b) { return a.minutes - b.minutes; });
+    var bdHtml = '<div class="stat-info-section"><div class="stat-info-label">Current breakdown</div>';
+    if (rows.length === 0) {
+      bdHtml += '<div class="stat-info-text">Nothing to track yet — no houses past Mud Hut.</div>';
+    } else {
+      bdHtml += '<div class="runway-breakdown">';
+      rows.forEach(function (row) {
+        var resourceName = row.key === 'food'
+          ? 'Food (all foods combined)'
+          : (state.resources && state.resources[row.key] && state.resources[row.key].name) || row.key;
+        var stock;
+        if (row.key === 'food') {
+          stock = Object.keys(state.resources || {})
+            .filter(function (k) { return state.resources[k].is_food; })
+            .reduce(function (s, k) { return s + (state.inventory[k] || 0); }, 0);
+        } else {
+          stock = state.inventory[row.key] || 0;
+        }
+        var label = formatRunway(row.minutes);
+        var cls = !isFinite(row.minutes) ? 'runway-row-stable'
+                : row.minutes < 60 ? 'runway-row-bad'
+                : row.minutes < 240 ? 'runway-row-warn' : '';
+        bdHtml += '<div class="runway-row ' + cls + '">';
+        bdHtml += '<span class="runway-row-name">' + escapeHtml(resourceName) + '</span>';
+        bdHtml += '<span class="runway-row-stock">' + Math.round(stock * 10) / 10 + ' in stock</span>';
+        bdHtml += '<span class="runway-row-time">' + label + '</span>';
+        bdHtml += '</div>';
+      });
+      bdHtml += '</div>';
+    }
+    bdHtml += '</div>';
+    actionHtml = bdHtml + actionHtml;
   }
   openOverlay.innerHTML =
     '<div class="stat-info-modal" role="dialog" aria-modal="true">' +
@@ -572,6 +620,7 @@ export function initHelp() {
   wireStat('g-happiness-stat', 'happiness');
   wireStat('g-crime-stat', 'crime');
   wireStat('g-migration-stat', 'migration');
+  wireStat('g-runway-stat', 'runway');
   wireStat('g-productivity-stat', 'productivity');
 
   var settingsBtn = document.getElementById('g-settings');
