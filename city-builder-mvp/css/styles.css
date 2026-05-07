@@ -1753,9 +1753,12 @@ body.panel-expanded .map-area { display: none; }
 .partner-visit-info { margin-bottom: 6px; }
 .partner-goods { margin-top: 6px; }
 .partner-goods-title { font-size: 0.7rem; font-weight: 600; color: #7a8a9e; text-transform: uppercase; margin-bottom: 4px; }
+.partner-goods-hint { font-weight: 400; text-transform: none; color: #5e6a7e; font-size: 0.66rem; margin-left: 4px; }
 .partner-goods-item { display: flex; justify-content: space-between; align-items: center; padding: 3px 0; font-size: 0.78rem; }
 .partner-goods-name { font-weight: 600; }
 .partner-goods-prices { font-size: 0.72rem; }
+.pg-cap { color: #7a8a9e; font-size: 0.68rem; font-weight: 600; margin-left: 4px; }
+.pg-cap.pg-cap-full { color: #e0707a; }
 .pg-sell { color: #5ec49e; }
 .pg-buy { color: #4fa3e0; }
 

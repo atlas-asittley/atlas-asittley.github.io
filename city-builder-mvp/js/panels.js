@@ -763,14 +763,32 @@ function renderPartnerGoods(traderKey) {
   var prices = state.allTraderPrices[traderKey] || {};
   var resources = Object.keys(prices);
   if (resources.length === 0) return '';
+  var quotas = (state.traderQuotas && state.traderQuotas[traderKey]) || {};
 
   var html = '<div class="partner-goods">';
-  html += '<div class="partner-goods-title">Traded Goods</div>';
+  html += '<div class="partner-goods-title">Traded Goods <span class="partner-goods-hint">(daily caps reset at midnight UTC)</span></div>';
   resources.forEach(function (rk) {
     var p = prices[rk];
+    var q = quotas[rk] || {};
     var parts = [];
-    if (p.buy_price) parts.push('<span class="pg-sell">Buys at ' + p.buy_price + 'g</span>');
-    if (p.sell_price) parts.push('<span class="pg-buy">Sells at ' + p.sell_price + 'g</span>');
+    if (p.buy_price) {
+      var capStr = '';
+      if (q.buy_cap != null) {
+        var remaining = Math.max(0, q.buy_cap - (q.buy_used || 0));
+        var fullClass = remaining === 0 ? ' pg-cap-full' : '';
+        capStr = '<span class="pg-cap' + fullClass + '">' + (q.buy_used || 0) + '/' + q.buy_cap + ' today</span>';
+      }
+      parts.push('<span class="pg-sell">Buys at ' + p.buy_price + 'g ' + capStr + '</span>');
+    }
+    if (p.sell_price) {
+      var capStr2 = '';
+      if (q.sell_cap != null) {
+        var remaining2 = Math.max(0, q.sell_cap - (q.sell_used || 0));
+        var fullClass2 = remaining2 === 0 ? ' pg-cap-full' : '';
+        capStr2 = '<span class="pg-cap' + fullClass2 + '">' + (q.sell_used || 0) + '/' + q.sell_cap + ' today</span>';
+      }
+      parts.push('<span class="pg-buy">Sells at ' + p.sell_price + 'g ' + capStr2 + '</span>');
+    }
     html += '<div class="partner-goods-item">';
     html += '<span class="partner-goods-name">' + resourceName(rk) + '</span>';
     html += '<span class="partner-goods-prices">' + parts.join(' &middot; ') + '</span>';

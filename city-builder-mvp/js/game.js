@@ -15,6 +15,27 @@ import { initHelp } from './help.js';
 // (pollution + desirability) and update the heatmap classes /
 // inspector data in place. Avoids a full renderMap rebuild —
 // touches only cells whose values actually changed.
+// Pull today's per-trader-per-resource demand-cap usage (for the
+// "X / Y today" indicators on the trade-partner panel). Cheap RPC,
+// returns one row per (trader, resource).
+function refreshTraderQuotas() {
+  if (!state.currentUser) return;
+  sb.rpc('get_trader_daily_quotas').then(function (r) {
+    if (!r.data) return;
+    var out = {};
+    r.data.forEach(function (row) {
+      out[row.trader_key] = out[row.trader_key] || {};
+      out[row.trader_key][row.resource_key] = {
+        buy_cap: row.buy_cap,
+        buy_used: row.buy_used,
+        sell_cap: row.sell_cap,
+        sell_used: row.sell_used,
+      };
+    });
+    state.traderQuotas = out;
+  }).catch(function () { /* non-fatal — keep prior data */ });
+}
+
 function refreshTileMetrics() {
   if (!state.currentUser) return;
   sb.from('map_tiles')
@@ -155,6 +176,9 @@ function processProduction() {
     // + inspector reflect this tick. Only updates cells whose values
     // actually changed.
     refreshTileMetrics();
+    // Auto-trade fired during process_production may have moved the
+    // daily quota. Refresh so the partner panel shows current state.
+    refreshTraderQuotas();
   }).catch(function (err) {
     console.warn('Production fetch error:', err);
   });
@@ -328,6 +352,7 @@ export function enterGame() {
     // grid-not-measurable race (offsetWidth=0 if layout hadn't fully
     // committed). Re-render after a frame so they get correct positions.
     requestAnimationFrame(function () { renderWalkers(); });
+    refreshTraderQuotas();
     loadNotifications();
     initNotificationBell();
   }).catch(function (err) {
