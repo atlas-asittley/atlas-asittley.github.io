@@ -57,44 +57,41 @@ def _delete_visits(cur, uid):
 
 
 def test_single_visit_resolves(make_player, cur):
+    """Auto-resolve: a process_production tick resolves any visits whose
+    cooldown has elapsed. Used to require an explicit resolve_trader_visit
+    call but that's now legacy — auto-resolve in _pp_resolve_trader_visits
+    handles it during the regular tick."""
     p = make_player(industry='timber', display_name='single_v')
     _act_as(cur, p['id'])
     _set_policy(cur, p['id'], 'timber', 'sell_surplus', 0)
     _set_inv(cur, p['id'], 'timber', 25.0)
-    # Backdate so exactly one visit is due (river_traders interval = 10 min).
     _backdate_profile(cur, p['id'], 11)
     _delete_visits(cur, p['id'])
-    cur.execute("SELECT public.resolve_trader_visit('river_traders')")
-    result = cur.fetchone()[0]
-    assert result['visit_resolved'] is True
-    assert result.get('visits_resolved') == 1
+    cur.execute("SELECT public.process_production()")
+    cur.execute("""SELECT count(*) FROM public.trader_visits
+                   WHERE player_id = %s AND trader_key = 'river_traders'""",
+                (str(p['id']),))
+    assert cur.fetchone()[0] >= 1
 
 
 def test_multiple_offline_visits_catch_up(make_player, cur):
-    """Player with 25 timber, sell_surplus policy, river_traders (10 min
-    interval, 20 capacity, buy_price=4). Backdate 65 min → ~6 visits due.
-    Expected: 5 visits at 5 timber/visit (limited by remaining inventory)
-    + 1 visit selling the last 0 (nothing to sell). Or if capacity isn't
-    the binding constraint, fewer visits sell smaller amounts. Verify
-    multiple visits run and end balance reflects every sale."""
+    """Player with 100 timber, sell_surplus policy. Backdate 65 min →
+    ~6 visits due. Auto-resolve drains inventory across the catch-up."""
     p = make_player(industry='timber', display_name='catchup_player')
     _act_as(cur, p['id'])
     _set_policy(cur, p['id'], 'timber', 'sell_surplus', 0)
     _set_inv(cur, p['id'], 'timber', 100.0)
-    # 65 minutes / 10-min interval → 6 due visits.
     _backdate_profile(cur, p['id'], 65)
     _delete_visits(cur, p['id'])
     money_before = _money(cur, p['id'])
-    timber_before = _get_inv(cur, p['id'], 'timber')
 
-    cur.execute("SELECT public.resolve_trader_visit('river_traders')")
-    result = cur.fetchone()[0]
+    cur.execute("SELECT public.process_production()")
 
-    assert result['visit_resolved'] is True
-    assert result.get('visits_resolved') >= 5, f"expected ≥5 visits resolved, got {result.get('visits_resolved')}"
-    # Each river_traders visit can carry up to 20 timber. 100 timber
-    # should fully empty in 5 visits — confirm money grew accordingly
-    # (4g/timber × 100 = 400) and inventory dropped to 0.
+    cur.execute("""SELECT count(*) FROM public.trader_visits
+                   WHERE player_id = %s AND trader_key = 'river_traders'""",
+                (str(p['id']),))
+    visits_resolved = cur.fetchone()[0]
+    assert visits_resolved >= 5, f"expected ≥5 visits resolved, got {visits_resolved}"
     timber_after = _get_inv(cur, p['id'], 'timber')
     money_after = _money(cur, p['id'])
     assert timber_after == 0, f"expected timber to fully sell, got {timber_after}"
@@ -148,25 +145,29 @@ def test_catchup_capped_at_50(make_player, cur):
     assert result.get('visits_resolved') == 50, f"expected exactly 50 (cap), got {result.get('visits_resolved')}"
 
 
-def test_buy_to_reserve_also_catches_up(make_player, cur):
+def test_buy_to_reserve_also_catches_up(make_player, place, cur):
     """Buy-to-reserve policy should also accumulate across catch-up
-    visits. Player with reserve_target=100 lumber and lots of money
-    should have lumber inventory grow over multiple visits."""
+    visits, via the auto-resolve in process_production. Mountain folk
+    is gated on totalBuildings >= 3 — give the player a few houses to
+    unlock it."""
     p = make_player(industry='timber', display_name='buy_catchup')
     _act_as(cur, p['id'])
     cur.execute("UPDATE public.player_profiles SET money = 100000 WHERE id = %s", (str(p['id']),))
-    _set_policy(cur, p['id'], 'lumber', 'buy_to_reserve', 100)
-    # mountain_folk sells lumber — wait, it doesn't. Let me use river_traders.
-    # river_traders only trades timber + stone. Let's check — actually
-    # use mountain_folk with timber; it sells timber.
+    # Clear resources so we can build wherever; then unlock mountain_folk
+    # by giving the player 3+ buildings.
+    cur.execute("UPDATE public.map_tiles SET resource_node_key = NULL "
+                " WHERE owner_player_id = %s", (str(p['id']),))
+    hx, hy = p['home_x'], p['home_y']
+    for dx in range(3):
+        place('house', hx + dx + 1, hy + 2)
     _set_policy(cur, p['id'], 'timber', 'buy_to_reserve', 100)
     _set_inv(cur, p['id'], 'timber', 0.0)
     _backdate_profile(cur, p['id'], 60)
     _delete_visits(cur, p['id'])
-    cur.execute("SELECT public.resolve_trader_visit('mountain_folk')")
-    result = cur.fetchone()[0]
-    assert result['visit_resolved'] is True
+    cur.execute("SELECT public.process_production()")
+    cur.execute("""SELECT count(*) FROM public.trader_visits
+                   WHERE player_id = %s AND trader_key = 'mountain_folk'""",
+                (str(p['id']),))
+    assert cur.fetchone()[0] >= 1
     timber = _get_inv(cur, p['id'], 'timber')
-    # mountain_folk sells timber at 5g, capacity 26. After multiple
-    # visits we should have ≥ 26 (one visit's worth) and probably more.
     assert timber >= 26, f"expected catch-up to accumulate timber, got {timber}"

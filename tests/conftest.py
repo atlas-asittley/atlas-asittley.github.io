@@ -108,7 +108,8 @@ def make_player(cur):
     the watermark to start at zero (e.g. the unlock-gate regression
     tests in test_progressive_unlock.py)."""
     counter = {'n': 0}
-    def _make(industry='timber', display_name=None, unlock_all=True):
+    def _make(industry='timber', display_name=None, unlock_all=True,
+              tutorial_done=True, population=100):
         counter['n'] += 1
         suffix = uuid.uuid4().hex[:8]
         email = f"test-{counter['n']}-{suffix}@citybuilder.test"
@@ -120,6 +121,20 @@ def make_player(cur):
             cur.execute(
                 "UPDATE public.player_profiles SET highest_housing_tier_ever = 8 WHERE id = %s",
                 (str(uid),)
+            )
+        # Default to "tutorial complete" so tests don't get caught by
+        # the AFTER INSERT trigger auto-bumping housing to tier 1 or
+        # advancing tutorial_step in unexpected ways. Also seed a generous
+        # worker pool — the tutorial-zero population default would leave
+        # most tests with zero workers and zero production. Tests that
+        # specifically exercise tutorial mechanics pass tutorial_done=False.
+        if tutorial_done:
+            cur.execute(
+                "UPDATE public.player_profiles "
+                "   SET tutorial_step = 4, trade_unlocked = true, "
+                "       population = %s, worker_capacity = %s "
+                " WHERE id = %s",
+                (population, int(population), str(uid))
             )
         cur.execute("SELECT id, industry_key, money, chunks_owned, home_x, home_y FROM public.player_profiles WHERE id = %s", (str(uid),))
         row = cur.fetchone()

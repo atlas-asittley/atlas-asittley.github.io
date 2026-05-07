@@ -83,13 +83,15 @@ def test_tax_man_credits_money_when_staffed(make_player, place, cur, clear_resou
 
 def test_tax_man_credits_nothing_when_unstaffed(make_player, place, cur, clear_resources):
     """If worker supply isn't enough to staff the tax_man, no money is credited."""
-    p = make_player()
+    # population=0 so the staffing pass has nothing to work with. The
+    # default 100-pop conftest seed would auto-staff the tax_man.
+    p = make_player(population=0)
     clear_resources(p['id'])
     hx, hy = p['home_x'], p['home_y']
     place('road', hx + 1, hy + 1)
     # Force worker_capacity well below the tax_man's worker_cost (10).
     cur.execute(
-        "UPDATE public.player_profiles SET worker_capacity = 0, money = 1000 WHERE id = %s",
+        "UPDATE public.player_profiles SET worker_capacity = 0, population = 0, money = 1000 WHERE id = %s",
         (str(p['id']),),
     )
     place('tax_man', hx + 1, hy + 2)

@@ -29,32 +29,74 @@ def _stock(cur, player_id, resource_key, qty):
 
 
 def test_trade_locked_at_game_start(make_player, cur):
-    p = make_player(industry='timber')
+    # New tutorial flow: trade is locked until the player completes the
+    # tutorial sequence (4 houses → well → food → extractor). Using
+    # tutorial_done=False so make_player leaves the freshly-onboarded
+    # player at step 0 / trade_unlocked=false (the column default).
+    p = make_player(industry='timber', tutorial_done=False)
     cur.execute("SELECT public.is_trade_unlocked(%s)", (str(p['id']),))
     assert cur.fetchone()[0] is False
 
 
-def test_trade_unlocks_after_extractor_food_and_tier1_house(make_player, place, stamp_food_tile, cur, clear_resources):
-    p = make_player(industry='timber')
+def test_trade_unlocks_after_tutorial_sequence(make_player, place, stamp_food_tile, cur, clear_resources):
+    """Trade unlocks when the player places their first food extractor —
+    that's the last tutorial step (after 4 houses → well). Sticky after
+    that — demolishing buildings doesn't lock it back."""
+    p = make_player(industry='timber', tutorial_done=False)
     clear_resources(p['id'])
     hx, hy = p['home_x'], p['home_y']
 
-    place('timber_camp', hx + 1, hy - 1)
     cur.execute("SELECT public.is_trade_unlocked(%s)", (str(p['id']),))
-    assert cur.fetchone()[0] is False, 'extractor alone is not enough'
+    assert cur.fetchone()[0] is False, 'tutorial step 0 = locked'
 
-    stamp_food_tile('orchard_grove', hx + 1, hy + 1)
-    place('orchard', hx + 1, hy + 1)
+    # Step 0: place 4 houses → step advances to 1. Avoid the chunk
+    # centerline at x=7 / y=7 within each chunk; pre-placed roads
+    # there block placement.
+    for dy in range(4):
+        place('house', hx - 1, hy + 1 + dy)
+    cur.execute("SELECT tutorial_step FROM public.player_profiles WHERE id = %s",
+                (str(p['id']),))
+    assert cur.fetchone()[0] == 1
     cur.execute("SELECT public.is_trade_unlocked(%s)", (str(p['id']),))
-    assert cur.fetchone()[0] is False, 'extractor + food without tier-1 house still locked'
+    assert cur.fetchone()[0] is False, 'still need well + food + extractor'
 
-    place('house', hx + 2, hy + 1)
+    # Step 1: well → step 2.
+    place('well', hx + 1, hy + 1)
+    cur.execute("SELECT tutorial_step FROM public.player_profiles WHERE id = %s",
+                (str(p['id']),))
+    assert cur.fetchone()[0] == 2
+
+    # Step 2: food extractor → step 3.
+    stamp_food_tile('orchard_grove', hx + 2, hy + 1)
+    place('orchard', hx + 2, hy + 1)
+    cur.execute("SELECT tutorial_step FROM public.player_profiles WHERE id = %s",
+                (str(p['id']),))
+    assert cur.fetchone()[0] == 3
     cur.execute("SELECT public.is_trade_unlocked(%s)", (str(p['id']),))
-    assert cur.fetchone()[0] is False, 'tier-0 shanty still locked'
+    assert cur.fetchone()[0] is False, 'extractor still pending'
 
-    _force_tier(cur, p['id'], 1)
+    # Step 3: resource extractor → step 4 + trade_unlocked.
+    place('timber_camp', hx - 2, hy + 1)
+    cur.execute("SELECT tutorial_step, trade_unlocked FROM public.player_profiles WHERE id = %s",
+                (str(p['id']),))
+    step, unlocked = cur.fetchone()
+    assert step == 4
+    assert unlocked is True
     cur.execute("SELECT public.is_trade_unlocked(%s)", (str(p['id']),))
     assert cur.fetchone()[0] is True
+
+
+def test_trade_stays_unlocked_after_demolition(make_player, place, stamp_food_tile, cur, clear_resources):
+    """Once unlocked, trade is sticky — even if the player demolishes the
+    extractor / food / housing that originally satisfied the gate."""
+    p = make_player(industry='timber', tutorial_done=True)  # already past step 4
+    cur.execute("SELECT public.is_trade_unlocked(%s)", (str(p['id']),))
+    assert cur.fetchone()[0] is True
+
+    # Whatever buildings exist, delete them all.
+    cur.execute("DELETE FROM public.buildings WHERE player_id = %s", (str(p['id']),))
+    cur.execute("SELECT public.is_trade_unlocked(%s)", (str(p['id']),))
+    assert cur.fetchone()[0] is True, 'sticky — should not relock'
 
 
 def test_district_weight_floor(make_player, cur):

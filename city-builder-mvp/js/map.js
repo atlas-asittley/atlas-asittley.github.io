@@ -324,8 +324,19 @@ function _doRenderMap() {
       if (ib && ib.target_x === x && ib.target_y === y) {
         classes.push('inspected-target');
       }
+      // Single-tile buildings: highlight the .cell (because .cell has
+      // `contain: paint` which would clip a .bldg child shadow). Multi-
+      // tile buildings: skip the cell highlight on the anchor — the
+      // .bldg.inspected-bldg outset shadow works fine on multi-tile
+      // anchor cells (which have `contain: none`) and naturally wraps
+      // the entire footprint in one clean rectangle.
       if (ib && ib.x === x && ib.y === y) {
-        classes.push('inspected-source');
+        var ibt = state.buildingTypes[ib.building_type_key];
+        var fw = (ibt && ibt.footprint_w) || 1;
+        var fh = (ibt && ibt.footprint_h) || 1;
+        if (fw === 1 && fh === 1) {
+          classes.push('inspected-source');
+        }
       }
 
       // While placing an extractor, soft-pulse all unclaimed matching resource

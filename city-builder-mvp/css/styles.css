@@ -181,12 +181,16 @@ body.inspector-open .map-canvas { margin-bottom: calc(50vh + 28px); }
               0 0 12px 2px rgba(230,198,90,0.55) !important;
   z-index: 5;
 }
-/* Legacy .bldg.inspected-bldg rule — kept harmless in case something
-   else relies on the class. .cell has `contain: paint` which clips any
-   .bldg box-shadow to the cell boundary, making the outward gold ring
-   invisible. The cell-level rule above is what actually shows. */
+/* Multi-tile buildings (school 2x2, temple 2x2, brewery 2x1, etc.):
+   the anchor cell has `contain: none` (.cell.multi-tile-anchor below),
+   so the .bldg's outset shadow paints freely and naturally wraps the
+   full footprint in one clean rectangle. Single-tile buildings get
+   their highlight via .cell.inspected-source above (the cell has
+   `contain: paint` which would clip an outset .bldg shadow). */
 .bldg.inspected-bldg {
-  box-shadow: inset 0 0 0 2px rgba(230,198,90,0.95) !important;
+  box-shadow: 0 0 0 2px rgba(230,198,90,0.95),
+              0 0 12px 2px rgba(230,198,90,0.55) !important;
+  z-index: 6;
 }
 /* During expansion-picker mode, every cell within a candidate chunk
    pulses gold to show it's buyable. The combined .empty-cell.expansion-
