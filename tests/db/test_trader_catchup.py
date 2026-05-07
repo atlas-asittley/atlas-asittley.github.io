@@ -56,6 +56,18 @@ def _delete_visits(cur, uid):
     cur.execute("DELETE FROM public.trader_visits WHERE player_id = %s", (str(uid),))
 
 
+def _clear_quota(cur, trader_key, resource_key):
+    """trader_daily_quota is shared global state — any sell_surplus
+    activity by REAL players during the day fills the bucket and
+    blocks tests that try to sell the same resource. Tests should
+    clear the relevant row at start; the savepoint wrapping each test
+    rolls the deletion back."""
+    cur.execute("DELETE FROM public.trader_daily_quota "
+                " WHERE trader_key = %s AND resource_key = %s "
+                "   AND day_bucket = CURRENT_DATE",
+                (trader_key, resource_key))
+
+
 def test_single_visit_resolves(make_player, cur):
     """Auto-resolve: a process_production tick resolves any visits whose
     cooldown has elapsed. Used to require an explicit resolve_trader_visit
@@ -67,6 +79,7 @@ def test_single_visit_resolves(make_player, cur):
     _set_inv(cur, p['id'], 'timber', 25.0)
     _backdate_profile(cur, p['id'], 11)
     _delete_visits(cur, p['id'])
+    _clear_quota(cur, 'river_traders', 'timber')
     cur.execute("SELECT public.process_production()")
     cur.execute("""SELECT count(*) FROM public.trader_visits
                    WHERE player_id = %s AND trader_key = 'river_traders'""",
@@ -83,6 +96,7 @@ def test_multiple_offline_visits_catch_up(make_player, cur):
     _set_inv(cur, p['id'], 'timber', 100.0)
     _backdate_profile(cur, p['id'], 65)
     _delete_visits(cur, p['id'])
+    _clear_quota(cur, 'river_traders', 'timber')
     money_before = _money(cur, p['id'])
 
     cur.execute("SELECT public.process_production()")
@@ -108,6 +122,7 @@ def test_catchup_records_separate_visit_rows(make_player, cur):
     _set_inv(cur, p['id'], 'timber', 50.0)
     _backdate_profile(cur, p['id'], 35)  # ~3 visits due
     _delete_visits(cur, p['id'])
+    _clear_quota(cur, 'river_traders', 'timber')
     cur.execute("SELECT public.resolve_trader_visit('river_traders')")
     cur.execute("""SELECT count(*) FROM public.trader_visits
                    WHERE player_id = %s AND trader_key = 'river_traders'""",
@@ -140,6 +155,7 @@ def test_catchup_capped_at_50(make_player, cur):
     # 100 visits' worth of backlog (10-min interval × 100 = 1000 min).
     _backdate_profile(cur, p['id'], 1000)
     _delete_visits(cur, p['id'])
+    _clear_quota(cur, 'river_traders', 'timber')
     cur.execute("SELECT public.resolve_trader_visit('river_traders')")
     result = cur.fetchone()[0]
     assert result.get('visits_resolved') == 50, f"expected exactly 50 (cap), got {result.get('visits_resolved')}"
@@ -153,17 +169,16 @@ def test_buy_to_reserve_also_catches_up(make_player, place, cur):
     p = make_player(industry='timber', display_name='buy_catchup')
     _act_as(cur, p['id'])
     cur.execute("UPDATE public.player_profiles SET money = 100000 WHERE id = %s", (str(p['id']),))
-    # Clear resources so we can build wherever; then unlock mountain_folk
-    # by giving the player 3+ buildings. Avoid the centerline road tiles.
-    cur.execute("UPDATE public.map_tiles SET resource_node_key = NULL "
-                " WHERE owner_player_id = %s", (str(p['id']),))
-    hx, hy = p['home_x'], p['home_y']
-    for dx in range(3):
-        place('house', hx - 1 - dx, hy + 2)
+    # Mountain_folk unlock requires totalBuildings >= 3. choose_industry
+    # already creates a road network of 30+ buildings, so the gate is
+    # already cleared — no need to place additional houses (which used to
+    # collide with the starter road footprint depending on which row this
+    # player landed on).
     _set_policy(cur, p['id'], 'timber', 'buy_to_reserve', 100)
     _set_inv(cur, p['id'], 'timber', 0.0)
     _backdate_profile(cur, p['id'], 60)
     _delete_visits(cur, p['id'])
+    _clear_quota(cur, 'mountain_folk', 'timber')
     cur.execute("SELECT public.process_production()")
     cur.execute("""SELECT count(*) FROM public.trader_visits
                    WHERE player_id = %s AND trader_key = 'mountain_folk'""",

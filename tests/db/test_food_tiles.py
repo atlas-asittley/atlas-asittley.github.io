@@ -184,13 +184,23 @@ def test_clear_resource_tile_works_on_empty_food_tile(make_player, cur, clear_re
 
 @pytest.mark.parametrize("industry", ['timber', 'stone', 'clay', 'iron'])
 def test_chunk_allocation_seeds_food_clusters(industry, make_player, cur):
-    """Each fresh chunk contains ≥1 food tile of the player's matching
-    type. Cluster sizes are random, so we only assert a non-zero floor —
-    unlikely the seeder produces zero across 2 clusters of 4-8 walks."""
-    p = make_player(industry=industry)
+    """Each fresh chunk seeds a food cluster of the player's matching
+    type. Post-scarcity-pass each starter chunk has 1 food cluster of
+    U(2,3) walk steps; the random walk can occasionally collapse onto
+    occupied tiles and produce 0 visible tiles. Try up to 3 fresh
+    players — the floor is "the seeder works on average", not "the
+    seeder always produces a tile." If all 3 attempts land 0, that's
+    a real regression."""
     fkey = FOOD_TILE_BY_INDUSTRY[industry]
-    cur.execute("""SELECT count(*) FROM public.map_tiles
-                   WHERE owner_player_id = %s AND resource_node_key = %s""",
-                (str(p['id']), fkey))
-    n = cur.fetchone()[0]
-    assert n >= 1, f'expected at least 1 {fkey} tile in a fresh {industry} chunk, got {n}'
+    best = 0
+    for attempt in range(3):
+        p = make_player(industry=industry)
+        cur.execute("""SELECT count(*) FROM public.map_tiles
+                       WHERE owner_player_id = %s AND resource_node_key = %s""",
+                    (str(p['id']), fkey))
+        n = cur.fetchone()[0]
+        if n > best:
+            best = n
+        if best >= 1:
+            break
+    assert best >= 1, f'expected at least 1 {fkey} tile across 3 fresh {industry} chunks, max seen {best}'
