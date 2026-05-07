@@ -125,11 +125,10 @@ export function updateWorkers() {
     el.className = 'v ' + (li.laborShortage ? 'shortage' : 'workers');
   }
   if (stat) {
-    stat.title = li.laborShortage
-      ? 'Labor shortage! ' + needed + ' jobs available, only ' + supply + ' workers in the pool. Build more housing.'
-      : idle > 0
-        ? used + ' employed of ' + needed + ' jobs (' + idle + ' workers idle — build more production to use them).'
-        : 'All ' + supply + ' workers employed.';
+    // First number = workers currently employed. Second = total jobs
+    // your buildings have on offer (sum of worker_cost across active
+    // production buildings with road access).
+    stat.title = used + ' workers employed / ' + needed + ' jobs available';
   }
   var badge = document.getElementById('g-labor-badge');
   if (badge) {
@@ -150,8 +149,9 @@ export function updateWorkers() {
   if (popStat) {
     var pop2 = Math.floor((state.profile && state.profile.population) || 0);
     var cap2 = (li && li.housingCapacity != null) ? li.housingCapacity : pop2;
-    popStat.title = 'Population: ' + pop2 + ' citizens, ' + cap2 + ' housing spaces total. '
-      + (pop2 < cap2 ? 'Citizens move in when happiness > 50.' : 'Housing is full — build more houses to grow further.');
+    // First number = citizens currently living here. Second = total
+    // housing spaces (sum of capacity across active houses).
+    popStat.title = pop2 + ' citizens / ' + cap2 + ' housing spaces';
   }
 }
 
