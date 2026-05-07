@@ -34,21 +34,33 @@ def test_well_required_for_tier_1_evolution(make_player, place, cur, clear_resou
     assert cur.fetchone()[0] == 1, "house failed to upgrade with a well in range"
 
 
-def test_well_too_far_does_not_count(make_player, place, cur, clear_resources):
-    """Manhattan distance > 4 means a well is out of range."""
+def test_well_too_far_for_tier_2_evolution(make_player, place, cur, clear_resources):
+    """Tier 2+ evolution still requires positional well coverage (within
+    4 manhattan) per the post-2026-05-07 balance change. Tier 1 only
+    needs ANY well in district — that case is tested elsewhere."""
     p = make_player()
     clear_resources(p['id'])
+    # Stock food so the tier 1 → 2 gate's needs_food is satisfied.
+    cur.execute(
+        "INSERT INTO public.inventories (player_id, resource_key, quantity) "
+        "VALUES (%s, 'berries', 50) "
+        "ON CONFLICT (player_id, resource_key) DO UPDATE SET quantity = 50",
+        (str(p['id']),),
+    )
     hx, hy = p['home_x'], p['home_y']
     place('road', hx + 1, hy + 1)
-    place('well', hx + 6, hy + 6)  # Manhattan distance 5+5 = 10 from house
+    place('well', hx + 6, hy + 6)  # Manhattan distance 10 from house
     house_id = place('house', hx + 1, hy + 2)['building_id']
+    # Start at tier 1 so the gate we're testing is tier 1 → 2.
+    cur.execute("UPDATE public.buildings SET housing_tier = 1 WHERE id = %s",
+                (house_id,))
     cur.execute(
-        "UPDATE public.buildings SET last_processed_at = now() - interval '120 seconds' WHERE id = %s",
+        "UPDATE public.buildings SET last_processed_at = now() - interval '180 seconds' WHERE id = %s",
         (house_id,),
     )
     cur.execute("SELECT public.process_production()")
     cur.execute("SELECT housing_tier FROM public.buildings WHERE id = %s", (house_id,))
-    assert cur.fetchone()[0] == 0, "out-of-range well should not enable upgrade"
+    assert cur.fetchone()[0] == 1, "tier-2 evolution should require positional well coverage"
 
 
 def test_tax_man_credits_money_when_staffed(make_player, place, cur, clear_resources):

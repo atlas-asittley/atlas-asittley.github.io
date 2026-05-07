@@ -288,6 +288,30 @@ function _doRenderMap() {
     });
   }
 
+  // Well coverage for the housing-placement preview: precompute the set
+  // of (x,y) keys within Manhattan-distance 4 of any of THIS player's
+  // active wells. Only computed when the player has selected housing
+  // from the build panel — surfaces "good house spots" before they
+  // place. Same idea as the crime heatmap above, smaller radius.
+  var wellCovered = {};
+  if (state.selectedBuildType && state.currentUser) {
+    var sbt0 = state.buildingTypes[state.selectedBuildType];
+    if (sbt0 && (sbt0.category === 'housing' || state.selectedBuildType === 'well')) {
+      var WELL_RADIUS = 4;
+      state.allBuildings.forEach(function (b) {
+        if (b.player_id !== state.currentUser.id) return;
+        if (b.status !== 'active' || b.building_type_key !== 'well') return;
+        for (var dx = -WELL_RADIUS; dx <= WELL_RADIUS; dx++) {
+          for (var dy = -WELL_RADIUS; dy <= WELL_RADIUS; dy++) {
+            if (Math.abs(dx) + Math.abs(dy) <= WELL_RADIUS) {
+              wellCovered[(b.x + dx) + ',' + (b.y + dy)] = true;
+            }
+          }
+        }
+      });
+    }
+  }
+
   // Dynamic grid columns based on current bounds
   grid.style.gridTemplateColumns = 'repeat(' + state.gridCols + ', 1fr)';
 
@@ -399,6 +423,17 @@ function _doRenderMap() {
 
       if (state.selectedBuildType && !building && isPlacementValid(state.selectedBuildType, tile)) {
         classes.push('valid-placement');
+      }
+
+      // Well-coverage preview: when placing housing or another well,
+      // tiles within 4 manhattan of an active well get a subtle
+      // green tint so the player can see "good house spots" before
+      // committing. Tier-1 huts technically only need ANY well in
+      // district per the post-2026-05-07 balance change, but tier 2+
+      // still need positional coverage — surfacing this radius
+      // remains useful for growth planning.
+      if (wellCovered[x + ',' + y]) {
+        classes.push('well-covered');
       }
 
       // Interior tiles of a multi-tile building inherit the anchor's

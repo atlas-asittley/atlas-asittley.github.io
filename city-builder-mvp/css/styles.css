@@ -302,6 +302,12 @@ body.inspector-open .map-canvas { margin-bottom: calc(50vh + 28px); }
    otherwise hide the placement outline whenever a heatmap is active. */
 .cell.valid-placement { outline: 2px solid #5ec49e; outline-offset: -2px; cursor: crosshair; }
 .cell.valid-placement:hover { background: rgba(94,196,158,0.15); }
+/* Well-coverage preview: shown only while placing a Well or housing
+   from the build panel. Tiles within 4 manhattan of an active well
+   get a subtle blue glow so the player can see "good house spots"
+   ahead of placement. The valid-placement outline (above) wins on
+   tiles that have both. */
+.cell.well-covered { background: rgba(80,160,200,0.18); }
 .cell.empty-cell { background: transparent; cursor: default; pointer-events: none; }
 .cell.empty-cell::before { display: none; }
 .cell.drag-preview { background: rgba(40, 36, 26, 0.7) !important; outline: 2px solid rgba(212, 170, 80, 0.6); outline-offset: -2px; cursor: crosshair; position: relative; }

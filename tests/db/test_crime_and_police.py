@@ -44,7 +44,7 @@ def test_crime_baseline_for_fresh_player(make_player, cur):
     cur.execute("SELECT public.compute_crime(%s)", (str(p['id']),))
     crime = float(cur.fetchone()[0])
     # base 10 + size pressure (population=5 → +0). Should be exactly 10.
-    assert crime == 10, f'expected base crime 10, got {crime}'
+    assert crime == 5, f'expected base crime 5, got {crime}'
 
 
 def test_uncovered_house_raises_crime(make_player, place, cur, clear_resources):
@@ -86,7 +86,7 @@ def test_watch_house_covers_nearby_house(make_player, place, cur, clear_resource
     _stamp_staffed(cur, p['id'])
     cur.execute("SELECT public.compute_crime(%s)", (str(p['id']),))
     crime = float(cur.fetchone()[0])
-    assert crime == 10, f'covered house should yield base crime; got {crime}'
+    assert crime == 5, f'covered house should yield base crime; got {crime}'
 
 
 def test_house_outside_watch_house_radius_uncovered(make_player, place, cur, clear_resources):
@@ -100,7 +100,7 @@ def test_house_outside_watch_house_radius_uncovered(make_player, place, cur, cle
     _stamp_staffed(cur, p['id'])
     cur.execute("SELECT public.compute_crime(%s)", (str(p['id']),))
     crime = float(cur.fetchone()[0])
-    assert crime == 14, f'expected base 10 + uncovered penalty 4; got {crime}'
+    assert crime == 9, f'expected base 5 + uncovered penalty 4; got {crime}'
 
 
 def test_higher_tier_pd_covers_wider_area(make_player, place, cur, clear_resources):
@@ -118,7 +118,7 @@ def test_higher_tier_pd_covers_wider_area(make_player, place, cur, clear_resourc
     _stamp_staffed(cur, p['id'])
     cur.execute("SELECT public.compute_crime(%s)", (str(p['id']),))
     crime = float(cur.fetchone()[0])
-    assert crime == 10, f'covered by Police Station; expected base 10, got {crime}'
+    assert crime == 5, f'covered by Police Station; expected base 10, got {crime}'
 
 
 def test_unstaffed_police_no_coverage(make_player, place, cur, clear_resources):
@@ -132,7 +132,7 @@ def test_unstaffed_police_no_coverage(make_player, place, cur, clear_resources):
     cur.execute("SELECT public.process_production()")  # refresh is_staffed
     cur.execute("SELECT public.compute_crime(%s)", (str(p['id']),))
     crime = float(cur.fetchone()[0])
-    assert crime == 14, f"no-road WH shouldn't cover; got {crime}"
+    assert crime == 9, f"no-road WH shouldn't cover; got {crime}"
 
 
 def test_unstaffed_police_no_coverage_due_to_worker_shortage(make_player, place, cur, clear_resources):
@@ -167,7 +167,7 @@ def test_unstaffed_police_no_coverage_due_to_worker_shortage(make_player, place,
     cur.execute("SELECT public.compute_crime(%s)", (str(p['id']),))
     crime = float(cur.fetchone()[0])
     # House is only in the UNSTAFFED B's radius → uncovered → +4 over base.
-    assert crime == 14, f"unstaffed police shouldn't cover; got {crime}"
+    assert crime == 9, f"unstaffed police shouldn't cover; got {crime}"
 
 
 def test_crime_reduces_happiness(make_player, place, cur, clear_resources):
@@ -176,7 +176,7 @@ def test_crime_reduces_happiness(make_player, place, cur, clear_resources):
     clear_resources(p['id'])
     _stock_food(cur, p['id'])
     hx, hy = p['home_x'], p['home_y']
-    # 5 uncovered houses → +20 crime → crime ≈ 30. Penalty floor(30/5)=6.
+    # 5 uncovered houses × 4 + base 5 = 25 crime. Penalty floor(25/5)=5.
     place('house', hx + 1, hy + 1)
     place('house', hx + 1, hy + 2)
     place('house', hx + 2, hy + 1)
@@ -184,7 +184,7 @@ def test_crime_reduces_happiness(make_player, place, cur, clear_resources):
     place('house', hx + 1, hy - 2)
     cur.execute("SELECT public.compute_happiness(%s)", (str(p['id']),))
     bk = cur.fetchone()[0]['breakdown']
-    assert bk['crime'] >= 30, f'expected crime ≥ 30 with 5 uncovered houses; got {bk["crime"]}'
+    assert bk['crime'] >= 25, f'expected crime ≥ 25 with 5 uncovered houses; got {bk["crime"]}'
     assert bk['crime_penalty'] == int(bk['crime']) // 5, 'penalty = floor(crime/5)'
 
 

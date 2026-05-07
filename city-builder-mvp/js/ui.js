@@ -21,7 +21,7 @@ var TUTORIAL_STEPS = [
   },
   {
     title: 'Step 4 of 4 — Build a Resource Extractor',
-    body: 'Place your industry\'s extractor on a matching resource tile (the one matching the resource you picked at signup). It produces the goods you\'ll trade for money. Costs 10 workers when staffed.'
+    body: 'Place your industry\'s extractor on a matching resource tile. It produces the goods you\'ll trade for money. Costs 10 workers when staffed. Tip: trade auto-happens once policies are set; expect ~$250/hour from one staffed extractor. Save up before building police buildings — their upkeep can sink an early-game economy.'
   }
 ];
 
