@@ -201,20 +201,28 @@ export function computeLaborAllocation() {
     return b.player_id === state.currentUser.id;
   });
 
-  // Worker supply is server-authoritative. The server uses
-  //   worker_capacity = floor(population) + tavern_bonus
-  // where housing_tier_config.workers determines the *target* population
-  // a city grows toward, NOT the current worker pool. Population grows
-  // toward the target as conditions permit (food, happiness, etc.) — so
-  // a brand-new tier-1 hut doesn't immediately hand you 6 workers.
-  //
-  // We previously computed `5 + sum(housing_tier_config.workers)` here,
-  // which gave the *target* and made every panel optimistically claim
-  // the city was fully staffed long before the population had actually
-  // arrived. Trust the server's worker_capacity (refreshed each 30s
-  // production tick) so the top bar, inspector, and unstaffedIds all
-  // reflect the actual current workforce.
+  // Worker supply is server-authoritative. Trust state.profile.worker_capacity
+  // (= floor(population) + tavern_bonus on the server). Computing
+  // 5 + sum(housing_tier_config.workers) client-side gave the *target*,
+  // which made every panel optimistically claim the city was fully
+  // staffed long before the population had actually arrived.
   var workerSupply = (state.profile && state.profile.worker_capacity) || 5;
+
+  // Total housing capacity — sum of tier capacities across active
+  // houses with their road/well prereqs satisfied. Used by the top
+  // bar to render "population/capacity". This IS the server's
+  // _pp_housing_supply, mirrored client-side.
+  var housingCapacity = 0;
+  myBuildings.forEach(function (b) {
+    var bt = state.buildingTypes[b.building_type_key];
+    if (!bt || bt.category !== 'housing' || b.status !== 'active') return;
+    var tier = b.housing_tier !== undefined ? b.housing_tier : 0;
+    var tierCfg = state.housingTierConfig[tier];
+    if (!tierCfg) return;
+    var hasRoad = !tierCfg.needs_road || state.roadAccessIds[b.id];
+    if (!hasRoad) return;
+    housingCapacity += tierCfg.workers || 0;
+  });
 
   // Get worker-consuming buildings sorted by priority DESC, then created_at ASC.
   // Mirrors the server's staffing loop in process_production: every
@@ -259,6 +267,7 @@ export function computeLaborAllocation() {
     workersUsed: Math.min(workerSupply, workersNeeded),
     workersIdle: Math.max(0, workerSupply - workersNeeded),
     laborShortage: workersNeeded > workerSupply,
+    housingCapacity: housingCapacity,
     staffedIds: staffedIds,
     unstaffedIds: unstaffedIds
   };

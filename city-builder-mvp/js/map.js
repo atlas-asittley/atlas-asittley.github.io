@@ -521,7 +521,7 @@ function refreshTutorialState() {
       updateTutorialBanner();
       if (r.data.tutorial_step !== prevStep) {
         renderBuildPanel();
-        if (r.data.tutorial_step >= 3 && (prevStep || 0) < 3) {
+        if (r.data.tutorial_step >= 4 && (prevStep || 0) < 4) {
           showToast('Tutorial complete! Trade is now open in the Trade tab.', 'success');
         }
       }

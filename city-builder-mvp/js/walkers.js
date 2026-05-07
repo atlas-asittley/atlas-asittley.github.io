@@ -26,12 +26,9 @@ function getWalkerTarget(b) {
   var bt = state.buildingTypes[b.building_type_key];
   if (!bt) return 0;
   if (bt.category === 'road') return 0;
-  if (bt.category === 'housing') {
-    var tier = b.housing_tier !== undefined ? b.housing_tier : 0;
-    var TARGET_BY_TIER = [1, 2, 3, 4, 5, 6, 7, 8, 9];
-    return TARGET_BY_TIER[Math.min(tier, TARGET_BY_TIER.length - 1)];
-  }
-  // extractor / food_extractor / processor / service / tax / booster
+  // One walker per building, regardless of category or housing tier.
+  // Used to scale per-tier (1..9) for housing, but the resulting walker
+  // density on a developed map was too busy and burned phone CPU.
   return 1;
 }
 

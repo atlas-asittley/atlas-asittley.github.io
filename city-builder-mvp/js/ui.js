@@ -8,16 +8,20 @@ var screens = document.querySelectorAll('.screen');
 // the tutorial is complete and the banner stays hidden.
 var TUTORIAL_STEPS = [
   {
-    title: 'Step 1 of 3 — Build a House',
-    body: 'Tap the Build tab and place a House. Houses raise the target population your city grows toward — citizens move in over time, and they become the workers who staff every other building.'
+    title: 'Step 1 of 4 — Build 4 Houses',
+    body: 'Tap the Build tab and place 4 Houses anywhere on your land. Each house holds 6 citizens who arrive immediately — by the end of this step you\'ll have ~24 workers ready to staff the rest of the city.'
   },
   {
-    title: 'Step 2 of 3 — Build a Well',
-    body: 'Place a Well on a tile next to a road, near your house. Wells supply water service to nearby housing — without one, houses stay at the lowest tier and barely hold anyone. The Well also takes 3 workers when staffed.'
+    title: 'Step 2 of 4 — Build a Well',
+    body: 'Place a Well on a tile next to a road, near your houses. Wells provide water service to nearby housing (within 4 tiles) so it can keep growing. The Well takes 3 workers when staffed.'
   },
   {
-    title: 'Step 3 of 3 — Build a Food Producer',
-    body: 'Pick a food extractor: Garden, Orchard, Fishing Pier, or Grain Farm — each needs its own type of resource tile. Food keeps your citizens alive. Once a food is in stock, happiness rises, and citizens immigrate at a rate that scales with how happy your city is — happier city, more arrivals per tick. Variety helps too: every different food type stacks +2 happiness.'
+    title: 'Step 3 of 4 — Build a Food Producer',
+    body: 'Pick a food extractor: Garden, Orchard, Fishing Pier, or Grain Farm — each needs its own type of resource tile. Food keeps citizens alive and happy. Each different food type also adds +2 happiness, and a happier city draws more immigrants per tick.'
+  },
+  {
+    title: 'Step 4 of 4 — Build a Resource Extractor',
+    body: 'Place your industry\'s extractor on a matching resource tile (the one matching the resource you picked at signup). It produces the goods you\'ll trade for money. Costs 10 workers when staffed.'
   }
 ];
 
@@ -25,7 +29,7 @@ export function updateTutorialBanner() {
   var banner = document.getElementById('tutorial-banner');
   if (!banner) return;
   var step = (state.profile && state.profile.tutorial_step) || 0;
-  if (step >= 3) {
+  if (step >= 4) {                        // step 4 = tutorial done
     banner.style.display = 'none';
     return;
   }
@@ -40,18 +44,25 @@ export function updateTutorialBanner() {
 }
 
 // Tutorial gating helper — used by the build panel to filter what's
-// available, and (indirectly) by the trade panel via trade_unlocked.
+// available. Step 0..3 are active steps; step 4 means done and the
+// full panel opens up.
 export function tutorialAllowsBuilding(bt) {
   var step = (state.profile && state.profile.tutorial_step) || 0;
-  if (step >= 3) return true;            // tutorial done
+  if (step >= 4) return true;
   if (!bt) return false;
-  if (bt.category === 'road') return true; // roads always allowed
+  if (bt.category === 'road') return true;
   if (step === 0) return bt.category === 'housing';
   if (step === 1) return bt.category === 'housing' || bt.key === 'well';
   if (step === 2) {
     return bt.category === 'housing'
       || bt.key === 'well'
       || bt.category === 'food_extractor';
+  }
+  if (step === 3) {
+    return bt.category === 'housing'
+      || bt.key === 'well'
+      || bt.category === 'food_extractor'
+      || bt.category === 'extractor';
   }
   return false;
 }
@@ -104,31 +115,43 @@ export function updateWorkers() {
   var el = document.getElementById('g-workers');
   var supply = li.workerSupply || 0;
   var used = Math.max(0, li.workersUsed || 0);
+  var needed = Math.max(0, li.workersNeeded || 0);
   var idle = Math.max(0, li.workersIdle || 0);
   var stat = document.getElementById('g-workers-stat');
+  // Workers stat: "employed / available jobs". When supply < needed,
+  // employed is capped at supply and the gap is the labor shortage.
   if (el) {
-    el.textContent = used;
+    el.textContent = used + '/' + needed;
     el.className = 'v ' + (li.laborShortage ? 'shortage' : 'workers');
   }
   if (stat) {
     stat.title = li.laborShortage
-      ? 'Labor shortage! ' + li.workersNeeded + ' workers needed, only ' + supply + ' available. Build more housing.'
+      ? 'Labor shortage! ' + needed + ' jobs available, only ' + supply + ' workers in the pool. Build more housing.'
       : idle > 0
-        ? used + ' of ' + supply + ' workers employed (' + idle + ' idle — build more production to use them).'
-        : 'Fully employed — all ' + supply + ' workers staffed.';
+        ? used + ' employed of ' + needed + ' jobs (' + idle + ' workers idle — build more production to use them).'
+        : 'All ' + supply + ' workers employed.';
   }
   var badge = document.getElementById('g-labor-badge');
   if (badge) {
     badge.style.display = li.laborShortage ? 'inline' : 'none';
   }
 
-  // Total population — server-authoritative current pop, separate from
-  // worker capacity so the player can see the underlying number drive
-  // the workforce. Capacity = floor(population) + tavern bonus.
+  // Population stat: "current / housing capacity". Capacity = sum of
+  // housing_tier_config.workers across all the player's active houses
+  // (with their road/well prereqs satisfied). State is computed in
+  // computeLaborAllocation; we expose laborInfo.housingCapacity below.
   var popEl = document.getElementById('g-population');
   if (popEl) {
     var pop = Math.floor((state.profile && state.profile.population) || 0);
-    popEl.textContent = pop;
+    var cap = (li && li.housingCapacity != null) ? li.housingCapacity : pop;
+    popEl.textContent = pop + '/' + cap;
+  }
+  var popStat = document.getElementById('g-population-stat');
+  if (popStat) {
+    var pop2 = Math.floor((state.profile && state.profile.population) || 0);
+    var cap2 = (li && li.housingCapacity != null) ? li.housingCapacity : pop2;
+    popStat.title = 'Population: ' + pop2 + ' citizens, ' + cap2 + ' housing spaces total. '
+      + (pop2 < cap2 ? 'Citizens move in when happiness > 50.' : 'Housing is full — build more houses to grow further.');
   }
 }
 
