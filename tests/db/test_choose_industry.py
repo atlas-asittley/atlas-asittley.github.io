@@ -11,7 +11,7 @@ import psycopg2
 def test_creates_player_with_district(make_player):
     p = make_player(industry='timber')
     assert p['industry_key'] == 'timber'
-    assert p['money'] == 500
+    assert p['money'] == 1000  # bumped from 500 → 1000 on 2026-05-06
     assert p['chunks_owned'] == 1
     assert p['home_x'] is not None
     assert p['home_y'] is not None

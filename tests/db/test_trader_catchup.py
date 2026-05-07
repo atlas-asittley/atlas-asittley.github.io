@@ -154,12 +154,12 @@ def test_buy_to_reserve_also_catches_up(make_player, place, cur):
     _act_as(cur, p['id'])
     cur.execute("UPDATE public.player_profiles SET money = 100000 WHERE id = %s", (str(p['id']),))
     # Clear resources so we can build wherever; then unlock mountain_folk
-    # by giving the player 3+ buildings.
+    # by giving the player 3+ buildings. Avoid the centerline road tiles.
     cur.execute("UPDATE public.map_tiles SET resource_node_key = NULL "
                 " WHERE owner_player_id = %s", (str(p['id']),))
     hx, hy = p['home_x'], p['home_y']
     for dx in range(3):
-        place('house', hx + dx + 1, hy + 2)
+        place('house', hx - 1 - dx, hy + 2)
     _set_policy(cur, p['id'], 'timber', 'buy_to_reserve', 100)
     _set_inv(cur, p['id'], 'timber', 0.0)
     _backdate_profile(cur, p['id'], 60)

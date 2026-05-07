@@ -125,7 +125,10 @@ def test_tavern_bonus_actually_buys_staffing_slots(make_player, place, cur, clea
 def test_tavern_bonus_does_not_apply_when_unfed(make_player, place, cur, clear_resources):
     """Inverse of the fix-pin test: with no inputs in stock, the tavern
     bonus must NOT pre-boost capacity. The extractor stays unstaffed."""
-    p = make_player(industry='timber')
+    # population=5 so the worker pool is exactly the base 5 — fed tavern
+    # bumps it to 15 and lets the timber_camp staff; unfed tavern leaves
+    # the worker pool at 5 and the timber_camp can't staff.
+    p = make_player(industry='timber', population=5)
     clear_resources(p['id'])
     hx, hy = p['home_x'], p['home_y']
     place('tavern', hx + 1, hy + 2)
