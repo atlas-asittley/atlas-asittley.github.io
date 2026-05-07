@@ -88,3 +88,69 @@ high confidence:
    services + food, but population stays at floor.
 
 Run these via `db_sim.py` for definitive answers.
+
+# Empirical findings from db_sim (2026-05-07)
+
+Three real scenarios run end-to-end against the live DB schema in a
+savepoint. Full server fidelity, so these results match production.
+
+## Finding 1: Roads + spatial layout dominate the early game
+
+A starter player who completes the tutorial sequence (4 huts → well →
+garden → clay_pit) but places those buildings at the *closest unoccupied
+tiles* — without thinking about well coverage radius — will see their
+houses devolve from Mud Hut (tier 1, 6 workers) back to Shanty (tier 0,
+2 workers) within ~2 minutes. Population drains from 24 → 15 (the
+floor) over ~20 minutes.
+
+**Why:** tier 1 housing requires a well within Manhattan-distance 4. If
+houses get placed at distance 5+ from the well, coverage misses and the
+houses devolve. Worker capacity drops accordingly.
+
+**Implication:** placement geometry is currently load-bearing in a way
+the new-player UI doesn't surface. Suggestions to consider:
+- Visualize well coverage radius when placing a Well or a House.
+- Loosen tier 1 prereq to "ANY well in district" instead of within-4-tiles.
+
+## Finding 2: Watch House is unaffordable in the first 30 minutes
+
+A starter player generates ~$130 trade revenue over 30 min (3
+river_traders visits × ~$42 each). A Watch House costs $300 build +
+$15/min upkeep = $750 in the first 30 min. Net loss ~$320.
+
+Crime DOES drop from ~27 → ~19 with a watch house, but the happiness
+bonus (one fewer crime penalty unit) doesn't pay for itself.
+
+**Implication:** the player should be steered away from police early
+("save up first"). Tutorial copy currently doesn't mention this. Could
+also: reduce Watch House upkeep 15 → 5/min, or start the crime
+baseline lower so police aren't urgent.
+
+## Finding 3: Population floor of 15 prevents complete collapse
+
+Even with bad placement + happiness drifting to 44, pop bottoms out
+at 15. `_pp_update_population`'s under-floor branch refills regardless
+of happiness. Without it, this scenario would have drained the player
+to 0 workers — game over.
+
+The floor is doing its job. Don't regress.
+
+## Finding 4: Auto-trade economy is healthy
+
+In all three scenarios, the 10-min river_traders cooldown fired
+reliably and sold up to 20 clay per visit (capacity). Money trickled
+in at $42-45/visit.
+
+**Tune target:** ~$250/hour from one staffed extractor. Reasonable
+starter income — enough to slowly accumulate $300 for a Watch House
+or $600 for a School over a 1-2 hour session.
+
+## Suggested next balance tweaks (NOT shipped — for Atlas to weigh)
+
+| # | Change | Lever | Risk |
+|---|---|---|---|
+| 1 | Show well coverage radius at placement time | UX | Low |
+| 2 | Tier 1 prereq: "any well in district" instead of within 4 | Gameplay | Med |
+| 3 | Watch House upkeep 15 → 5/min | Balance | Low |
+| 4 | Base crime 10 → 5 | Balance | Low |
+| 5 | Tutorial copy: "save for $300+ before building police" | UX | Low |

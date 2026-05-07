@@ -244,47 +244,74 @@ class DBSim:
         )
         return self
 
-    def build(self, key, count=1, tier=None, status=None, near_home=True):
-        """Place `count` buildings. For housing, optionally force a tier
-        (after placement, since place_building always starts at 0)."""
-        # Get player home
-        self.cur.execute("SELECT home_x, home_y FROM public.player_profiles WHERE id=%s",
+    def pave_roads_around_home(self, radius=3):
+        """Pave roads on every available tile within `radius` Manhattan
+        of the home tile. Mirrors what a real player would do — most
+        buildings need road access to staff. Skips tiles that are
+        already occupied or have a resource node."""
+        self.cur.execute("SELECT home_x, home_y FROM player_profiles WHERE id=%s",
                          (str(self.player_id),))
         hx, hy = self.cur.fetchone()
-        # Place near home, walking outward in a spiral
-        placed_ids = []
-        offset = 0
-        for _ in range(count):
-            for attempt in range(50):
-                offset += 1
-                # Simple spiral: alternating x/y offsets
-                dx = (offset // 2) * (1 if offset % 2 == 0 else -1)
-                dy = (offset // 4) * (1 if offset % 4 < 2 else -1)
-                self.cur.execute(
-                    "SELECT id FROM public.map_tiles WHERE x=%s AND y=%s",
-                    (hx + dx, hy + dy))
-                row = self.cur.fetchone()
-                if not row:
+        for dx in range(-radius, radius + 1):
+            for dy in range(-radius, radius + 1):
+                if abs(dx) + abs(dy) > radius:
                     continue
-                tile_id = row['id']
-                # Try to place
+                if dx == 0 and dy == 0:
+                    continue  # home tile
+                self.cur.execute(
+                    "SELECT id, occupied_building_id, resource_node_key, buildable "
+                    "  FROM public.map_tiles WHERE x=%s AND y=%s "
+                    "    AND owner_player_id = %s",
+                    (hx + dx, hy + dy, str(self.player_id)))
+                row = self.cur.fetchone()
+                if not row or row['occupied_building_id'] or row['resource_node_key'] or not row['buildable']:
+                    continue
+                self.cur.execute("SAVEPOINT pave")
                 try:
                     self.cur.execute(
-                        "SAVEPOINT place_attempt"
-                    )
+                        "SELECT public.place_building(%s, %s)",
+                        (str(row['id']), 'road'))
+                    self.cur.execute("RELEASE SAVEPOINT pave")
+                except psycopg2.Error:
+                    self.cur.execute("ROLLBACK TO SAVEPOINT pave")
+        return self
+
+    def build(self, key, count=1, tier=None, status=None, near_home=True):
+        """Place `count` buildings on UNOCCUPIED tiles in the player's
+        district. For housing, optionally force a tier post-placement."""
+        placed_ids = []
+        for _ in range(count):
+            # Find an unoccupied owned tile, preferring close-to-home.
+            self.cur.execute(
+                "SELECT mt.id, mt.x, mt.y, ABS(mt.x - pp.home_x) + ABS(mt.y - pp.home_y) AS d "
+                "  FROM public.map_tiles mt "
+                "  JOIN public.player_profiles pp ON pp.id = mt.owner_player_id "
+                " WHERE pp.id = %s "
+                "   AND mt.occupied_building_id IS NULL "
+                "   AND mt.resource_node_key IS NULL "
+                "   AND mt.buildable = true "
+                " ORDER BY d ASC "
+                " LIMIT 100",
+                (str(self.player_id),))
+            candidates = self.cur.fetchall()
+            placed = False
+            for row in candidates:
+                tile_id = row['id']
+                self.cur.execute("SAVEPOINT place_attempt")
+                try:
                     self.cur.execute(
                         "SELECT public.place_building(%s, %s)",
                         (str(tile_id), key))
                     result = self.cur.fetchone()[0]
-                    bid = result['building_id']
-                    placed_ids.append(bid)
+                    placed_ids.append(result['building_id'])
                     self.cur.execute("RELEASE SAVEPOINT place_attempt")
+                    placed = True
                     break
                 except psycopg2.Error:
                     self.cur.execute("ROLLBACK TO SAVEPOINT place_attempt")
                     continue
-            else:
-                raise RuntimeError(f"Could not place {key} after 50 attempts")
+            if not placed:
+                raise RuntimeError(f"Could not place {key}: no buildable unoccupied tiles in district")
         # Apply tier override / status
         for bid in placed_ids:
             if tier is not None:
@@ -295,6 +322,41 @@ class DBSim:
                 self.cur.execute(
                     "UPDATE public.buildings SET status=%s WHERE id=%s",
                     (status, bid))
+        return placed_ids
+
+    def build_food(self, key, count=1):
+        """Place `count` food extractors, stamping the matching food tile
+        before each placement so it succeeds. Looks for unoccupied tiles
+        near home."""
+        kind = {
+            'orchard':      'orchard_grove',
+            'fishing_pier': 'pond',
+            'garden':       'garden_plot',
+            'grain_farm':   'farmland',
+        }[key]
+        placed_ids = []
+        for _ in range(count):
+            self.cur.execute(
+                "SELECT mt.id, mt.x, mt.y "
+                "  FROM public.map_tiles mt "
+                "  JOIN public.player_profiles pp ON pp.id = mt.owner_player_id "
+                " WHERE pp.id = %s "
+                "   AND mt.occupied_building_id IS NULL "
+                "   AND mt.resource_node_key IS NULL "
+                "   AND mt.buildable = true "
+                " ORDER BY ABS(mt.x - pp.home_x) + ABS(mt.y - pp.home_y) ASC "
+                " LIMIT 1",
+                (str(self.player_id),))
+            row = self.cur.fetchone()
+            if not row:
+                raise RuntimeError(f"No buildable unoccupied tile for {key}")
+            self.cur.execute(
+                "UPDATE public.map_tiles SET resource_node_key = %s WHERE id = %s",
+                (kind, row['id']))
+            self.cur.execute(
+                "SELECT public.place_building(%s, %s)",
+                (str(row['id']), key))
+            placed_ids.append(self.cur.fetchone()[0]['building_id'])
         return placed_ids
 
     def set_policy(self, resource, mode, reserve=0):
