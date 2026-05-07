@@ -131,10 +131,17 @@ var spawnTickCounter = 0;        // for round-robin rotation under the global ca
 
 // Cap total walker count district-wide. Each building still has its
 // own roster target (per getWalkerTarget), but when total walkers
-// reach this cap we stop spawning until existing ones despawn. Round-
-// robin rotation in spawnTick keeps the cap fair — buildings late in
-// the list still get walkers, just on later ticks.
-var WALKER_GLOBAL_CAP = 60;
+// reach this cap we stop spawning until existing ones despawn.
+// Round-robin rotation in spawnTick keeps the cap fair — buildings
+// late in the list still get walkers, just on later ticks.
+//
+// Cap = floor(population / 10) — scales with city size so a tiny
+// starter district has 0–2 walkers and a thriving city of 100 has
+// 10. Used to be a flat 60.
+function getWalkerCap() {
+  var pop = (state.profile && state.profile.population) || 0;
+  return Math.floor(pop / 10);
+}
 
 // Pause walker CSS animations when offscreen. IntersectionObserver
 // flips the .walker-offscreen class on/off as walkers scroll in/out
@@ -753,7 +760,7 @@ function spawnTick() {
     spawners = spawners.slice(rot).concat(spawners.slice(0, rot));
   }
   for (var s = 0; s < spawners.length; s++) {
-    if (walkers.length >= WALKER_GLOBAL_CAP) break;  // soft cap — district-wide
+    if (walkers.length >= getWalkerCap()) break;  // soft cap — pop/10, district-wide
     var b = spawners[s];
     if (spawnCooldowns[b.id]) continue;
     var target = getWalkerTarget(b);
