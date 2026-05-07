@@ -220,16 +220,30 @@ function setMapZoomAtPoint(nextZoom, clientX, clientY) {
   if (newZoom === oldZoom) return;
 
   var rect = viewport.getBoundingClientRect();
-  var localX = clientX - rect.left + viewport.scrollLeft;
-  var localY = clientY - rect.top + viewport.scrollTop;
-  var worldX = localX / oldZoom;
-  var worldY = localY / oldZoom;
+  // Grid's left/top edge in viewport content coordinates. The grid sits
+  // inside `.map-canvas` which has a 20/28px margin (also responsive on
+  // small screens) — that offset doesn't scale with zoom, so it has to
+  // be subtracted before computing the unzoomed pixel offset INTO the
+  // grid, and added back after. Without this the visible center drifts
+  // ~`margin × (1 - newZoom/oldZoom)` per zoom click.
+  var gridRect = grid.getBoundingClientRect();
+  var gridContentX = (gridRect.left - rect.left) + viewport.scrollLeft;
+  var gridContentY = (gridRect.top - rect.top) + viewport.scrollTop;
+  var clickContentX = (clientX - rect.left) + viewport.scrollLeft;
+  var clickContentY = (clientY - rect.top) + viewport.scrollTop;
+  var worldX = (clickContentX - gridContentX) / oldZoom;
+  var worldY = (clickContentY - gridContentY) / oldZoom;
 
   state.mapZoom = newZoom;
   applyMapZoom();
 
-  viewport.scrollLeft = Math.max(0, worldX * newZoom - (clientX - rect.left));
-  viewport.scrollTop = Math.max(0, worldY * newZoom - (clientY - rect.top));
+  // The grid's content-X anchor (.map-canvas margin) is zoom-invariant
+  // for the current inline-block layout, so reuse gridContentX. The
+  // new content-X of the same world point is gridContentX + worldX*newZoom.
+  var newClickContentX = gridContentX + worldX * newZoom;
+  var newClickContentY = gridContentY + worldY * newZoom;
+  viewport.scrollLeft = Math.max(0, newClickContentX - (clientX - rect.left));
+  viewport.scrollTop = Math.max(0, newClickContentY - (clientY - rect.top));
   scheduleSaveMapView();
 }
 
