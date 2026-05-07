@@ -175,15 +175,18 @@ body.inspector-open .map-canvas { margin-bottom: calc(50vh + 28px); }
    as linked. The building outline lives on the .bldg element rather than
    the cell so multi-tile footprints get a single clean rectangle around
    the whole building, not four boxes touching. */
-.cell.inspected-target {
+.cell.inspected-target,
+.cell.inspected-source {
   box-shadow: inset 0 0 0 2px rgba(230,198,90,0.95),
               0 0 12px 2px rgba(230,198,90,0.55) !important;
   z-index: 5;
 }
+/* Legacy .bldg.inspected-bldg rule — kept harmless in case something
+   else relies on the class. .cell has `contain: paint` which clips any
+   .bldg box-shadow to the cell boundary, making the outward gold ring
+   invisible. The cell-level rule above is what actually shows. */
 .bldg.inspected-bldg {
-  box-shadow: 0 0 0 2px rgba(230,198,90,0.95),
-              0 0 12px 2px rgba(230,198,90,0.55) !important;
-  z-index: 6;
+  box-shadow: inset 0 0 0 2px rgba(230,198,90,0.95) !important;
 }
 /* During expansion-picker mode, every cell within a candidate chunk
    pulses gold to show it's buyable. The combined .empty-cell.expansion-

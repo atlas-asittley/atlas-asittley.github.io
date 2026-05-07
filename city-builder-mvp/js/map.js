@@ -314,14 +314,18 @@ function _doRenderMap() {
         classes.push('owned-other');
       }
 
-      // Highlight the inspected extractor's target resource tile so the
-      // pair reads as linked. The building itself gets highlighted on
-      // its .bldg element below — applying to .bldg rather than the cell
-      // means multi-tile footprints get a single clean outline rather
-      // than four touching boxes.
+      // Highlight the inspected building's anchor cell + its claimed
+      // resource tile. The pair gets the same gold ring so they read
+      // as linked. We tag the cell rather than .bldg because .cell
+      // has `contain: paint` set — any box-shadow on a child element
+      // (.bldg) gets clipped to the cell boundary and never renders
+      // outward, but a box-shadow on the .cell itself paints fine.
       var ib = inspectedBuildingHolder.value;
       if (ib && ib.target_x === x && ib.target_y === y) {
         classes.push('inspected-target');
+      }
+      if (ib && ib.x === x && ib.y === y) {
+        classes.push('inspected-source');
       }
 
       // While placing an extractor, soft-pulse all unclaimed matching resource
