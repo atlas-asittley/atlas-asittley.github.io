@@ -350,6 +350,26 @@ export function computeNetRates() {
     }
   }
 
+  // Cumulative lifestyle goods drain — pottery / bread / furniture /
+  // statuary at every tier-or-above house. The drain is a flat
+  // per-resource subtraction (not pro-rata like food) since each
+  // demand row specifies a single resource.
+  if (state.housingLifestyleDemands) {
+    Object.keys(state.housingLifestyleDemands).forEach(function (tier) {
+      var demands = state.housingLifestyleDemands[tier];
+      var houseCount = myBuildings.filter(function (b) {
+        var bt = state.buildingTypes[b.building_type_key];
+        return bt && bt.category === 'housing'
+          && b.status === 'active'
+          && b.housing_tier === Number(tier);
+      }).length;
+      if (houseCount === 0) return;
+      demands.forEach(function (d) {
+        rates[d.resource_key] = (rates[d.resource_key] || 0) - houseCount * Number(d.qty_per_minute);
+      });
+    });
+  }
+
   return rates;
 }
 
