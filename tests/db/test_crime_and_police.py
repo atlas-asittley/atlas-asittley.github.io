@@ -40,7 +40,7 @@ def test_police_buildings_seeded(cur):
 
 def test_crime_baseline_for_fresh_player(make_player, cur):
     """A player with no buildings has crime ≈ base (10) plus tiny population pressure."""
-    p = make_player(industry='timber')
+    p = make_player(industry='timber', population=5)
     cur.execute("SELECT public.compute_crime(%s)", (str(p['id']),))
     crime = float(cur.fetchone()[0])
     # base 10 + size pressure (population=5 → +0). Should be exactly 10.
@@ -49,7 +49,7 @@ def test_crime_baseline_for_fresh_player(make_player, cur):
 
 def test_uncovered_house_raises_crime(make_player, place, cur, clear_resources):
     """Each uncovered house adds 4 crime."""
-    p = make_player()
+    p = make_player(population=5)
     clear_resources(p['id'])
     hx, hy = p['home_x'], p['home_y']
     cur.execute("SELECT public.compute_crime(%s)", (str(p['id']),))
@@ -77,7 +77,7 @@ def _stamp_staffed(cur, player_id):
 
 def test_watch_house_covers_nearby_house(make_player, place, cur, clear_resources):
     """A house within Manhattan radius 4 of a (staffed) Watch House is covered."""
-    p = make_player()
+    p = make_player(population=5)
     clear_resources(p['id'])
     cur.execute("UPDATE public.player_profiles SET money = 5000 WHERE id = %s", (str(p['id']),))
     hx, hy = p['home_x'], p['home_y']
@@ -91,7 +91,7 @@ def test_watch_house_covers_nearby_house(make_player, place, cur, clear_resource
 
 def test_house_outside_watch_house_radius_uncovered(make_player, place, cur, clear_resources):
     """A house far from the only Watch House stays uncovered."""
-    p = make_player()
+    p = make_player(population=5)
     clear_resources(p['id'])
     cur.execute("UPDATE public.player_profiles SET money = 5000 WHERE id = %s", (str(p['id']),))
     hx, hy = p['home_x'], p['home_y']
@@ -105,7 +105,7 @@ def test_house_outside_watch_house_radius_uncovered(make_player, place, cur, cle
 
 def test_higher_tier_pd_covers_wider_area(make_player, place, cur, clear_resources):
     """Police Station (radius 6) covers a house Watch House (radius 4) wouldn't."""
-    p = make_player()
+    p = make_player(population=5)
     clear_resources(p['id'])
     cur.execute("""
         UPDATE public.player_profiles
@@ -123,7 +123,7 @@ def test_higher_tier_pd_covers_wider_area(make_player, place, cur, clear_resourc
 
 def test_unstaffed_police_no_coverage(make_player, place, cur, clear_resources):
     """A Watch House with no road access doesn't get is_staffed → no coverage."""
-    p = make_player()
+    p = make_player(population=5)
     clear_resources(p['id'])
     cur.execute("UPDATE public.player_profiles SET money = 5000 WHERE id = %s", (str(p['id']),))
     hx, hy = p['home_x'], p['home_y']
@@ -140,7 +140,7 @@ def test_unstaffed_police_no_coverage_due_to_worker_shortage(make_player, place,
     shortage) should NOT count as covering nearby housing. Closes a
     free-coverage exploit where unstaffed PDs avoid upkeep but still
     drop crime."""
-    p = make_player()
+    p = make_player(population=5)
     clear_resources(p['id'])
     cur.execute("UPDATE public.player_profiles SET money = 5000 WHERE id = %s", (str(p['id']),))
     hx, hy = p['home_x'], p['home_y']
@@ -172,7 +172,7 @@ def test_unstaffed_police_no_coverage_due_to_worker_shortage(make_player, place,
 
 def test_crime_reduces_happiness(make_player, place, cur, clear_resources):
     """High crime subtracts FLOOR(crime/5) from happiness."""
-    p = make_player()
+    p = make_player(population=5)
     clear_resources(p['id'])
     _stock_food(cur, p['id'])
     hx, hy = p['home_x'], p['home_y']
@@ -190,7 +190,7 @@ def test_crime_reduces_happiness(make_player, place, cur, clear_resources):
 
 def test_pd_upkeep_deducts_money_and_logs_ledger_row(make_player, place, cur, clear_resources):
     """Active staffed Watch House deducts $5/min and logs an upkeep row."""
-    p = make_player()
+    p = make_player(population=5)
     clear_resources(p['id'])
     cur.execute("""
         UPDATE public.player_profiles

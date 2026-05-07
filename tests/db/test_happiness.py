@@ -27,40 +27,40 @@ def test_initial_happiness_is_in_range(make_player, cur):
     assert 0 <= h <= 100
 
 
-def test_initial_population_starts_at_5(make_player, cur):
-    p = make_player(industry='timber')
+def test_initial_population_starts_at_floor(make_player, cur):
+    """Post-tutorial player starts at the floor=15. tutorial_done=False
+    starts at column default 0 (tutorial floor)."""
+    # tutorial_done=True (default) sets pop to 100 in the conftest fixture,
+    # so use tutorial_done=False to see the column default behavior.
+    p = make_player(industry='timber', tutorial_done=False)
     cur.execute("SELECT population FROM public.player_profiles WHERE id = %s", (str(p['id']),))
-    assert cur.fetchone()[0] == 5
+    assert cur.fetchone()[0] == 0  # column default for fresh profile
 
 
 def test_population_grows_toward_capacity_when_happy(make_player, place, cur, clear_resources):
     """When housing capacity exceeds population AND happiness ≥ 50,
-    citizens immigrate gradually. Backdate a long time and verify pop
-    grew toward target (instead of snapping there instantly like the
-    old asymmetric model). Exact rate depends on the happiness math
-    so we just check the direction."""
-    p = make_player(industry='timber')
+    citizens immigrate gradually. Post-tutorial floor=15, so a
+    happy long tick fills toward 15 + housing_supply."""
+    p = make_player(industry='timber', population=5)  # below floor=15
     clear_resources(p['id'])
     hx, hy = p['home_x'], p['home_y']
 
-    # Tier-1 housing → target = 5 + 6 = 11. No production buildings,
-    # so workers_needed = 0 and staffing_ratio = 1.0 (full +20). With
-    # the well counting as a service (+3) and avg_tier=1 (+2), happiness
-    # lands well above 50 → immigration fires.
+    # Tier-1 housing (Mud Hut, 6 workers) → target = 15 + 6 = 21.
+    # Below-floor branch refills toward 15 first, then immigration fills
+    # the remaining 6 toward 21 if happy.
     place('well', hx + 3, hy + 1)
     place('house', hx + 2, hy + 1)
     cur.execute("UPDATE public.buildings SET housing_tier = 1 WHERE player_id = %s AND building_type_key = 'house'",
                 (str(p['id']),))
 
-    # Backdate 10 hours — at any positive rate that's enough to fill 6 slots.
     _backdate_population_tick(cur, p['id'], 10 * 60 * 60)
     cur.execute("SELECT public.process_production()")
     result = cur.fetchone()[0]
     assert result['population'] > 5, (
-        f"happy long tick should grow pop above starting 5; got {result['population']}"
+        f"happy long tick should grow pop above 5; got {result['population']}"
     )
-    assert result['population'] <= 11, (
-        f"pop should never exceed target 11; got {result['population']}"
+    assert result['population'] <= 21, (
+        f"pop should never exceed target 15+6=21; got {result['population']}"
     )
     assert result['migration_rate'] >= 0, (
         f"migration_rate should be non-negative when filling; got {result['migration_rate']}"
@@ -71,10 +71,9 @@ def test_population_clamps_down_when_above_target(make_player, cur, clear_resour
     """If population is somehow above the housing-capacity target (e.g.
     housing devolved or was demolished), the next tick clamps it back
     down to target. Verifies the LEAST(target, ...) branch."""
-    p = make_player(industry='timber')
+    p = make_player(industry='timber', population=20)
     clear_resources(p['id'])
-    # No housing → target = 5. Force population artificially high.
-    # last_population_tick_at = now so no emigration drift this call.
+    # No housing → target = floor (15) + 0 = 15. Pop=20 > target → clamp.
     cur.execute("""
         UPDATE public.player_profiles
         SET population = 20, last_population_tick_at = now()
@@ -82,8 +81,8 @@ def test_population_clamps_down_when_above_target(make_player, cur, clear_resour
     """, (str(p['id']),))
     cur.execute("SELECT public.process_production()")
     result = cur.fetchone()[0]
-    assert result['population'] == 5, (
-        f"pop above no-housing target (5) should clamp; got {result['population']}"
+    assert result['population'] == 15, (
+        f"pop above no-housing target (15) should clamp; got {result['population']}"
     )
 
 

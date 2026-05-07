@@ -53,7 +53,9 @@ def test_high_priority_staffs_before_older_normal(make_player, place, cur, clear
     We expect the high-priority extractor to produce timber while the
     normal one stays unstaffed.
     """
-    p = make_player(industry='timber')
+    # population=5 so the worker pool is exactly enough for one extractor
+    # at the cost-4 override below, not two.
+    p = make_player(industry='timber', population=5)
     clear_resources(p['id'])
     _make_workers_tight_for_two_extractors(cur)
     hx, hy = p['home_x'], p['home_y']
@@ -74,7 +76,7 @@ def test_high_priority_staffs_before_older_normal(make_player, place, cur, clear
 
 def test_low_priority_staffs_last(make_player, place, cur, clear_resources):
     """Low-priority older buildings should yield workers to newer normal buildings."""
-    p = make_player(industry='timber')
+    p = make_player(industry='timber', population=5)
     clear_resources(p['id'])
     _make_workers_tight_for_two_extractors(cur)
     hx, hy = p['home_x'], p['home_y']

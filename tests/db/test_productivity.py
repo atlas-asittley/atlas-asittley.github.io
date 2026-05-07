@@ -78,8 +78,8 @@ def _set_tools(cur, pid, qty):
 
 
 def test_tools_stockpile_high_threshold_bonus(make_player, cur):
-    """tools >= pop*0.5 → +0.10. Default population=5, threshold=2.5 → 3 tools."""
-    p = make_player(industry='timber')
+    """tools >= pop*0.5 → +0.10. With population=5, threshold=2.5 → 3 tools."""
+    p = make_player(industry='timber', population=5)
     _set_tools(cur, p['id'], 3)
     cur.execute("SELECT public._pp_compute_productivity(%s)", (str(p['id']),))
     val = float(cur.fetchone()[0])
@@ -87,8 +87,8 @@ def test_tools_stockpile_high_threshold_bonus(make_player, cur):
 
 
 def test_tools_stockpile_low_threshold_bonus(make_player, cur):
-    """tools >= pop*0.2 but < pop*0.5 → +0.05. Default population=5 → 1 or 2 tools."""
-    p = make_player(industry='timber')
+    """tools >= pop*0.2 but < pop*0.5 → +0.05. With population=5 → 1 or 2 tools."""
+    p = make_player(industry='timber', population=5)
     _set_tools(cur, p['id'], 2)
     cur.execute("SELECT public._pp_compute_productivity(%s)", (str(p['id']),))
     val = float(cur.fetchone()[0])
