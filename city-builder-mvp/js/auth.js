@@ -245,11 +245,16 @@ export function doReset() {
     }
     stopProdLoop();
     if (state.channel) { sb.removeChannel(state.channel); state.channel = null; }
-    // Profile is gone — re-routing through checkProfileAndRoute will land
-    // the user on industry-selection, where choose_industry recreates the
-    // profile and a starter parcel.
+    // Hard reload after reset. checkProfileAndRoute would normally
+    // re-fetch and re-render, but state.tileMap / state.allBuildings /
+    // localStorage map-view all carry references to the old district
+    // and any miss in the cleanup keeps the old district visible on
+    // the broader map. A full page reload reloads everything from
+    // scratch, which is bulletproof and simpler than chasing every
+    // potential cache.
     state.profile = null;
-    checkProfileAndRoute(state.currentUser);
+    try { localStorage.removeItem('city_map_view_' + state.currentUser.id); } catch (e) {}
+    window.location.reload();
   }).catch(function (err) {
     alert('Reset failed: ' + (err.message || err));
   });
