@@ -6,7 +6,7 @@
 
 import { sb } from './config.js';
 import { state } from './state.js';
-import { computeNetRates, resourceName, saveTradePolicy } from './panels.js';
+import { computeNetRates, computeResourceFlow, resourceName, saveTradePolicy } from './panels.js';
 import { openTradeDialog } from './players.js';
 
 
@@ -220,8 +220,97 @@ function buildResourceRows(rates, flows) {
   return rows;
 }
 
+// Format a /min rate for display: 1 decimal, signed with a leading
+// arrow so the eye reads "in" vs "out" at a glance.
+function fmtRate(value) {
+  var v = Math.round(Number(value) * 10) / 10;
+  return (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v).toFixed(1) + '/min';
+}
+
+function renderResourceFlowHtml(resourceKey) {
+  var flow = computeResourceFlow(resourceKey);
+  // Aggregate totals to compute net (matches what computeNetRates returns).
+  var totalIn = 0;
+  flow.production.forEach(function (p) { totalIn += p.rate; });
+  flow.imports.forEach(function (i) { totalIn += i.rate; });
+  var totalOut = 0;
+  flow.processing.forEach(function (p) { totalOut += p.rate; });
+  flow.services.forEach(function (s) { totalOut += s.rate; });
+  totalOut += flow.citizens;
+  flow.exports.forEach(function (e) { totalOut += e.rate; });
+
+  if (totalIn === 0 && totalOut === 0) {
+    return '<div class="rsrc-flow"><div class="rsrc-flow-empty">'
+         + 'No production or consumption right now.'
+         + '</div></div>';
+  }
+
+  var html = '<div class="rsrc-flow">';
+  html += '<div class="rsrc-flow-title">Where it\'s going</div>';
+
+  if (flow.production.length > 0) {
+    html += '<div class="rsrc-flow-section">';
+    html += '<div class="rsrc-flow-section-title good">Producing +' + (Math.round(totalIn * 10) / 10).toFixed(1) + '/min</div>';
+    flow.production.forEach(function (p) {
+      html += '<div class="rsrc-flow-row">';
+      html += '<span>' + p.count + '× ' + escapeHtml(p.name) + '</span>';
+      html += '<span class="good">' + fmtRate(p.rate) + '</span>';
+      html += '</div>';
+    });
+    flow.imports.forEach(function (i) {
+      html += '<div class="rsrc-flow-row">';
+      html += '<span>' + escapeHtml(i.trader) + ' (buy-to-reserve)</span>';
+      html += '<span class="good">' + fmtRate(i.rate) + ' max</span>';
+      html += '</div>';
+    });
+    html += '</div>';
+  }
+
+  if (totalOut > 0) {
+    html += '<div class="rsrc-flow-section">';
+    html += '<div class="rsrc-flow-section-title bad">Consuming −' + (Math.round(totalOut * 10) / 10).toFixed(1) + '/min</div>';
+    flow.processing.forEach(function (p) {
+      html += '<div class="rsrc-flow-row">';
+      var out = p.output ? ' → ' + escapeHtml(p.output) : '';
+      html += '<span>' + p.count + '× ' + escapeHtml(p.name) + out + '</span>';
+      html += '<span class="bad">−' + (Math.round(p.rate * 10) / 10).toFixed(1) + '/min</span>';
+      html += '</div>';
+    });
+    flow.services.forEach(function (s) {
+      html += '<div class="rsrc-flow-row">';
+      html += '<span>' + s.count + '× ' + escapeHtml(s.name) + ' (service input)</span>';
+      html += '<span class="bad">−' + (Math.round(s.rate * 10) / 10).toFixed(1) + '/min</span>';
+      html += '</div>';
+    });
+    if (flow.citizens > 0) {
+      html += '<div class="rsrc-flow-row">';
+      html += '<span>Citizens (eaten by housing)</span>';
+      html += '<span class="bad">−' + (Math.round(flow.citizens * 10) / 10).toFixed(1) + '/min</span>';
+      html += '</div>';
+    }
+    flow.exports.forEach(function (e) {
+      html += '<div class="rsrc-flow-row">';
+      html += '<span>' + escapeHtml(e.trader) + ' (sell-surplus, ' + e.price + 'g)</span>';
+      html += '<span class="bad">−' + (Math.round(e.rate * 10) / 10).toFixed(1) + '/min max</span>';
+      html += '</div>';
+    });
+    html += '</div>';
+  }
+
+  var net = totalIn - totalOut;
+  var netClass = net > 0.05 ? 'good' : net < -0.05 ? 'bad' : '';
+  html += '<div class="rsrc-flow-net">';
+  html += 'Net: <span class="' + netClass + '">' + fmtRate(net) + '</span>';
+  html += '</div>';
+  html += '</div>';
+  return html;
+}
+
 function renderResourceDrilldownHtml(resourceKey, flows) {
   var html = '';
+
+  // ── Where the resource is going (flow breakdown) ──
+  html += renderResourceFlowHtml(resourceKey);
 
   // ── NPC trade policy ──
   // Sets how the NPC trader visit RPC treats this resource:

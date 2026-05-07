@@ -353,6 +353,121 @@ export function computeNetRates() {
   return rates;
 }
 
+// Per-resource flow breakdown — used by the City → Resources drilldown.
+// Returns where this resource is being produced and consumed at the
+// current tick. Buildings are grouped by type (so "3× Mason Workshop"
+// instead of three separate rows).
+//
+// Shape:
+//   {
+//     production: [{name, count, rate}],          // staffed extractors/processors that produce this
+//     processing: [{name, count, rate, output}],  // processors consuming this -> output
+//     services:   [{name, count, rate}],          // services consuming this as fuel
+//     citizens:   number (food only — pro-rata share of housing food drain),
+//     exports:    [{trader, rate, price}],        // sell_surplus to traders that buy this
+//     imports:    [{trader, rate, price}],        // buy_to_reserve from traders that sell this
+//   }
+//
+// Trader rates are PROJECTED MAX = capacity / visit_interval (e.g.
+// river_traders 20 cap / 10 min = 2.0/min). Actual rate may be lower
+// if stock or money runs out.
+export function computeResourceFlow(resourceKey) {
+  var flow = { production: [], processing: [], services: [],
+               citizens: 0, exports: [], imports: [] };
+  if (!state.currentUser) return flow;
+
+  var myActive = state.allBuildings.filter(function (b) {
+    return b.player_id === state.currentUser.id && b.status === 'active';
+  });
+
+  // Group worker-consuming buildings by type, only counting those
+  // currently staffed (anything else doesn't actually move the
+  // resource needle). Housing not relevant here — it's handled by
+  // the citizens branch below.
+  var byType = {};
+  myActive.forEach(function (b) {
+    var bt = state.buildingTypes[b.building_type_key];
+    if (!bt) return;
+    if (bt.category === 'road' || bt.category === 'housing') return;
+    if (state.laborInfo.unstaffedIds && state.laborInfo.unstaffedIds[b.id]) return;
+    if (!byType[bt.key]) byType[bt.key] = { bt: bt, count: 0 };
+    byType[bt.key].count++;
+  });
+
+  Object.keys(byType).forEach(function (k) {
+    var bt = byType[k].bt;
+    var count = byType[k].count;
+    if (bt.output_resource_key === resourceKey && bt.output_rate > 0) {
+      flow.production.push({ name: bt.name, count: count,
+                             rate: count * Number(bt.output_rate) });
+    }
+    if (bt.input_resource_key === resourceKey && bt.input_rate > 0) {
+      var item = { name: bt.name, count: count, rate: count * Number(bt.input_rate) };
+      if (bt.output_resource_key && state.resources[bt.output_resource_key]) {
+        item.output = state.resources[bt.output_resource_key].name;
+      }
+      (bt.category === 'service' ? flow.services : flow.processing).push(item);
+    }
+    if (bt.input_resource_key_2 === resourceKey && bt.input_rate_2 > 0) {
+      var item2 = { name: bt.name, count: count, rate: count * Number(bt.input_rate_2) };
+      if (bt.output_resource_key && state.resources[bt.output_resource_key]) {
+        item2.output = state.resources[bt.output_resource_key].name;
+      }
+      (bt.category === 'service' ? flow.services : flow.processing).push(item2);
+    }
+  });
+
+  // Citizens (food drain). Same pro-rata split logic as computeNetRates.
+  var resInfo = state.resources && state.resources[resourceKey];
+  if (resInfo && resInfo.is_food) {
+    var totalFoodPerMin = 0;
+    myActive.forEach(function (b) {
+      var bt = state.buildingTypes[b.building_type_key];
+      if (!bt || bt.category !== 'housing') return;
+      var tier = b.housing_tier !== undefined ? b.housing_tier : 1;
+      var cfg = state.housingTierConfig[tier];
+      if (cfg && cfg.food_per_minute) totalFoodPerMin += Number(cfg.food_per_minute);
+    });
+    if (totalFoodPerMin > 0) {
+      var foodKeys = Object.keys(state.resources).filter(function (k2) {
+        return state.resources[k2].is_food;
+      });
+      var totalFoodAvail = foodKeys.reduce(function (s, k2) {
+        return s + (state.inventory[k2] || 0);
+      }, 0);
+      if (totalFoodAvail > 0) {
+        var qty = state.inventory[resourceKey] || 0;
+        flow.citizens = totalFoodPerMin * (qty / totalFoodAvail);
+      } else if (resourceKey === 'grain') {
+        flow.citizens = totalFoodPerMin;
+      }
+    }
+  }
+
+  // NPC trade flow — only relevant if the player has a policy on this
+  // resource AND the trade gate is open.
+  var policy = state.tradePolicies && state.tradePolicies[resourceKey];
+  if (policy && policy.mode !== 'keep'
+      && state.profile && state.profile.trade_unlocked) {
+    Object.keys(state.traders || {}).forEach(function (tk) {
+      var t = state.traders[tk];
+      var prices = (state.allTraderPrices && state.allTraderPrices[tk]
+                    && state.allTraderPrices[tk][resourceKey]) || null;
+      if (!prices) return;
+      var unlock = state.unlockedTraders && state.unlockedTraders[tk];
+      if (unlock && !unlock.unlocked) return;
+      var rate = (t.visit_capacity || 0) / (t.visit_interval_minutes || 1);
+      if (policy.mode === 'sell_surplus' && prices.buy_price) {
+        flow.exports.push({ trader: t.name, rate: rate, price: prices.buy_price });
+      } else if (policy.mode === 'buy_to_reserve' && prices.sell_price) {
+        flow.imports.push({ trader: t.name, rate: rate, price: prices.sell_price });
+      }
+    });
+  }
+
+  return flow;
+}
+
 // renderInventory removed: the Inventory tab was folded into City →
 // Resources, which carries the same rate/stock data alongside trade-flow
 // context. Other Inventory sections (housing tiers / labor) live in the

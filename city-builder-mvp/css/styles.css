@@ -308,6 +308,29 @@ body.inspector-open .map-canvas { margin-bottom: calc(50vh + 28px); }
    ahead of placement. The valid-placement outline (above) wins on
    tiles that have both. */
 .cell.well-covered { background: rgba(80,160,200,0.18); }
+
+/* Resource flow breakdown: appears at the top of each resource
+   drilldown in City → Resources. Production sources + import projections
+   (good), then consumption sinks + export projections (bad), then a
+   net total. Building names and rate cells are flex pairs. */
+.rsrc-flow { background: #0f1620; border: 1px solid #1e2a3a; border-radius: 8px;
+             padding: 10px 12px; margin-bottom: 10px; font-size: 0.86rem; }
+.rsrc-flow-title { font-weight: 700; color: #c8d4e0; margin-bottom: 8px; font-size: 0.92rem; }
+.rsrc-flow-section { margin-bottom: 10px; }
+.rsrc-flow-section:last-child { margin-bottom: 0; }
+.rsrc-flow-section-title { font-weight: 600; font-size: 0.82rem; margin-bottom: 4px;
+                           text-transform: uppercase; letter-spacing: 0.04em; }
+.rsrc-flow-section-title.good { color: #5ec49e; }
+.rsrc-flow-section-title.bad  { color: #e0707a; }
+.rsrc-flow-row { display: flex; justify-content: space-between; gap: 12px;
+                 padding: 3px 0; color: #c8d4e0; }
+.rsrc-flow-row .good { color: #5ec49e; font-weight: 600; }
+.rsrc-flow-row .bad  { color: #e0707a; font-weight: 600; }
+.rsrc-flow-net { border-top: 1px solid #1e2a3a; padding-top: 6px; margin-top: 6px;
+                 font-weight: 700; color: #c8d4e0; }
+.rsrc-flow-net .good { color: #5ec49e; }
+.rsrc-flow-net .bad  { color: #e0707a; }
+.rsrc-flow-empty { color: #7a8a9e; font-style: italic; }
 .cell.empty-cell { background: transparent; cursor: default; pointer-events: none; }
 .cell.empty-cell::before { display: none; }
 .cell.drag-preview { background: rgba(40, 36, 26, 0.7) !important; outline: 2px solid rgba(212, 170, 80, 0.6); outline-offset: -2px; cursor: crosshair; position: relative; }
