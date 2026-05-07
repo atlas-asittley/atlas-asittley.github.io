@@ -229,7 +229,8 @@ function loadGameData() {
     sb.from('trade_policies').select('*').eq('player_id', state.currentUser.id),
     sb.from('trader_visits').select('*').eq('player_id', state.currentUser.id).order('visited_at', { ascending: false }).limit(10),
     sb.from('traders').select('*').eq('is_active', true),
-    sb.from('housing_tier_config').select('*')
+    sb.from('housing_tier_config').select('*'),
+    sb.from('housing_lifestyle_demands').select('*')
   ]).then(function (results) {
     state.buildingTypes = {};
     if (results[0].data) results[0].data.forEach(function (bt) { state.buildingTypes[bt.key] = bt; });
@@ -292,6 +293,20 @@ function loadGameData() {
     if (results[9] && results[9].data && !results[9].error) {
       results[9].data.forEach(function (tc) {
         state.housingTierConfig[tc.tier] = tc;
+      });
+    }
+
+    // Load per-tier lifestyle demands (pottery for cottages, bread for
+    // townhouses, etc.). Indexed by tier so the inspector can quickly
+    // ask "what does this house consume each tick?".
+    state.housingLifestyleDemands = {};
+    if (results[10] && results[10].data && !results[10].error) {
+      results[10].data.forEach(function (d) {
+        if (!state.housingLifestyleDemands[d.tier]) state.housingLifestyleDemands[d.tier] = [];
+        state.housingLifestyleDemands[d.tier].push({
+          resource_key: d.resource_key,
+          qty_per_minute: Number(d.qty_per_minute)
+        });
       });
     }
 

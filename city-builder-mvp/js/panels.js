@@ -444,6 +444,29 @@ export function computeResourceFlow(resourceKey) {
     }
   }
 
+  // Lifestyle drain — direct (not pro-rata) per-tier demand. If this
+  // resource is the lifestyle good for some tier and the player has
+  // houses at that tier, sum up the drain rate.
+  if (state.housingLifestyleDemands) {
+    var lifestyleRate = 0;
+    Object.keys(state.housingLifestyleDemands).forEach(function (tier) {
+      var demands = state.housingLifestyleDemands[tier];
+      demands.forEach(function (d) {
+        if (d.resource_key !== resourceKey) return;
+        var houseCount = myActive.filter(function (b) {
+          var bt = state.buildingTypes[b.building_type_key];
+          return bt && bt.category === 'housing'
+            && b.status === 'active'
+            && (b.housing_tier === Number(tier));
+        }).length;
+        lifestyleRate += houseCount * d.qty_per_minute;
+      });
+    });
+    if (lifestyleRate > 0) {
+      flow.citizens = (flow.citizens || 0) + lifestyleRate;
+    }
+  }
+
   // NPC trade flow — only relevant if the player has a policy on this
   // resource AND the trade gate is open.
   var policy = state.tradePolicies && state.tradePolicies[resourceKey];

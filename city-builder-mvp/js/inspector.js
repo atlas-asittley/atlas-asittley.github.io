@@ -351,6 +351,19 @@ function getHousingUpgradeBlockers(building, nextTierCfg) {
     if (!allIndLux) blockers.push('all_industrial_luxuries');
   }
 
+  // Lifestyle demands per tier — pottery for Cottages, bread for
+  // Townhouses, furniture for Villas, statuary for Manors. The
+  // resource has to be in stock (>0) for upgrade AND continuously
+  // (it's drained each tick). One blocker entry per missing demand.
+  var demands = state.housingLifestyleDemands && state.housingLifestyleDemands[nextTierCfg.tier];
+  if (demands) {
+    demands.forEach(function (d) {
+      if ((state.inventory[d.resource_key] || 0) <= 0) {
+        blockers.push('lifestyle:' + d.resource_key);
+      }
+    });
+  }
+
   return blockers;
 }
 
@@ -363,6 +376,11 @@ function describeUpgradeBlocker(key) {
   if (key === 'luxury_food') return 'a luxury food in stock (spirits, caviar, spices, or ale)';
   if (key === 'industrial_luxury') return 'an industrial luxury in stock (cabinets, monuments, mosaics, or machinery)';
   if (key === 'all_industrial_luxuries') return 'ALL FOUR industrial luxuries in stock simultaneously (cabinets + monuments + mosaics + machinery)';
+  if (key.indexOf('lifestyle:') === 0) {
+    var rk = key.slice('lifestyle:'.length);
+    var name = (state.resources && state.resources[rk] && state.resources[rk].name) || rk;
+    return name + ' in stock (this tier consumes it ongoingly)';
+  }
   return key;
 }
 

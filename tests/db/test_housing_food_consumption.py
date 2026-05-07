@@ -65,7 +65,7 @@ def test_tier_1_house_does_not_drain_food(make_player, place, cur, clear_resourc
 
 
 def test_tier_2_house_drains_food(make_player, place, cur, clear_resources):
-    """Cottage at 0.06/min should drain ~0.06 food over 60s."""
+    """Cottage at 0.24/min should drain ~0.24 food over 60s."""
     p = make_player()
     clear_resources(p['id'])
     hx, hy = p['home_x'], p['home_y']
@@ -78,8 +78,8 @@ def test_tier_2_house_drains_food(make_player, place, cur, clear_resources):
     cur.execute("SELECT quantity FROM public.inventories WHERE player_id = %s AND resource_key = 'grain'",
                 (str(p['id']),))
     grain = float(cur.fetchone()[0])
-    # 0.06/min × 1 min = 0.06 drained
-    assert 9.92 < grain < 9.96, f"expected ~9.94 grain after 0.06 drain, got {grain}"
+    # 0.24/min × 1 min = 0.24 drained
+    assert 9.74 < grain < 9.78, f"expected ~9.76 grain after 0.24 drain, got {grain}"
 
 
 # ── multi-food drain ─────────────────────────────────────────
@@ -92,16 +92,19 @@ def test_drain_proportional_across_food_resources(make_player, place, cur, clear
     hx, hy = p['home_x'], p['home_y']
     house_id = _make_tier_1_house(cur, place, p, hx, hy)
     cur.execute("UPDATE public.buildings SET housing_tier = 5 WHERE id = %s", (house_id,))
-    # tier 5 = 0.25/min, over 240s = 1.0 food needed
+    # tier 5 = 1.0/min, over 60s = 1.0 food needed
     _stock(cur, p['id'], grain=60.0, flour=30.0, bread=10.0)
-    _backdate_food_tick(cur, p['id'], 240)
+    _backdate_food_tick(cur, p['id'], 60)
 
     cur.execute("SELECT public.process_production()")
     cur.execute("""SELECT resource_key, quantity FROM public.inventories
                    WHERE player_id = %s AND resource_key IN ('grain', 'flour', 'bread')
                    ORDER BY resource_key""", (str(p['id']),))
     rows = {r[0]: float(r[1]) for r in cur.fetchall()}
-    # Total drain = 1.0; drain proportions: 0.6, 0.3, 0.1
+    # Total drain = 1.0; drain proportions: 0.6 grain, 0.3 flour, 0.1 bread
+    # NOTE: tier 5 also has a lifestyle demand for statuary; we didn't
+    # stock any so it's not active for this test. Bread at tier 5 is
+    # food only here; the new T3 lifestyle bread drain doesn't apply.
     assert 59.3 < rows['grain'] < 59.5, f"grain expected ~59.4, got {rows['grain']}"
     assert 29.6 < rows['flour'] < 29.8, f"flour expected ~29.7, got {rows['flour']}"
     assert 9.85 < rows['bread'] < 9.95, f"bread expected ~9.9, got {rows['bread']}"
@@ -118,8 +121,8 @@ def test_house_devolves_when_drain_empties_food(make_player, place, cur, clear_r
     hx, hy = p['home_x'], p['home_y']
     house_id = _make_tier_1_house(cur, place, p, hx, hy)
     cur.execute("UPDATE public.buildings SET housing_tier = 2 WHERE id = %s", (house_id,))
-    # 0.06 grain / min, give exactly enough for 60s = 0.06
-    _stock(cur, p['id'], grain=0.06)
+    # 0.24 grain / min, give exactly enough for 60s = 0.24
+    _stock(cur, p['id'], grain=0.24)
     _backdate_food_tick(cur, p['id'], 60)
     cur.execute("""UPDATE public.buildings
                    SET last_processed_at = now() - interval '120 seconds'
@@ -153,8 +156,8 @@ def test_drain_scales_with_house_count(make_player, place, cur, clear_resources)
     cur.execute("SELECT quantity FROM public.inventories WHERE player_id = %s AND resource_key = 'grain'",
                 (str(p['id']),))
     grain = float(cur.fetchone()[0])
-    # 2 houses × 0.06 = 0.12 drained
-    assert 9.85 < grain < 9.91, f"expected ~9.88 grain after 2-house drain, got {grain}"
+    # 2 houses × 0.24 = 0.48 drained
+    assert 9.49 < grain < 9.55, f"expected ~9.52 grain after 2-house drain, got {grain}"
 
 
 # ── last_food_tick_at updates ────────────────────────────────
