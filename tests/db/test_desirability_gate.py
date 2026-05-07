@@ -82,6 +82,8 @@ def test_upgrade_succeeds_at_threshold(make_player, place, cur, clear_resources)
     house_id = place('house', hx + 1, hy + 2)['building_id']
     cur.execute("UPDATE public.buildings SET housing_tier = 1 WHERE id = %s", (house_id,))
     cur.execute("INSERT INTO public.inventories (player_id, resource_key, quantity) VALUES (%s, 'berries', 5) ON CONFLICT (player_id, resource_key) DO UPDATE SET quantity = 5", (str(p['id']),))
+    # Cottage (T2) requires pottery as a lifestyle demand.
+    cur.execute("INSERT INTO public.inventories (player_id, resource_key, quantity) VALUES (%s, 'pottery', 5) ON CONFLICT (player_id, resource_key) DO UPDATE SET quantity = 5", (str(p['id']),))
     _backdate_house(cur, p['id'], house_id, 240)
 
     _stamp_desirability(cur, p['id'], 50)  # ≥ tier-2 threshold
@@ -127,6 +129,8 @@ def test_devolve_does_not_fire_in_hysteresis_band(make_player, place, cur, clear
     house_id = place('house', hx + 1, hy + 2)['building_id']
     cur.execute("UPDATE public.buildings SET housing_tier = 2 WHERE id = %s", (house_id,))
     cur.execute("INSERT INTO public.inventories (player_id, resource_key, quantity) VALUES (%s, 'berries', 5) ON CONFLICT (player_id, resource_key) DO UPDATE SET quantity = 5", (str(p['id']),))
+    # Cottage (T2) requires pottery to maintain its tier.
+    cur.execute("INSERT INTO public.inventories (player_id, resource_key, quantity) VALUES (%s, 'pottery', 5) ON CONFLICT (player_id, resource_key) DO UPDATE SET quantity = 5", (str(p['id']),))
     _backdate_house(cur, p['id'], house_id, 240)
 
     _stamp_desirability(cur, p['id'], 25)

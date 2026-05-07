@@ -24,9 +24,10 @@ def test_starting_chunk_has_resource_tiles(make_player, cur):
         WHERE owner_player_id = %s AND resource_node_key = 'timber'
     """, (str(p['id']),))
     n = cur.fetchone()[0]
-    # 4 random-walk clusters of 6-15 steps each — typically ~15-30 tiles
-    # with variance, but can be up to ~50 when walks don't double back.
-    assert 5 <= n <= 50, f"unexpected resource tile count: {n}"
+    # Post-scarcity-pass: starter chunk seeds 2 industry clusters of
+    # U(2,5) steps each. Random walks can overlap themselves, so the
+    # observed count varies from ~3 (heavy doubling-back) to ~10.
+    assert 3 <= n <= 25, f"unexpected resource tile count: {n}"
 
 
 def test_total_tiles_in_chunk_is_225(make_player, cur):

@@ -205,7 +205,11 @@ def test_resources_are_clustered_in_new_chunks(make_player, cur, as_user):
             )) AS with_neighbor
     """, (str(p['id']),))
     total, with_neighbor = cur.fetchone()
-    assert total >= 30, f"too few resources sampled: {total}"
+    # Post-scarcity-pass: starter chunk has 2 industry + 1 food cluster,
+    # subsequent chunks have 1 + 1. Across 4 chunks the typical sample
+    # is in the high teens to mid-20s — enough for the cluster ratio
+    # below to be meaningful.
+    assert total >= 15, f"too few resources sampled: {total}"
     pct = with_neighbor / total
     assert pct > 0.5, f"resources don't look clustered: only {pct:.0%} have a neighbor"
 
