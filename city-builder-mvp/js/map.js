@@ -115,11 +115,9 @@ function computeMinZoom() {
 var lastAppliedMapWidth = null;
 export function applyMapZoom() {
   var grid = document.getElementById('map-grid');
-  var label = document.getElementById('zoom-label');
   if (!grid) return;
   var mapWidth = Math.round(CELL_BASE_SIZE * state.gridCols * state.mapZoom);
   grid.style.width = mapWidth + 'px';
-  if (label) label.textContent = Math.round(state.mapZoom * 100) + '%';
   // Only snap walkers when the map width actually changed (zoom or grid
   // bounds shifted). Calling snapWalkersToZoom() on every renderMap was
   // teleporting every walker to its destination tile-center on every
@@ -128,6 +126,18 @@ export function applyMapZoom() {
     lastAppliedMapWidth = mapWidth;
     snapWalkersToZoom();
   }
+  updateZoomButtonStates();
+}
+
+// Disable +/- when state.mapZoom is at the corresponding limit so the
+// player gets visual feedback that the click did nothing. Min zoom is
+// dynamic (computeMinZoom — depends on viewport size and grid size),
+// so this updates on every applyMapZoom rather than once at init.
+function updateZoomButtonStates() {
+  var inBtn = document.getElementById('zoom-in');
+  var outBtn = document.getElementById('zoom-out');
+  if (inBtn) inBtn.disabled = state.mapZoom >= MAP_MAX_ZOOM;
+  if (outBtn) outBtn.disabled = state.mapZoom <= computeMinZoom() + 0.001;
 }
 
 function setMapZoom(nextZoom) {
@@ -199,8 +209,15 @@ export function restoreMapView() {
       // zoom from a smaller district adapts gracefully.
       setMapZoom(saved.mapZoom);
     }
-    vp.scrollLeft = saved.scrollLeft;
-    vp.scrollTop  = saved.scrollTop;
+    // Clamp to the actual scrollable range. If grid bounds have shrunk
+    // since the save (district reset, building demolished off the
+    // border), saved.scrollLeft can exceed scrollWidth-clientWidth and
+    // the browser silently clamps — but doing it explicitly here
+    // documents the intent and keeps behavior predictable.
+    var maxX = Math.max(0, vp.scrollWidth - vp.clientWidth);
+    var maxY = Math.max(0, vp.scrollHeight - vp.clientHeight);
+    vp.scrollLeft = Math.max(0, Math.min(saved.scrollLeft, maxX));
+    vp.scrollTop  = Math.max(0, Math.min(saved.scrollTop,  maxY));
   } else {
     scrollToTile(getHomeX(), getHomeY());
   }

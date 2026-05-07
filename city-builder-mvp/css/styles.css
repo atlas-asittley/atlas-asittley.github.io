@@ -126,6 +126,8 @@ body {
 .zoom-controls { position: absolute; right: 16px; bottom: 16px; z-index: 10; display: flex; flex-direction: column; gap: 6px; pointer-events: none; }
 .zoom-controls > button { pointer-events: auto; width: 44px; height: 44px; border: 1px solid #2a3548; border-radius: 8px; background: rgba(20, 28, 40, 0.88); color: #e0e6ed; font-size: 22px; font-weight: 700; line-height: 1; cursor: pointer; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; touch-action: manipulation; box-shadow: 0 2px 6px rgba(0,0,0,0.35); transition: background 0.12s, transform 0.06s; }
 .zoom-controls > button:active { transform: scale(0.94); background: rgba(40, 56, 80, 0.95); }
+.zoom-controls > button:disabled { opacity: 0.35; cursor: default; transform: none !important; }
+.zoom-controls > button:disabled:active { background: rgba(20, 28, 40, 0.88); }
 .zoom-controls > button.active { border-color: rgba(220, 180, 50, 0.8); box-shadow: 0 0 0 1px rgba(220, 180, 50, 0.4); }
 .map-canvas { position: relative; display: inline-block; margin: 20px 28px 28px; transition: margin-bottom 0.2s ease-out; }
 /* When the inspector is open, give the map extra scroll-room below so a
