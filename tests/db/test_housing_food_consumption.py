@@ -101,13 +101,16 @@ def test_drain_proportional_across_food_resources(make_player, place, cur, clear
                    WHERE player_id = %s AND resource_key IN ('grain', 'flour', 'bread')
                    ORDER BY resource_key""", (str(p['id']),))
     rows = {r[0]: float(r[1]) for r in cur.fetchall()}
-    # Total drain = 1.0; drain proportions: 0.6 grain, 0.3 flour, 0.1 bread
-    # NOTE: tier 5 also has a lifestyle demand for statuary; we didn't
-    # stock any so it's not active for this test. Bread at tier 5 is
-    # food only here; the new T3 lifestyle bread drain doesn't apply.
+    # Phase 1 — proportional food drain: total need 1.0, drain proportions
+    # 0.6 grain + 0.3 flour + 0.1 bread. After this: grain 59.4, flour
+    # 29.7, bread 9.9.
+    # Phase 2 — cumulative lifestyle drain at tier 5: bread is also a
+    # T3-onward lifestyle good (T5 rate 0.20/min × 1 min = 0.20). After
+    # this: bread 9.70. Pottery/furniture/statuary aren't stocked so
+    # those lifestyle rows skip with no effect on this test.
     assert 59.3 < rows['grain'] < 59.5, f"grain expected ~59.4, got {rows['grain']}"
     assert 29.6 < rows['flour'] < 29.8, f"flour expected ~29.7, got {rows['flour']}"
-    assert 9.85 < rows['bread'] < 9.95, f"bread expected ~9.9, got {rows['bread']}"
+    assert 9.65 < rows['bread'] < 9.75, f"bread expected ~9.70 (food+lifestyle), got {rows['bread']}"
 
 
 # ── starvation devolve ───────────────────────────────────────

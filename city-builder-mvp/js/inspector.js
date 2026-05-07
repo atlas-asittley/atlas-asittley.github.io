@@ -367,6 +367,43 @@ function getHousingUpgradeBlockers(building, nextTierCfg) {
   return blockers;
 }
 
+// Devolve risk: same tier-requirement logic, but checked against the
+// CURRENT tier (the requirements that have to keep being met to stay
+// at this tier). The SQL devolve gate triggers when any current-tier
+// requirement is missing AND no bathhouse is suppressing devolve, after
+// the per-tier grace window (housing_tier_config.devolve_secs, 60-300s
+// depending on tier). We surface this in the inspector so the player
+// sees the full list of supply problems before the house devolves —
+// not just the next-upgrade list, which can hide an in-progress
+// shortage.
+//
+// Returns { blockers, hasBathhouseCover, willDevolve }.
+function getHousingDevolveRisks(building, currentTierCfg) {
+  if (!currentTierCfg) return { blockers: [], hasBathhouseCover: false, willDevolve: false };
+  var blockers = getHousingUpgradeBlockers(building, currentTierCfg);
+  if (blockers.length === 0) {
+    return { blockers: [], hasBathhouseCover: false, willDevolve: false };
+  }
+  var bbt = state.buildingTypes['bathhouse'];
+  var hasBathhouseCover = state.allBuildings.some(function (s) {
+    if (s.player_id !== state.currentUser.id) return false;
+    if (s.building_type_key !== 'bathhouse') return false;
+    if (s.status !== 'active') return false;
+    if (state.laborInfo.unstaffedIds[s.id]) return false;
+    if (bbt && bbt.input_resource_key && bbt.input_rate > 0
+        && (state.inventory[bbt.input_resource_key] || 0) <= 0) return false;
+    if (bbt && bbt.input_resource_key_2 && bbt.input_rate_2 > 0
+        && (state.inventory[bbt.input_resource_key_2] || 0) <= 0) return false;
+    var dist = Math.abs(s.x - building.x) + Math.abs(s.y - building.y);
+    return dist <= 4;
+  });
+  return {
+    blockers: blockers,
+    hasBathhouseCover: hasBathhouseCover,
+    willDevolve: !hasBathhouseCover
+  };
+}
+
 function describeUpgradeBlocker(key) {
   if (key === 'road') return 'a road touching this house';
   if (key === 'well') return 'a well within 4 tiles';
@@ -617,6 +654,25 @@ function renderInspector() {
         }
       } else {
         html += '<div class="insp-row"><span class="insp-label">Tier</span><span class="insp-value insp-good">Max tier reached</span></div>';
+      }
+
+      // Devolve risk: show ALL current-tier requirements that are
+      // currently failing. The grace window (devolve_secs) gives the
+      // player time to react — the warning surfaces during that window
+      // so they see WHY before the house actually drops.
+      var risks = getHousingDevolveRisks(b, tierCfg);
+      if (risks.blockers.length > 0) {
+        var prevTier = state.housingTierConfig[tier - 1];
+        var prevTierName = (prevTier && prevTier.name) || 'lower tier';
+        var graceSecs = (tierCfg && tierCfg.devolve_secs) || 60;
+        var risksDesc = risks.blockers.map(describeUpgradeBlocker).join(', plus ');
+        if (risks.willDevolve) {
+          html += '<div class="insp-row"><span class="insp-label">Devolve risk</span><span class="insp-value insp-warn">Will drop to ' + prevTierName + ' within ~' + graceSecs + 's</span></div>';
+          html += '<div class="insp-hint insp-warn">Missing: ' + risksDesc + '. Restock before the grace window expires or the house tier will drop.</div>';
+        } else {
+          html += '<div class="insp-row"><span class="insp-label">Devolve risk</span><span class="insp-value insp-hint-muted">Bathhouse coverage is holding the tier — for now</span></div>';
+          html += '<div class="insp-hint insp-hint-muted">Conditions are slipping (missing: ' + risksDesc + '). The bathhouse blocks the actual devolve, but if its inputs run out OR it goes unstaffed, the house will drop.</div>';
+        }
       }
 
       // Labor context

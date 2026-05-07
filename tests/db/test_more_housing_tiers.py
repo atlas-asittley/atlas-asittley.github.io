@@ -13,7 +13,19 @@ without hardcoding keys.
 """
 
 
-_SERVICE_INPUTS = {'lumber': 5.0, 'flour': 5.0, 'statuary': 5.0, 'brick': 5.0}
+# Baseline stocks every test gets unless overridden via kwargs:
+#   lumber/flour: school inputs (so school qualifies as 'operating')
+#   statuary/brick: temple inputs (same reason)
+#   pottery/bread/furniture/statuary: cumulative housing lifestyle goods.
+#     With cumulative demands, every house at T2..T8 needs all four of
+#     these, so pre-stocking enough that the test runs (≈ 25 min of
+#     drain at the highest rates) avoids tier-maintenance noise tripping
+#     these tier-progression tests.
+_SERVICE_INPUTS = {
+    'lumber': 5.0, 'flour': 5.0,
+    'statuary': 50.0, 'brick': 50.0,
+    'pottery': 50.0, 'bread': 50.0, 'furniture': 50.0,
+}
 
 
 def _set_inventory(cur, player_id, **stocks):

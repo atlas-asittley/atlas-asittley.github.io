@@ -190,9 +190,10 @@ def test_school_required_for_tier_4_evolution(make_player, place, cur, clear_res
     cur.execute("UPDATE public.buildings SET housing_tier = 3 WHERE id = %s", (house_id,))
     _give_lots_of_workers(cur, p['id'])
     _stock(cur, p['id'], 'grain', 10.0)
-    # Per-tier lifestyle demands: Townhouse (T3) keeps bread, Villa (T4)
-    # keeps furniture. Stock both up front so the only thing being
-    # tested is the school gate.
+    # Cumulative lifestyle demands: T3 needs pottery+bread, T4 adds
+    # furniture. Stock all three up front so the only thing being tested
+    # here is the school gate.
+    _stock(cur, p['id'], 'pottery', 10.0)
     _stock(cur, p['id'], 'bread', 10.0)
     _stock(cur, p['id'], 'furniture', 10.0)
     _backdate(cur, p['id'], 240)
@@ -208,6 +209,7 @@ def test_school_required_for_tier_4_evolution(make_player, place, cur, clear_res
     _stock(cur, p['id'], 'lumber', 5.0)
     _stock(cur, p['id'], 'flour', 5.0)
     _stock(cur, p['id'], 'grain', 10.0)
+    _stock(cur, p['id'], 'pottery', 10.0)
     _stock(cur, p['id'], 'bread', 10.0)
     _stock(cur, p['id'], 'furniture', 10.0)
     _backdate(cur, p['id'], 240)
@@ -231,10 +233,12 @@ def test_unfed_school_does_not_unlock_tier_4(make_player, place, cur, clear_reso
     _give_lots_of_workers(cur, p['id'])
     _stock(cur, p['id'], 'lumber', 0)
     _stock(cur, p['id'], 'flour', 0)
-    # Stock food + Townhouse-tier lifestyle (bread) so the only thing
-    # being tested is the school feed. We deliberately leave furniture
-    # OUT — even if some other gate magically passed, T4 still needs it.
+    # Stock food + cumulative T3 lifestyle (pottery+bread) so the only
+    # thing being tested is the school feed. We deliberately leave
+    # furniture OUT — even if some other gate magically passed, T4 still
+    # needs it.
     _stock(cur, p['id'], 'grain', 10.0)
+    _stock(cur, p['id'], 'pottery', 10.0)
     _stock(cur, p['id'], 'bread', 10.0)
     _backdate(cur, p['id'], 240)
 
