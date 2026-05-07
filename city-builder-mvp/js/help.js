@@ -299,9 +299,9 @@ var STAT_INFO = {
   population: {
     icon: '👥',
     title: 'Population',
-    what: 'Total citizens living in your district. The <b>worker pool</b> equals floor(population) + tavern bonus, so this number directly drives how many buildings you can staff.',
-    why: 'Population is the bottleneck on city size. Houses set a <b>target</b>; population grows toward it slowly when conditions are right. Until citizens actually move in, capacity sits at the floor.',
-    how: 'Grow population by raising happiness above 50 — citizens move in. They need <b>food</b> (food extractors + variety), <b>services</b> (well, tavern, bathhouse, school, temple covering houses), and <b>low crime</b>. Below 50 happiness, citizens leave instead. Population can\'t exceed the target set by your housing supply, so build more / better housing to raise the ceiling.'
+    what: 'Shown as <b>citizens / housing capacity</b>. The first number is the people currently living in your district; the second is how many you can hold. Capacity = a <b>baseline of 15</b> (a floor that exists even with no housing) <b>plus</b> the workers each of your active houses can hold (Shanty 2, Mud Hut 6, Cottage 10, Townhouse 16, etc.).',
+    why: 'Population IS your worker pool — every staffed building draws from this number. The 15 baseline is the safety net that prevents a death spiral: even if you demolish every house, you keep 15 citizens to rebuild from. Beyond the baseline, housing capacity is what limits city size.',
+    how: 'Citizens move in when <b>happiness ≥ 50</b>: food variety, service coverage, low crime. Below 50, they leave (down to the 15 floor). Faster growth comes from happier conditions — at happiness 100, immigration runs at ~4 per minute. Raise your ceiling by building more houses or letting them evolve to higher tiers (which hold more people each). Population can never exceed capacity, so housing is the gate on growth.'
   },
   parcels: {
     icon: '🗺',
