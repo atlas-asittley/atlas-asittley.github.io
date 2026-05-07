@@ -40,6 +40,44 @@ function unlockBlurb(bt) {
   return 'Locked until you reach ' + tierName(bt.unlocks_at_housing_tier) + ' housing.';
 }
 
+// Find the smallest integer k such that every rate × k rounds to an
+// integer. Used to integer-ize recipe ratios for display ("0.5 in →
+// 0.25 out" → k=4 → "2 in per 4 min, 1 out per 4 min"). Caps at 60
+// so the cycle time stays reasonable; rates that require k>60 are
+// surfaced with their decimal form as a fallback.
+function findRateScale(rates) {
+  var nonzero = rates.filter(function (r) { return r > 0; });
+  if (nonzero.length === 0) return 1;
+  for (var k = 1; k <= 60; k++) {
+    var ok = true;
+    for (var i = 0; i < nonzero.length; i++) {
+      if (Math.abs(nonzero[i] * k - Math.round(nonzero[i] * k)) > 0.001) { ok = false; break; }
+    }
+    if (ok) return k;
+  }
+  return 1;
+}
+
+// "Recipe-ize" a building's rates into integer in/out quantities and a
+// cycle period. {input_q, input_q_2, output_q, period_min}.
+function recipeOf(bt) {
+  var rates = [bt.input_rate || 0, bt.input_rate_2 || 0, bt.output_rate || 0];
+  var k = findRateScale(rates);
+  return {
+    input_q:    Math.round((bt.input_rate || 0) * k),
+    input_q_2:  Math.round((bt.input_rate_2 || 0) * k),
+    output_q:   Math.round((bt.output_rate || 0) * k),
+    period_min: k
+  };
+}
+
+// Format a quantity with its time period: "1/min" or "2 per 4 min".
+function fmtPer(qty, period) {
+  if (qty <= 0) return '';
+  if (period === 1) return qty + '/min';
+  return qty + ' per ' + period + ' min';
+}
+
 // Plain-language "what this building does for your city" line. Where
 // the gameplay effect is just "produces X" we lean on the existing
 // Output row; where it's a non-output effect (services, police,
@@ -119,26 +157,36 @@ var CATEGORY_ORDER = {
 };
 
 function renderBuildingCard(bt) {
-  var inputs = [];
-  if (bt.input_resource_key && bt.input_rate > 0) {
-    inputs.push(bt.input_rate + ' ' + resName(bt.input_resource_key).toLowerCase());
-  }
-  if (bt.input_resource_key_2 && (bt.input_rate_2 || bt.input_rate) > 0) {
-    inputs.push((bt.input_rate_2 || bt.input_rate) + ' ' + resName(bt.input_resource_key_2).toLowerCase());
-  }
-  var outputLine = '';
-  if (bt.output_resource_key && bt.output_rate > 0) {
-    outputLine = bt.output_rate + ' ' + resName(bt.output_resource_key).toLowerCase() + '/min';
-  } else if (bt.category === 'tax' && bt.output_rate > 0) {
-    outputLine = '$' + bt.output_rate + '/min';
-  }
-
   var rows = '';
-  if (inputs.length) {
-    rows += '<div class="help-row"><span class="help-label">Inputs</span><span class="help-value">' + escapeHtml(inputs.join(' + ')) + '/min</span></div>';
-  }
-  if (outputLine) {
-    rows += '<div class="help-row"><span class="help-label">Output</span><span class="help-value">' + escapeHtml(outputLine) + '</span></div>';
+
+  // Recipe display: scale rates to integer quantities with a cycle
+  // period so the player never sees "0.5 timber → 0.25 lumber".
+  // Tax buildings stay in $/min (always integer-friendly).
+  if (bt.category === 'tax' && bt.output_rate > 0) {
+    rows += '<div class="help-row"><span class="help-label">Output</span><span class="help-value">$' + bt.output_rate + '/min</span></div>';
+  } else if ((bt.input_resource_key && bt.input_rate > 0)
+             || (bt.output_resource_key && bt.output_rate > 0)) {
+    var r = recipeOf(bt);
+    var inputParts = [];
+    if (r.input_q > 0) {
+      inputParts.push(r.input_q + ' ' + resName(bt.input_resource_key).toLowerCase());
+    }
+    if (r.input_q_2 > 0 && bt.input_resource_key_2) {
+      inputParts.push(r.input_q_2 + ' ' + resName(bt.input_resource_key_2).toLowerCase());
+    }
+    if (inputParts.length) {
+      var inputsLabel = inputParts.join(' + ');
+      // Tavern's "output" is +10 worker capacity, not a tradeable
+      // resource — handled separately in benefitText. Skip the row
+      // here.
+      var perCycle = r.period_min === 1 ? '/min' : ' per ' + r.period_min + ' min';
+      rows += '<div class="help-row"><span class="help-label">Inputs</span><span class="help-value">' + escapeHtml(inputsLabel) + perCycle + '</span></div>';
+    }
+    if (r.output_q > 0 && bt.output_resource_key) {
+      var outLabel = r.output_q + ' ' + resName(bt.output_resource_key).toLowerCase()
+                   + (r.period_min === 1 ? '/min' : ' per ' + r.period_min + ' min');
+      rows += '<div class="help-row"><span class="help-label">Output</span><span class="help-value">' + escapeHtml(outLabel) + '</span></div>';
+    }
   }
   if (bt.category === 'booster') {
     var pct = Math.round(((bt.boost_multiplier || 1) - 1) * 100);
@@ -172,10 +220,27 @@ function renderBuildingCard(bt) {
     nameSuffix = ' <small>T' + bt.tier + '</small>';
   }
   if (bt.category === 'housing') {
-    rows = '<div class="help-row"><span class="help-label">Tiers</span><span class="help-value">Shanty → Hut → Cottage → Townhouse → Villa → Manor → Mansion → Estate → Palace</span></div>' +
-           '<div class="help-row"><span class="help-label">Workers</span><span class="help-value">2 to 100, evolves with conditions</span></div>' +
-           '<div class="help-row"><span class="help-label">Prereqs</span><span class="help-value">T1 well, T2 food, T3 road, T4 school, T5 temple, T6+ luxury foods, T8 industrial luxuries</span></div>' +
-           '<div class="help-row"><span class="help-label">Build cost</span><span class="help-value">$' + (bt.build_cost || 0) + '</span></div>';
+    rows =
+      '<div class="help-row"><span class="help-label">Tiers</span><span class="help-value">Shanty → Mud Hut → Cottage → Townhouse → Villa → Manor → Mansion → Estate → Palace</span></div>' +
+      '<div class="help-row"><span class="help-label">Workers / house</span><span class="help-value">Shanty 2 · Hut 6 · Cottage 10 · Townhouse 16 · Villa 24 · Manor 35 · Mansion 50 · Estate 70 · Palace 100</span></div>' +
+      '<div class="help-row"><span class="help-label">Build cost</span><span class="help-value">$' + (bt.build_cost || 0) + ' (placed as Shanty; evolves automatically)</span></div>' +
+      '<div class="help-row help-row-section"><span class="help-label">Tier prereqs</span><span class="help-value">' +
+        '<b>Mud Hut</b>: any well in your district.<br>' +
+        '<b>Cottage</b>: well within 4 tiles · food in stock.<br>' +
+        '<b>Townhouse</b>: road-connected · school within 5 tiles.<br>' +
+        '<b>Villa</b>: temple within 6 tiles.<br>' +
+        '<b>Manor &amp; up</b>: tavern + bathhouse coverage, plus more food variety and luxuries the higher you go.<br>' +
+        '<i>Click any house in your city to see its exact upgrade blockers.</i>' +
+      '</span></div>' +
+      '<div class="help-row help-row-section"><span class="help-label">Food drain</span><span class="help-value">' +
+        'Houses past Mud Hut consume food every minute, drawn proportionally from whatever foods you have in stock. Run out and they devolve.<br>' +
+        'Per house, per hour: Cottage ~14 · Townhouse 24 · Villa 36 · Manor 60 · Mansion 96 · Estate 144 · Palace 216.' +
+      '</span></div>' +
+      '<div class="help-row help-row-section"><span class="help-label">Lifestyle goods</span><span class="help-value">' +
+        'Higher tiers also need a non-food luxury in stock to upgrade and to keep from sliding back:<br>' +
+        '<b>Cottage</b>: pottery · <b>Townhouse</b>: bread · <b>Villa</b>: furniture · <b>Manor</b>: statuary.<br>' +
+        'Each consumes 1 per 10 minutes per house from your shared inventory.' +
+      '</span></div>';
   }
 
   // Icon: same inline-SVG sprite the build panel uses, scaled down.
@@ -307,7 +372,7 @@ var STAT_INFO = {
     icon: '🗺',
     title: 'Parcels',
     what: 'A parcel is a 15×15 piece of land you\'ve claimed. Each gives ~225 buildable tiles plus a few resource patches in your industry. Multiple parcels stitched together make your district.',
-    why: 'More parcels = more room to grow, but the cost scales steeply: <b>$1,000 × parcels²</b> for the next one — $1,000 for the 2nd, $4,000 for the 3rd, $9,000 for the 4th, $16,000 for the 5th. Expand faster than your economy and you\'ll go broke.',
+    why: 'More parcels = more room to grow, but the cost scales steeply: <b>$10,000 × parcels²</b> for the next one — $10,000 for the 2nd, $40,000 for the 3rd, $90,000 for the 4th, $160,000 for the 5th. Expand faster than your economy and you\'ll go broke.',
     how: 'Use the <b>Expand district</b> button below. Highlighted parcels adjacent to your district become buyable; tap one to allocate it.'
   },
   happiness: {
@@ -348,7 +413,7 @@ function openStatInfo(key) {
   var actionHtml = '';
   if (key === 'parcels') {
     var owned = (state.profile && state.profile.chunks_owned) || 1;
-    var nextCost = 1000 * owned * owned;
+    var nextCost = 10000 * owned * owned;
     var canAfford = (state.profile && state.profile.money || 0) >= nextCost;
     actionHtml =
       '<div class="stat-info-actions">' +
