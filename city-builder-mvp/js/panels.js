@@ -6,6 +6,7 @@ import { BLDG_LABELS, renderMap, cancelPlacement } from './map.js';
 import { renderPlayersPanel, openTradeDialog } from './players.js';
 import { renderResourcesPanel, renderTreasuryPanel } from './reports.js';
 import { renderWalkers } from './walkers.js';
+import { recipeOf, periodSuffix } from './recipe_format.js';
 
 export function resourceName(key) {
   if (state.resources[key]) return state.resources[key].name;
@@ -138,12 +139,14 @@ export function renderBuildPanel() {
     } else if (bt.category === 'housing') {
       desc = 'Shanty \u2192 Hut \u2192 Cottage \u2192 Townhouse \u2192 Villa \u2192 Manor \u2192 Mansion \u2192 Estate \u2192 Palace. Workers: 2\u2013100 as conditions improve. Each tier adds one prereq: T1 well, T2 food, T3 road, T4 school, T5 temple. T6+ adds a luxury food (spirits/caviar/spices/ale), T7+ any industrial luxury, T8 ALL FOUR (cabinets, monuments, mosaics, machinery) \u2014 full trade network required.';
     } else if (bt.category === 'extractor') {
-      desc = 'Produces ' + bt.output_rate + ' ' + resourceName(bt.output_resource_key).toLowerCase() + '/min. Needs road access.';
+      var er = recipeOf(bt);
+      desc = 'Produces ' + er.output_q + ' ' + resourceName(bt.output_resource_key).toLowerCase() + periodSuffix(er.period_min) + '. Needs road access.';
     } else if (bt.category === 'food_extractor') {
       var tileLabel = bt.placement_resource_node_key
         ? resourceName(bt.placement_resource_node_key).toLowerCase() + ' tile'
         : 'any open tile';
-      desc = 'Produces ' + bt.output_rate + ' ' + resourceName(bt.output_resource_key).toLowerCase() + '/min (a food). Place on a ' + tileLabel + '. Needs road access.';
+      var fer = recipeOf(bt);
+      desc = 'Produces ' + fer.output_q + ' ' + resourceName(bt.output_resource_key).toLowerCase() + periodSuffix(fer.period_min) + ' (a food). Place on a ' + tileLabel + '. Needs road access.';
     } else if (bt.category === 'booster') {
       var pct = Math.round(((bt.boost_multiplier || 1) - 1) * 100);
       var targetText = bt.boost_target === 'food_extractor' ? 'food extractors' : 'extractors';
@@ -175,13 +178,19 @@ export function renderBuildPanel() {
       // Processor (catchall): list every required input including the
       // optional second input. Without this, dual-input processors like
       // cabinetmaker (furniture + lime) and architect (statuary + glass)
-      // hide the second prereq from the player.
-      var inParts = [bt.input_rate + ' ' + resourceName(bt.input_resource_key).toLowerCase()];
-      if (bt.input_resource_key_2) {
-        var rate2 = (bt.input_rate_2 != null) ? bt.input_rate_2 : bt.input_rate;
-        inParts.push(rate2 + ' ' + resourceName(bt.input_resource_key_2).toLowerCase());
+      // hide the second prereq from the player. Use integer-ratio
+      // formatting (Atlas rule 2026-05-08): "2 timber + 1 statuary \u2192
+      // 1 lumber per 2 min", not "1 timber + 0.5 statuary \u2192 0.5 lumber/min".
+      var pr = recipeOf(bt);
+      var psuf = periodSuffix(pr.period_min);
+      var inParts2 = [];
+      if (pr.input_q > 0 && bt.input_resource_key) {
+        inParts2.push(pr.input_q + ' ' + resourceName(bt.input_resource_key).toLowerCase());
       }
-      desc = inParts.join(' + ') + ' \u2192 ' + bt.output_rate + ' ' + resourceName(bt.output_resource_key).toLowerCase() + '/min. Needs road access.';
+      if (pr.input_q_2 > 0 && bt.input_resource_key_2) {
+        inParts2.push(pr.input_q_2 + ' ' + resourceName(bt.input_resource_key_2).toLowerCase());
+      }
+      desc = inParts2.join(' + ') + ' \u2192 ' + pr.output_q + ' ' + resourceName(bt.output_resource_key).toLowerCase() + psuf + '. Needs road access.';
     }
 
     var costStr;

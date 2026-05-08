@@ -14,6 +14,7 @@ import { sb } from './config.js';
 import { updateIdentity } from './ui.js';
 import { addNotification } from './notifications.js';
 import { computeCityRunway, formatRunway } from './panels.js';
+import { recipeOf, periodSuffix } from './recipe_format.js';
 
 var openOverlay = null;
 
@@ -41,43 +42,8 @@ function unlockBlurb(bt) {
   return 'Locked until you reach ' + tierName(bt.unlocks_at_housing_tier) + ' housing.';
 }
 
-// Find the smallest integer k such that every rate × k rounds to an
-// integer. Used to integer-ize recipe ratios for display ("0.5 in →
-// 0.25 out" → k=4 → "2 in per 4 min, 1 out per 4 min"). Caps at 60
-// so the cycle time stays reasonable; rates that require k>60 are
-// surfaced with their decimal form as a fallback.
-function findRateScale(rates) {
-  var nonzero = rates.filter(function (r) { return r > 0; });
-  if (nonzero.length === 0) return 1;
-  for (var k = 1; k <= 60; k++) {
-    var ok = true;
-    for (var i = 0; i < nonzero.length; i++) {
-      if (Math.abs(nonzero[i] * k - Math.round(nonzero[i] * k)) > 0.001) { ok = false; break; }
-    }
-    if (ok) return k;
-  }
-  return 1;
-}
-
-// "Recipe-ize" a building's rates into integer in/out quantities and a
-// cycle period. {input_q, input_q_2, output_q, period_min}.
-function recipeOf(bt) {
-  var rates = [bt.input_rate || 0, bt.input_rate_2 || 0, bt.output_rate || 0];
-  var k = findRateScale(rates);
-  return {
-    input_q:    Math.round((bt.input_rate || 0) * k),
-    input_q_2:  Math.round((bt.input_rate_2 || 0) * k),
-    output_q:   Math.round((bt.output_rate || 0) * k),
-    period_min: k
-  };
-}
-
-// Format a quantity with its time period: "1/min" or "2 per 4 min".
-function fmtPer(qty, period) {
-  if (qty <= 0) return '';
-  if (period === 1) return qty + '/min';
-  return qty + ' per ' + period + ' min';
-}
+// Recipe formatting helpers live in recipe_format.js so the inspector
+// uses the same integer-ratio rendering.
 
 // Plain-language "what this building does for your city" line. Where
 // the gameplay effect is just "produces X" we lean on the existing

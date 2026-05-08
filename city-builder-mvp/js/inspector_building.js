@@ -19,6 +19,7 @@ import {
   describeUpgradeBlocker,
   computeBuildingIssues
 } from './inspector_helpers.js';
+import { recipeOf, periodSuffix, resourceName } from './recipe_format.js';
 
 // Re-render the building inspector against whatever building is
 // currently inspected. Called after any action that mutates the
@@ -92,11 +93,21 @@ export function renderBuildingInspector() {
       var canonical = 4;
       var pathLen = b.path_length || 1;
       var pathFactor = Math.min(1, canonical / Math.max(pathLen, 1));
-      var effectiveRate = (bt.output_rate * pathFactor).toFixed(2);
-      var resName = (state.resources[bt.output_resource_key] && state.resources[bt.output_resource_key].name) || bt.output_resource_key;
+      var effectiveRate = bt.output_rate * pathFactor;
+      // Integer-ratio: scale up until effective rate is whole. For
+      // canonical-or-shorter paths, scale = recipeOf's base scale. For
+      // longer paths (rate × 4/path_length), the path length itself
+      // typically becomes the period.
+      var rateScale = 1;
+      for (var rk = 1; rk <= 60; rk++) {
+        if (Math.abs(effectiveRate * rk - Math.round(effectiveRate * rk)) < 0.001) { rateScale = rk; break; }
+      }
+      var rateQty = Math.round(effectiveRate * rateScale);
+      var rateSuffix = rateScale === 1 ? '/min' : ' per ' + rateScale + ' min';
+      var resNameLower = ((state.resources[bt.output_resource_key] && state.resources[bt.output_resource_key].name) || bt.output_resource_key).toLowerCase();
       html += '<div class="insp-row"><span class="insp-label">Target</span><span class="insp-value">(' + b.target_x + ', ' + b.target_y + ')</span></div>';
       html += '<div class="insp-row"><span class="insp-label">Path</span><span class="insp-value">' + pathLen + ' tile' + (pathLen === 1 ? '' : 's') + '</span></div>';
-      html += '<div class="insp-row"><span class="insp-label">Rate</span><span class="insp-value">' + effectiveRate + ' ' + resName.toLowerCase() + '/min</span></div>';
+      html += '<div class="insp-row"><span class="insp-label">Rate</span><span class="insp-value">' + rateQty + ' ' + resNameLower + rateSuffix + '</span></div>';
       if (pathLen > canonical) {
         html += '<div class="insp-hint insp-hint-muted">Shorter paths produce faster. ' + canonical + '-tile path = full rate.</div>';
       }
@@ -193,34 +204,33 @@ export function renderBuildingInspector() {
     }
 
     if ((bt.category === 'extractor' || bt.category === 'food_extractor') && bt.output_resource_key) {
-      var orName = state.resources[bt.output_resource_key] ? state.resources[bt.output_resource_key].name : bt.output_resource_key;
-      html += '<div class="insp-row"><span class="insp-label">Output</span><span class="insp-value">' + bt.output_rate + ' ' + orName + '/min</span></div>';
+      // Integer-ratio display: "2 lumber per 2 min" instead of "0.5 lumber/min".
+      var er = recipeOf(bt);
+      var suffix = periodSuffix(er.period_min);
+      html += '<div class="insp-row"><span class="insp-label">Output</span><span class="insp-value">' + er.output_q + ' ' + resourceName(bt.output_resource_key).toLowerCase() + suffix + '</span></div>';
       html += buildTradeValueRow(bt.output_resource_key, bt.output_rate);
     } else if (bt.category === 'processor') {
-      var procInputs = [];
-      if (bt.input_resource_key && bt.input_rate > 0) procInputs.push({ key: bt.input_resource_key, rate: bt.input_rate });
-      if (bt.input_resource_key_2 && bt.input_rate_2 > 0) procInputs.push({ key: bt.input_resource_key_2, rate: bt.input_rate_2 });
-      procInputs.forEach(function (inp, i) {
-        var nm = state.resources[inp.key] ? state.resources[inp.key].name : inp.key;
-        html += '<div class="insp-row"><span class="insp-label">' + (i === 0 ? 'Input' : 'Input 2') + '</span><span class="insp-value">' + inp.rate + ' ' + nm + '/min</span></div>';
-      });
-      if (bt.output_resource_key) {
-        var outName = state.resources[bt.output_resource_key] ? state.resources[bt.output_resource_key].name : bt.output_resource_key;
-        html += '<div class="insp-row"><span class="insp-label">Output</span><span class="insp-value">' + bt.output_rate + ' ' + outName + '/min</span></div>';
+      var pr = recipeOf(bt);
+      var psuffix = periodSuffix(pr.period_min);
+      if (pr.input_q > 0 && bt.input_resource_key) {
+        html += '<div class="insp-row"><span class="insp-label">Input</span><span class="insp-value">' + pr.input_q + ' ' + resourceName(bt.input_resource_key).toLowerCase() + psuffix + '</span></div>';
+      }
+      if (pr.input_q_2 > 0 && bt.input_resource_key_2) {
+        html += '<div class="insp-row"><span class="insp-label">Input 2</span><span class="insp-value">' + pr.input_q_2 + ' ' + resourceName(bt.input_resource_key_2).toLowerCase() + psuffix + '</span></div>';
+      }
+      if (pr.output_q > 0 && bt.output_resource_key) {
+        html += '<div class="insp-row"><span class="insp-label">Output</span><span class="insp-value">' + pr.output_q + ' ' + resourceName(bt.output_resource_key).toLowerCase() + psuffix + '</span></div>';
         html += buildTradeValueRow(bt.output_resource_key, bt.output_rate);
       }
     } else if (bt.category === 'service') {
-      var sInputs = [];
-      if (bt.input_resource_key && bt.input_rate > 0) {
-        sInputs.push({ key: bt.input_resource_key, rate: bt.input_rate });
+      var sr = recipeOf(bt);
+      var ssuffix = periodSuffix(sr.period_min);
+      if (sr.input_q > 0 && bt.input_resource_key) {
+        html += '<div class="insp-row"><span class="insp-label">Input</span><span class="insp-value">' + sr.input_q + ' ' + resourceName(bt.input_resource_key).toLowerCase() + ssuffix + '</span></div>';
       }
-      if (bt.input_resource_key_2 && bt.input_rate_2 > 0) {
-        sInputs.push({ key: bt.input_resource_key_2, rate: bt.input_rate_2 });
+      if (sr.input_q_2 > 0 && bt.input_resource_key_2) {
+        html += '<div class="insp-row"><span class="insp-label">Input 2</span><span class="insp-value">' + sr.input_q_2 + ' ' + resourceName(bt.input_resource_key_2).toLowerCase() + ssuffix + '</span></div>';
       }
-      sInputs.forEach(function (inp, i) {
-        var nm = state.resources[inp.key] ? state.resources[inp.key].name : inp.key;
-        html += '<div class="insp-row"><span class="insp-label">' + (i === 0 ? 'Input' : 'Input 2') + '</span><span class="insp-value">' + inp.rate + ' ' + nm + '/min</span></div>';
-      });
     }
   }
 
