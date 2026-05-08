@@ -159,26 +159,30 @@ export function computeRoadAccess() {
         || bt.category === 'service'  || bt.category === 'tax'
         || bt.category === 'booster'  || bt.category === 'police'
         || bt.category === 'transport_hub' || bt.category === 'transport_connector') {
-      // Check if this housing tier actually needs road
+      // Perimeter check: any road tile orthogonal to ANY tile of the
+      // building's footprint counts. The anchor-only check missed roads
+      // adjacent to the right/bottom edges of multi-tile buildings.
+      var fw = bt.footprint_w || 1;
+      var fh = bt.footprint_h || 1;
+      var hasAccess = false;
+      for (var dx = 0; dx < fw && !hasAccess; dx++) {
+        if (roadTiles[(b.x + dx) + ',' + (b.y - 1)]) hasAccess = true;
+        if (roadTiles[(b.x + dx) + ',' + (b.y + fh)]) hasAccess = true;
+      }
+      for (var dy = 0; dy < fh && !hasAccess; dy++) {
+        if (roadTiles[(b.x - 1) + ',' + (b.y + dy)]) hasAccess = true;
+        if (roadTiles[(b.x + fw) + ',' + (b.y + dy)]) hasAccess = true;
+      }
+
       if (bt.category === 'housing') {
         var tier = b.housing_tier !== undefined ? b.housing_tier : 1;
         var tierCfg = state.housingTierConfig[tier];
         if (tierCfg && !tierCfg.needs_road) {
-          // This tier doesn't need road; still track road access (for upgrade checks)
-          var hasAccess = roadTiles[(b.x - 1) + ',' + b.y]
-            || roadTiles[(b.x + 1) + ',' + b.y]
-            || roadTiles[b.x + ',' + (b.y - 1)]
-            || roadTiles[b.x + ',' + (b.y + 1)];
           if (hasAccess) roadAccessIds[b.id] = true;
-          // Don't add to noRoadAccessIds — this tier is fine without roads
           return;
         }
       }
 
-      var hasAccess = roadTiles[(b.x - 1) + ',' + b.y]
-        || roadTiles[(b.x + 1) + ',' + b.y]
-        || roadTiles[b.x + ',' + (b.y - 1)]
-        || roadTiles[b.x + ',' + (b.y + 1)];
       if (hasAccess) {
         roadAccessIds[b.id] = true;
       } else {
