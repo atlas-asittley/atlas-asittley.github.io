@@ -1296,6 +1296,15 @@ body.app-hidden *::after {
 .walker-dot.walker-offscreen,
 .walker-dot.walker-offscreen::before,
 .walker-dot.walker-offscreen::after { animation-play-state: paused !important; }
+/* IntersectionObserver in map.js flips .bldg-offscreen on each .bldg
+   when it scrolls out of the map viewport. Hide the decorative
+   ::before / ::after pseudo-elements (smoke, glow, figure overlays)
+   so the compositor stops driving their animations every frame.
+   display: none rather than animation-play-state: paused — pause
+   freezes mid-cycle and resumes glitchy on zoom/scroll re-entry.
+   Don't hide .bldg itself — it stays painted as a static sprite. */
+.bldg.bldg-offscreen::before,
+.bldg.bldg-offscreen::after { display: none !important; }
 .walker-dot {
   position: absolute; width: 10px; height: 14px;
   --wk-scale: 1; --wk-hue: 0deg;

@@ -566,10 +566,50 @@ function _doRenderMap() {
   }
   grid.innerHTML = html;
   applyMapZoom();
+  observeBuildings();
   // Sync walker system with new road + extractor layout
   rebuildRoadSet();
   syncCollectorWalkers();
   renderWalkers();
+}
+
+// IntersectionObserver flips .bldg-offscreen on each building tile when
+// it scrolls out of the map viewport. CSS hides the decorative ::before
+// / ::after pseudo-elements (smoke, glow, figure overlays) for those —
+// the building itself stays visible, but its animated pseudo-elements
+// stop driving the compositor every frame. Mobile Safari spends most of
+// its battery on filter/opacity animations off the visible viewport;
+// this is the highest-leverage CPU win for phones.
+//
+// We use display: none rather than animation-play-state: paused because
+// pause freezes the pseudo-element mid-cycle and resumes glitchy when
+// the user zooms or scrolls back. display: none means animations
+// restart cleanly from t=0 on re-entry.
+var _bldgObserver = null;
+function ensureBuildingObserver() {
+  if (_bldgObserver) return _bldgObserver;
+  if (typeof IntersectionObserver === 'undefined') return null;
+  var root = document.getElementById('map-viewport');
+  if (!root) return null;
+  _bldgObserver = new IntersectionObserver(function (entries) {
+    for (var i = 0; i < entries.length; i++) {
+      var e = entries[i];
+      if (e.isIntersecting) e.target.classList.remove('bldg-offscreen');
+      else e.target.classList.add('bldg-offscreen');
+    }
+  }, { root: root, rootMargin: '80px', threshold: 0 });
+  return _bldgObserver;
+}
+
+function observeBuildings() {
+  var obs = ensureBuildingObserver();
+  if (!obs) return;
+  // grid.innerHTML rebuild dropped all old .bldg nodes — observer
+  // entries for those are auto-released. Re-observe the new ones.
+  var nodes = document.querySelectorAll('#grid .bldg');
+  for (var i = 0; i < nodes.length; i++) {
+    obs.observe(nodes[i]);
+  }
 }
 
 // ── Placement ──
