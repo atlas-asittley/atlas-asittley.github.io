@@ -202,8 +202,8 @@ function renderHousingTierBlock(tier, cfg, demands) {
     drainParts.push(perHour + ' ' + name.toLowerCase() + '/hr');
   });
 
-  var html = '<div class="help-row help-row-section help-row-tier">';
-  html += '<span class="help-label">' + escapeHtml(cfg.name) + '</span>';
+  var html = '<div class="help-row help-row-section help-row-tier house-t' + tier + '">';
+  html += '<span class="help-label"><span class="help-tier-icon"></span>' + escapeHtml(cfg.name) + '</span>';
   html += '<span class="help-value">';
   html += '<div class="help-tier-line"><b>Tier ' + tier + '</b> · houses up to <b>' + workers + '</b> people</div>';
 
