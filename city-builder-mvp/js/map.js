@@ -527,12 +527,30 @@ function _doRenderMap() {
           // buildings like processors / services) every required input is
           // in stock. Roads and housing don't carry the producing class —
           // both have other indicators (road glow / housing tier).
+          // hasInputs: the building has fuel to run this tick. Snapshot
+          // inventory alone is misleading — a balanced chain (e.g. 3
+          // clay_pits feeding 3 pottery_kilns) consumes inputs as fast
+          // as they're produced, so the snapshot is ~0 every tick even
+          // though production is healthy. So count an input as
+          // satisfied if EITHER the player has stock OR they're
+          // actively producing it (any staffed building outputs it).
           var hasInputs = true;
           if (mine && (buildingBt.input_resource_key || buildingBt.input_resource_key_2)) {
-            if (buildingBt.input_resource_key
-                && (state.inventory[buildingBt.input_resource_key] || 0) <= 0) hasInputs = false;
-            if (buildingBt.input_resource_key_2
-                && (state.inventory[buildingBt.input_resource_key_2] || 0) <= 0) hasInputs = false;
+            function inputOK(rk) {
+              if (!rk) return true;
+              if ((state.inventory[rk] || 0) > 0) return true;
+              // Flow-through check: any of player's other staffed buildings
+              // output this resource?
+              return state.allBuildings.some(function (b2) {
+                if (b2.player_id !== state.currentUser.id) return false;
+                if (b2.status !== 'active') return false;
+                if (state.laborInfo && state.laborInfo.unstaffedIds && state.laborInfo.unstaffedIds[b2.id]) return false;
+                var bt2 = state.buildingTypes[b2.building_type_key];
+                return bt2 && bt2.output_resource_key === rk;
+              });
+            }
+            if (!inputOK(buildingBt.input_resource_key)) hasInputs = false;
+            if (!inputOK(buildingBt.input_resource_key_2)) hasInputs = false;
           }
           var isFunctionalCategory = buildingBt.category === 'extractor'
             || buildingBt.category === 'food_extractor'
