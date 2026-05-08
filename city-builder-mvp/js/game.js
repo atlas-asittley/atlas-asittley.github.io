@@ -159,15 +159,29 @@ function processProduction() {
         }
       });
       data.evolution_events.forEach(function (ev) {
-        // Server emits { event: 'upgrade'|'devolve', from_tier, to_tier }.
-        // Use the full tier name (label is a 1–2 letter map abbreviation).
+        // Server emits one of:
+        //   { event: 'devolve', from_tier, to_tier, building_id }  — auto
+        //   { event: 'housing_ready_to_upgrade', count }            — manual
+        // (Auto-upgrade is gone: housing only steps up when the player
+        // taps Upgrade in the inspector. Devolves still fire on
+        // condition-slip after the grace window.)
+        if (ev.event === 'housing_ready_to_upgrade') {
+          var n = ev.count || 1;
+          var msg = n === 1
+            ? '1 house is ready to upgrade — open its inspector to step it up.'
+            : n + ' houses are ready to upgrade — open each inspector to step them up.';
+          addNotification('info', msg);
+          return;
+        }
         var fromCfg = state.housingTierConfig[ev.from_tier];
         var toCfg = state.housingTierConfig[ev.to_tier];
         var fromName = (fromCfg && fromCfg.name) || ('Tier ' + ev.from_tier);
         var toName = (toCfg && toCfg.name) || ('Tier ' + ev.to_tier);
         if (ev.event === 'upgrade') {
+          // Legacy event in case any in-flight tick produced one before
+          // the migration applied.
           addNotification('success', fromName + ' upgraded to ' + toName);
-        } else {
+        } else if (ev.event === 'devolve') {
           addNotification('warn', fromName + ' devolved to ' + toName);
         }
       });

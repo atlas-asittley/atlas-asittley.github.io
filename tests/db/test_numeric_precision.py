@@ -15,6 +15,23 @@ under a sane digit cap.
 import psycopg2
 import pytest
 
+def _tick_and_upgrade_all(cur):
+    """process_production + auto-step every now-eligible house. Mirrors
+    what the player does in the UI (the click on the Upgrade button)
+    so tests written against the pre-2026-05-08 auto-upgrade flow stay
+    truthful. Safe to call even when nothing is eligible."""
+    cur.execute("SELECT public.process_production()")
+    cur.execute("SELECT id FROM public.buildings WHERE evolution_eligible_at IS NOT NULL")
+    for (bid,) in cur.fetchall():
+        cur.execute("SAVEPOINT __tu")
+        try:
+            cur.execute("SELECT public.upgrade_house(%s)", (str(bid),))
+            cur.execute("RELEASE SAVEPOINT __tu")
+        except Exception:
+            cur.execute("ROLLBACK TO SAVEPOINT __tu")
+
+
+
 
 MAX_DIGITS = 30  # 6 decimals + room for integer part + sign + dot
 
@@ -47,7 +64,7 @@ def test_food_drain_does_not_bloat_quantity(make_player, place, cur, clear_resou
         cur.execute("""UPDATE public.player_profiles
                        SET last_food_tick_at = now() - interval '60 seconds'
                        WHERE id = %s""", (str(p['id']),))
-        cur.execute("SELECT public.process_production()")
+        _tick_and_upgrade_all(cur)
 
     cur.execute("""SELECT MAX(length(quantity::text))
                    FROM public.inventories WHERE player_id = %s""", (str(p['id']),))
@@ -73,7 +90,7 @@ def test_processor_output_does_not_bloat_quantity(make_player, place, cur, clear
     for _ in range(50):
         cur.execute("""UPDATE public.buildings SET last_processed_at = now() - interval '60 seconds'
                        WHERE player_id = %s""", (str(p['id']),))
-        cur.execute("SELECT public.process_production()")
+        _tick_and_upgrade_all(cur)
 
     cur.execute("""SELECT resource_key, length(quantity::text)
                    FROM public.inventories WHERE player_id = %s
@@ -92,7 +109,7 @@ def test_population_and_migration_rate_do_not_bloat(make_player, cur):
         cur.execute("""UPDATE public.player_profiles
                        SET last_population_tick_at = now() - interval '60 seconds'
                        WHERE id = %s""", (str(p['id']),))
-        cur.execute("SELECT public.process_production()")
+        _tick_and_upgrade_all(cur)
 
     cur.execute("""SELECT length(population::text), length(migration_rate::text), length(happiness::text)
                    FROM public.player_profiles WHERE id = %s""", (str(p['id']),))

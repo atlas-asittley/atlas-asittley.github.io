@@ -1,3 +1,20 @@
+
+def _tick_and_upgrade_all(cur):
+    """process_production + auto-step every now-eligible house. Mirrors
+    what the player does in the UI (the click on the Upgrade button)
+    so tests written against the pre-2026-05-08 auto-upgrade flow stay
+    truthful. Safe to call even when nothing is eligible."""
+    cur.execute("SELECT public.process_production()")
+    cur.execute("SELECT id FROM public.buildings WHERE evolution_eligible_at IS NOT NULL")
+    for (bid,) in cur.fetchall():
+        cur.execute("SAVEPOINT __tu")
+        try:
+            cur.execute("SELECT public.upgrade_house(%s)", (str(bid),))
+            cur.execute("RELEASE SAVEPOINT __tu")
+        except Exception:
+            cur.execute("ROLLBACK TO SAVEPOINT __tu")
+
+
 """Tests for the housing food gate.
 
 Tier 2+ housing requires "any food" in inventory (resources.is_food = true).
@@ -36,7 +53,7 @@ def test_shanty_to_mud_hut_only_needs_water(make_player, place, cur, clear_resou
     _set_inventory(cur, p['id'])  # explicitly empty — no food
     _backdate(cur, p['id'], 60)
 
-    cur.execute("SELECT public.process_production()")
+    _tick_and_upgrade_all(cur)
     cur.execute("SELECT housing_tier FROM public.buildings WHERE id = %s", (house_id,))
     assert cur.fetchone()[0] == 1, "shanty should upgrade to mud hut on water alone"
 
@@ -51,7 +68,7 @@ def test_mud_hut_to_cottage_blocked_without_food(make_player, place, cur, clear_
     cur.execute("UPDATE public.buildings SET housing_tier = 1 WHERE id = %s", (house_id,))
     _set_inventory(cur, p['id'])
     _backdate(cur, p['id'], 120)
-    cur.execute("SELECT public.process_production()")
+    _tick_and_upgrade_all(cur)
     cur.execute("SELECT housing_tier FROM public.buildings WHERE id = %s", (house_id,))
     assert cur.fetchone()[0] == 1, "mud hut should not upgrade to cottage without food"
 
@@ -66,7 +83,7 @@ def test_shanty_to_mud_hut_succeeds_with_grain_only(make_player, place, cur, cle
     _set_inventory(cur, p['id'], grain=5.0)
     _backdate(cur, p['id'], 60)
 
-    cur.execute("SELECT public.process_production()")
+    _tick_and_upgrade_all(cur)
     cur.execute("SELECT housing_tier FROM public.buildings WHERE id = %s", (house_id,))
     assert cur.fetchone()[0] == 1, "shanty failed to upgrade with grain in stock"
 
@@ -80,7 +97,7 @@ def test_shanty_to_mud_hut_succeeds_with_bread_only(make_player, place, cur, cle
     _set_inventory(cur, p['id'], bread=3.0)
     _backdate(cur, p['id'], 60)
 
-    cur.execute("SELECT public.process_production()")
+    _tick_and_upgrade_all(cur)
     cur.execute("SELECT housing_tier FROM public.buildings WHERE id = %s", (house_id,))
     assert cur.fetchone()[0] == 1, "shanty failed to upgrade with bread in stock"
 
@@ -99,7 +116,7 @@ def test_non_food_resource_does_not_satisfy_food_gate(make_player, place, cur, c
     _set_inventory(cur, p['id'], lumber=100.0, brick=100.0, statuary=50.0)
     _backdate(cur, p['id'], 120)
 
-    cur.execute("SELECT public.process_production()")
+    _tick_and_upgrade_all(cur)
     cur.execute("SELECT housing_tier FROM public.buildings WHERE id = %s", (house_id,))
     assert cur.fetchone()[0] == 1, "non-food resources should not satisfy tier-2 food gate"
 
@@ -115,7 +132,7 @@ def test_cottage_devolves_when_food_runs_out(make_player, place, cur, clear_reso
     cur.execute("UPDATE public.buildings SET housing_tier = 2 WHERE id = %s", (house_id,))
     _set_inventory(cur, p['id'])  # no food
     _backdate(cur, p['id'], 240)
-    cur.execute("SELECT public.process_production()")
+    _tick_and_upgrade_all(cur)
     cur.execute("SELECT housing_tier FROM public.buildings WHERE id = %s", (house_id,))
     assert cur.fetchone()[0] == 1, "cottage should devolve to mud hut when food runs out"
 
@@ -133,6 +150,6 @@ def test_shanty_does_not_need_food(make_player, place, cur, clear_resources):
     _set_inventory(cur, p['id'])
     _backdate(cur, p['id'], 120)
 
-    cur.execute("SELECT public.process_production()")
+    _tick_and_upgrade_all(cur)
     cur.execute("SELECT housing_tier FROM public.buildings WHERE id = %s", (house_id,))
     assert cur.fetchone()[0] == 0, "shanty should remain at tier 0 with no food"

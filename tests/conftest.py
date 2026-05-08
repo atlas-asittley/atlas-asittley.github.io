@@ -248,6 +248,42 @@ def place(cur, tile_id_at):
 
 
 @pytest.fixture
+def tick(cur):
+    """Run process_production() and then auto-step every house that the
+    server flagged eligible (evolution_eligible_at IS NOT NULL).
+
+    Manual upgrades (2026-05-08) replaced the auto-upgrade that
+    process_production used to do — but most existing tests assume
+    "tick → housing_tier += 1 if conditions hold". This helper keeps
+    those tests truthful by walking through each newly-eligible house
+    and calling upgrade_house, exactly as the player does in the UI.
+
+    Tests that specifically want to verify the manual gate (i.e., that
+    the user has to click) should call process_production directly and
+    inspect evolution_eligible_at.
+    """
+    def _tick(player_id=None):
+        cur.execute("SELECT public.process_production()")
+        if player_id is None:
+            cur.execute(
+                "SELECT id FROM public.buildings WHERE evolution_eligible_at IS NOT NULL"
+            )
+        else:
+            cur.execute(
+                "SELECT id FROM public.buildings WHERE player_id = %s AND evolution_eligible_at IS NOT NULL",
+                (str(player_id),),
+            )
+        for (bid,) in cur.fetchall():
+            cur.execute("SAVEPOINT try_up")
+            try:
+                cur.execute("SELECT public.upgrade_house(%s)", (str(bid),))
+                cur.execute("RELEASE SAVEPOINT try_up")
+            except Exception:
+                cur.execute("ROLLBACK TO SAVEPOINT try_up")
+    return _tick
+
+
+@pytest.fixture
 def stamp_food_tile(cur, tile_id_at):
     """Stamp a food tile (resource_node_key) at (x, y). Use before placing
     a food extractor (orchard, fishing_pier, garden, grain_farm) since

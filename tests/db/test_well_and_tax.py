@@ -2,6 +2,23 @@
 import pytest
 import psycopg2
 
+def _tick_and_upgrade_all(cur):
+    """process_production + auto-step every now-eligible house. Mirrors
+    what the player does in the UI (the click on the Upgrade button)
+    so tests written against the pre-2026-05-08 auto-upgrade flow stay
+    truthful. Safe to call even when nothing is eligible."""
+    cur.execute("SELECT public.process_production()")
+    cur.execute("SELECT id FROM public.buildings WHERE evolution_eligible_at IS NOT NULL")
+    for (bid,) in cur.fetchall():
+        cur.execute("SAVEPOINT __tu")
+        try:
+            cur.execute("SELECT public.upgrade_house(%s)", (str(bid),))
+            cur.execute("RELEASE SAVEPOINT __tu")
+        except Exception:
+            cur.execute("ROLLBACK TO SAVEPOINT __tu")
+
+
+
 
 def test_well_required_for_tier_1_evolution(make_player, place, cur, clear_resources):
     """Without a well in range, a shanty should NOT upgrade to mud hut even
@@ -19,7 +36,7 @@ def test_well_required_for_tier_1_evolution(make_player, place, cur, clear_resou
         "UPDATE public.buildings SET last_processed_at = now() - interval '120 seconds' WHERE id = %s",
         (house_id,),
     )
-    cur.execute("SELECT public.process_production()")
+    _tick_and_upgrade_all(cur)
     cur.execute("SELECT housing_tier FROM public.buildings WHERE id = %s", (house_id,))
     assert cur.fetchone()[0] == 0, "house upgraded to tier 1 without a well in range"
 
@@ -29,7 +46,7 @@ def test_well_required_for_tier_1_evolution(make_player, place, cur, clear_resou
         "UPDATE public.buildings SET last_processed_at = now() - interval '120 seconds' WHERE id = %s",
         (house_id,),
     )
-    cur.execute("SELECT public.process_production()")
+    _tick_and_upgrade_all(cur)
     cur.execute("SELECT housing_tier FROM public.buildings WHERE id = %s", (house_id,))
     assert cur.fetchone()[0] == 1, "house failed to upgrade with a well in range"
 
@@ -58,7 +75,7 @@ def test_well_too_far_for_tier_2_evolution(make_player, place, cur, clear_resour
         "UPDATE public.buildings SET last_processed_at = now() - interval '180 seconds' WHERE id = %s",
         (house_id,),
     )
-    cur.execute("SELECT public.process_production()")
+    _tick_and_upgrade_all(cur)
     cur.execute("SELECT housing_tier FROM public.buildings WHERE id = %s", (house_id,))
     assert cur.fetchone()[0] == 1, "tier-2 evolution should require positional well coverage"
 
@@ -86,7 +103,7 @@ def test_tax_man_credits_money_when_staffed(make_player, place, cur, clear_resou
     """, (str(p['id']),))
     cur.execute("SELECT money FROM public.player_profiles WHERE id = %s", (str(p['id']),))
     money_before = cur.fetchone()[0]
-    cur.execute("SELECT public.process_production()")
+    _tick_and_upgrade_all(cur)
     cur.execute("SELECT money FROM public.player_profiles WHERE id = %s", (str(p['id']),))
     money_after = cur.fetchone()[0]
     assert money_after > money_before, \
@@ -113,7 +130,7 @@ def test_tax_man_credits_nothing_when_unstaffed(make_player, place, cur, clear_r
     """, (str(p['id']),))
     cur.execute("SELECT money FROM public.player_profiles WHERE id = %s", (str(p['id']),))
     money_before = cur.fetchone()[0]
-    cur.execute("SELECT public.process_production()")
+    _tick_and_upgrade_all(cur)
     cur.execute("SELECT money FROM public.player_profiles WHERE id = %s", (str(p['id']),))
     money_after = cur.fetchone()[0]
     assert money_after == money_before, \

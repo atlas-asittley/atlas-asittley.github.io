@@ -1,3 +1,20 @@
+
+def _tick_and_upgrade_all(cur):
+    """process_production + auto-step every now-eligible house. Mirrors
+    what the player does in the UI (the click on the Upgrade button)
+    so tests written against the pre-2026-05-08 auto-upgrade flow stay
+    truthful. Safe to call even when nothing is eligible."""
+    cur.execute("SELECT public.process_production()")
+    cur.execute("SELECT id FROM public.buildings WHERE evolution_eligible_at IS NOT NULL")
+    for (bid,) in cur.fetchall():
+        cur.execute("SAVEPOINT __tu")
+        try:
+            cur.execute("SELECT public.upgrade_house(%s)", (str(bid),))
+            cur.execute("RELEASE SAVEPOINT __tu")
+        except Exception:
+            cur.execute("ROLLBACK TO SAVEPOINT __tu")
+
+
 """Tests for housing tiers 6-8: Mansion, Estate, Palace.
 
 Each tier adds an escalating luxury prereq on top of the existing
@@ -117,7 +134,7 @@ def test_tier5_to_6_blocked_without_luxury_food(make_player, place, cur, clear_r
     p, house_id = _setup_tier5_ready_house(cur, make_player, place, clear_resources, 5)
     _set_inventory(cur, p['id'], bread=20.0)  # plain food only
     _backdate_house(cur, p['id'], house_id, 600)
-    cur.execute("SELECT public.process_production()")
+    _tick_and_upgrade_all(cur)
     cur.execute("SELECT housing_tier FROM public.buildings WHERE id = %s", (house_id,))
     assert cur.fetchone()[0] == 5, "manor upgraded to mansion without luxury food"
 
@@ -126,7 +143,7 @@ def test_tier5_to_6_succeeds_with_spirits(make_player, place, cur, clear_resourc
     p, house_id = _setup_tier5_ready_house(cur, make_player, place, clear_resources, 5)
     _set_inventory(cur, p['id'], bread=20.0, spirits=5.0)
     _backdate_house(cur, p['id'], house_id, 600)
-    cur.execute("SELECT public.process_production()")
+    _tick_and_upgrade_all(cur)
     cur.execute("SELECT housing_tier FROM public.buildings WHERE id = %s", (house_id,))
     assert cur.fetchone()[0] == 6, "manor failed to upgrade to mansion with spirits in stock"
 
@@ -136,7 +153,7 @@ def test_tier5_to_6_succeeds_with_any_luxury_food(make_player, place, cur, clear
     p, house_id = _setup_tier5_ready_house(cur, make_player, place, clear_resources, 5)
     _set_inventory(cur, p['id'], bread=20.0, caviar=3.0)
     _backdate_house(cur, p['id'], house_id, 600)
-    cur.execute("SELECT public.process_production()")
+    _tick_and_upgrade_all(cur)
     cur.execute("SELECT housing_tier FROM public.buildings WHERE id = %s", (house_id,))
     assert cur.fetchone()[0] == 6
 
@@ -148,7 +165,7 @@ def test_tier6_to_7_blocked_without_industrial_luxury(make_player, place, cur, c
     p, house_id = _setup_tier5_ready_house(cur, make_player, place, clear_resources, 6)
     _set_inventory(cur, p['id'], bread=20.0, spirits=5.0)
     _backdate_house(cur, p['id'], house_id, 900)
-    cur.execute("SELECT public.process_production()")
+    _tick_and_upgrade_all(cur)
     cur.execute("SELECT housing_tier FROM public.buildings WHERE id = %s", (house_id,))
     assert cur.fetchone()[0] == 6, "mansion upgraded to estate without an industrial luxury"
 
@@ -157,7 +174,7 @@ def test_tier6_to_7_succeeds_with_cabinets(make_player, place, cur, clear_resour
     p, house_id = _setup_tier5_ready_house(cur, make_player, place, clear_resources, 6)
     _set_inventory(cur, p['id'], bread=20.0, spirits=5.0, cabinets=2.0)
     _backdate_house(cur, p['id'], house_id, 900)
-    cur.execute("SELECT public.process_production()")
+    _tick_and_upgrade_all(cur)
     cur.execute("SELECT housing_tier FROM public.buildings WHERE id = %s", (house_id,))
     assert cur.fetchone()[0] == 7
 
@@ -169,7 +186,7 @@ def test_tier7_to_8_blocked_without_all_four(make_player, place, cur, clear_reso
     p, house_id = _setup_tier5_ready_house(cur, make_player, place, clear_resources, 7)
     _set_inventory(cur, p['id'], bread=20.0, spirits=5.0, cabinets=2.0)
     _backdate_house(cur, p['id'], house_id, 1500)
-    cur.execute("SELECT public.process_production()")
+    _tick_and_upgrade_all(cur)
     cur.execute("SELECT housing_tier FROM public.buildings WHERE id = %s", (house_id,))
     assert cur.fetchone()[0] == 7, "estate upgraded to palace with only one industrial luxury"
 
@@ -180,7 +197,7 @@ def test_tier7_to_8_blocked_with_three_of_four(make_player, place, cur, clear_re
     _set_inventory(cur, p['id'], bread=20.0, spirits=5.0,
                    cabinets=2.0, monuments=1.0, mosaics=1.0)
     _backdate_house(cur, p['id'], house_id, 1500)
-    cur.execute("SELECT public.process_production()")
+    _tick_and_upgrade_all(cur)
     cur.execute("SELECT housing_tier FROM public.buildings WHERE id = %s", (house_id,))
     assert cur.fetchone()[0] == 7, "estate upgraded to palace with only 3 of 4 industrial luxuries"
 
@@ -190,7 +207,7 @@ def test_tier7_to_8_succeeds_with_all_four(make_player, place, cur, clear_resour
     _set_inventory(cur, p['id'], bread=20.0, spirits=5.0,
                    cabinets=2.0, monuments=1.0, mosaics=1.0, machinery=1.0)
     _backdate_house(cur, p['id'], house_id, 1500)
-    cur.execute("SELECT public.process_production()")
+    _tick_and_upgrade_all(cur)
     cur.execute("SELECT housing_tier FROM public.buildings WHERE id = %s", (house_id,))
     assert cur.fetchone()[0] == 8
 
@@ -202,7 +219,7 @@ def test_mansion_devolves_when_luxury_food_runs_out(make_player, place, cur, cle
     p, house_id = _setup_tier5_ready_house(cur, make_player, place, clear_resources, 6)
     _set_inventory(cur, p['id'], bread=20.0)  # plain food, no luxury food
     _backdate_house(cur, p['id'], house_id, 600)
-    cur.execute("SELECT public.process_production()")
+    _tick_and_upgrade_all(cur)
     cur.execute("SELECT housing_tier FROM public.buildings WHERE id = %s", (house_id,))
     assert cur.fetchone()[0] == 5, "mansion failed to devolve when luxury food ran out"
 
@@ -213,6 +230,6 @@ def test_palace_devolves_when_one_industrial_luxury_runs_out(make_player, place,
     _set_inventory(cur, p['id'], bread=20.0, spirits=5.0,
                    cabinets=2.0, monuments=1.0, mosaics=1.0)  # missing machinery
     _backdate_house(cur, p['id'], house_id, 1500)
-    cur.execute("SELECT public.process_production()")
+    _tick_and_upgrade_all(cur)
     cur.execute("SELECT housing_tier FROM public.buildings WHERE id = %s", (house_id,))
     assert cur.fetchone()[0] == 7, "palace should devolve when 1 of 4 industrial luxuries is missing"

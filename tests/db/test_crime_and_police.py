@@ -12,6 +12,23 @@ in process_production and logged in cash_transactions.
 """
 import pytest
 
+def _tick_and_upgrade_all(cur):
+    """process_production + auto-step every now-eligible house. Mirrors
+    what the player does in the UI (the click on the Upgrade button)
+    so tests written against the pre-2026-05-08 auto-upgrade flow stay
+    truthful. Safe to call even when nothing is eligible."""
+    cur.execute("SELECT public.process_production()")
+    cur.execute("SELECT id FROM public.buildings WHERE evolution_eligible_at IS NOT NULL")
+    for (bid,) in cur.fetchall():
+        cur.execute("SAVEPOINT __tu")
+        try:
+            cur.execute("SELECT public.upgrade_house(%s)", (str(bid),))
+            cur.execute("RELEASE SAVEPOINT __tu")
+        except Exception:
+            cur.execute("ROLLBACK TO SAVEPOINT __tu")
+
+
+
 
 def _stock_food(cur, player_id):
     """Stock berries + grain so happiness/devolve isn't food-gated."""
@@ -129,7 +146,7 @@ def test_unstaffed_police_no_coverage(make_player, place, cur, clear_resources):
     hx, hy = p['home_x'], p['home_y']
     place('house', hx + 4, hy + 5)
     place('watch_house', hx + 5, hy + 5)  # off-road tile (clear_resources put roads at hx, hy crosses)
-    cur.execute("SELECT public.process_production()")  # refresh is_staffed
+    _tick_and_upgrade_all(cur)  # refresh is_staffed
     cur.execute("SELECT public.compute_crime(%s)", (str(p['id']),))
     crime = float(cur.fetchone()[0])
     assert crime == 9, f"no-road WH shouldn't cover; got {crime}"
@@ -155,7 +172,7 @@ def test_unstaffed_police_no_coverage_due_to_worker_shortage(make_player, place,
         UPDATE public.buildings SET last_processed_at = now() - interval '60 seconds'
         WHERE player_id = %s
     """, (str(p['id']),))
-    cur.execute("SELECT public.process_production()")
+    _tick_and_upgrade_all(cur)
 
     cur.execute("""
         SELECT COUNT(*) FILTER (WHERE is_staffed) FROM public.buildings
@@ -213,7 +230,7 @@ def test_pd_upkeep_deducts_money_and_logs_ledger_row(make_player, place, cur, cl
                 (str(p['id']),))
     cur.execute("SELECT money FROM public.player_profiles WHERE id = %s", (str(p['id']),))
     money_before = cur.fetchone()[0]
-    cur.execute("SELECT public.process_production()")
+    _tick_and_upgrade_all(cur)
     cur.execute("SELECT money FROM public.player_profiles WHERE id = %s", (str(p['id']),))
     money_after = cur.fetchone()[0]
     assert money_after < money_before, 'upkeep should have reduced money'

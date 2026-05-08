@@ -13,6 +13,23 @@ satisfies the housing food gate automatically.
 import psycopg2
 import pytest
 
+def _tick_and_upgrade_all(cur):
+    """process_production + auto-step every now-eligible house. Mirrors
+    what the player does in the UI (the click on the Upgrade button)
+    so tests written against the pre-2026-05-08 auto-upgrade flow stay
+    truthful. Safe to call even when nothing is eligible."""
+    cur.execute("SELECT public.process_production()")
+    cur.execute("SELECT id FROM public.buildings WHERE evolution_eligible_at IS NOT NULL")
+    for (bid,) in cur.fetchall():
+        cur.execute("SAVEPOINT __tu")
+        try:
+            cur.execute("SELECT public.upgrade_house(%s)", (str(bid),))
+            cur.execute("RELEASE SAVEPOINT __tu")
+        except Exception:
+            cur.execute("ROLLBACK TO SAVEPOINT __tu")
+
+
+
 
 # ── industry filter on placement ─────────────────────────────
 
@@ -75,7 +92,7 @@ def test_orchard_produces_berries_at_flat_rate(make_player, place, stamp_food_ti
     cur.execute("""UPDATE public.buildings
                    SET last_processed_at = now() - interval '60 seconds'
                    WHERE player_id = %s""", (str(p['id']),))
-    cur.execute("SELECT public.process_production()")
+    _tick_and_upgrade_all(cur)
     cur.execute("SELECT quantity FROM public.inventories WHERE player_id = %s AND resource_key = 'berries'",
                 (str(p['id']),))
     berries = float(cur.fetchone()[0])
@@ -92,7 +109,7 @@ def test_fishing_pier_produces_fish(make_player, place, stamp_food_tile, cur, cl
     cur.execute("""UPDATE public.buildings
                    SET last_processed_at = now() - interval '60 seconds'
                    WHERE player_id = %s""", (str(p['id']),))
-    cur.execute("SELECT public.process_production()")
+    _tick_and_upgrade_all(cur)
     cur.execute("SELECT quantity FROM public.inventories WHERE player_id = %s AND resource_key = 'fish'",
                 (str(p['id']),))
     fish = float(cur.fetchone()[0])
@@ -114,7 +131,7 @@ def test_food_extractor_idle_without_road(make_player, place, stamp_food_tile, c
     cur.execute("""UPDATE public.buildings
                    SET last_processed_at = now() - interval '60 seconds'
                    WHERE id = %s""", (bid,))
-    cur.execute("SELECT public.process_production()")
+    _tick_and_upgrade_all(cur)
     cur.execute("SELECT COALESCE(SUM(quantity), 0) FROM public.inventories WHERE player_id = %s AND resource_key = 'vegetables'",
                 (str(p['id']),))
     veg = float(cur.fetchone()[0])
@@ -133,7 +150,7 @@ def test_food_extractor_with_road_produces(make_player, place, stamp_food_tile, 
     cur.execute("""UPDATE public.buildings
                    SET last_processed_at = now() - interval '60 seconds'
                    WHERE id = %s""", (bid,))
-    cur.execute("SELECT public.process_production()")
+    _tick_and_upgrade_all(cur)
     cur.execute("SELECT quantity FROM public.inventories WHERE player_id = %s AND resource_key = 'vegetables'",
                 (str(p['id']),))
     veg = float(cur.fetchone()[0])
@@ -166,7 +183,7 @@ def test_orchard_output_satisfies_food_gate(make_player, place, stamp_food_tile,
                        population = 100
                    WHERE id = %s""", (str(p['id']),))
 
-    cur.execute("SELECT public.process_production()")
+    _tick_and_upgrade_all(cur)
 
     cur.execute("SELECT quantity FROM public.inventories WHERE player_id = %s AND resource_key = 'berries'",
                 (str(p['id']),))

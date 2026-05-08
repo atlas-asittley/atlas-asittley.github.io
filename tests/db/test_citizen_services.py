@@ -5,6 +5,23 @@ different effect when "operating" (staffed AND both inputs available).
 """
 import pytest
 
+def _tick_and_upgrade_all(cur):
+    """process_production + auto-step every now-eligible house. Mirrors
+    what the player does in the UI (the click on the Upgrade button)
+    so tests written against the pre-2026-05-08 auto-upgrade flow stay
+    truthful. Safe to call even when nothing is eligible."""
+    cur.execute("SELECT public.process_production()")
+    cur.execute("SELECT id FROM public.buildings WHERE evolution_eligible_at IS NOT NULL")
+    for (bid,) in cur.fetchall():
+        cur.execute("SAVEPOINT __tu")
+        try:
+            cur.execute("SELECT public.upgrade_house(%s)", (str(bid),))
+            cur.execute("RELEASE SAVEPOINT __tu")
+        except Exception:
+            cur.execute("ROLLBACK TO SAVEPOINT __tu")
+
+
+
 
 def _stock(cur, player_id, resource_key, qty):
     """Set a player's inventory for one resource."""
@@ -51,7 +68,7 @@ def test_tavern_consumes_both_inputs(make_player, place, cur, clear_resources):
     _stock(cur, p['id'], 'pottery', 5.0)
     _backdate(cur, p['id'], 60)
 
-    cur.execute("SELECT public.process_production()")
+    _tick_and_upgrade_all(cur)
 
     cur.execute("SELECT quantity FROM public.inventories WHERE player_id = %s AND resource_key = 'bread'",
                 (str(p['id']),))
@@ -77,7 +94,7 @@ def test_tavern_consumes_nothing_when_one_input_missing(make_player, place, cur,
     _stock(cur, p['id'], 'pottery', 0)
     _backdate(cur, p['id'], 60)
 
-    cur.execute("SELECT public.process_production()")
+    _tick_and_upgrade_all(cur)
 
     cur.execute("SELECT quantity FROM public.inventories WHERE player_id = %s AND resource_key = 'bread'",
                 (str(p['id']),))
@@ -119,7 +136,7 @@ def test_school_required_for_tier_4_evolution(make_player, place, cur, clear_res
     _backdate(cur, p['id'], 240)
 
     # No school yet → should stay at tier 3.
-    cur.execute("SELECT public.process_production()")
+    _tick_and_upgrade_all(cur)
     cur.execute("SELECT housing_tier FROM public.buildings WHERE id = %s", (house_id,))
     assert cur.fetchone()[0] == 3, "townhouse upgraded past tier 3 without a school"
 
@@ -133,7 +150,7 @@ def test_school_required_for_tier_4_evolution(make_player, place, cur, clear_res
     _stock(cur, p['id'], 'bread', 10.0)
     _stock(cur, p['id'], 'furniture', 10.0)
     _backdate(cur, p['id'], 240)
-    cur.execute("SELECT public.process_production()")
+    _tick_and_upgrade_all(cur)
     cur.execute("SELECT housing_tier FROM public.buildings WHERE id = %s", (house_id,))
     assert cur.fetchone()[0] == 4, "townhouse failed to upgrade with school in range"
 
@@ -162,7 +179,7 @@ def test_unfed_school_does_not_unlock_tier_4(make_player, place, cur, clear_reso
     _stock(cur, p['id'], 'bread', 10.0)
     _backdate(cur, p['id'], 240)
 
-    cur.execute("SELECT public.process_production()")
+    _tick_and_upgrade_all(cur)
     cur.execute("SELECT housing_tier FROM public.buildings WHERE id = %s", (house_id,))
     assert cur.fetchone()[0] == 3, "unfed school should not unlock tier 4"
 
@@ -212,7 +229,7 @@ def test_bathhouse_blocks_devolve(make_player, place, cur, clear_resources):
     """, (str(p['id']), hx + 2, hy + 1))
     _backdate(cur, p['id'], 120)
 
-    cur.execute("SELECT public.process_production()")
+    _tick_and_upgrade_all(cur)
     cur.execute("SELECT housing_tier FROM public.buildings WHERE id = %s", (house_id,))
     assert cur.fetchone()[0] == 3, "bathhouse should have prevented devolve"
 
@@ -229,6 +246,6 @@ def test_unfed_bathhouse_does_not_block_devolve(make_player, place, cur, clear_r
     """, (str(p['id']), hx + 2, hy + 1))
     _backdate(cur, p['id'], 120)
 
-    cur.execute("SELECT public.process_production()")
+    _tick_and_upgrade_all(cur)
     cur.execute("SELECT housing_tier FROM public.buildings WHERE id = %s", (house_id,))
     assert cur.fetchone()[0] == 2, "unfed bathhouse should not have prevented devolve from 3 to 2"

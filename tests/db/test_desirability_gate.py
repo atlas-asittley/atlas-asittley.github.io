@@ -12,6 +12,23 @@ Verifies:
 """
 import pytest
 
+def _tick_and_upgrade_all(cur):
+    """process_production + auto-step every now-eligible house. Mirrors
+    what the player does in the UI (the click on the Upgrade button)
+    so tests written against the pre-2026-05-08 auto-upgrade flow stay
+    truthful. Safe to call even when nothing is eligible."""
+    cur.execute("SELECT public.process_production()")
+    cur.execute("SELECT id FROM public.buildings WHERE evolution_eligible_at IS NOT NULL")
+    for (bid,) in cur.fetchall():
+        cur.execute("SAVEPOINT __tu")
+        try:
+            cur.execute("SELECT public.upgrade_house(%s)", (str(bid),))
+            cur.execute("RELEASE SAVEPOINT __tu")
+        except Exception:
+            cur.execute("ROLLBACK TO SAVEPOINT __tu")
+
+
+
 
 def _enable_gate(cur):
     cur.execute("RESET \"city.skip_desirability_gate\"")
@@ -37,9 +54,23 @@ def _stamp_desirability(cur, player_id, value):
 
 def _eval_housing(cur, player_id, operating_services_array='ARRAY[]::uuid[]'):
     """Run housing eval directly without going through process_production
-    (which would re-derive desirability and overwrite our stamp)."""
+    (which would re-derive desirability and overwrite our stamp). Now
+    that upgrades are manual, also walk every newly-eligible house and
+    call upgrade_house — this preserves the pre-2026-05-08 invariant
+    that "after eval with conditions met, the house has stepped up"."""
     cur.execute(f"SELECT public._pp_evolve_housing(%s::uuid, {operating_services_array})",
                 (str(player_id),))
+    cur.execute(
+        "SELECT id FROM public.buildings WHERE player_id = %s AND evolution_eligible_at IS NOT NULL",
+        (str(player_id),)
+    )
+    for (bid,) in cur.fetchall():
+        cur.execute("SAVEPOINT __eh")
+        try:
+            cur.execute("SELECT public.upgrade_house(%s)", (str(bid),))
+            cur.execute("RELEASE SAVEPOINT __eh")
+        except Exception:
+            cur.execute("ROLLBACK TO SAVEPOINT __eh")
 
 
 def _set_money(cur, player_id, money):

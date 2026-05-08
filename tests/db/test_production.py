@@ -10,6 +10,23 @@ Regression coverage:
 import pytest
 import psycopg2
 
+def _tick_and_upgrade_all(cur):
+    """process_production + auto-step every now-eligible house. Mirrors
+    what the player does in the UI (the click on the Upgrade button)
+    so tests written against the pre-2026-05-08 auto-upgrade flow stay
+    truthful. Safe to call even when nothing is eligible."""
+    cur.execute("SELECT public.process_production()")
+    cur.execute("SELECT id FROM public.buildings WHERE evolution_eligible_at IS NOT NULL")
+    for (bid,) in cur.fetchall():
+        cur.execute("SAVEPOINT __tu")
+        try:
+            cur.execute("SELECT public.upgrade_house(%s)", (str(bid),))
+            cur.execute("RELEASE SAVEPOINT __tu")
+        except Exception:
+            cur.execute("ROLLBACK TO SAVEPOINT __tu")
+
+
+
 
 def test_housing_evolves_to_tier_1_with_road(make_player, place, cur, clear_resources):
     """Regression: shanty (tier 0) should upgrade to mud hut (tier 1)
@@ -40,7 +57,7 @@ def test_housing_evolves_to_tier_1_with_road(make_player, place, cur, clear_reso
         WHERE id = %s
     """, (house_id,))
 
-    cur.execute("SELECT public.process_production()")
+    _tick_and_upgrade_all(cur)
 
     cur.execute("SELECT housing_tier FROM public.buildings WHERE id = %s", (house_id,))
     assert cur.fetchone()[0] == 1, \
@@ -74,7 +91,7 @@ def test_housing_devolves_without_road(make_player, place, cur, clear_resources)
     # remains but doesn't reach the house's adjacency cells.
     cur.execute("DELETE FROM public.buildings WHERE id = %s", (last_road,))
 
-    cur.execute("SELECT public.process_production()")
+    _tick_and_upgrade_all(cur)
 
     cur.execute("SELECT housing_tier FROM public.buildings WHERE id = %s", (house_id,))
     assert cur.fetchone()[0] == 0, "mud hut should devolve to shanty without road"
@@ -92,7 +109,7 @@ def test_extractor_no_path_produces_nothing(make_player, place, cur, clear_resou
     # Backdate so a normal extractor would have produced
     cur.execute("UPDATE public.buildings SET last_processed_at = now() - interval '60 seconds' WHERE player_id = %s", (str(p['id']),))
 
-    cur.execute("SELECT public.process_production()")
+    _tick_and_upgrade_all(cur)
 
     cur.execute("SELECT COALESCE(SUM(quantity), 0) FROM public.inventories WHERE player_id = %s AND resource_key = 'timber'", (str(p['id']),))
     timber = cur.fetchone()[0]

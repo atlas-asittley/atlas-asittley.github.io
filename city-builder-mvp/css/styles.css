@@ -1899,6 +1899,9 @@ body.panel-expanded .map-area { display: none; }
 .insp-hint.insp-hint-muted { color: #5a6a7e; font-style: italic; }
 .insp-evolution-bar { height: 3px; background: #1e2a3a; border-radius: 2px; margin: 4px 0 8px; overflow: hidden; }
 .insp-evolution-bar .insp-evolution-fill { height: 100%; background: linear-gradient(90deg, #5ec49e, #4fa3e0); border-radius: 2px; transition: width 0.5s; }
+.btn-upgrade-house { width: 100%; padding: 11px; border: none; border-radius: 8px; background: linear-gradient(180deg, #2a6a48, #1f5036); color: #e0fff0; font-weight: 700; font-size: 0.88rem; cursor: pointer; margin: 8px 0 4px; transition: background 0.15s; }
+.btn-upgrade-house:hover { background: linear-gradient(180deg, #348058, #265a3e); }
+.btn-upgrade-house:disabled { opacity: 0.55; cursor: not-allowed; }
 .insp-section { font-size: 0.7rem; font-weight: 600; color: #7a8a9e; text-transform: uppercase; letter-spacing: 0.04em; padding: 10px 0 4px; }
 .insp-issues { padding: 4px 0 6px; }
 .insp-issue { display: flex; gap: 6px; align-items: flex-start; padding: 4px 0; }

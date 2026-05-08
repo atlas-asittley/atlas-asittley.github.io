@@ -150,18 +150,19 @@ export function renderBuildingInspector() {
       if (nextTierCfg) {
         var blockers = getHousingUpgradeBlockers(b, nextTierCfg);
         var canUpgrade = blockers.length === 0;
-        var evolving = canUpgrade && b.evolution_eligible_at;
-        if (evolving) {
-          var elapsed = Math.floor((Date.now() - new Date(b.evolution_eligible_at).getTime()) / 1000);
-          var needed = htierCfg ? htierCfg.upgrade_secs : 30;
-          var remaining = Math.max(0, needed - elapsed);
-          var progressPct = Math.min(100, Math.round((elapsed / needed) * 100));
-          var progressText = remaining > 0 ? 'Upgrading (' + remaining + 's)' : 'Upgrading soon';
-          html += '<div class="insp-row"><span class="insp-label">Next</span><span class="insp-value insp-good">' + nextTierCfg.name + ' — ' + progressText + '</span></div>';
-          html += '<div class="insp-evolution-bar"><div class="insp-evolution-fill" style="width:' + progressPct + '%"></div></div>';
+        // evolution_eligible_at is server-confirmed: set on the tick
+        // that all next-tier conditions check out, cleared on a tick
+        // that finds them slipped. Acts as the gate for the manual
+        // Upgrade button — if the server says you're eligible, the
+        // button is live; otherwise we show why.
+        var serverEligible = !!b.evolution_eligible_at;
+        if (canUpgrade && serverEligible) {
+          html += '<div class="insp-row"><span class="insp-label">Next</span><span class="insp-value insp-good">' + nextTierCfg.name + ' (+' + nextTierCfg.workers + ' wkrs)</span></div>';
+          html += '<div class="insp-hint insp-hint-muted">Ready to upgrade. Tap below to step this house up to ' + nextTierCfg.name + '.</div>';
+          html += '<button class="btn-upgrade-house" data-bldg="' + b.id + '">Upgrade to ' + nextTierCfg.name + '</button>';
         } else if (canUpgrade) {
           html += '<div class="insp-row"><span class="insp-label">Next</span><span class="insp-value">' + nextTierCfg.name + ' (+' + nextTierCfg.workers + ' wkrs)</span></div>';
-          html += '<div class="insp-hint insp-hint-muted">Conditions met — will begin upgrading at next production tick.</div>';
+          html += '<div class="insp-hint insp-hint-muted">Conditions met — eligibility will be confirmed on the next production tick (~30s), then the Upgrade button appears here.</div>';
         } else {
           var blockerLabels = blockers.join(' + ');
           html += '<div class="insp-row"><span class="insp-label">Next</span><span class="insp-value insp-warn">' + nextTierCfg.name + ' — needs ' + blockerLabels + '</span></div>';
@@ -320,6 +321,37 @@ export function renderBuildingInspector() {
     });
   } else {
     actionsEl.innerHTML = '';
+  }
+
+  // Wire housing Upgrade button (manual upgrades — the player chooses
+  // when to step a house up; the server has already validated
+  // eligibility via evolution_eligible_at).
+  var upgradeBtn = document.querySelector('.btn-upgrade-house');
+  if (upgradeBtn) {
+    upgradeBtn.addEventListener('click', function () {
+      upgradeBtn.disabled = true; upgradeBtn.textContent = 'Upgrading…';
+      sb.rpc('upgrade_house', { p_building_id: b.id }).then(function (r) {
+        if (r.error) {
+          showToast('Upgrade failed: ' + r.error.message, 'error');
+          upgradeBtn.disabled = false; upgradeBtn.textContent = 'Upgrade';
+          return;
+        }
+        var data = r.data || {};
+        b.housing_tier = data.to_tier;
+        b.evolution_eligible_at = null;
+        showToast('Upgraded to ' + (data.tier_name || ('tier ' + data.to_tier)), 'success');
+        // Reload buildings so the labor model + map sprite see the new tier.
+        sb.from('buildings').select('*, player_profiles(display_name, color_hex)').then(function (rr) {
+          if (rr.data) {
+            state.allBuildings = rr.data;
+            // Re-render map and inspector.
+            renderBuildingInspector();
+            renderMap();
+            updateWorkers();
+          }
+        });
+      });
+    });
   }
 
   // Wire transport-hub Expand button (lives in the body, not actions).

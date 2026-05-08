@@ -1,3 +1,20 @@
+
+def _tick_and_upgrade_all(cur):
+    """process_production + auto-step every now-eligible house. Mirrors
+    what the player does in the UI (the click on the Upgrade button)
+    so tests written against the pre-2026-05-08 auto-upgrade flow stay
+    truthful. Safe to call even when nothing is eligible."""
+    cur.execute("SELECT public.process_production()")
+    cur.execute("SELECT id FROM public.buildings WHERE evolution_eligible_at IS NOT NULL")
+    for (bid,) in cur.fetchall():
+        cur.execute("SAVEPOINT __tu")
+        try:
+            cur.execute("SELECT public.upgrade_house(%s)", (str(bid),))
+            cur.execute("RELEASE SAVEPOINT __tu")
+        except Exception:
+            cur.execute("ROLLBACK TO SAVEPOINT __tu")
+
+
 """Tests for per-tick housing food consumption.
 
 Active tier-1+ houses drain food from inventory at htc.food_per_minute per
@@ -41,7 +58,7 @@ def test_tier_0_house_drains_no_food(make_player, place, cur, clear_resources):
     _stock(cur, p['id'], grain=10.0)
     _backdate_food_tick(cur, p['id'], 60)
 
-    cur.execute("SELECT public.process_production()")
+    _tick_and_upgrade_all(cur)
     cur.execute("SELECT quantity FROM public.inventories WHERE player_id = %s AND resource_key = 'grain'",
                 (str(p['id']),))
     assert float(cur.fetchone()[0]) == 10.0, "shanty should not drain food"
@@ -57,7 +74,7 @@ def test_tier_1_house_does_not_drain_food(make_player, place, cur, clear_resourc
     _stock(cur, p['id'], grain=10.0)
     _backdate_food_tick(cur, p['id'], 60)
 
-    cur.execute("SELECT public.process_production()")
+    _tick_and_upgrade_all(cur)
     cur.execute("SELECT quantity FROM public.inventories WHERE player_id = %s AND resource_key = 'grain'",
                 (str(p['id']),))
     grain = float(cur.fetchone()[0])
@@ -74,7 +91,7 @@ def test_tier_2_house_drains_food(make_player, place, cur, clear_resources):
     _stock(cur, p['id'], grain=10.0)
     _backdate_food_tick(cur, p['id'], 60)
 
-    cur.execute("SELECT public.process_production()")
+    _tick_and_upgrade_all(cur)
     cur.execute("SELECT quantity FROM public.inventories WHERE player_id = %s AND resource_key = 'grain'",
                 (str(p['id']),))
     grain = float(cur.fetchone()[0])
@@ -96,7 +113,7 @@ def test_drain_proportional_across_food_resources(make_player, place, cur, clear
     _stock(cur, p['id'], grain=60.0, flour=30.0, bread=10.0)
     _backdate_food_tick(cur, p['id'], 60)
 
-    cur.execute("SELECT public.process_production()")
+    _tick_and_upgrade_all(cur)
     cur.execute("""SELECT resource_key, quantity FROM public.inventories
                    WHERE player_id = %s AND resource_key IN ('grain', 'flour', 'bread')
                    ORDER BY resource_key""", (str(p['id']),))
@@ -132,7 +149,7 @@ def test_house_devolves_when_drain_empties_food(make_player, place, cur, clear_r
                    SET last_processed_at = now() - interval '120 seconds'
                    WHERE id = %s""", (house_id,))
 
-    cur.execute("SELECT public.process_production()")
+    _tick_and_upgrade_all(cur)
     cur.execute("SELECT housing_tier FROM public.buildings WHERE id = %s", (house_id,))
     tier = cur.fetchone()[0]
     cur.execute("SELECT quantity FROM public.inventories WHERE player_id = %s AND resource_key = 'grain'",
@@ -156,7 +173,7 @@ def test_drain_scales_with_house_count(make_player, place, cur, clear_resources)
     _stock(cur, p['id'], grain=10.0)
     _backdate_food_tick(cur, p['id'], 60)
 
-    cur.execute("SELECT public.process_production()")
+    _tick_and_upgrade_all(cur)
     cur.execute("SELECT quantity FROM public.inventories WHERE player_id = %s AND resource_key = 'grain'",
                 (str(p['id']),))
     grain = float(cur.fetchone()[0])
@@ -171,7 +188,7 @@ def test_last_food_tick_advances(make_player, place, cur, clear_resources):
     p = make_player()
     clear_resources(p['id'])
     _backdate_food_tick(cur, p['id'], 60)
-    cur.execute("SELECT public.process_production()")
+    _tick_and_upgrade_all(cur)
     cur.execute("""SELECT EXTRACT(EPOCH FROM (now() - last_food_tick_at))
                    FROM public.player_profiles WHERE id = %s""", (str(p['id']),))
     secs = float(cur.fetchone()[0])
@@ -190,7 +207,7 @@ def test_paused_house_drains_no_food(make_player, place, cur, clear_resources):
     _stock(cur, p['id'], grain=10.0)
     _backdate_food_tick(cur, p['id'], 60)
 
-    cur.execute("SELECT public.process_production()")
+    _tick_and_upgrade_all(cur)
     cur.execute("SELECT quantity FROM public.inventories WHERE player_id = %s AND resource_key = 'grain'",
                 (str(p['id']),))
     grain = float(cur.fetchone()[0])
