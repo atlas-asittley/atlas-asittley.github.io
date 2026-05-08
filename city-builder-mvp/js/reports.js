@@ -439,7 +439,7 @@ function fetchDailySeries(days) {
   // 7-day net read $17,988 instead of the true $2,043.
   var since = new Date(Date.now() - days * 86400000).toISOString();
   return sb.from('cash_transactions')
-    .select('source, amount, created_at, context')
+    .select('source, amount, created_at, context, period_start')
     .gte('created_at', since)
     .then(function (r) {
       var buckets = {};
@@ -450,16 +450,58 @@ function fetchDailySeries(days) {
         dayKeys.push(k);
         buckets[k] = { date: k, earned: 0, spent: 0, sources: {}, sinks: {} };
       }
+      // Distribute a row's amount across the daily buckets it touches.
+      // For point events (period_start null/equal to created_at) all goes
+      // to the created_at day. For continuous catch-up rows (server sets
+      // period_start = the moment accrual began), the amount is split
+      // proportionally by the seconds the [period_start, created_at]
+      // window spends in each day. So a $4150 / 7-hour upkeep that
+      // crosses midnight no longer shows as a single-day spike.
       (r.data || []).forEach(function (row) {
-        var k = row.created_at.slice(0, 10);
-        if (!buckets[k]) return;
         var amt = row.amount;
-        if (amt > 0) {
-          buckets[k].earned += amt;
-          buckets[k].sources[row.source] = (buckets[k].sources[row.source] || 0) + amt;
-        } else if (amt < 0) {
-          buckets[k].spent += -amt;
-          buckets[k].sinks[row.source] = (buckets[k].sinks[row.source] || 0) + (-amt);
+        var endMs = new Date(row.created_at).getTime();
+        var startMs = row.period_start ? new Date(row.period_start).getTime() : endMs;
+        if (!(startMs > 0) || startMs >= endMs) startMs = endMs;
+        // Crop to the days window — anything before `since` is dropped.
+        var sinceMs = new Date(since).getTime();
+        if (startMs < sinceMs) startMs = sinceMs;
+        var spanMs = Math.max(1, endMs - startMs);
+
+        function add(dayKey, portion) {
+          var b = buckets[dayKey];
+          if (!b) return;
+          if (amt > 0) {
+            b.earned += portion;
+            b.sources[row.source] = (b.sources[row.source] || 0) + portion;
+          } else if (amt < 0) {
+            b.spent += -portion;
+            b.sinks[row.source] = (b.sinks[row.source] || 0) + (-portion);
+          }
+        }
+
+        if (startMs === endMs) {
+          // Point event — all in the created_at day.
+          add(row.created_at.slice(0, 10), amt);
+          return;
+        }
+
+        // Walk each UTC day the [start, end] window touches.
+        var cursor = startMs;
+        var allocated = 0;
+        while (cursor < endMs) {
+          var d = new Date(cursor);
+          // Next UTC midnight after cursor.
+          var nextMidnight = Date.UTC(
+            d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + 1, 0, 0, 0, 0
+          );
+          var sliceEnd = Math.min(nextMidnight, endMs);
+          var slicePortion = amt * ((sliceEnd - cursor) / spanMs);
+          // Avoid float drift on the last slice.
+          if (sliceEnd >= endMs) slicePortion = amt - allocated;
+          var k = new Date(cursor).toISOString().slice(0, 10);
+          add(k, slicePortion);
+          allocated += slicePortion;
+          cursor = sliceEnd;
         }
       });
       return dayKeys.map(function (k) {
