@@ -29,18 +29,24 @@ export function renderBuildPanel() {
   var panel = document.getElementById('panel-build');
   var html = '';
 
-  // Group buildings into 4 sections so the panel doesn't dump 15+
+  // Group buildings into 5 sections so the panel doesn't dump 15+
   // items in a flat list:
-  //   infra    — road + housing (always available, structural)
-  //   industry — resource chain locked to the player's industry
-  //              (extractor + non-food processors + cross-converters +
-  //               cross-recipe T4 + resource boosters)
-  //   farming  — food chain (food_extractor + food-output processors +
-  //              luxury food T3 + food boosters)
-  //   civic    — services + tax (common to everyone)
+  //   infra     — road + housing (always available, structural)
+  //   industry  — resource chain locked to the player's industry
+  //               (extractor + non-food processors + cross-converters +
+  //                cross-recipe T4 + resource boosters)
+  //   farming   — food chain (food_extractor + food-output processors +
+  //               luxury food T3 + food boosters)
+  //   civic     — services + tax + police (common to everyone)
+  //   transport — airport / seaport / train depot / truck depot
+  //               (city-wide trade-route infrastructure)
   // Each section collapses independently; state persists in localStorage.
-  var CATEGORY_ORDER = { road: 0, housing: 1, extractor: 2, food_extractor: 3, processor: 4, booster: 5, service: 6, tax: 7, police: 8, park: 9 };
-  var SECTION_RANK = { infra: 0, industry: 1, farming: 2, civic: 3 };
+  var CATEGORY_ORDER = {
+    road: 0, housing: 1, extractor: 2, food_extractor: 3,
+    processor: 4, booster: 5, service: 6, tax: 7, police: 8, park: 9,
+    transport_hub: 10, transport_connector: 11
+  };
+  var SECTION_RANK = { infra: 0, industry: 1, farming: 2, civic: 3, transport: 4 };
   function isFoodOutput(bt) {
     if (!bt.output_resource_key || !state.resources) return false;
     var r = state.resources[bt.output_resource_key];
@@ -48,6 +54,7 @@ export function renderBuildPanel() {
   }
   function sectionFor(bt) {
     if (bt.category === 'road' || bt.category === 'housing') return 'infra';
+    if (bt.category === 'transport_hub' || bt.category === 'transport_connector') return 'transport';
     if (bt.industry_key === 'common') return 'civic';
     // Industry-locked: split resource chain (industry) from food chain (farming).
     if (bt.category === 'food_extractor') return 'farming';
@@ -92,7 +99,8 @@ export function renderBuildPanel() {
     infra: 'Infrastructure',
     industry: industryName + ' Industry',
     farming: 'Farming',
-    civic: 'Civic & Services'
+    civic: 'Civic & Services',
+    transport: 'Transport Network'
   };
   // Accordion behavior: at most one section is open at a time. Stored
   // as a single string — section name when one is open, empty string
