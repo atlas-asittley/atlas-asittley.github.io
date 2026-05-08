@@ -1,7 +1,7 @@
 // ── Build, Inventory, and Trade panels ──
 import { sb } from './config.js';
 import { state, computeTraderUnlocks } from './state.js';
-import { showToast, updateMoney, tutorialAllowsBuilding } from './ui.js';
+import { showToast, updateMoney, tutorialAllowsBuilding, updateCityRunway } from './ui.js';
 import { BLDG_LABELS, renderMap, cancelPlacement } from './map.js';
 import { renderPlayersPanel, openTradeDialog } from './players.js';
 import { renderResourcesPanel, renderTreasuryPanel } from './reports.js';
@@ -1075,6 +1075,7 @@ export function checkAllTraderVisits() {
         showToast(msg, 'success');
       }
       updateMoney();
+      updateCityRunway();
       refreshActiveDataPanel();
       renderTradePanel();
       state.visitChecked = true;
@@ -1159,6 +1160,7 @@ function blackMarketTrade(resourceKey, quantity, direction, btn) {
     }
 
     updateMoney();
+    updateCityRunway();
 
     var bmKey = 'bm-' + direction + '-' + resourceKey;
     state.blackMarketAmounts[bmKey] = 0;

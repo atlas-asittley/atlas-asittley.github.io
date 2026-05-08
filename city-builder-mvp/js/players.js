@@ -12,7 +12,7 @@
 
 import { sb } from './config.js';
 import { state } from './state.js';
-import { showToast, updateMoney } from './ui.js';
+import { showToast, updateMoney, updateCityRunway } from './ui.js';
 import { addNotification } from './notifications.js';
 import { refreshActiveDataPanel } from './panels.js';
 
@@ -650,6 +650,7 @@ function acceptOffer(offerId) {
         state.inventory = {};
         (rr.data || []).forEach(function (row) { state.inventory[row.resource_key] = parseFloat(row.quantity); });
         refreshActiveDataPanel();
+        updateCityRunway();
       });
     renderPlayersPanel();
   });

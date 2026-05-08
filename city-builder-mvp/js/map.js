@@ -1,7 +1,7 @@
 // ── Map rendering, placement logic, drag-to-paint roads, and map expansion ──
 import { sb } from './config.js';
 import { state, CITY_CENTER_X, CITY_CENTER_Y, getHomeX, getHomeY, isMyTile, isWildernessTile, inspectedBuildingHolder, computeLaborAllocation, computeGridBounds } from './state.js';
-import { showToast, updateMoney, updateWorkers, updateTutorialBanner } from './ui.js';
+import { showToast, updateMoney, updateWorkers, updateTutorialBanner, updateCityRunway } from './ui.js';
 import { renderBuildPanel } from './panels.js';
 import { rebuildRoadSet, renderWalkers, snapWalkersToZoom, syncCollectorWalkers } from './walkers.js';
 import { openInspector, openResourceInspector } from './inspector.js';
@@ -654,6 +654,7 @@ function placeBuilding(tileId, btKey) {
 
       updateMoney();
       updateWorkers();
+      updateCityRunway();
 
       var msg = bt.name + ' placed!';
       if (data.labor_shortage) msg += ' (labor shortage — build housing!)';
@@ -814,6 +815,7 @@ function executeDragPlacements() {
   chain.then(function () {
     updateMoney();
     updateWorkers();
+    updateCityRunway();
     if (placed > 0) {
       showToast(placed + ' road' + (placed > 1 ? 's' : '') + ' placed!', 'success');
     }

@@ -7,7 +7,7 @@
 
 import { sb } from './config.js';
 import { state, computeLaborAllocation } from './state.js';
-import { showToast, updateMoney, updateWorkers } from './ui.js';
+import { showToast, updateMoney, updateWorkers, updateCityRunway } from './ui.js';
 import { renderMap } from './map.js';
 import { renderBuildPanel, refreshActiveDataPanel } from './panels.js';
 import { closeInspector, getInspectedBuilding } from './inspector_core.js';
@@ -310,6 +310,7 @@ function setBuildingPriority(building, priority) {
       renderBuildingInspector();
       renderMap();
       updateWorkers();
+      updateCityRunway();
     });
 }
 
@@ -324,6 +325,7 @@ function toggleBuildingPaused(building) {
       renderMap();
       refreshActiveDataPanel();
       updateWorkers();
+      updateCityRunway();
     });
 }
 
@@ -393,6 +395,7 @@ function executeDemolish(building) {
       computeLaborAllocation();
       updateMoney();
       updateWorkers();
+      updateCityRunway();
 
       renderMap();
       renderBuildPanel();
