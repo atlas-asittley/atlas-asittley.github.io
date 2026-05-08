@@ -166,7 +166,7 @@ export function renderBuildPanel() {
         desc = 'Service building. Needs road access.';
       }
     } else if (bt.category === 'tax') {
-      desc = 'Generates $' + bt.output_rate + '/min when staffed. Needs road access.';
+      desc = 'Tax revenue scales with population: $' + bt.output_rate + '/min per 100 citizens. Needs road access + staff.';
     } else if (bt.category === 'police') {
       desc = 'Covers nearby housing within ' + (bt.coverage_radius || 0) + ' tiles to reduce crime. Costs $'
            + (bt.upkeep_per_minute || 0) + '/min in upkeep while active. Needs road access.';

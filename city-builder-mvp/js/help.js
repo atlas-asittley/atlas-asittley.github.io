@@ -84,7 +84,7 @@ function benefitText(bt) {
     return 'Service building.';
   }
   if (bt.category === 'tax') {
-    return 'Generates $' + (bt.output_rate || 0) + '/min in tax revenue while staffed and road-connected.';
+    return 'Tax revenue scales with population: $' + (bt.output_rate || 0) + '/min per 100 citizens. A city of 200 generates $' + ((bt.output_rate || 0) * 2) + '/min per office. Staffed + road-connected.';
   }
   if (bt.category === 'police') {
     var radius = bt.coverage_radius || 0;
@@ -229,9 +229,9 @@ function renderBuildingCard(bt) {
 
   // Recipe display: scale rates to integer quantities with a cycle
   // period so the player never sees "0.5 timber → 0.25 lumber".
-  // Tax buildings stay in $/min (always integer-friendly).
+  // Tax revenue is "$ per 100 citizens per minute" — scales with pop.
   if (bt.category === 'tax' && bt.output_rate > 0) {
-    rows += '<div class="help-row"><span class="help-label">Output</span><span class="help-value">$' + bt.output_rate + '/min</span></div>';
+    rows += '<div class="help-row"><span class="help-label">Revenue</span><span class="help-value">$' + bt.output_rate + '/min per 100 citizens (scales with population)</span></div>';
   } else if ((bt.input_resource_key && bt.input_rate > 0)
              || (bt.output_resource_key && bt.output_rate > 0)) {
     var r = recipeOf(bt);
