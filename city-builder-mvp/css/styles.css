@@ -1693,6 +1693,10 @@ body.panel-expanded .map-area { display: none; }
 .build-name small { color: #7a8a9e; font-weight: 400; }
 .build-cost { font-size: 0.72rem; color: #e6c65a; }
 .build-cost.warn { color: #f0a0a0; }
+.build-materials { display: flex; flex-wrap: wrap; gap: 4px; margin: 4px 0 2px; }
+.build-mat-chip { font-size: 0.66rem; padding: 1px 6px; border-radius: 3px; background: rgba(120,140,170,0.12); color: #b8c4d4; border: 1px solid rgba(120,140,170,0.18); white-space: nowrap; }
+.build-mat-chip.short { background: rgba(220,120,120,0.14); color: #f0a0a0; border-color: rgba(220,120,120,0.28); }
+.build-mat-chip .build-mat-have { color: #c8908a; font-weight: 600; margin-left: 2px; }
 .build-desc { font-size: 0.7rem; color: #5a6a7e; }
 .build-hint { font-size: 0.72rem; color: #5a6a7e; text-align: center; padding: 10px 8px 4px; border-top: 1px solid #1e2a3a; margin-top: 4px; line-height: 1.4; }
 

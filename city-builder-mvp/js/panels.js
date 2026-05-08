@@ -129,12 +129,28 @@ export function renderBuildPanel() {
       lastSection = thisSection;
     }
     var canAfford = state.profile.money >= bt.build_cost;
+    // Resource-cost gate (2026-05-08): every non-basic building consumes
+    // a small set of resources at placement time. Compute now and feed
+    // both the disabled flag and the materials chip line below.
+    var resourceCosts = (state.buildingResourceCosts && state.buildingResourceCosts[key]) || [];
+    var resourcesOK = true;
+    var costShortages = [];
+    resourceCosts.forEach(function (rc) {
+      var have = Math.floor((state.inventory && state.inventory[rc.resource_key]) || 0);
+      if (have < rc.quantity) {
+        resourcesOK = false;
+        costShortages.push({
+          resource_key: rc.resource_key,
+          short: rc.quantity - have
+        });
+      }
+    });
     // Progressive unlock: gate buildings hide / lock until the player
     // has reached the required housing tier at least once (sticky).
     var unlockTier = bt.unlocks_at_housing_tier;
     var maxTierEver = (state.profile && state.profile.highest_housing_tier_ever) || 0;
     var unlocked = unlockTier == null || maxTierEver >= unlockTier;
-    var disabled = !canAfford || !unlocked;
+    var disabled = !canAfford || !unlocked || !resourcesOK;
     var selected = state.selectedBuildType === key;
 
     var bgColor = colors[key] || '#4a4a6a';
@@ -251,6 +267,17 @@ export function renderBuildPanel() {
     html += '<div class="build-info">';
     html += '<div class="build-name">' + bt.name + (showTier ? ' <small>Tier ' + bt.tier + '</small>' : '') + '</div>';
     html += '<div class="' + costClass + '">' + costStr + '</div>';
+    if (resourceCosts.length > 0) {
+      var chips = resourceCosts.map(function (rc) {
+        var have = Math.floor((state.inventory && state.inventory[rc.resource_key]) || 0);
+        var ok = have >= rc.quantity;
+        return '<span class="build-mat-chip' + (ok ? '' : ' short') + '">'
+             + rc.quantity + ' ' + resourceName(rc.resource_key)
+             + (ok ? '' : ' <span class="build-mat-have">(' + have + ')</span>')
+             + '</span>';
+      }).join('');
+      html += '<div class="build-materials">' + chips + '</div>';
+    }
     html += '<div class="build-desc">' + desc + '</div>';
     html += '</div></div>';
   });

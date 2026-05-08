@@ -731,6 +731,14 @@ function placeBuilding(tileId, btKey) {
       cancelPlacement();
 
       reloadMapData();
+      // place_building may have deducted resources for this building.
+      // Refetch the player's inventory so the build-menu material chips
+      // and the City → Resources panel show the new totals.
+      sb.from('inventories').select('resource_key, quantity').eq('player_id', state.currentUser.id).then(function (q) {
+        state.inventory = {};
+        (q.data || []).forEach(function (row) { state.inventory[row.resource_key] = row.quantity; });
+        renderBuildPanel();
+      });
       // The AFTER INSERT trigger may have advanced tutorial_step /
       // flipped trade_unlocked. Refetch those two so the banner +
       // build panel + trade gate see the new state immediately.

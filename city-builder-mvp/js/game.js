@@ -235,7 +235,8 @@ function loadGameData() {
     sb.from('trader_visits').select('*').eq('player_id', state.currentUser.id).order('visited_at', { ascending: false }).limit(10),
     sb.from('traders').select('*').eq('is_active', true),
     sb.from('housing_tier_config').select('*'),
-    sb.from('housing_lifestyle_demands').select('*')
+    sb.from('housing_lifestyle_demands').select('*'),
+    sb.from('building_type_resource_costs').select('*')
   ]).then(function (results) {
     state.buildingTypes = {};
     if (results[0].data) results[0].data.forEach(function (bt) { state.buildingTypes[bt.key] = bt; });
@@ -313,6 +314,23 @@ function loadGameData() {
         state.housingLifestyleDemands[d.tier].push({
           resource_key: d.resource_key,
           qty_per_minute: Number(d.qty_per_minute)
+        });
+      });
+    }
+
+    // Resource costs for placing buildings (2026-05-08): money is no
+    // longer the only build cost. state.buildingResourceCosts[bt_key]
+    // is an array of { resource_key, quantity } pairs the player must
+    // have in inventory at placement time.
+    state.buildingResourceCosts = {};
+    if (results[11] && results[11].data) {
+      results[11].data.forEach(function (c) {
+        if (!state.buildingResourceCosts[c.building_type_key]) {
+          state.buildingResourceCosts[c.building_type_key] = [];
+        }
+        state.buildingResourceCosts[c.building_type_key].push({
+          resource_key: c.resource_key,
+          quantity: c.quantity
         });
       });
     }

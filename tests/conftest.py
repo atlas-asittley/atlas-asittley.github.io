@@ -238,10 +238,45 @@ def place(cur, tile_id_at):
     """Place a building via RPC. Returns the JSON result.
 
     Auto-resolves (x, y) to tile_id and asserts the tile exists.
+
+    Also auto-tops-up the placing player's inventory with whatever the
+    building's resource costs require (2026-05-08). The vast majority
+    of existing tests place processors / services / police / transport
+    to set up scenarios for OTHER assertions — they shouldn't have to
+    enumerate brick / lime / lumber / etc just to get a building on
+    the map. Tests that specifically exercise the resource-cost gate
+    skip this fixture and call place_building directly with seeded
+    inventory.
     """
     def _place(building_type_key, x, y):
         tid = tile_id_at(x, y)
         assert tid is not None, f"No tile at ({x}, {y}) — make sure the player's district covers it"
+        # Look up the placing player's id (the one auth.uid() will return).
+        cur.execute("SELECT current_setting('request.jwt.claims', true)")
+        claims = cur.fetchone()[0]
+        if claims:
+            import json as _json
+            try:
+                uid = _json.loads(claims).get('sub')
+            except Exception:
+                uid = None
+        else:
+            uid = None
+        # Top up resources for THIS building's costs.
+        if uid:
+            cur.execute(
+                "SELECT resource_key, quantity FROM public.building_type_resource_costs "
+                "WHERE building_type_key = %s",
+                (building_type_key,)
+            )
+            for resource_key, qty in cur.fetchall():
+                cur.execute(
+                    "INSERT INTO public.inventories (player_id, resource_key, quantity) "
+                    "VALUES (%s, %s, %s) "
+                    "ON CONFLICT (player_id, resource_key) DO UPDATE SET "
+                    "  quantity = GREATEST(public.inventories.quantity, EXCLUDED.quantity)",
+                    (uid, resource_key, qty)
+                )
         cur.execute("SELECT public.place_building(%s, %s)", (tid, building_type_key))
         return cur.fetchone()[0]
     return _place
