@@ -93,24 +93,29 @@ export var state = {
 // ── Grid bounds: compute dynamic grid size from tiles ──
 // Also widens to include any expansion-candidate chunks so the picker can
 // render unallocated territory as empty cells the player can tap.
+//
+// We start undefined (rather than 0/0/14/14) and fall back to that 15x15
+// default only when there's NO data to anchor on — otherwise the
+// defaults act as a floor and produce dark-green "empty-cell" zones
+// outside the actual city. Specifically: when another player resets and
+// their old chunks vanish from the top of the map, the bounds used to
+// stay anchored at y=0 even though no tiles exist up there. The grid
+// then iterated y=0..59 painting a dark-green strip above the surviving
+// districts. With dynamic bounds the grid only covers actual content.
 export function computeGridBounds() {
-  var minX = 0, minY = 0, maxX = 14, maxY = 14;
-  state.tiles.forEach(function (t) {
-    if (t.x < minX) minX = t.x;
-    if (t.y < minY) minY = t.y;
-    if (t.x > maxX) maxX = t.x;
-    if (t.y > maxY) maxY = t.y;
-  });
+  var minX, minY, maxX, maxY;
+  function widen(x, y) {
+    if (minX === undefined || x < minX) minX = x;
+    if (minY === undefined || y < minY) minY = y;
+    if (maxX === undefined || x > maxX) maxX = x;
+    if (maxY === undefined || y > maxY) maxY = y;
+  }
+  state.tiles.forEach(function (t) { widen(t.x, t.y); });
   state.expansionCandidates.forEach(function (c) {
-    var cMinX = c.chunk_x * 15;
-    var cMaxX = c.chunk_x * 15 + 14;
-    var cMinY = c.chunk_y * 15;
-    var cMaxY = c.chunk_y * 15 + 14;
-    if (cMinX < minX) minX = cMinX;
-    if (cMaxX > maxX) maxX = cMaxX;
-    if (cMinY < minY) minY = cMinY;
-    if (cMaxY > maxY) maxY = cMaxY;
+    widen(c.chunk_x * 15, c.chunk_y * 15);
+    widen(c.chunk_x * 15 + 14, c.chunk_y * 15 + 14);
   });
+  if (minX === undefined) { minX = 0; minY = 0; maxX = 14; maxY = 14; }
   state.gridMinX = minX;
   state.gridMinY = minY;
   state.gridMaxX = maxX;
