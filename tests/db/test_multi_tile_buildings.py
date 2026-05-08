@@ -24,14 +24,25 @@ def test_chosen_buildings_have_expected_footprints(cur):
 
 
 def test_default_footprint_is_1x1(cur):
-    """Most categories stay 1x1. Only the buildings explicitly listed in
-    the migration are multi-tile — exhaustive check below ensures we
-    didn't accidentally widen anything else."""
+    """Most categories stay 1x1. Only the buildings explicitly listed
+    here are multi-tile — exhaustive check ensures we didn't accidentally
+    widen anything else. Update this list when intentionally giving a
+    new building a non-1x1 footprint.
+
+    Current multi-tile set:
+    - tax_man / school / temple — 2x2 (original civic buildings)
+    - brewery — 2x1 (original processing)
+    - airport / seaport — 2x2 (transport hubs, 2026-05-08)
+    - train_depot — 2x1 (transport hub, 2026-05-08)
+    """
     cur.execute("""SELECT key FROM public.building_types
                    WHERE footprint_w <> 1 OR footprint_h <> 1
                    ORDER BY key""")
     keys = [r[0] for r in cur.fetchall()]
-    assert keys == ['brewery', 'school', 'tax_man', 'temple']
+    assert keys == [
+        'airport', 'brewery', 'school', 'seaport',
+        'tax_man', 'temple', 'train_depot'
+    ]
 
 
 def test_school_claims_all_4_tiles(make_player, place, cur, clear_resources):
