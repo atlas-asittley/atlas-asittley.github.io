@@ -590,12 +590,16 @@ function renderFlowBars(byKey, kind) {
 function prettySource(k) {
   if (k === 'black_market') return 'Black Market';
   if (k === 'player_trade') return 'Player Trade';
+  if (k === 'p2p_trade') return 'Player Trade';
+  if (k === 'p2p_agreement') return 'Trade Agreement';
+  if (k === 'npc_trade') return 'NPC Traders';
   if (k === 'tax_revenue') return 'Tax Revenue';
   if (k === 'build_cost') return 'Building Construction';
   if (k === 'expansion_cost') return 'District Expansion';
   if (k === 'starting_grant') return 'Starting Grant';
   if (k === 'demolish_refund') return 'Demolish Refund';
   if (k === 'upkeep') return 'Upkeep';
+  if (k === 'ledger_adjustment') return 'Pre-Audit Adjustment';
   return (state.traders && state.traders[k] && state.traders[k].name) || k;
 }
 
