@@ -179,7 +179,7 @@ export function renderBuildPanel() {
            + ' network. Expand it later (tap once built) to add another. Anyone in the city with road-connected'
            + ' truck depots can use the partners too.';
     } else if (bt.category === 'transport_connector') {
-      desc = 'Truck Depot. Connects you to every transport hub in the city via roads — you can use other players\' airport / seaport / train traders. Cheap on its own, valuable in proportion to how many hubs exist.';
+      desc = 'Truck Depot. Unlocks the Regional Hauliers trader (raw materials at moderate prices), and connects you to every airport / seaport / train depot in the city — you can use other players\' transport-hub traders.';
     } else if (bt.category === 'tax') {
       desc = 'Tax revenue scales with population: $' + bt.output_rate + '/min per 100 citizens. Needs road access + staff.';
     } else if (bt.category === 'police') {

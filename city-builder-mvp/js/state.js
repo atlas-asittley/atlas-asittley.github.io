@@ -322,20 +322,30 @@ export function computeTraderUnlocks() {
         && b.building_type_key === modeHubKey(mode)
         && state.roadAccessIds[b.id];
   }
+  function isTruckDepot(b) {
+    return b.building_type_key === 'truck_depot' && b.status === 'active' && state.roadAccessIds[b.id];
+  }
   function cityTiersForMode(mode) {
     var t = 0;
+    if (mode === 'truck') {
+      cityBuildings.forEach(function (b) {
+        if (isTruckDepot(b)) t += 1 + (b.expansion_level || 0);
+      });
+      return t;
+    }
     cityBuildings.forEach(function (b) {
       if (isHub(b, mode)) t += 1 + (b.expansion_level || 0);
     });
     return t;
   }
   function playerHasAccess(mode) {
+    if (mode === 'truck') {
+      return myBuildings.some(isTruckDepot);
+    }
     // Owns a hub of mode (road-connected)?
     if (myBuildings.some(function (b) { return isHub(b, mode); })) return true;
     // Owns a road-connected truck depot AND city has any road-connected hub?
-    var hasTruck = myBuildings.some(function (b) {
-      return b.building_type_key === 'truck_depot' && b.status === 'active' && state.roadAccessIds[b.id];
-    });
+    var hasTruck = myBuildings.some(isTruckDepot);
     if (!hasTruck) return false;
     return cityBuildings.some(function (b) { return isHub(b, mode); });
   }
@@ -359,13 +369,17 @@ export function computeTraderUnlocks() {
       var unlocked = (t.tier <= cityTiers) && hasAccess;
       var hint = '';
       if (!unlocked) {
+        var hubName = (t.transport_mode === 'airport') ? 'Airport'
+                    : (t.transport_mode === 'seaport') ? 'Seaport'
+                    : (t.transport_mode === 'train')   ? 'Train Depot'
+                    : 'Truck Depot';
         if (t.tier > cityTiers) {
           hint = 'Build ' + (t.tier === 1 ? 'a' : 'another') + ' '
-               + (t.transport_mode === 'airport' ? 'Airport' :
-                  t.transport_mode === 'seaport' ? 'Seaport' : 'Train Depot')
-               + ' (or expand an existing one) in the city.';
+               + hubName + ' (or expand an existing one) in the city.';
         } else if (!hasAccess) {
-          hint = 'Build a Truck Depot to plug into the city\'s ' + t.transport_mode + ' network.';
+          hint = (t.transport_mode === 'truck')
+            ? 'Build a Truck Depot to unlock this trader.'
+            : 'Build a Truck Depot to plug into the city\'s ' + t.transport_mode + ' network.';
         }
       }
       state.unlockedTraders[tk] = { unlocked: unlocked, hint: hint };
