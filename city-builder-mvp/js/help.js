@@ -439,9 +439,9 @@ var STAT_INFO = {
   workers: {
     icon: '👷',
     title: 'Workers Employed',
-    what: 'The number of citizens currently <b>working</b> at a building somewhere in your district. Compare against your population (👥 next to this) to see how many are idle.',
-    why: 'When this equals your population, every citizen has a job — productive and content. When it\'s well below population, you have idle workers and need more production. When the city actively can\'t fill its jobs, a red <b>!</b> badge appears: that\'s a labor shortage and production stalls.',
-    how: 'Want more workers employed? Build more production buildings (extractors, processors, services). Want to fix a shortage? Grow population — bigger / more-evolved houses raise the target, citizens move in when happiness is above 50. A <b>Tavern</b> directly boosts capacity while it\'s running.'
+    what: 'The number of citizens currently <b>working</b> at a building somewhere in your district. The format is <b>employed / jobs available</b>. A small <b>+N🍺</b> next to this means a staffed Tavern is contributing N extra workers <i>on top of</i> your population (think of it as travelers and barflies pitching in — they don\'t need housing).',
+    why: 'When workers employed equals jobs available, every job is staffed — your city is running at full capacity. When the city actively can\'t fill its jobs, a red <b>!</b> badge appears: that\'s a labor shortage and production stalls. The tavern bonus is why you can sometimes see "228 employed / 228 jobs" with only 226 population — the labor pool is 226 + 10 from the tavern = 236.',
+    how: 'Want more workers employed? Build more production buildings (extractors, processors, services). Want to fix a shortage? Grow population — bigger / more-evolved houses raise the target, citizens move in when happiness is above 50. A <b>Tavern</b> directly boosts capacity by +10 while it\'s staffed AND fed, on top of however many citizens you have.'
   },
   population: {
     icon: '👥',

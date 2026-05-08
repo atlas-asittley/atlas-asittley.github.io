@@ -118,18 +118,23 @@ export function updateWorkers() {
   var used = Math.max(0, li.workersUsed || 0);
   var needed = Math.max(0, li.workersNeeded || 0);
   var idle = Math.max(0, li.workersIdle || 0);
+  var pop = Math.floor((state.profile && state.profile.population) || 0);
+  // Tavern bonus = worker capacity above raw population. A staffed +
+  // fed tavern contributes +10 workers, modeling barflies & travelers
+  // who pitch in but don't live in housing. Without surfacing this,
+  // "228 employed / 226 population" looks like a math error.
+  var tavernBonus = Math.max(0, supply - pop);
   var stat = document.getElementById('g-workers-stat');
-  // Workers stat: "employed / available jobs". When supply < needed,
-  // employed is capped at supply and the gap is the labor shortage.
   if (el) {
-    el.textContent = used + '/' + needed;
+    var bonusSuffix = tavernBonus > 0 ? ' <span class="workers-bonus">+' + tavernBonus + '🍺</span>' : '';
+    el.innerHTML = used + '/' + needed + bonusSuffix;
     el.className = 'v ' + (li.laborShortage ? 'shortage' : 'workers');
   }
   if (stat) {
-    // First number = workers currently employed. Second = total jobs
-    // your buildings have on offer (sum of worker_cost across active
-    // production buildings with road access).
-    stat.title = used + ' workers employed / ' + needed + ' jobs available';
+    var tavernLine = tavernBonus > 0
+      ? ' (labor pool ' + supply + ' = ' + pop + ' citizens + ' + tavernBonus + ' from a staffed tavern)'
+      : '';
+    stat.title = used + ' workers employed / ' + needed + ' jobs available' + tavernLine;
   }
   var badge = document.getElementById('g-labor-badge');
   if (badge) {
