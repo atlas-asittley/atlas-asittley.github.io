@@ -669,4 +669,95 @@ export function initHelp() {
 
   var settingsBtn = document.getElementById('g-settings');
   if (settingsBtn) settingsBtn.addEventListener('click', openSettingsModal);
+
+  var bugBtn = document.getElementById('g-bug-report');
+  if (bugBtn) bugBtn.addEventListener('click', openBugReportModal);
+}
+
+// ── Bug report modal ──
+// Players type a description; the server-side submit_bug_report RPC
+// snapshots their state (buildings, inventory, cash ledger, trader
+// visits, agreements, policies) so the dev can forensically read
+// what the world looked like at the moment without making the
+// player describe every detail. Client passes a small jsonb of UI
+// state (active panel, selected trader, recent notifications) for
+// extra context.
+function openBugReportModal() {
+  if (openOverlay) return;
+  openOverlay = document.createElement('div');
+  openOverlay.className = 'help-overlay';
+  openOverlay.innerHTML =
+    '<div class="stat-info-modal" role="dialog" aria-modal="true">' +
+      '<div class="help-header">' +
+        '<span class="help-title">🐞 Report a bug</span>' +
+        '<button class="help-close" id="help-close" aria-label="Close">×</button>' +
+      '</div>' +
+      '<div class="help-body">' +
+        '<div class="bug-report-hint">Describe what happened. We capture a snapshot of your current state — buildings, inventory, recent transactions, trader visits — so you don\'t need to repeat details. Be specific about what you expected vs. what happened.</div>' +
+        '<textarea id="bug-report-text" class="bug-report-textarea" rows="6" maxlength="5000" placeholder="e.g. My pottery kilns look idle but inventory shows pottery climbing — kilns are at (10,56) (11,56) (9,57)."></textarea>' +
+        '<div class="bug-report-actions">' +
+          '<button class="btn-secondary" id="bug-report-cancel">Cancel</button>' +
+          '<button class="btn-primary" id="bug-report-submit">Submit</button>' +
+        '</div>' +
+        '<div class="bug-report-status" id="bug-report-status"></div>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(openOverlay);
+  document.getElementById('help-close').addEventListener('click', closeHelpModal);
+  document.getElementById('bug-report-cancel').addEventListener('click', closeHelpModal);
+  openOverlay.addEventListener('click', function (e) {
+    if (e.target === openOverlay) closeHelpModal();
+  });
+
+  var textarea = document.getElementById('bug-report-text');
+  textarea.focus();
+
+  document.getElementById('bug-report-submit').addEventListener('click', function () {
+    var desc = textarea.value.trim();
+    if (desc.length < 5) {
+      var st = document.getElementById('bug-report-status');
+      st.textContent = 'Please write at least a few words about what went wrong.';
+      st.className = 'bug-report-status error';
+      return;
+    }
+    var btn = document.getElementById('bug-report-submit');
+    btn.disabled = true;
+    btn.textContent = 'Submitting…';
+
+    // Tiny client snapshot: things the server can't see (which UI
+    // tab/sub-tab is open, what the user was last interacting with,
+    // viewport size, timestamp).
+    var clientState = {
+      ts: new Date().toISOString(),
+      ua: (navigator.userAgent || '').slice(0, 200),
+      viewport: { w: window.innerWidth, h: window.innerHeight, dpr: window.devicePixelRatio || 1 },
+      active_panel: (document.querySelector('.tab-btn.active') || {}).dataset
+        ? (document.querySelector('.tab-btn.active').dataset.tab || null)
+        : null,
+      active_subtab: (document.querySelector('.trade-subtab.active, .city-subtab.active') || {}).dataset
+        ? (document.querySelector('.trade-subtab.active, .city-subtab.active').dataset.subtab || null)
+        : null,
+      selected_trader: state.selectedTrader || null,
+      selected_build: state.selectedBuildType || null,
+      recent_notifications: (state.notifications || []).slice(-10).map(function (n) {
+        return { kind: n.kind, msg: n.message, at: n.created_at };
+      })
+    };
+
+    sb.rpc('submit_bug_report', {
+      p_description: desc,
+      p_client_state: clientState
+    }).then(function (r) {
+      if (r.error) {
+        var st2 = document.getElementById('bug-report-status');
+        st2.textContent = 'Submit failed: ' + r.error.message;
+        st2.className = 'bug-report-status error';
+        btn.disabled = false;
+        btn.textContent = 'Submit';
+        return;
+      }
+      addNotification('success', 'Bug report sent. Thanks!');
+      closeHelpModal();
+    });
+  });
 }

@@ -137,6 +137,19 @@ body {
 /* ── Game: info bar ────────────────────────────────── */
 .info-bar { display: flex; align-items: center; justify-content: center; gap: 16px; padding: 5px 12px; background: #111820; font-size: 0.78rem; color: #7a8a9e; border-bottom: 1px solid #1a2332; flex-shrink: 0; }
 .info-bar .tag { background: rgba(79,163,224,0.1); color: #4fa3e0; padding: 2px 8px; border-radius: 4px; font-weight: 600; text-transform: capitalize; }
+.btn-bug-report { background: transparent; border: 1px solid #1e2a3a; color: #7a8a9e; font-size: 0.74rem; padding: 3px 10px; border-radius: 4px; cursor: pointer; margin-left: auto; transition: all 0.15s; }
+.btn-bug-report:hover { background: rgba(220,140,80,0.12); border-color: #5a3a20; color: #e0a060; }
+.bug-report-hint { font-size: 0.78rem; color: #7a8a9e; line-height: 1.45; margin-bottom: 12px; }
+.bug-report-textarea { width: 100%; box-sizing: border-box; background: #0e1620; border: 1px solid #243447; border-radius: 6px; color: #e6eef6; font-family: inherit; font-size: 0.9rem; padding: 10px; resize: vertical; min-height: 110px; }
+.bug-report-textarea:focus { outline: none; border-color: #4fa3e0; }
+.bug-report-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 12px; }
+.bug-report-actions .btn-primary,
+.bug-report-actions .btn-secondary { padding: 8px 18px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; cursor: pointer; border: none; }
+.bug-report-actions .btn-secondary { background: transparent; color: #7a8a9e; border: 1px solid #243447; }
+.bug-report-actions .btn-primary { background: #4fa3e0; color: #0b0f14; }
+.bug-report-actions .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+.bug-report-status { font-size: 0.78rem; margin-top: 10px; min-height: 1em; }
+.bug-report-status.error { color: #e0707a; }
 
 /* ── Game: layout ──────────────────────────────────── */
 .game-body { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
