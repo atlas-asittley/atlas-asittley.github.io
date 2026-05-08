@@ -15,12 +15,12 @@
 -- 1) New trader.
 INSERT INTO public.traders
   (key, name, description, is_active, visit_capacity, visit_interval_minutes,
-   display_order, mission_cooldown_minutes, base_request_qty,
+   display_order, base_request_qty,
    soft_deadline_minutes, transport_mode, tier)
 VALUES
   ('regional_hauliers', 'Regional Hauliers',
    'Local hauling co-op. Frequent runs to nearby villages with raw materials and household goods.',
-   TRUE, 25, 12, 90, 30, 5, 60, 'truck', 1)
+   TRUE, 25, 12, 90, 5, 60, 'truck', 1)
 ON CONFLICT (key) DO UPDATE SET
   name = EXCLUDED.name,
   description = EXCLUDED.description,

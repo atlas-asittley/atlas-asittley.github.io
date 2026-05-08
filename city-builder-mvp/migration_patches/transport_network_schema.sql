@@ -60,18 +60,18 @@ ON CONFLICT (key) DO UPDATE SET
 
 INSERT INTO public.traders
   (key, name, description, is_active, visit_capacity, visit_interval_minutes,
-   display_order, mission_cooldown_minutes, base_request_qty,
+   display_order, base_request_qty,
    soft_deadline_minutes, transport_mode, tier)
 VALUES
   -- Airport: fast premium, lifestyle-focused.
-  ('sky_caravans',   'Sky Caravans',   'Premium air freight. Small loads, frequent stops.',         TRUE, 10,  8, 100, 30, 5, 60,  'airport', 1),
-  ('cloud_couriers', 'Cloud Couriers', 'High-altitude luxury food specialists.',                    TRUE, 12, 12, 110, 30, 5, 60,  'airport', 2),
+  ('sky_caravans',   'Sky Caravans',   'Premium air freight. Small loads, frequent stops.',         TRUE, 10,  8, 100, 5, 60,  'airport', 1),
+  ('cloud_couriers', 'Cloud Couriers', 'High-altitude luxury food specialists.',                    TRUE, 12, 12, 110, 5, 60,  'airport', 2),
   -- Seaport: bulk exotic.
-  ('coastal_merchants', 'Coastal Merchants', 'Bulk raw-material shippers from coastal harbors.',   TRUE, 40, 18, 120, 30, 5, 60,  'seaport', 1),
-  ('distant_isles',     'Distant Isles',     'Exotic goods from beyond the main shipping lanes.', TRUE, 30, 22, 130, 30, 5, 60,  'seaport', 2),
+  ('coastal_merchants', 'Coastal Merchants', 'Bulk raw-material shippers from coastal harbors.',   TRUE, 40, 18, 120, 5, 60,  'seaport', 1),
+  ('distant_isles',     'Distant Isles',     'Exotic goods from beyond the main shipping lanes.', TRUE, 30, 22, 130, 5, 60,  'seaport', 2),
   -- Train Depot: continental staples.
-  ('inland_caravans', 'Inland Caravans', 'Continental grain and food staples in volume.',          TRUE, 60, 25, 140, 30, 5, 60,  'train',   1),
-  ('mountain_express', 'Mountain Express', 'Processed metals and bulk industrials by rail.',       TRUE, 50, 30, 150, 30, 5, 60,  'train',   2)
+  ('inland_caravans', 'Inland Caravans', 'Continental grain and food staples in volume.',          TRUE, 60, 25, 140, 5, 60,  'train',   1),
+  ('mountain_express', 'Mountain Express', 'Processed metals and bulk industrials by rail.',       TRUE, 50, 30, 150, 5, 60,  'train',   2)
 ON CONFLICT (key) DO UPDATE SET
   name = EXCLUDED.name,
   description = EXCLUDED.description,

@@ -1299,7 +1299,7 @@ export function initPanelCollapse() {
 // inactive sibling tab's remembered sub-state.
 //
 // Sub-panel containers are named panel-trade-<sub> for the Trade tab
-// (partners / missions / players) and panel-city-<sub> for the City tab
+// (partners / players) and panel-city-<sub> for the City tab
 // (resources / treasury). The sub-tab click handler uses the dataset
 // to figure out which prefix to look for.
 export function initTabs() {
@@ -1362,7 +1362,6 @@ export function refreshActiveDataPanel() {
 
 function renderSubpanel(sub) {
   if (sub === 'partners') renderTradePanel();
-  else if (sub === 'missions') renderMissionsPanel();
   else if (sub === 'players') renderPlayersPanel();
   else if (sub === 'resources') renderResourcesPanel();
   else if (sub === 'treasury') renderTreasuryPanel();
@@ -1399,99 +1398,6 @@ function renderLockedTradeHtml(info) {
        + '<div class="trade-lock-body">' + hint + '</div>'
        + '<div class="trade-lock-hint">Once trade opens it stays open — even if you demolish buildings later.</div>'
        + '</div>';
-}
-
-function renderMissionsPanel() {
-  var panel = document.getElementById('panel-trade-missions');
-  var unlock = computeTradeUnlockState();
-  if (!unlock.unlocked) {
-    panel.innerHTML = renderLockedTradeHtml(unlock);
-    return;
-  }
-  panel.innerHTML = '<div class="trade-loading">Loading missions…</div>';
-  sb.rpc('get_active_missions').then(function (r) {
-    if (r.error) {
-      panel.innerHTML = '<div class="trade-error">Failed to load missions: ' + escapeHtml(r.error.message) + '</div>';
-      return;
-    }
-    var data = r.data || {};
-    var open = data.open || [];
-    var quiet = data.quiet || [];
-    if (open.length === 0 && quiet.length === 0) {
-      panel.innerHTML = '<div class="trade-empty">No traders are working with the city yet.</div>';
-      return;
-    }
-    var html = '';
-    if (open.length) {
-      html += '<div class="missions-list">';
-      open.forEach(function (m) {
-        var pct = Math.min(100, Math.round((m.current_qty / m.target_qty) * 100));
-        var youHave = Math.floor((state.inventory && state.inventory[m.resource_key]) || 0);
-        var remaining = m.target_qty - m.current_qty;
-        var disabled = youHave <= 0 || remaining <= 0;
-        var deadlineMs = new Date(m.soft_deadline).getTime() - Date.now();
-        var deadlineText = deadlineMs > 0
-          ? Math.max(1, Math.round(deadlineMs / 60000)) + ' min until soft deadline'
-          : 'past soft deadline (still accepting partial)';
-        html += '<div class="mission-card">'
-              + '<div class="mission-header">'
-              + '<span class="mission-trader">' + escapeHtml(m.trader_name) + ' wants</span>'
-              + '<span class="mission-deadline">' + deadlineText + '</span>'
-              + '</div>'
-              + '<div class="mission-target">' + m.target_qty + ' ' + escapeHtml(resourceName(m.resource_key)) + '</div>'
-              + '<div class="mission-progress"><div class="mission-progress-fill" style="width:' + pct + '%"></div></div>'
-              + '<div class="mission-meta">'
-              + '<span>' + m.current_qty + ' / ' + m.target_qty + '</span>'
-              + '<span>You: ' + (m.your_donated_qty || 0) + ' donated · have ' + youHave + '</span>'
-              + '</div>'
-              + '<div class="mission-actions">'
-              + '<input type="number" min="1" step="1" value="' + Math.min(remaining, youHave || 1) + '" class="mission-qty" data-mission="' + m.id + '">'
-              + '<button class="btn-mission-donate" data-mission="' + m.id + '"' + (disabled ? ' disabled' : '') + '>Donate</button>'
-              + '</div>'
-              + '</div>';
-      });
-      html += '</div>';
-    }
-    if (quiet.length) {
-      html += '<div class="quiet-traders">';
-      html += '<div class="quiet-traders-title">Waiting on next request</div>';
-      quiet.forEach(function (q) {
-        var nextMs = new Date(q.next_eligible_at).getTime() - Date.now();
-        var nextText = nextMs <= 60000 ? 'soon' : '~' + Math.max(1, Math.round(nextMs / 60000)) + ' min';
-        html += '<div class="quiet-trader-card">'
-              + '<span class="quiet-trader-name">' + escapeHtml(q.trader_name) + '</span>'
-              + '<span class="quiet-trader-eta">Next request in ' + nextText + '</span>'
-              + '</div>';
-      });
-      html += '</div>';
-    }
-    panel.innerHTML = html;
-
-    panel.querySelectorAll('.btn-mission-donate').forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        var mid = btn.dataset.mission;
-        var qtyInput = panel.querySelector('.mission-qty[data-mission="' + mid + '"]');
-        var qty = Math.max(1, parseInt(qtyInput.value, 10) || 1);
-        btn.disabled = true; btn.textContent = 'Sending…';
-        sb.rpc('donate_to_mission', { p_mission_id: mid, p_qty: qty }).then(function (rr) {
-          if (rr.error) {
-            showToast('Donate failed: ' + rr.error.message, 'error');
-            btn.disabled = false; btn.textContent = 'Donate';
-            return;
-          }
-          var d = rr.data || {};
-          showToast('Donated ' + d.donated_qty + (d.fulfilled ? ' — mission fulfilled!' : ''), 'success');
-          // Refresh inventory + missions.
-          sb.from('inventories').select('resource_key, quantity').eq('player_id', state.currentUser.id).then(function (q) {
-            state.inventory = {};
-            (q.data || []).forEach(function (row) { state.inventory[row.resource_key] = row.quantity; });
-            refreshActiveDataPanel();
-          });
-          renderMissionsPanel();
-        });
-      });
-    });
-  });
 }
 
 function escapeHtml(s) {
