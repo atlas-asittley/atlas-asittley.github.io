@@ -127,6 +127,107 @@ function benefitText(bt) {
   return null;
 }
 
+// Per-tier housing breakdown — data-driven from state.housingTierConfig
+// + state.housingLifestyleDemands so the help text never goes stale
+// when balance numbers move. Renders one block per tier with worker
+// count, every prerequisite the tier checks (cumulative across all
+// previous tiers), the lifestyle goods stacked at this tier, the food
+// + lifestyle drain expressed in per-hour units, and the desirability
+// threshold if relevant.
+function renderHousingTierBreakdown(bt) {
+  var tiers = state.housingTierConfig || {};
+  var demands = state.housingLifestyleDemands || {};
+
+  var html = '';
+  // Top-level chain banner — a quick "what's the ladder?" line.
+  html += '<div class="help-row"><span class="help-label">Tiers</span><span class="help-value">';
+  var chain = [];
+  for (var t = 0; t <= 8; t++) {
+    if (tiers[t]) chain.push(tiers[t].name);
+  }
+  html += escapeHtml(chain.join(' → '));
+  html += '</span></div>';
+  html += '<div class="help-row"><span class="help-label">Build cost</span><span class="help-value">$' + (bt.build_cost || 0) + ' (placed as Shanty; evolves automatically as conditions are met)</span></div>';
+  html += '<div class="help-row help-row-section"><span class="help-label">How it works</span><span class="help-value">'
+       +    'Houses evolve through the tiers below as their needs are met. '
+       +    'They <i>devolve</i> a tier when a need fails — after a per-tier grace window. '
+       +    'Lifestyle goods (pottery/bread/furniture/statuary) stack: once a tier earns a good, every higher tier keeps needing it. '
+       +    'Click any house in the city to see its exact next-upgrade blockers.'
+       + '</span></div>';
+
+  // Per-tier blocks. Skip Shanty/Mud Hut details unless they have
+  // distinguishing requirements; T0 is the placement, T1 is "any well".
+  for (var tier = 0; tier <= 8; tier++) {
+    var cfg = tiers[tier];
+    if (!cfg) continue;
+    html += renderHousingTierBlock(tier, cfg, demands);
+  }
+
+  return html;
+}
+
+function renderHousingTierBlock(tier, cfg, demands) {
+  var workers = cfg.workers || 0;
+  var foodPerMin = Number(cfg.food_per_minute || 0);
+  var foodPerHour = Math.round(foodPerMin * 60);
+
+  var prereqs = [];
+  if (tier === 1) {
+    prereqs.push('any well in your district');
+  } else {
+    if (cfg.needs_well)   prereqs.push('well within 4 tiles');
+    if (cfg.needs_road)   prereqs.push('road-connected');
+    if (cfg.needs_food)   prereqs.push('food in stock (any food type)');
+    if (cfg.needs_school) prereqs.push('operating school within 5 tiles');
+    if (cfg.needs_temple) prereqs.push('operating temple within 6 tiles');
+    if (cfg.needs_luxury_food) prereqs.push('a luxury food in stock (spirits / caviar / spices / ale)');
+    if (cfg.needs_all_industrial_luxuries) prereqs.push('ALL FOUR industrial luxuries in stock (cabinets + monuments + mosaics + machinery)');
+    else if (cfg.needs_industrial_luxury) prereqs.push('an industrial luxury in stock (cabinets / monuments / mosaics / machinery)');
+    if (cfg.min_desirability > 0) prereqs.push('desirability ≥ ' + cfg.min_desirability + '/100');
+  }
+
+  // Lifestyle drain rows for this tier (cumulative — one row per
+  // resource defined for this tier in housing_lifestyle_demands).
+  var lifestyleRows = (demands[tier] || []).slice().sort(function (a, b) {
+    return a.resource_key.localeCompare(b.resource_key);
+  });
+
+  var drainParts = [];
+  if (foodPerHour > 0) {
+    drainParts.push(foodPerHour + ' food/hr');
+  }
+  lifestyleRows.forEach(function (d) {
+    var perHour = Math.round(Number(d.qty_per_minute) * 60 * 10) / 10;
+    var name = (state.resources && state.resources[d.resource_key] && state.resources[d.resource_key].name) || d.resource_key;
+    drainParts.push(perHour + ' ' + name.toLowerCase() + '/hr');
+  });
+
+  var html = '<div class="help-row help-row-section help-row-tier">';
+  html += '<span class="help-label">' + escapeHtml(cfg.name) + '</span>';
+  html += '<span class="help-value">';
+  html += '<div class="help-tier-line"><b>Tier ' + tier + '</b> · houses up to <b>' + workers + '</b> people</div>';
+
+  if (prereqs.length > 0) {
+    html += '<div class="help-tier-line"><i>Needs:</i> ' + escapeHtml(prereqs.join(' · ')) + '</div>';
+  } else if (tier === 0) {
+    html += '<div class="help-tier-line"><i>No prereqs</i> — placed as Shanty, then evolves automatically.</div>';
+  }
+
+  if (lifestyleRows.length > 0) {
+    var goods = lifestyleRows.map(function (d) {
+      return (state.resources && state.resources[d.resource_key] && state.resources[d.resource_key].name) || d.resource_key;
+    });
+    html += '<div class="help-tier-line"><i>Lifestyle goods (must stay in stock):</i> ' + escapeHtml(goods.join(' + ')) + '</div>';
+  }
+
+  if (drainParts.length > 0) {
+    html += '<div class="help-tier-line"><i>Per-house drain:</i> ' + escapeHtml(drainParts.join(' · ')) + '</div>';
+  }
+
+  html += '</span></div>';
+  return html;
+}
+
 // Section assignment mirrors panels.js but split by industry so each
 // player's chain is its own visual section. "Common" buildings are
 // further split into Infrastructure (road/housing) vs Civic (services /
@@ -221,30 +322,7 @@ function renderBuildingCard(bt) {
     nameSuffix = ' <small>T' + bt.tier + '</small>';
   }
   if (bt.category === 'housing') {
-    rows =
-      '<div class="help-row"><span class="help-label">Tiers</span><span class="help-value">Shanty → Mud Hut → Cottage → Townhouse → Villa → Manor → Mansion → Estate → Palace</span></div>' +
-      '<div class="help-row"><span class="help-label">Workers / house</span><span class="help-value">Shanty 2 · Hut 6 · Cottage 10 · Townhouse 16 · Villa 24 · Manor 35 · Mansion 50 · Estate 70 · Palace 100</span></div>' +
-      '<div class="help-row"><span class="help-label">Build cost</span><span class="help-value">$' + (bt.build_cost || 0) + ' (placed as Shanty; evolves automatically)</span></div>' +
-      '<div class="help-row help-row-section"><span class="help-label">Tier prereqs</span><span class="help-value">' +
-        '<b>Mud Hut</b>: any well in your district.<br>' +
-        '<b>Cottage</b>: well within 4 tiles · food in stock.<br>' +
-        '<b>Townhouse</b>: road-connected · school within 5 tiles.<br>' +
-        '<b>Villa</b>: temple within 6 tiles.<br>' +
-        '<b>Manor &amp; up</b>: tavern + bathhouse coverage, plus more food variety and luxuries the higher you go.<br>' +
-        '<i>Click any house in your city to see its exact upgrade blockers.</i>' +
-      '</span></div>' +
-      '<div class="help-row help-row-section"><span class="help-label">Food drain</span><span class="help-value">' +
-        'Houses past Mud Hut consume food every minute, drawn proportionally from whatever foods you have in stock. Run out and they devolve.<br>' +
-        'Per house, per hour: Cottage ~14 · Townhouse 24 · Villa 36 · Manor 60 · Mansion 96 · Estate 144 · Palace 216.' +
-      '</span></div>' +
-      '<div class="help-row help-row-section"><span class="help-label">Lifestyle goods</span><span class="help-value">' +
-        'Higher tiers need non-food luxuries in stock to upgrade <i>and</i> to keep from devolving. Goods stack — once your residents acquire a taste, they keep wanting it forever:<br>' +
-        '<b>Cottage</b>: pottery.<br>' +
-        '<b>Townhouse</b>: pottery + bread.<br>' +
-        '<b>Villa</b>: pottery + bread + furniture.<br>' +
-        '<b>Manor &amp; up</b>: pottery + bread + furniture + statuary.<br>' +
-        'Per-house consumption scales with tier — a Manor uses ~2.5× as much pottery as a Cottage. Plan multiple production chains, or trade for what you can\'t make.' +
-      '</span></div>';
+    rows = renderHousingTierBreakdown(bt);
   }
 
   // Icon: same inline-SVG sprite the build panel uses, scaled down.
