@@ -370,6 +370,34 @@ export function computeNetRates() {
     });
   }
 
+  // NPC trade flow — buy_to_reserve adds to inventory, sell_surplus
+  // drains it. Rate uses projected max (visit_capacity / interval),
+  // matching the "+X/min max" displayed in the resource drilldown.
+  // Without this the Rate column under-reported by the trade-flow
+  // amount; Jill's pottery showed −1.8/min in the listing while the
+  // drilldown's Net was +2.7/min from her three import policies.
+  if (state.profile && state.profile.trade_unlocked && state.tradePolicies) {
+    Object.keys(state.tradePolicies).forEach(function (rk) {
+      var policy = state.tradePolicies[rk];
+      if (!policy || policy.mode === 'keep') return;
+      Object.keys(state.traders || {}).forEach(function (tk) {
+        var t = state.traders[tk];
+        if (!t) return;
+        var prices = (state.allTraderPrices && state.allTraderPrices[tk]
+                      && state.allTraderPrices[tk][rk]) || null;
+        if (!prices) return;
+        var unlock = state.unlockedTraders && state.unlockedTraders[tk];
+        if (unlock && !unlock.unlocked) return;
+        var rate = (t.visit_capacity || 0) / (t.visit_interval_minutes || 1);
+        if (policy.mode === 'sell_surplus' && prices.buy_price) {
+          rates[rk] = (rates[rk] || 0) - rate;
+        } else if (policy.mode === 'buy_to_reserve' && prices.sell_price) {
+          rates[rk] = (rates[rk] || 0) + rate;
+        }
+      });
+    });
+  }
+
   return rates;
 }
 
@@ -595,6 +623,31 @@ export function computeCityRunway() {
       totalFoodProduction += Number(bt.output_rate);
     }
   });
+  // Add NPC trade flow on every food resource (so a buy_to_reserve on
+  // grain extends runway just like a grain farm would). Lifestyle-good
+  // runways already get this via computeResourceFlow; food was being
+  // computed standalone and missing it.
+  if (state.profile && state.profile.trade_unlocked && state.tradePolicies) {
+    foodKeys.forEach(function (fk) {
+      var policy = state.tradePolicies[fk];
+      if (!policy || policy.mode === 'keep') return;
+      Object.keys(state.traders || {}).forEach(function (tk) {
+        var t = state.traders[tk];
+        if (!t) return;
+        var prices = (state.allTraderPrices && state.allTraderPrices[tk]
+                      && state.allTraderPrices[tk][fk]) || null;
+        if (!prices) return;
+        var unlock = state.unlockedTraders && state.unlockedTraders[tk];
+        if (unlock && !unlock.unlocked) return;
+        var rate = (t.visit_capacity || 0) / (t.visit_interval_minutes || 1);
+        if (policy.mode === 'sell_surplus' && prices.buy_price) {
+          totalFoodDrain += rate;
+        } else if (policy.mode === 'buy_to_reserve' && prices.sell_price) {
+          totalFoodProduction += rate;
+        }
+      });
+    });
+  }
   consider('food', totalFoodStock, totalFoodProduction, totalFoodDrain);
 
   // ── 2) Lifestyle goods ──
