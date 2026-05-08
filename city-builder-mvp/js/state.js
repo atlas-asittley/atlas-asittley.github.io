@@ -149,13 +149,15 @@ export function computeRoadAccess() {
     if (bt.category === 'road') return;
 
     // Every other production category — extractor, food_extractor,
-    // processor, service, tax, booster — now needs road access to
-    // operate. Housing keeps its tier-config gate (tier 0 shanties
-    // don't need roads).
+    // processor, service, tax, booster, police — now needs road access
+    // to operate. Housing keeps its tier-config gate (tier 0 shanties
+    // don't need roads). Police was missing here, which matched a
+    // mirror bug in computeLaborAllocation that under-counted workers
+    // needed by the city's police footprint.
     if (bt.category === 'extractor' || bt.category === 'food_extractor'
         || bt.category === 'processor' || bt.category === 'housing'
         || bt.category === 'service'  || bt.category === 'tax'
-        || bt.category === 'booster') {
+        || bt.category === 'booster'  || bt.category === 'police') {
       // Check if this housing tier actually needs road
       if (bt.category === 'housing') {
         var tier = b.housing_tier !== undefined ? b.housing_tier : 1;
@@ -232,16 +234,20 @@ export function computeLaborAllocation() {
   var popFloor = inTutorial ? 0 : 15;
   var housingCapacity = popFloor + housingSupply;
 
-  // Get worker-consuming buildings sorted by priority DESC, then created_at ASC.
-  // Mirrors the server's staffing loop in process_production: every
-  // production category requires road access now (extractors, food
-  // extractors, boosters included — previously they were unconditional).
+  // Get worker-consuming buildings sorted by priority DESC, then
+  // created_at ASC. Mirrors the server's _pp_workers_needed staffing
+  // query, which lists categories: extractor, food_extractor, booster,
+  // processor, tax, service, police. Police was missing here — without
+  // it, every police building's worker_cost was a phantom "idle
+  // worker" in the inspector (Jill saw 15 idle even though she was
+  // staffed at full capacity).
   var prodBuildings = myBuildings.filter(function (b) {
     var bt = state.buildingTypes[b.building_type_key];
     if (!bt || b.status !== 'active') return false;
     if (bt.category === 'extractor' || bt.category === 'food_extractor'
         || bt.category === 'processor' || bt.category === 'service'
-        || bt.category === 'tax' || bt.category === 'booster') {
+        || bt.category === 'tax' || bt.category === 'booster'
+        || bt.category === 'police') {
       return !!state.roadAccessIds[b.id];
     }
     return false;
