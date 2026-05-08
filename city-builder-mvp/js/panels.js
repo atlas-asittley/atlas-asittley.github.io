@@ -397,11 +397,19 @@ export function computeNetRates() {
         if (!prices) return;
         var unlock = state.unlockedTraders && state.unlockedTraders[tk];
         if (unlock && !unlock.unlocked) return;
-        var rate = (t.visit_capacity || 0) / (t.visit_interval_minutes || 1);
+        // Sustained rate respects daily caps (see computeResourceFlow
+        // for the full reasoning). 1440 min = 24h.
+        var burst = (t.visit_capacity || 0) / (t.visit_interval_minutes || 1);
         if (policy.mode === 'sell_surplus' && prices.buy_price) {
+          var rate = prices.daily_buy_cap != null
+            ? Math.min(burst, prices.daily_buy_cap / 1440)
+            : burst;
           rates[rk] = (rates[rk] || 0) - rate;
         } else if (policy.mode === 'buy_to_reserve' && prices.sell_price) {
-          rates[rk] = (rates[rk] || 0) + rate;
+          var rateB = prices.daily_sell_cap != null
+            ? Math.min(burst, prices.daily_sell_cap / 1440)
+            : burst;
+          rates[rk] = (rates[rk] || 0) + rateB;
         }
       });
     });
@@ -529,6 +537,13 @@ export function computeResourceFlow(resourceKey) {
   var policy = state.tradePolicies && state.tradePolicies[resourceKey];
   if (policy && policy.mode !== 'keep'
       && state.profile && state.profile.trade_unlocked) {
+    // Cap-aware sustained rate. Per-visit projection (cap/interval) is
+    // the BURST rate; daily caps create a SUSTAINED rate ceiling. The
+    // long-term flow is min(burst, daily_cap/1440min). For runway
+    // calculations the sustained rate is what matters — a player with
+    // 20-cap-per-visit pottery and a 200/day sell cap actually averages
+    // 0.139/min over 24h, not 2/min.
+    var DAY_MINS = 24 * 60;
     Object.keys(state.traders || {}).forEach(function (tk) {
       var t = state.traders[tk];
       var prices = (state.allTraderPrices && state.allTraderPrices[tk]
@@ -536,11 +551,17 @@ export function computeResourceFlow(resourceKey) {
       if (!prices) return;
       var unlock = state.unlockedTraders && state.unlockedTraders[tk];
       if (unlock && !unlock.unlocked) return;
-      var rate = (t.visit_capacity || 0) / (t.visit_interval_minutes || 1);
+      var burst = (t.visit_capacity || 0) / (t.visit_interval_minutes || 1);
       if (policy.mode === 'sell_surplus' && prices.buy_price) {
-        flow.exports.push({ trader: t.name, rate: rate, price: prices.buy_price });
+        var sustained = prices.daily_buy_cap != null
+          ? Math.min(burst, prices.daily_buy_cap / DAY_MINS)
+          : burst;
+        flow.exports.push({ trader: t.name, rate: sustained, price: prices.buy_price });
       } else if (policy.mode === 'buy_to_reserve' && prices.sell_price) {
-        flow.imports.push({ trader: t.name, rate: rate, price: prices.sell_price });
+        var sustainedB = prices.daily_sell_cap != null
+          ? Math.min(burst, prices.daily_sell_cap / DAY_MINS)
+          : burst;
+        flow.imports.push({ trader: t.name, rate: sustainedB, price: prices.sell_price });
       }
     });
   }
@@ -648,11 +669,17 @@ export function computeCityRunway() {
         if (!prices) return;
         var unlock = state.unlockedTraders && state.unlockedTraders[tk];
         if (unlock && !unlock.unlocked) return;
-        var rate = (t.visit_capacity || 0) / (t.visit_interval_minutes || 1);
+        var burst = (t.visit_capacity || 0) / (t.visit_interval_minutes || 1);
         if (policy.mode === 'sell_surplus' && prices.buy_price) {
-          totalFoodDrain += rate;
+          var sellRate = prices.daily_buy_cap != null
+            ? Math.min(burst, prices.daily_buy_cap / 1440)
+            : burst;
+          totalFoodDrain += sellRate;
         } else if (policy.mode === 'buy_to_reserve' && prices.sell_price) {
-          totalFoodProduction += rate;
+          var buyRate = prices.daily_sell_cap != null
+            ? Math.min(burst, prices.daily_sell_cap / 1440)
+            : burst;
+          totalFoodProduction += buyRate;
         }
       });
     });

@@ -254,7 +254,9 @@ function loadGameData() {
       }
       state.allTraderPrices[tp.trader_key][tp.resource_key] = {
         buy_price: tp.buy_price,
-        sell_price: tp.sell_price
+        sell_price: tp.sell_price,
+        daily_buy_cap: tp.daily_buy_cap,
+        daily_sell_cap: tp.daily_sell_cap
       };
     });
 
