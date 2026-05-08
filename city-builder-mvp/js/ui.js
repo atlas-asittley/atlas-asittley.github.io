@@ -87,14 +87,11 @@ export function capitalize(s) {
   return s ? s.charAt(0).toUpperCase() + s.slice(1) : '';
 }
 
-// All notification surface is now the bell-icon log. showToast() is kept
-// as a thin compatibility shim so the dozens of existing callers don't
-// each need a touch — empty / unknown types map to 'info'.
-export function showToast(msg, type) {
-  if (!msg) return;
-  var t = (type === 'success' || type === 'info' || type === 'warn' || type === 'error') ? type : 'info';
-  addNotification(t, msg);
-}
+// Per Atlas (2026-05-08): the bell log shows ONLY the
+// housing-ready-to-upgrade notification. showToast() used to forward
+// to the bell; it's now a no-op compatibility shim so existing
+// callers don't error.
+export function showToast(_msg, _type) { /* notifications stripped */ }
 
 // ── Topbar state display ──
 export function updateMoney() {

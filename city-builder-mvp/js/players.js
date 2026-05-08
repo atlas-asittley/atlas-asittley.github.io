@@ -705,14 +705,9 @@ export function onTradeOfferChange() {
     });
     if (pending.length > 0) {
       // Lightweight ping for new incoming offers
-      var newest = pending[0];
-      // Show a toast for offers we haven't seen yet (created in last 5s).
-      if (Date.now() - new Date(newest.created_at).getTime() < 5000) {
-        var fromP = otherPlayers.find(function (p) { return p.id === newest.from_player_id; });
-        var msg = 'New trade offer from ' + (fromP ? fromP.display_name : 'a player');
-        showToast(msg, 'success');
-        addNotification('info', msg);
-      }
+      // Trade-offer notification stripped per Atlas (2026-05-08).
+      // Pending offers still surface as the badge on the Players sub-tab.
+      void pending[0];
     }
     renderPlayersPanel();
   });

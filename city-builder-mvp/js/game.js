@@ -128,20 +128,10 @@ function processProduction() {
     updateProductivity();
     updateCityRunway();
 
-    // Bankruptcy alert: fire on the tick where money first crosses
-    // into negative territory. Single toast + log entry — don't nag.
-    if (prevMoney >= 0 && data.money !== undefined && data.money < 0) {
-      var bankruptMsg = 'You\'re running a deficit — sell goods or pause buildings.';
-      showToast(bankruptMsg, 'error');
-      addNotification('error', bankruptMsg);
-    }
-    // Crime cascade warning: when crime crosses 70 going up. Same
-    // single-shot rule. Toast + log so the warning survives a refresh.
-    if (data.crime !== undefined && data.crime >= 70 && (prevCrime || 0) < 70) {
-      var crimeMsg = 'Crime is high — build / staff police buildings near housing.';
-      showToast(crimeMsg, 'error');
-      addNotification('warn', crimeMsg);
-    }
+    // Bankruptcy + crime cascade notifications stripped per Atlas
+    // (2026-05-08) — the bell log shows ONLY housing_ready_to_upgrade.
+    // The state values are still set on state.profile so the topbar
+    // money chip and crime stat reflect the situation visually.
 
     // Refresh the visible data-driven panel (Trade or City).
     refreshActiveDataPanel();
@@ -177,13 +167,13 @@ function processProduction() {
         var toCfg = state.housingTierConfig[ev.to_tier];
         var fromName = (fromCfg && fromCfg.name) || ('Tier ' + ev.from_tier);
         var toName = (toCfg && toCfg.name) || ('Tier ' + ev.to_tier);
-        if (ev.event === 'upgrade') {
-          // Legacy event in case any in-flight tick produced one before
-          // the migration applied.
-          addNotification('success', fromName + ' upgraded to ' + toName);
-        } else if (ev.event === 'devolve') {
-          addNotification('warn', fromName + ' devolved to ' + toName);
-        }
+        // Legacy 'upgrade' / 'devolve' events: state is still applied
+        // (the buildings reload above picks up the new tier), but no
+        // notification is emitted — only housing_ready_to_upgrade goes
+        // in the bell log per Atlas's 2026-05-08 directive.
+        // (Variables intentionally referenced so unused-var lints stay
+        // quiet during the strip-down.)
+        void fromName; void toName;
       });
     }
 

@@ -606,14 +606,13 @@ function openSettingsModal() {
     if (name == null) return;
     name = name.trim();
     if (name.length < 2 || name.length > 40) {
-      addNotification('error', 'District name must be 2–40 characters.');
+      alert('District name must be 2–40 characters.');
       return;
     }
     sb.rpc('rename_district', { p_name: name }).then(function (r) {
-      if (r.error) { addNotification('error', 'Rename failed: ' + r.error.message); return; }
+      if (r.error) { alert('Rename failed: ' + r.error.message); return; }
       state.profile.district_name = r.data;
       updateIdentity();
-      addNotification('success', 'District renamed to ' + r.data + '.');
     });
     closeHelpModal();
   });
@@ -623,14 +622,13 @@ function openSettingsModal() {
     if (name == null) return;
     name = name.trim();
     if (name.length < 2 || name.length > 40) {
-      addNotification('error', 'City name must be 2–40 characters.');
+      alert('City name must be 2–40 characters.');
       return;
     }
     sb.rpc('rename_city', { p_name: name }).then(function (r) {
-      if (r.error) { addNotification('error', 'Rename failed: ' + r.error.message); return; }
+      if (r.error) { alert('Rename failed: ' + r.error.message); return; }
       state.cityName = r.data;
       updateIdentity();
-      addNotification('success', 'City renamed to ' + r.data + '.');
     });
     closeHelpModal();
   });
@@ -756,7 +754,7 @@ function openBugReportModal() {
         btn.textContent = 'Submit';
         return;
       }
-      addNotification('success', 'Bug report sent. Thanks!');
+      alert('Bug report sent — thanks!');
       closeHelpModal();
     });
   });
