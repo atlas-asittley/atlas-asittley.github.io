@@ -1639,6 +1639,24 @@ body.panel-expanded .map-area { display: none; }
 .stats-flow-val  { position: relative; z-index: 1; font-weight: 700; }
 .stats-flow-val.good { color: #5ec49e; }
 .stats-flow-val.bad  { color: #e0a070; }
+.stats-flow-row { grid-template-columns: 1fr auto auto; }
+.stats-flow-row.clickable { cursor: pointer; }
+.stats-flow-row.clickable:hover { filter: brightness(1.15); }
+.stats-flow-chevron { position: relative; z-index: 1; color: #5a6878; font-size: 0.75rem; transition: transform 0.15s; }
+.stats-flow-row.expanded .stats-flow-chevron { transform: rotate(180deg); }
+
+.stats-flow-detail { background: #0d141d; border-radius: 4px; padding: 8px 12px; margin: 2px 0 4px; font-size: 0.75rem; }
+.stats-flow-detail-loading,
+.stats-flow-detail-empty { color: #7a8a9e; padding: 6px 0; }
+.stats-flow-detail-error { color: #f0a0a0; padding: 6px 0; }
+.stats-flow-detail-list { display: flex; flex-direction: column; gap: 3px; max-height: 280px; overflow-y: auto; }
+.stats-flow-detail-row { display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: baseline; padding: 3px 4px; }
+.stats-flow-detail-when { color: #6a7888; font-size: 0.7rem; white-space: nowrap; }
+.stats-flow-ctx { color: #8a99a8; font-size: 0.72rem; }
+.stats-flow-detail-amt { font-weight: 600; text-align: right; }
+.stats-flow-detail-amt.good { color: #5ec49e; }
+.stats-flow-detail-amt.bad  { color: #e0a070; }
+.stats-flow-detail-truncated { color: #6a7888; font-size: 0.7rem; padding: 6px 4px 0; border-top: 1px solid #1a2230; margin-top: 4px; }
 
 .trade-loading, .trade-empty, .trade-error { padding: 20px; text-align: center; color: #7a8a9e; font-size: 0.82rem; }
 .trade-error { color: #f0a0a0; }

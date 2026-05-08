@@ -401,6 +401,26 @@ export function renderTreasuryPanel() {
       html += '<div class="trade-empty">No money has moved in this period.</div>';
     }
     replaceLoading(panel, html);
+
+    // Wire flow-bar clicks → expand detail panel inline. The detail
+    // queries cash_transactions for the source so we can show the
+    // actual rows backing each bucket — answers questions like
+    // "which buildings is upkeep on?" without leaving the panel.
+    panel.querySelectorAll('.stats-flow-row.clickable').forEach(function (row) {
+      row.addEventListener('click', function () {
+        var source = row.dataset.source;
+        var detail = panel.querySelector('.stats-flow-detail[data-source-detail="' + source + '"]');
+        if (!detail) return;
+        if (detail.style.display === 'none') {
+          detail.style.display = 'block';
+          row.classList.add('expanded');
+          renderFlowDetail(detail, source, period);
+        } else {
+          detail.style.display = 'none';
+          row.classList.remove('expanded');
+        }
+      });
+    });
   }).catch(function (err) {
     replaceLoading(panel, '<div class="trade-error">Failed to load: ' + escapeHtml(err.message || err) + '</div>');
   });
@@ -572,14 +592,84 @@ function renderFlowBars(byKey, kind) {
   keys.forEach(function (k) {
     var v = byKey[k];
     var pct = Math.max(2, Math.round(v / max * 100));
-    html += '<div class="stats-flow-row stats-flow-' + kind + '" style="--bar-width:' + pct + '%">'
+    html += '<div class="stats-flow-row stats-flow-' + kind + ' clickable"'
+         +    ' data-source="' + escapeHtml(k) + '" data-kind="' + kind + '"'
+         +    ' style="--bar-width:' + pct + '%">'
          +    '<span class="stats-flow-bar"></span>'
          +    '<span class="stats-flow-name">' + escapeHtml(prettySource(k)) + '</span>'
          +    '<span class="stats-flow-val ' + kind + '">$' + v + '</span>'
-         +  '</div>';
+         +    '<span class="stats-flow-chevron">▾</span>'
+         +  '</div>'
+         +  '<div class="stats-flow-detail" data-source-detail="' + escapeHtml(k) + '" style="display:none;"></div>';
   });
   html += '</div>';
   return html;
+}
+
+// Fetch + render the raw transactions making up a source bucket, into
+// the per-source detail container. Called when a flow bar is tapped.
+function renderFlowDetail(detailEl, source, period) {
+  detailEl.innerHTML = '<div class="stats-flow-detail-loading">Loading…</div>';
+  var since;
+  if (period === 'today') {
+    var d = new Date(); d.setHours(0, 0, 0, 0); since = d.toISOString();
+  } else if (period === 'week') {
+    since = new Date(Date.now() - 7 * 86400000).toISOString();
+  } else {
+    since = '1970-01-01T00:00:00Z';
+  }
+  var uid = state.currentUser.id;
+  sb.from('cash_transactions')
+    .select('amount, context, created_at')
+    .eq('player_id', uid)
+    .eq('source', source)
+    .gte('created_at', since)
+    .order('created_at', { ascending: false })
+    .limit(200)
+    .then(function (r) {
+      if (r.error) {
+        detailEl.innerHTML = '<div class="stats-flow-detail-error">Failed: ' + escapeHtml(r.error.message) + '</div>';
+        return;
+      }
+      var rows = r.data || [];
+      if (rows.length === 0) {
+        detailEl.innerHTML = '<div class="stats-flow-detail-empty">No transactions in this period.</div>';
+        return;
+      }
+      var html = '<div class="stats-flow-detail-list">';
+      var total = 0;
+      rows.forEach(function (row) {
+        total += row.amount;
+        var ts = new Date(row.created_at);
+        var when = ts.toLocaleString(undefined, {
+          month: 'short', day: 'numeric',
+          hour: '2-digit', minute: '2-digit'
+        });
+        var ctx = row.context;
+        var ctxHtml = '';
+        if (ctx && typeof ctx === 'object') {
+          var bits = [];
+          if (ctx.trader) bits.push(escapeHtml(ctx.trader));
+          if (ctx.direction) bits.push(escapeHtml(ctx.direction));
+          if (ctx.role) bits.push(escapeHtml(ctx.role));
+          if (ctx.reason) bits.push(escapeHtml(ctx.reason));
+          if (ctx.resource) bits.push(escapeHtml(ctx.resource));
+          if (ctx.quantity) bits.push(ctx.quantity + ' @ $' + (ctx.unit_price || '?'));
+          if (bits.length) ctxHtml = '<span class="stats-flow-ctx">' + bits.join(' · ') + '</span>';
+        }
+        var cls = row.amount > 0 ? 'good' : row.amount < 0 ? 'bad' : '';
+        var display = (row.amount > 0 ? '+$' : row.amount < 0 ? '−$' : '$') + Math.abs(row.amount);
+        html += '<div class="stats-flow-detail-row">'
+             +    '<span class="stats-flow-detail-when">' + escapeHtml(when) + '</span>'
+             +    ctxHtml
+             +    '<span class="stats-flow-detail-amt ' + cls + '">' + display + '</span>'
+             +  '</div>';
+      });
+      html += '</div>';
+      var more = rows.length === 200 ? '<div class="stats-flow-detail-truncated">Showing 200 most recent. Total of these: $' + total + '.</div>' : '';
+      html += more;
+      detailEl.innerHTML = html;
+    });
 }
 
 function prettySource(k) {
