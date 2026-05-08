@@ -32,8 +32,9 @@ def test_default_footprint_is_1x1(cur):
     Current multi-tile set:
     - tax_man / school / temple — 2x2 (original civic buildings)
     - brewery — 2x1 (original processing)
-    - airport / seaport — 2x2 (transport hubs, 2026-05-08)
-    - train_depot — 2x1 (transport hub, 2026-05-08)
+    - airport — 3x3 (transport hub, 2026-05-08)
+    - seaport / train_depot — 3x2 (transport hubs, 2026-05-08)
+    - truck_depot — 2x2 (transport connector, 2026-05-08)
     """
     cur.execute("""SELECT key FROM public.building_types
                    WHERE footprint_w <> 1 OR footprint_h <> 1
@@ -41,8 +42,67 @@ def test_default_footprint_is_1x1(cur):
     keys = [r[0] for r in cur.fetchall()]
     assert keys == [
         'airport', 'brewery', 'school', 'seaport',
-        'tax_man', 'temple', 'train_depot'
+        'tax_man', 'temple', 'train_depot', 'truck_depot'
     ]
+
+
+def test_has_road_access_perimeter_for_multitile(make_player, place, cur, clear_resources):
+    """Regression: has_road_access() used to check only the 4 tiles
+    orthogonal to the anchor. A 2x2 truck_depot with a road touching
+    only its right edge (e.g. (anchor_x + 2, anchor_y + 1)) returned
+    false. Fixed to check the full perimeter of the footprint."""
+    p = make_player(industry='timber')
+    clear_resources(p['id'])
+    cur.execute("UPDATE public.player_profiles SET money = 50000 WHERE id = %s", (str(p['id']),))
+    hx, hy = p['home_x'], p['home_y']
+
+    # Place a 2x2 truck_depot off the test-fixture's highway cross
+    # (vertical at x=hx, horizontal at y=hy). Anchor (hx+1, hy+2)
+    # covers (hx+1..hx+2, hy+2..hy+3).
+    ax, ay = hx + 1, hy + 2
+    place('truck_depot', ax, ay)
+
+    # Test-only road INSERT — bypasses the road-must-connect-to-road
+    # placement rule, which would force us to chain roads from the
+    # highway and complicate the test. We're verifying has_road_access,
+    # not place_building.
+    def _put_road(rx, ry):
+        cur.execute(
+            "DELETE FROM public.buildings WHERE player_id=%s AND building_type_key='road'",
+            (str(p['id']),)
+        )
+        cur.execute("SELECT id FROM public.map_tiles WHERE x=%s AND y=%s", (rx, ry))
+        tile_id = cur.fetchone()[0]
+        cur.execute(
+            "INSERT INTO public.buildings (id, player_id, building_type_key, tile_id, x, y, status) "
+            "VALUES (gen_random_uuid(), %s, 'road', %s, %s, %s, 'active') RETURNING id",
+            (str(p['id']), tile_id, rx, ry)
+        )
+        rid = cur.fetchone()[0]
+        cur.execute(
+            "UPDATE public.map_tiles SET occupied_building_id=%s WHERE id=%s",
+            (rid, tile_id)
+        )
+
+    # Right-edge: (ax+2, ay+1) — adjacent to interior (ax+1, ay+1) only.
+    # Anchor-only check missed this; perimeter check finds it.
+    _put_road(ax + 2, ay + 1)
+    cur.execute("SELECT public.has_road_access(%s, %s, %s)", (str(p['id']), ax, ay))
+    assert cur.fetchone()[0] is True, \
+        'road on right-edge of 2x2 footprint should grant road access'
+
+    # Bottom-edge: (ax+1, ay+2) — adjacent to interior (ax+1, ay+1) only.
+    _put_road(ax + 1, ay + 2)
+    cur.execute("SELECT public.has_road_access(%s, %s, %s)", (str(p['id']), ax, ay))
+    assert cur.fetchone()[0] is True, \
+        'road on bottom-edge of 2x2 footprint should grant road access'
+
+    # Diagonal-only: (ax+2, ay+2) — kitty-corner from bottom-right interior,
+    # not orthogonal to ANY footprint cell. Should NOT grant access.
+    _put_road(ax + 2, ay + 2)
+    cur.execute("SELECT public.has_road_access(%s, %s, %s)", (str(p['id']), ax, ay))
+    assert cur.fetchone()[0] is False, \
+        'diagonal-only road should NOT grant access (perimeter is ortho-strict)'
 
 
 def test_school_claims_all_4_tiles(make_player, place, cur, clear_resources):
