@@ -40,10 +40,10 @@ INSERT INTO public.building_types (
   is_active, tier, unlocks_at_housing_tier,
   input_rate, output_rate
 ) VALUES
-  ('airport',     'Airport',     'transport_hub',   'common', 50000, 10, 2, 2, TRUE, 4, NULL, 0, 0),
-  ('seaport',     'Seaport',     'transport_hub',   'common', 40000, 10, 2, 2, TRUE, 4, NULL, 0, 0),
-  ('train_depot', 'Train Depot', 'transport_hub',   'common', 30000,  8, 2, 1, TRUE, 3, NULL, 0, 0),
-  ('truck_depot', 'Truck Depot', 'transport_connector', 'common', 8000, 5, 1, 1, TRUE, 2, NULL, 0, 0)
+  ('airport',     'Airport',     'transport_hub',   'common', 50000, 10, 3, 3, TRUE, 4, NULL, 0, 0),
+  ('seaport',     'Seaport',     'transport_hub',   'common', 40000, 10, 3, 2, TRUE, 4, NULL, 0, 0),
+  ('train_depot', 'Train Depot', 'transport_hub',   'common', 30000,  8, 3, 2, TRUE, 3, NULL, 0, 0),
+  ('truck_depot', 'Truck Depot', 'transport_connector', 'common', 8000, 5, 2, 2, TRUE, 2, NULL, 0, 0)
 ON CONFLICT (key) DO UPDATE SET
   name = EXCLUDED.name,
   category = EXCLUDED.category,

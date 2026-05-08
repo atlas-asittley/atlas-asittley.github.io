@@ -387,6 +387,8 @@ body.inspector-open .map-canvas { margin-bottom: calc(50vh + 28px); }
 .bldg.footprint-2x1 { position: absolute; left: 0; top: 0; width: 200%; height: 100%; z-index: 5; pointer-events: auto; --bldg-fig-x: 0.5; --bldg-fig-y: 1; }
 .bldg.footprint-1x2 { position: absolute; left: 0; top: 0; width: 100%; height: 200%; z-index: 5; pointer-events: auto; --bldg-fig-x: 1; --bldg-fig-y: 0.5; }
 .bldg.footprint-3x3 { position: absolute; left: 0; top: 0; width: 300%; height: 300%; z-index: 5; pointer-events: auto; --bldg-fig-x: 0.333; --bldg-fig-y: 0.333; }
+.bldg.footprint-3x2 { position: absolute; left: 0; top: 0; width: 300%; height: 200%; z-index: 5; pointer-events: auto; --bldg-fig-x: 0.333; --bldg-fig-y: 0.5; }
+.bldg.footprint-2x3 { position: absolute; left: 0; top: 0; width: 200%; height: 300%; z-index: 5; pointer-events: auto; --bldg-fig-x: 0.5; --bldg-fig-y: 0.333; }
 .cell.multi-tile-interior::before { display: none; }
 /* Multi-tile anchor cell needs a higher z-index than its sibling
    cells so the .bldg's absolute overflow (200% width/height) paints
