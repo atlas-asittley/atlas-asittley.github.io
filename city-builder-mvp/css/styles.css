@@ -1777,6 +1777,8 @@ body.panel-expanded .map-area { display: none; }
 
 /* ── Black Market ─────────────────────────────────── */
 .bm-section { margin-top: 16px; border: 1px solid #3a2a1a; border-radius: 10px; padding: 12px; background: #1a1510; }
+.bm-group-label { font-size: 0.72rem; font-weight: 700; color: #b48c50; text-transform: uppercase; letter-spacing: 0.06em; margin: 14px 0 6px; }
+.bm-group-label:first-child { margin-top: 4px; }
 .bm-header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
 .bm-title { font-weight: 700; font-size: 0.95rem; color: #d4a040; }
 .bm-warning { font-size: 0.72rem; color: #8a7a5a; margin-bottom: 10px; font-style: italic; line-height: 1.4; }

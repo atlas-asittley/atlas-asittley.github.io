@@ -872,76 +872,10 @@ export function renderTradePanel() {
 
   html += '</div>';
 
-  // Trade-policy controls live in City → Resources now (per-resource,
-  // alongside stock + rate + flow), so the Partners view is just the
-  // partner picker + selected partner's goods + Black Market.
-
-  // ── Black Market section (separate from partner trade) ──
-  html += '<div class="bm-section">';
-  html += '<div class="bm-header">';
-  html += '<span class="bm-title">Black Market</span>';
-  html += '</div>';
-  html += '<div class="bm-warning">Instant trade for emergencies. Always available, but the rates are terrible.</div>';
-
-  var bmPrices = {
-    timber: { buy: 2, sell: 10 },
-    stone:  { buy: 2, sell: 11 },
-    lumber: { buy: 5, sell: 18 },
-    brick:  { buy: 6, sell: 20 },
-    grain:  { buy: 2, sell: 9 },
-    flour:  { buy: 5, sell: 16 }
-  };
-
-  // The City-tab refactor (e2562dc) removed the surrounding tradeResources
-  // array but left this loop pointing at it, throwing a silent ReferenceError
-  // mid-render and leaving the entire Partners panel blank. Restore the list
-  // (display order matches the prior version: raw → processed by industry).
-  var tradeResources = ['timber', 'lumber', 'stone', 'brick', 'grain', 'flour'];
-
-  tradeResources.forEach(function (rk) {
-    var bmp = bmPrices[rk];
-    var stock = Math.floor(state.inventory[rk] || 0);
-    var sellKey = 'bm-sell-' + rk;
-    var buyKey = 'bm-buy-' + rk;
-    var sellAmt = state.blackMarketAmounts[sellKey] || 0;
-    var buyAmt = state.blackMarketAmounts[buyKey] || 0;
-    var maxBuy = bmp.sell > 0 ? Math.floor(state.profile.money / bmp.sell) : 0;
-
-    html += '<div class="bm-row">';
-    html += '<div class="bm-row-header">';
-    html += '<span class="bm-res-name">' + resourceName(rk) + '</span>';
-    html += '<span class="bm-res-stock">Stock: ' + stock + '</span>';
-    html += '</div>';
-    html += '<div class="bm-prices">';
-    html += '<span class="bm-price bm-price-sell">Sell at ' + bmp.buy + 'g</span>';
-    html += '<span class="bm-price bm-price-buy">Buy at ' + bmp.sell + 'g</span>';
-    html += '</div>';
-
-    // Sell to black market row
-    html += '<div class="bm-trade-row">';
-    html += '<span class="bm-trade-label">Sell:</span>';
-    html += '<div class="trade-controls">';
-    html += '<button class="trade-amt-btn bm-amt-btn" data-bmkey="' + sellKey + '" data-dir="dec">-</button>';
-    html += '<span class="trade-amt" id="bma-' + sellKey + '">' + sellAmt + '</span>';
-    html += '<button class="trade-amt-btn bm-amt-btn" data-bmkey="' + sellKey + '" data-dir="inc" data-max="' + stock + '">+</button>';
-    html += '<button class="btn-bm-sell" data-resource="' + rk + '" data-bmkey="' + sellKey + '"' + (sellAmt < 1 ? ' disabled' : '') + '>Sell</button>';
-    html += '</div>';
-    html += '</div>';
-
-    // Buy from black market row
-    html += '<div class="bm-trade-row">';
-    html += '<span class="bm-trade-label">Buy:</span>';
-    html += '<div class="trade-controls">';
-    html += '<button class="trade-amt-btn bm-amt-btn" data-bmkey="' + buyKey + '" data-dir="dec">-</button>';
-    html += '<span class="trade-amt" id="bma-' + buyKey + '">' + buyAmt + '</span>';
-    html += '<button class="trade-amt-btn bm-amt-btn" data-bmkey="' + buyKey + '" data-dir="inc" data-max="' + maxBuy + '">+</button>';
-    html += '<button class="btn-bm-buy" data-resource="' + rk + '" data-bmkey="' + buyKey + '"' + (buyAmt < 1 ? ' disabled' : '') + '>Buy</button>';
-    html += '</div>';
-    html += '</div>';
-
-    html += '</div>';
-  });
-  html += '</div>';
+  // Black Market lives in its own sub-tab now (renderBlackMarketPanel).
+  // Trade-policy controls live in City → Resources (per-resource).
+  // The Partners view is just the partner picker + selected partner's
+  // goods.
 
   panel.innerHTML = html;
 
@@ -963,44 +897,115 @@ export function renderTradePanel() {
   // (The Check All button is gone — visits auto-resolve every production
   // tick via _pp_resolve_trader_visits on the server.)
 
-  // ── Wire Black Market amount buttons ──
+}
+
+// ── Black Market sub-tab ──
+// Always available, every active resource. Sell at 35% of base_price,
+// buy at 200% of base_price. Server (black_market_trade RPC) computes
+// the same multipliers — UI just displays them so the player sees the
+// terrible rate before committing.
+function renderBlackMarketPanel() {
+  var panel = document.getElementById('panel-trade-black_market');
+  if (!panel) return;
+  var html = '<div class="bm-section">';
+  html += '<div class="bm-header"><span class="bm-title">Black Market</span></div>';
+  html += '<div class="bm-warning">Always available. Buys anything from your inventory at 35% of fair value, sells anything to you at 200%. The emergency option.</div>';
+
+  // Group resources for readability: raw → processed; food / luxury
+  // pulled out so the list isn't 33 unsorted rows.
+  var groups = [
+    { label: 'Raw materials', filter: function (r) { return r.kind === 'raw' && !r.is_food; } },
+    { label: 'Raw food',      filter: function (r) { return r.kind === 'raw' && r.is_food; } },
+    { label: 'Processed',     filter: function (r) { return r.kind === 'processed' && !r.is_food && !r.is_luxury_food && !r.is_industrial_luxury; } },
+    { label: 'Cooked food',   filter: function (r) { return r.kind === 'processed' && r.is_food && !r.is_luxury_food; } },
+    { label: 'Lifestyle',     filter: function (r) { return r.kind === 'processed' && !r.is_food && !r.is_industrial_luxury && (r.key === 'tiles' || r.key === 'glass' || r.key === 'furniture' || r.key === 'statuary' || r.key === 'wine' || r.key === 'ale'); } },
+    { label: 'Industrial luxury', filter: function (r) { return r.is_industrial_luxury; } },
+    { label: 'Luxury food',   filter: function (r) { return r.is_luxury_food; } }
+  ];
+  var resources = Object.keys(state.resources || {})
+    .map(function (k) { return state.resources[k]; })
+    .filter(function (r) { return r.is_active && r.base_price; });
+
+  groups.forEach(function (g) {
+    var members = resources.filter(g.filter);
+    if (members.length === 0) return;
+    html += '<div class="bm-group-label">' + escapeHtml(g.label) + '</div>';
+    members.sort(function (a, b) {
+      return (a.base_price - b.base_price) || a.key.localeCompare(b.key);
+    });
+    members.forEach(function (r) {
+      var rk = r.key;
+      var sellPrice = Math.max(1, Math.floor(r.base_price * 0.35));
+      var buyPrice = Math.ceil(r.base_price * 2.0);
+      var stock = Math.floor((state.inventory && state.inventory[rk]) || 0);
+      var sellKey = 'bm-sell-' + rk;
+      var buyKey = 'bm-buy-' + rk;
+      var sellAmt = state.blackMarketAmounts[sellKey] || 0;
+      var buyAmt = state.blackMarketAmounts[buyKey] || 0;
+      var maxBuy = buyPrice > 0 ? Math.floor((state.profile && state.profile.money || 0) / buyPrice) : 0;
+
+      html += '<div class="bm-row">';
+      html += '<div class="bm-row-header">';
+      html += '<span class="bm-res-name">' + resourceName(rk) + '</span>';
+      html += '<span class="bm-res-stock">Stock: ' + stock + '</span>';
+      html += '</div>';
+      html += '<div class="bm-prices">';
+      html += '<span class="bm-price bm-price-sell">Sell at $' + sellPrice + '</span>';
+      html += '<span class="bm-price bm-price-buy">Buy at $' + buyPrice + '</span>';
+      html += '</div>';
+
+      html += '<div class="bm-trade-row">';
+      html += '<span class="bm-trade-label">Sell:</span>';
+      html += '<div class="trade-controls">';
+      html += '<button class="trade-amt-btn bm-amt-btn" data-bmkey="' + sellKey + '" data-dir="dec">-</button>';
+      html += '<span class="trade-amt" id="bma-' + sellKey + '">' + sellAmt + '</span>';
+      html += '<button class="trade-amt-btn bm-amt-btn" data-bmkey="' + sellKey + '" data-dir="inc" data-max="' + stock + '">+</button>';
+      html += '<button class="btn-bm-sell" data-resource="' + rk + '" data-bmkey="' + sellKey + '"' + (sellAmt < 1 ? ' disabled' : '') + '>Sell</button>';
+      html += '</div></div>';
+
+      html += '<div class="bm-trade-row">';
+      html += '<span class="bm-trade-label">Buy:</span>';
+      html += '<div class="trade-controls">';
+      html += '<button class="trade-amt-btn bm-amt-btn" data-bmkey="' + buyKey + '" data-dir="dec">-</button>';
+      html += '<span class="trade-amt" id="bma-' + buyKey + '">' + buyAmt + '</span>';
+      html += '<button class="trade-amt-btn bm-amt-btn" data-bmkey="' + buyKey + '" data-dir="inc" data-max="' + maxBuy + '">+</button>';
+      html += '<button class="btn-bm-buy" data-resource="' + rk + '" data-bmkey="' + buyKey + '"' + (buyAmt < 1 ? ' disabled' : '') + '>Buy</button>';
+      html += '</div></div>';
+
+      html += '</div>';
+    });
+  });
+  html += '</div>';
+  panel.innerHTML = html;
+
   panel.querySelectorAll('.bm-amt-btn').forEach(function (btn) {
     btn.addEventListener('click', function () {
       var key = btn.dataset.bmkey;
       var dir = btn.dataset.dir;
       var max = parseInt(btn.dataset.max || '999');
       var current = state.blackMarketAmounts[key] || 0;
-
       if (dir === 'inc' && current < max) current++;
       else if (dir === 'dec' && current > 0) current--;
       state.blackMarketAmounts[key] = current;
-
       var el = document.getElementById('bma-' + key);
       if (el) el.textContent = current;
-
       var row = btn.closest('.bm-trade-row');
       var actionBtn = row.querySelector('.btn-bm-sell, .btn-bm-buy');
       if (actionBtn) actionBtn.disabled = current < 1;
     });
   });
-
-  // ── Wire Black Market sell buttons ──
   panel.querySelectorAll('.btn-bm-sell').forEach(function (btn) {
     btn.addEventListener('click', function () {
       var rk = btn.dataset.resource;
-      var key = btn.dataset.bmkey;
-      var amt = state.blackMarketAmounts[key] || 0;
+      var amt = state.blackMarketAmounts[btn.dataset.bmkey] || 0;
       if (amt < 1) return;
       blackMarketTrade(rk, amt, 'sell', btn);
     });
   });
-
-  // ── Wire Black Market buy buttons ──
   panel.querySelectorAll('.btn-bm-buy').forEach(function (btn) {
     btn.addEventListener('click', function () {
       var rk = btn.dataset.resource;
-      var key = btn.dataset.bmkey;
-      var amt = state.blackMarketAmounts[key] || 0;
+      var amt = state.blackMarketAmounts[btn.dataset.bmkey] || 0;
       if (amt < 1) return;
       blackMarketTrade(rk, amt, 'buy', btn);
     });
@@ -1362,6 +1367,7 @@ export function refreshActiveDataPanel() {
 
 function renderSubpanel(sub) {
   if (sub === 'partners') renderTradePanel();
+  else if (sub === 'black_market') renderBlackMarketPanel();
   else if (sub === 'players') renderPlayersPanel();
   else if (sub === 'resources') renderResourcesPanel();
   else if (sub === 'treasury') renderTreasuryPanel();
