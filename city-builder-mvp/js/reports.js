@@ -410,49 +410,44 @@ export function renderTreasuryPanel() {
 // ── Treasury Advisor: 7-day burn rate / chart / chips ──
 
 function fetchDailySeries(days) {
+  // Reads exclusively from cash_transactions, which after the
+  // 2026-05-08 cash_ledger_completeness migration now logs every
+  // server-side money mutation including NPC trades. Previously this
+  // also summed trade_transactions to capture NPC trades, but those
+  // are now double-logged (once in each table), so adding them
+  // inflated daily-net by the entire NPC trade volume — Drew's
+  // 7-day net read $17,988 instead of the true $2,043.
   var since = new Date(Date.now() - days * 86400000).toISOString();
-  return Promise.all([
-    sb.from('cash_transactions').select('source, amount, created_at').gte('created_at', since),
-    sb.from('trade_transactions').select('total_price, transaction_type, trader_key, created_at').gte('created_at', since)
-  ]).then(function (results) {
-    var buckets = {};
-    var dayKeys = [];
-    for (var i = days - 1; i >= 0; i--) {
-      var d = new Date(Date.now() - i * 86400000);
-      var k = d.toISOString().slice(0, 10);
-      dayKeys.push(k);
-      buckets[k] = { date: k, earned: 0, spent: 0, sources: {}, sinks: {} };
-    }
-    (results[0].data || []).forEach(function (row) {
-      var k = row.created_at.slice(0, 10);
-      if (!buckets[k]) return;
-      var amt = row.amount;
-      if (amt > 0) {
-        buckets[k].earned += amt;
-        buckets[k].sources[row.source] = (buckets[k].sources[row.source] || 0) + amt;
-      } else if (amt < 0) {
-        buckets[k].spent += -amt;
-        buckets[k].sinks[row.source] = (buckets[k].sinks[row.source] || 0) + (-amt);
+  return sb.from('cash_transactions')
+    .select('source, amount, created_at, context')
+    .gte('created_at', since)
+    .then(function (r) {
+      var buckets = {};
+      var dayKeys = [];
+      for (var i = days - 1; i >= 0; i--) {
+        var d = new Date(Date.now() - i * 86400000);
+        var k = d.toISOString().slice(0, 10);
+        dayKeys.push(k);
+        buckets[k] = { date: k, earned: 0, spent: 0, sources: {}, sinks: {} };
       }
+      (r.data || []).forEach(function (row) {
+        var k = row.created_at.slice(0, 10);
+        if (!buckets[k]) return;
+        var amt = row.amount;
+        if (amt > 0) {
+          buckets[k].earned += amt;
+          buckets[k].sources[row.source] = (buckets[k].sources[row.source] || 0) + amt;
+        } else if (amt < 0) {
+          buckets[k].spent += -amt;
+          buckets[k].sinks[row.source] = (buckets[k].sinks[row.source] || 0) + (-amt);
+        }
+      });
+      return dayKeys.map(function (k) {
+        var b = buckets[k];
+        b.net = b.earned - b.spent;
+        return b;
+      });
     });
-    (results[1].data || []).forEach(function (row) {
-      var k = row.created_at.slice(0, 10);
-      if (!buckets[k]) return;
-      var amt = row.total_price;
-      if (row.transaction_type === 'sell') {
-        buckets[k].earned += amt;
-        buckets[k].sources[row.trader_key] = (buckets[k].sources[row.trader_key] || 0) + amt;
-      } else {
-        buckets[k].spent += amt;
-        buckets[k].sinks[row.trader_key] = (buckets[k].sinks[row.trader_key] || 0) + amt;
-      }
-    });
-    return dayKeys.map(function (k) {
-      var b = buckets[k];
-      b.net = b.earned - b.spent;
-      return b;
-    });
-  });
 }
 
 function renderTreasuryAdvisor(days) {
