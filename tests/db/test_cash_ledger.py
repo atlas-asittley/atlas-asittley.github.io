@@ -72,6 +72,83 @@ def test_tax_revenue_logged_per_tick(make_player, place, cur, clear_resources):
     assert row[0] > 0
 
 
+def test_upkeep_row_populates_period_start(make_player, place, cur, clear_resources):
+    """_pp_run_upkeep stamps period_start = the earliest staffed
+    building's previous last_processed_at, so the Treasury chart can
+    spread offline-catch-up charges proportionally instead of cliffing
+    on the reconnect day."""
+    p = make_player(industry='timber')
+    clear_resources(p['id'])
+    hx, hy = p['home_x'], p['home_y']
+    place('road', hx + 1, hy + 1)
+    place('well', hx + 2, hy + 2)
+    place('house', hx + 1, hy + 2)
+    cur.execute(
+        "UPDATE public.player_profiles SET money = 100000, population = 50, worker_capacity = 50 WHERE id = %s",
+        (str(p['id']),)
+    )
+    # police_station has upkeep > 0 (10/min). Place it staffed.
+    place('police_station', hx + 2, hy + 1)
+    # Backdate building clocks to simulate 60 minutes of accrual.
+    cur.execute(
+        "UPDATE public.buildings SET last_processed_at = now() - interval '60 seconds' WHERE player_id = %s",
+        (str(p['id']),)
+    )
+    cur.execute("DELETE FROM public.cash_transactions WHERE player_id = %s AND source = 'upkeep'",
+                (str(p['id']),))
+    cur.execute("SELECT public.process_production()")
+
+    cur.execute("""
+        SELECT amount, period_start, created_at
+        FROM public.cash_transactions
+        WHERE player_id = %s AND source = 'upkeep'
+        ORDER BY created_at DESC LIMIT 1
+    """, (str(p['id']),))
+    row = cur.fetchone()
+    assert row is not None, 'upkeep should be logged'
+    amt, period_start, created_at = row
+    assert amt < 0
+    assert period_start is not None, 'period_start must be populated for upkeep'
+    assert period_start < created_at, 'period_start must precede created_at'
+
+
+def test_tax_row_populates_period_start(make_player, place, cur, clear_resources):
+    """_pp_run_tax mirrors _pp_run_upkeep: period_start = earliest
+    staffed tax building's previous last_processed_at."""
+    p = make_player(industry='timber')
+    clear_resources(p['id'])
+    hx, hy = p['home_x'], p['home_y']
+    place('road', hx + 1, hy + 1)
+    place('well', hx + 2, hy + 2)
+    house_id = place('house', hx + 1, hy + 2)['building_id']
+    cur.execute("UPDATE public.buildings SET housing_tier = 2 WHERE id = %s", (house_id,))
+    cur.execute(
+        "UPDATE public.player_profiles SET money = 1000, population = 20, worker_capacity = 20 WHERE id = %s",
+        (str(p['id']),)
+    )
+    place('tax_man', hx + 1, hy + 3)
+    cur.execute(
+        "UPDATE public.buildings SET last_processed_at = now() - interval '60 seconds' WHERE player_id = %s",
+        (str(p['id']),)
+    )
+    cur.execute("DELETE FROM public.cash_transactions WHERE player_id = %s AND source = 'tax_revenue'",
+                (str(p['id']),))
+    cur.execute("SELECT public.process_production()")
+
+    cur.execute("""
+        SELECT amount, period_start, created_at
+        FROM public.cash_transactions
+        WHERE player_id = %s AND source = 'tax_revenue'
+        ORDER BY created_at DESC LIMIT 1
+    """, (str(p['id']),))
+    row = cur.fetchone()
+    assert row is not None, 'tax_revenue should be logged'
+    amt, period_start, created_at = row
+    assert amt > 0
+    assert period_start is not None, 'period_start must be populated for tax_revenue'
+    assert period_start < created_at
+
+
 def test_cash_transactions_only_visible_to_owner(make_player, conn, cur):
     """RLS: a player can't read another player's ledger rows."""
     a = make_player(industry='timber')

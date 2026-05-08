@@ -6,6 +6,7 @@ import { renderBuildPanel } from './panels.js';
 import { rebuildRoadSet, renderWalkers, snapWalkersToZoom, syncCollectorWalkers } from './walkers.js';
 import { openInspector, openResourceInspector } from './inspector.js';
 import { getRoadTileSVG, rebuildPlacementRoadSet, isRoadPlacementConnected, roadNeighborFlags } from './map_roads.js';
+import { spriteIcons } from './sprites.js';
 
 export var BLDG_LABELS = {
   timber_camp: 'TC', sawmill: 'SM',
@@ -555,7 +556,17 @@ function _doRenderMap() {
           var isInspected = ib && ib.x === x && ib.y === y && ib.id === building.id;
           var bldgClasses = 'bldg ' + btk + housingTierClass + footprintClass + (mine ? ' mine' : '') + (isPaused ? ' paused' : '') + (isUnstaffed ? ' unstaffed' : '') + (isDisconnected ? ' disconnected' : '') + (isIdle ? ' idle' : '') + (isProducing ? ' producing' : '') + (isInspected ? ' inspected-bldg' : '');
           var pausedBadge = isPaused ? '<span class="paused-overlay">⏸</span>' : '';
-          html += '<div class="' + bldgClasses + '" title="' + titleText + '">' + label + pausedBadge + '</div>';
+          // Sprite from JS is the single source of truth (commits/notes
+          // refer to this as "single-source-of-truth refactor"). The CSS
+          // file used to duplicate every building's data: URI in a
+          // .bldg.<key> rule; now spriteIcons[btk] feeds --bldg-sprite
+          // and one base CSS rule renders all of them. New buildings
+          // only need their entry in sprites.js.
+          var spriteUrl = spriteIcons[btk];
+          var styleAttr = spriteUrl
+            ? ' style="--bldg-sprite: url(&quot;' + spriteUrl + '&quot;);"'
+            : '';
+          html += '<div class="' + bldgClasses + '" title="' + titleText + '"' + styleAttr + '>' + label + pausedBadge + '</div>';
         }
       } else if (tile.resource_node_key) {
         html += '<div class="res-dot"></div>';

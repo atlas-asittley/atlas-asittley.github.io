@@ -163,25 +163,21 @@ def test_catchup_capped_at_50(make_player, cur):
 
 def test_buy_to_reserve_also_catches_up(make_player, place, cur):
     """Buy-to-reserve policy should also accumulate across catch-up
-    visits, via the auto-resolve in process_production. Mountain folk
-    is gated on totalBuildings >= 3 — give the player a few houses to
-    unlock it."""
+    visits, via the auto-resolve in process_production. Uses
+    river_traders (Neighboring City) — the always-on starter — since
+    desert_caravan and mountain_folk were deactivated during the
+    2026-05-08 trader-collapse migration."""
     p = make_player(industry='timber', display_name='buy_catchup')
     _act_as(cur, p['id'])
     cur.execute("UPDATE public.player_profiles SET money = 100000 WHERE id = %s", (str(p['id']),))
-    # Mountain_folk unlock requires totalBuildings >= 3. choose_industry
-    # already creates a road network of 30+ buildings, so the gate is
-    # already cleared — no need to place additional houses (which used to
-    # collide with the starter road footprint depending on which row this
-    # player landed on).
     _set_policy(cur, p['id'], 'timber', 'buy_to_reserve', 100)
     _set_inv(cur, p['id'], 'timber', 0.0)
     _backdate_profile(cur, p['id'], 60)
     _delete_visits(cur, p['id'])
-    _clear_quota(cur, 'mountain_folk', 'timber')
+    _clear_quota(cur, 'river_traders', 'timber')
     cur.execute("SELECT public.process_production()")
     cur.execute("""SELECT count(*) FROM public.trader_visits
-                   WHERE player_id = %s AND trader_key = 'mountain_folk'""",
+                   WHERE player_id = %s AND trader_key = 'river_traders'""",
                 (str(p['id']),))
     assert cur.fetchone()[0] >= 1
     timber = _get_inv(cur, p['id'], 'timber')

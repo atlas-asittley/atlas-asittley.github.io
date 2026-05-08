@@ -103,3 +103,25 @@ def test_district_weight_floor(make_player, cur):
     cur.execute("SELECT public.district_weight(%s)", (str(p['id']),))
     assert cur.fetchone()[0] >= 1
 
+
+def test_truck_depot_unlocks_regional_hauliers(make_player, place, cur, clear_resources):
+    """Building a road-connected truck_depot unlocks the Regional
+    Hauliers trader (transport_mode='truck'). Without one, the trader
+    is locked even though it's tier 1."""
+    p = make_player(industry='timber')
+    clear_resources(p['id'])
+    cur.execute("UPDATE public.player_profiles SET money = 50000 WHERE id = %s", (str(p['id']),))
+    hx, hy = p['home_x'], p['home_y']
+
+    # Before: no truck_depot, trader locked.
+    cur.execute("SELECT public._trader_is_unlocked(%s, 'regional_hauliers')",
+                (str(p['id']),))
+    assert cur.fetchone()[0] is False, 'should be locked without a truck_depot'
+
+    # Place a truck_depot adjacent to the highway (y=hy is the test
+    # fixture's horizontal highway road).
+    place('truck_depot', hx + 1, hy + 1)
+    cur.execute("SELECT public._trader_is_unlocked(%s, 'regional_hauliers')",
+                (str(p['id']),))
+    assert cur.fetchone()[0] is True, 'should unlock after road-connected truck_depot'
+
