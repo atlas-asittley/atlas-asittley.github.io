@@ -165,6 +165,13 @@ export function renderBuildPanel() {
       } else {
         desc = 'Service building. Needs road access.';
       }
+    } else if (bt.category === 'transport_hub') {
+      var hubMode = key === 'airport' ? 'airport' : key === 'seaport' ? 'seaport' : 'train depot';
+      desc = 'Transport hub. Building this unlocks 1 city-wide trade partner via the ' + hubMode
+           + ' network. Expand it later (tap once built) to add another. Anyone in the city with road-connected'
+           + ' truck depots can use the partners too.';
+    } else if (bt.category === 'transport_connector') {
+      desc = 'Truck Depot. Connects you to every transport hub in the city via roads — you can use other players\' airport / seaport / train traders. Cheap on its own, valuable in proportion to how many hubs exist.';
     } else if (bt.category === 'tax') {
       desc = 'Tax revenue scales with population: $' + bt.output_rate + '/min per 100 citizens. Needs road access + staff.';
     } else if (bt.category === 'police') {

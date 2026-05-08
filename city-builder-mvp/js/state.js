@@ -157,7 +157,8 @@ export function computeRoadAccess() {
     if (bt.category === 'extractor' || bt.category === 'food_extractor'
         || bt.category === 'processor' || bt.category === 'housing'
         || bt.category === 'service'  || bt.category === 'tax'
-        || bt.category === 'booster'  || bt.category === 'police') {
+        || bt.category === 'booster'  || bt.category === 'police'
+        || bt.category === 'transport_hub' || bt.category === 'transport_connector') {
       // Check if this housing tier actually needs road
       if (bt.category === 'housing') {
         var tier = b.housing_tier !== undefined ? b.housing_tier : 1;
@@ -247,7 +248,8 @@ export function computeLaborAllocation() {
     if (bt.category === 'extractor' || bt.category === 'food_extractor'
         || bt.category === 'processor' || bt.category === 'service'
         || bt.category === 'tax' || bt.category === 'booster'
-        || bt.category === 'police') {
+        || bt.category === 'police'
+        || bt.category === 'transport_hub' || bt.category === 'transport_connector') {
       return !!state.roadAccessIds[b.id];
     }
     return false;
@@ -294,14 +296,49 @@ export function computeLaborAllocation() {
 // player_trader_unlocks table and seed it from these same conditions.
 export function computeTraderUnlocks() {
   var myBuildings = state.allBuildings.filter(function (b) { return b.player_id === state.currentUser.id; });
+  var cityBuildings = state.allBuildings;  // every player's buildings in the shared city
   var hasProcessor = myBuildings.some(function (b) {
     var bt = state.buildingTypes[b.building_type_key];
     return bt && bt.category === 'processor';
   });
   var totalBuildings = myBuildings.length;
 
+  // ── Transport network access (mirrors the server's
+  // _player_has_transport_access) ──
+  // Per-mode: city has hubs, player owns hub OR truck-depot.
+  function modeHubKey(mode) {
+    return mode === 'airport' ? 'airport'
+         : mode === 'seaport' ? 'seaport'
+         : mode === 'train'   ? 'train_depot' : null;
+  }
+  function isHub(b, mode) {
+    var bt = state.buildingTypes[b.building_type_key];
+    return bt && bt.category === 'transport_hub'
+        && b.status === 'active'
+        && b.building_type_key === modeHubKey(mode)
+        && state.roadAccessIds[b.id];
+  }
+  function cityTiersForMode(mode) {
+    var t = 0;
+    cityBuildings.forEach(function (b) {
+      if (isHub(b, mode)) t += 1 + (b.expansion_level || 0);
+    });
+    return t;
+  }
+  function playerHasAccess(mode) {
+    // Owns a hub of mode (road-connected)?
+    if (myBuildings.some(function (b) { return isHub(b, mode); })) return true;
+    // Owns a road-connected truck depot AND city has any road-connected hub?
+    var hasTruck = myBuildings.some(function (b) {
+      return b.building_type_key === 'truck_depot' && b.status === 'active' && state.roadAccessIds[b.id];
+    });
+    if (!hasTruck) return false;
+    return cityBuildings.some(function (b) { return isHub(b, mode); });
+  }
+
   state.unlockedTraders = {};
   Object.keys(state.traders).forEach(function (tk) {
+    var t = state.traders[tk];
     if (tk === 'river_traders') {
       state.unlockedTraders[tk] = { unlocked: true, hint: '' };
     } else if (tk === 'desert_caravan') {
@@ -314,17 +351,32 @@ export function computeTraderUnlocks() {
         unlocked: totalBuildings >= 3,
         hint: totalBuildings >= 3 ? '' : 'Expand to 3+ buildings to draw the attention of bulk traders. (' + totalBuildings + '/3)'
       };
+    } else if (t && t.transport_mode) {
+      // Transport-mode trader: gated on city-tier + per-player access.
+      var cityTiers = cityTiersForMode(t.transport_mode);
+      var hasAccess = playerHasAccess(t.transport_mode);
+      var unlocked = (t.tier <= cityTiers) && hasAccess;
+      var hint = '';
+      if (!unlocked) {
+        if (t.tier > cityTiers) {
+          hint = 'Build ' + (t.tier === 1 ? 'a' : 'another') + ' '
+               + (t.transport_mode === 'airport' ? 'Airport' :
+                  t.transport_mode === 'seaport' ? 'Seaport' : 'Train Depot')
+               + ' (or expand an existing one) in the city.';
+        } else if (!hasAccess) {
+          hint = 'Build a Truck Depot to plug into the city\'s ' + t.transport_mode + ' network.';
+        }
+      }
+      state.unlockedTraders[tk] = { unlocked: unlocked, hint: hint };
     } else {
-      // Future partners default to locked
       state.unlockedTraders[tk] = { unlocked: false, hint: 'Not yet available.' };
     }
   });
 
-  // Ensure selected trader is unlocked; fall back to first unlocked
   if (state.selectedTrader && state.unlockedTraders[state.selectedTrader] && !state.unlockedTraders[state.selectedTrader].unlocked) {
-    var unlocked = Object.keys(state.traders).filter(function (tk) {
+    var unlocked2 = Object.keys(state.traders).filter(function (tk) {
       return state.unlockedTraders[tk] && state.unlockedTraders[tk].unlocked;
     });
-    state.selectedTrader = unlocked.length > 0 ? unlocked[0] : null;
+    state.selectedTrader = unlocked2.length > 0 ? unlocked2[0] : null;
   }
 }

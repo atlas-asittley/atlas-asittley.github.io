@@ -83,10 +83,33 @@ export function renderBuildingInspector() {
 
     if (bt.category === 'extractor' || bt.category === 'food_extractor'
         || bt.category === 'processor' || bt.category === 'service' || bt.category === 'tax'
-        || bt.category === 'booster') {
+        || bt.category === 'booster' || bt.category === 'police'
+        || bt.category === 'transport_hub' || bt.category === 'transport_connector') {
       if (bt.worker_cost > 0) {
         html += '<div class="insp-row"><span class="insp-label">Workers</span><span class="insp-value">' + bt.worker_cost + ' required</span></div>';
       }
+    }
+
+    // Transport hubs: show expansion level + Expand button.
+    if (bt.category === 'transport_hub') {
+      var lvl = b.expansion_level || 0;
+      var modeName = b.building_type_key === 'airport' ? 'airport'
+                  : b.building_type_key === 'seaport' ? 'seaport' : 'train';
+      var tradersFromThis = 1 + lvl;
+      html += '<div class="insp-row"><span class="insp-label">Traders</span><span class="insp-value">'
+           + tradersFromThis + ' unlocked from this ' + bt.name + ' (city-wide)</span></div>';
+      if (mine && lvl < 1) {
+        var nextCost = bt.build_cost * 2 * (lvl + 1);
+        var canAfford = (state.profile && state.profile.money || 0) >= nextCost;
+        html += '<div class="insp-row"><span class="insp-label">Expansion</span><span class="insp-value">Level ' + lvl + ' / 1</span></div>';
+        html += '<div class="insp-hint insp-hint-muted">Expanding adds another trader to the city\'s ' + modeName + ' network. Cost $' + nextCost.toLocaleString() + '.</div>';
+        html += '<button class="btn-primary" id="btn-expand-hub"' + (canAfford ? '' : ' disabled') + '>Expand — $' + nextCost.toLocaleString() + '</button>';
+      } else if (lvl >= 1) {
+        html += '<div class="insp-row"><span class="insp-label">Expansion</span><span class="insp-value insp-good">Maxed out</span></div>';
+      }
+    }
+    if (bt.category === 'transport_connector') {
+      html += '<div class="insp-row"><span class="insp-label">Role</span><span class="insp-value">Truck route — connects you to every road-connected hub in the city.</span></div>';
     }
 
     if (bt.category === 'extractor' && b.target_x !== null && b.target_x !== undefined) {
@@ -297,6 +320,24 @@ export function renderBuildingInspector() {
     });
   } else {
     actionsEl.innerHTML = '';
+  }
+
+  // Wire transport-hub Expand button (lives in the body, not actions).
+  var expandBtn = document.getElementById('btn-expand-hub');
+  if (expandBtn) {
+    expandBtn.addEventListener('click', function () {
+      expandBtn.disabled = true; expandBtn.textContent = 'Expanding…';
+      sb.rpc('expand_transport_hub', { p_building_id: b.id }).then(function (r) {
+        if (r.error) { showToast('Expand failed: ' + r.error.message, 'error'); expandBtn.disabled = false; return; }
+        var data = r.data;
+        b.expansion_level = data.new_level;
+        state.profile.money = data.money;
+        showToast(bt.name + ' expanded! New trader unlocked.', 'success');
+        updateMoney();
+        renderBuildingInspector();
+        renderMap();
+      });
+    });
   }
 }
 

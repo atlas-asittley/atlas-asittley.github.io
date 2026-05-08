@@ -234,7 +234,8 @@ export function computeBuildingIssues(b, bt) {
   var needsRoad = false;
   if (bt.category === 'processor' || bt.category === 'service' || bt.category === 'tax'
       || bt.category === 'extractor' || bt.category === 'food_extractor'
-      || bt.category === 'booster') {
+      || bt.category === 'booster' || bt.category === 'police'
+      || bt.category === 'transport_hub' || bt.category === 'transport_connector') {
     needsRoad = true;
   } else if (bt.category === 'housing') {
     var tier0 = b.housing_tier !== undefined ? b.housing_tier : 1;
@@ -259,7 +260,8 @@ export function computeBuildingIssues(b, bt) {
 
   var consumesWorkers = bt.category === 'extractor' || bt.category === 'food_extractor'
     || bt.category === 'processor' || bt.category === 'service' || bt.category === 'tax'
-    || bt.category === 'booster' || bt.category === 'police';
+    || bt.category === 'booster' || bt.category === 'police'
+    || bt.category === 'transport_hub' || bt.category === 'transport_connector';
   if (consumesWorkers && state.laborInfo.unstaffedIds[b.id]) {
     var li = state.laborInfo;
     var hint = 'Needs ' + bt.worker_cost + ' worker' + (bt.worker_cost > 1 ? 's' : '')
