@@ -248,7 +248,12 @@ function renderResourceFlowHtml(resourceKey) {
   var html = '<div class="rsrc-flow">';
   html += '<div class="rsrc-flow-title">Where it\'s going</div>';
 
-  if (flow.production.length > 0) {
+  // Show the "Producing" section if we have EITHER local production OR
+  // NPC imports — both contribute to totalIn / Net. Previously the
+  // gate was production-only, so a player whose only inflow was a
+  // buy_to_reserve policy saw "Net +2.7/min" with no explanation
+  // (the imports were silently summed into the net but never listed).
+  if (flow.production.length > 0 || flow.imports.length > 0) {
     html += '<div class="rsrc-flow-section">';
     html += '<div class="rsrc-flow-section-title good">Producing +' + (Math.round(totalIn * 10) / 10).toFixed(1) + '/min</div>';
     flow.production.forEach(function (p) {
@@ -259,7 +264,7 @@ function renderResourceFlowHtml(resourceKey) {
     });
     flow.imports.forEach(function (i) {
       html += '<div class="rsrc-flow-row">';
-      html += '<span>' + escapeHtml(i.trader) + ' (buy-to-reserve)</span>';
+      html += '<span>' + escapeHtml(i.trader) + ' (buy-to-reserve, ' + i.price + 'g)</span>';
       html += '<span class="good">' + fmtRate(i.rate) + ' max</span>';
       html += '</div>';
     });
