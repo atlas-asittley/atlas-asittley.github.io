@@ -105,12 +105,15 @@ def test_resource_booster_boosts_adjacent_extractor(make_player, place, cur, cle
         # Easiest: connect via a tile that's road-adjacent to (bx+1, by)
         # using existing roads — try (bx, by-1) or (bx, by+1) etc.
         for nx, ny in [(bx + 1, by - 1), (bx + 1, by + 1), (bx + 2, by)]:
+            cur.execute("SAVEPOINT road_try")
             try:
                 cur.execute("UPDATE public.map_tiles SET resource_node_key = NULL WHERE x = %s AND y = %s",
                             (nx, ny))
                 place('road', nx, ny)
+                cur.execute("RELEASE SAVEPOINT road_try")
                 break
             except Exception:
+                cur.execute("ROLLBACK TO SAVEPOINT road_try")
                 continue
     place('foresters_office', bx + 1, by)
 
