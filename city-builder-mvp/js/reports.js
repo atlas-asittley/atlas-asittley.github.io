@@ -678,6 +678,7 @@ function prettySource(k) {
   if (k === 'p2p_trade') return 'Player Trade';
   if (k === 'p2p_agreement') return 'Trade Agreement';
   if (k === 'npc_trade') return 'NPC Traders';
+  if (k === 'river_traders') return 'Neighboring City';
   if (k === 'tax_revenue') return 'Tax Revenue';
   if (k === 'build_cost') return 'Building Construction';
   if (k === 'expansion_cost') return 'District Expansion';

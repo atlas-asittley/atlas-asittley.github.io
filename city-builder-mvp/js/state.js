@@ -340,17 +340,14 @@ export function computeTraderUnlocks() {
   Object.keys(state.traders).forEach(function (tk) {
     var t = state.traders[tk];
     if (tk === 'river_traders') {
+      // Renamed to "Neighboring City" 2026-05-08 — always-on starter
+      // trader providing modest income until transport hubs unlock
+      // bigger routes.
       state.unlockedTraders[tk] = { unlocked: true, hint: '' };
-    } else if (tk === 'desert_caravan') {
-      state.unlockedTraders[tk] = {
-        unlocked: hasProcessor,
-        hint: hasProcessor ? '' : 'Build a processor (Sawmill or Mason Workshop) to attract refined-goods traders.'
-      };
-    } else if (tk === 'mountain_folk') {
-      state.unlockedTraders[tk] = {
-        unlocked: totalBuildings >= 3,
-        hint: totalBuildings >= 3 ? '' : 'Expand to 3+ buildings to draw the attention of bulk traders. (' + totalBuildings + '/3)'
-      };
+    } else if (tk === 'desert_caravan' || tk === 'mountain_folk') {
+      // Collapsed into Neighboring City; their is_active flag is false
+      // server-side so they don't visit. Locked here too.
+      state.unlockedTraders[tk] = { unlocked: false, hint: 'Retired — collapsed into Neighboring City.' };
     } else if (t && t.transport_mode) {
       // Transport-mode trader: gated on city-tier + per-player access.
       var cityTiers = cityTiersForMode(t.transport_mode);
