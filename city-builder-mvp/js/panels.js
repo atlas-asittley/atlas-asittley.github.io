@@ -152,7 +152,7 @@ export function renderBuildPanel() {
       if (key === 'well') {
         desc = 'Lets housing within 4 tiles upgrade past tier 0. Needs road + 3 workers.';
       } else if (key === 'tavern') {
-        desc = 'Consumes bread + pottery while staffed; +10 worker capacity. Needs road.';
+        desc = 'Consumes bread + pottery while staffed; +5% productivity (and a small crime hit). Needs road.';
       } else if (key === 'bathhouse') {
         desc = 'Consumes brick + clay while staffed; nearby housing won’t devolve. Needs road.';
       } else if (key === 'school') {

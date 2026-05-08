@@ -86,91 +86,11 @@ def test_tavern_consumes_nothing_when_one_input_missing(make_player, place, cur,
 
 
 # ── tavern worker bonus ─────────────────────────────────────────
-
-def test_tavern_bonus_actually_buys_staffing_slots(make_player, place, cur, clear_resources):
-    """Regression for the previously-decorative tavern bonus.
-
-    Setup: base capacity (5) + a tavern (5w cost, +10 bonus when fed) +
-    an extractor (10w cost). Total need = 15.
-
-    Old code: tavern bonus was added AFTER the staffing loop, so
-    capacity at staffing time was 5 (base alone). Tavern got the 5
-    workers, extractor stayed unstaffed (unstaffed_count=1). Tavern
-    bonus then inflated the displayed capacity to 15 — purely
-    cosmetic.
-
-    New code: tavern bonus is pre-computed before staffing → capacity
-    is 15 going into the loop → both buildings staff (unstaffed_count=0).
-    """
-    p = make_player(industry='timber')
-    clear_resources(p['id'])
-    hx, hy = p['home_x'], p['home_y']
-    place('tavern', hx + 1, hy + 2)
-    place('timber_camp', hx + 2, hy + 1)
-
-    # Tavern needs bread + pottery to qualify for the bonus
-    cur.execute("""INSERT INTO public.inventories (player_id, resource_key, quantity) VALUES
-                   (%s, 'bread', 5.0), (%s, 'pottery', 5.0)
-                   ON CONFLICT (player_id, resource_key) DO UPDATE SET quantity = EXCLUDED.quantity""",
-                (str(p['id']), str(p['id'])))
-    cur.execute("""UPDATE public.buildings
-                   SET last_processed_at = now() - interval '60 seconds'
-                   WHERE player_id = %s""", (str(p['id']),))
-
-    cur.execute("SELECT (public.process_production()->>'unstaffed_count')::int")
-    assert cur.fetchone()[0] == 0, \
-        "fed tavern's bonus should have brought capacity to 15, staffing both buildings"
-
-
-def test_tavern_bonus_does_not_apply_when_unfed(make_player, place, cur, clear_resources):
-    """Inverse of the fix-pin test: with no inputs in stock, the tavern
-    bonus must NOT pre-boost capacity. The extractor stays unstaffed."""
-    # population=5 so the worker pool is exactly the base 5 — fed tavern
-    # bumps it to 15 and lets the timber_camp staff; unfed tavern leaves
-    # the worker pool at 5 and the timber_camp can't staff.
-    p = make_player(industry='timber', population=5)
-    clear_resources(p['id'])
-    hx, hy = p['home_x'], p['home_y']
-    place('tavern', hx + 1, hy + 2)
-    place('timber_camp', hx + 2, hy + 1)
-    # No bread / pottery → tavern doesn't qualify for the bonus
-
-    cur.execute("""UPDATE public.buildings
-                   SET last_processed_at = now() - interval '60 seconds'
-                   WHERE player_id = %s""", (str(p['id']),))
-    cur.execute("SELECT (public.process_production()->>'unstaffed_count')::int")
-    assert cur.fetchone()[0] >= 1, \
-        "unfed tavern shouldn't boost capacity; extractor should be unstaffed"
-
-
-def test_tavern_adds_worker_capacity_when_fed(make_player, place, cur, clear_resources):
-    p = make_player()
-    clear_resources(p['id'])
-    hx, hy = p['home_x'], p['home_y']
-    place('road', hx + 1, hy + 1)
-    place('tavern', hx + 1, hy + 2)
-    _give_lots_of_workers(cur, p['id'])  # ensure tavern itself is staffed
-    _stock(cur, p['id'], 'bread', 5.0)
-    _stock(cur, p['id'], 'pottery', 5.0)
-    _backdate(cur, p['id'], 60)
-
-    cur.execute("SELECT public.process_production()")
-    cur.execute("SELECT worker_capacity FROM public.player_profiles WHERE id = %s",
-                (str(p['id']),))
-    cap_with = cur.fetchone()[0]
-
-    # Now drain the inputs so the tavern stops operating.
-    _stock(cur, p['id'], 'bread', 0)
-    _stock(cur, p['id'], 'pottery', 0)
-    _give_lots_of_workers(cur, p['id'])
-    _backdate(cur, p['id'], 60)
-    cur.execute("SELECT public.process_production()")
-    cur.execute("SELECT worker_capacity FROM public.player_profiles WHERE id = %s",
-                (str(p['id']),))
-    cap_without = cur.fetchone()[0]
-
-    assert cap_with - cap_without == 10, \
-        f"tavern should add exactly 10 worker capacity when fed (with={cap_with}, without={cap_without})"
+# Removed 2026-05-08: the +10-workers-from-a-fed-tavern mechanic was
+# pulled because it confused players (fed tavern adds workers you
+# don't have housing for → math doesn't reconcile). The Tavern still
+# provides a +5% productivity bonus and a small crime hit; tests for
+# those live in test_productivity / test_crime, not here.
 
 
 # ── school gates townhouse (tier 3) ─────────────────────────────

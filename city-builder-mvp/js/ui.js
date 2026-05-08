@@ -114,27 +114,15 @@ export function updateIdentity() {
 export function updateWorkers() {
   var li = state.laborInfo;
   var el = document.getElementById('g-workers');
-  var supply = li.workerSupply || 0;
   var used = Math.max(0, li.workersUsed || 0);
   var needed = Math.max(0, li.workersNeeded || 0);
-  var idle = Math.max(0, li.workersIdle || 0);
-  var pop = Math.floor((state.profile && state.profile.population) || 0);
-  // Tavern bonus = worker capacity above raw population. A staffed +
-  // fed tavern contributes +10 workers, modeling barflies & travelers
-  // who pitch in but don't live in housing. Without surfacing this,
-  // "228 employed / 226 population" looks like a math error.
-  var tavernBonus = Math.max(0, supply - pop);
   var stat = document.getElementById('g-workers-stat');
   if (el) {
-    var bonusSuffix = tavernBonus > 0 ? ' <span class="workers-bonus">+' + tavernBonus + '🍺</span>' : '';
-    el.innerHTML = used + '/' + needed + bonusSuffix;
+    el.textContent = used + '/' + needed;
     el.className = 'v ' + (li.laborShortage ? 'shortage' : 'workers');
   }
   if (stat) {
-    var tavernLine = tavernBonus > 0
-      ? ' (labor pool ' + supply + ' = ' + pop + ' citizens + ' + tavernBonus + ' from a staffed tavern)'
-      : '';
-    stat.title = used + ' workers employed / ' + needed + ' jobs available' + tavernLine;
+    stat.title = used + ' workers employed / ' + needed + ' jobs available';
   }
   var badge = document.getElementById('g-labor-badge');
   if (badge) {

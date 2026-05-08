@@ -132,7 +132,6 @@ body {
 .stat .v.workers { color: #5ec49e; }
 .stat .v.shortage { color: #f06060; }
 .labor-badge { font-size: 0.65rem; color: #f06060; font-weight: 600; margin-left: 2px; }
-.workers-bonus { font-size: 0.65rem; color: #c8a050; font-weight: 600; margin-left: 3px; }
 .btn-sm { padding: 4px 10px; font-size: 0.75rem; background: none; border: 1px solid #1e2a3a; color: #7a8a9e; border-radius: 6px; cursor: pointer; }
 
 /* ── Game: info bar ────────────────────────────────── */

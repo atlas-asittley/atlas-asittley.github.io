@@ -7,7 +7,8 @@ Coverage:
   population=5 (citizens never leave below baseline, even at
   happiness=0 — prevents the death spiral).
 - Population clamps DOWN to housing capacity when housing is lost.
-- worker_capacity reflects floor(population) + tavern_bonus.
+- worker_capacity reflects floor(population) (the legacy tavern
+  +10 bonus was removed on 2026-05-08).
 """
 import pytest
 
@@ -184,8 +185,8 @@ def test_emigration_caps_at_floor(make_player, place, cur, clear_resources):
 
 
 def test_worker_capacity_uses_floor_population(make_player, cur):
-    """worker_capacity = floor(population) + tavern_bonus.
-    Player with no tavern → worker_capacity should equal floor(population)."""
+    """worker_capacity = floor(population). The legacy tavern +10
+    bonus was removed on 2026-05-08, so this is now a clean equality."""
     p = make_player(industry='timber')
     cur.execute("SELECT public.process_production()")
     result = cur.fetchone()[0]
