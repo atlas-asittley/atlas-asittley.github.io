@@ -149,6 +149,21 @@ def test_tax_row_populates_period_start(make_player, place, cur, clear_resources
     assert period_start < created_at
 
 
+def test_starting_grant_ledger_row_emitted_at_choose_industry(make_player, cur):
+    """choose_industry credits $1000 at profile creation. The cash
+    ledger invariant requires a matching starting_grant row so the
+    Treasury chart's running balance starts at the right value
+    instead of $1000 short."""
+    p = make_player(industry='timber')
+    cur.execute("""
+        SELECT amount FROM public.cash_transactions
+        WHERE player_id = %s AND source = 'starting_grant'
+    """, (str(p['id']),))
+    rows = cur.fetchall()
+    assert len(rows) == 1, f'expected one starting_grant row, got {len(rows)}'
+    assert rows[0][0] == 1000, f'starting grant amount mismatch: {rows[0][0]}'
+
+
 def test_cash_transactions_only_visible_to_owner(make_player, conn, cur):
     """RLS: a player can't read another player's ledger rows."""
     a = make_player(industry='timber')
