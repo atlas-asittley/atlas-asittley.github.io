@@ -168,6 +168,20 @@ export function getHousingUpgradeBlockers(building, tierCfg) {
     });
   }
 
+  // Desirability gate (server-side _pp_evolve_housing checks
+  // v_desirability >= COALESCE(v_next_tier.min_desirability, 0)). Mirror
+  // it on the client so the inspector lists it as a blocker instead of
+  // silently saying "Conditions met" when the server refuses to
+  // flag eligible. tile.desirability defaults to 50 when unset
+  // (matches the SQL COALESCE).
+  if (tierCfg.min_desirability && tierCfg.min_desirability > 0) {
+    var tile = state.tileMap && state.tileMap[building.x + ',' + building.y];
+    var desirability = tile && tile.desirability != null ? Number(tile.desirability) : 50;
+    if (desirability < tierCfg.min_desirability) {
+      blockers.push('desirability');
+    }
+  }
+
   return blockers;
 }
 
@@ -210,6 +224,7 @@ export function describeUpgradeBlocker(key) {
   if (key === 'luxury_food') return 'a luxury food in stock (spirits, caviar, spices, or ale)';
   if (key === 'industrial_luxury') return 'an industrial luxury in stock (cabinets, monuments, mosaics, or machinery)';
   if (key === 'all_industrial_luxuries') return 'ALL FOUR industrial luxuries in stock simultaneously (cabinets + monuments + mosaics + machinery)';
+  if (key === 'desirability') return 'higher tile desirability (build parks/services nearby, reduce pollution + crime + tax pressure)';
   if (key.indexOf('lifestyle:') === 0) {
     var rk = key.slice('lifestyle:'.length);
     var name = (state.resources && state.resources[rk] && state.resources[rk].name) || rk;
