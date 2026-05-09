@@ -832,29 +832,39 @@ export function renderTradePanel() {
   // ── Best deals banner — driven by your reservation prices ──
   html += renderBestDealsBanner(unlockedKeys);
 
-  // ── Unlocked partner cards ──
+  // ── Unlocked partner cards (collapsible — header toggles body) ──
   html += '<div class="trader-cards">';
   unlockedKeys.forEach(function (tk) {
     html += renderTraderCard(tk);
   });
   html += '</div>';
 
-  // ── Locked partners (compact, at the bottom) ──
-  if (lockedKeys.length > 0) {
-    html += '<div class="trader-locked-section">';
-    html += '<div class="trader-locked-title">Locked partners</div>';
-    lockedKeys.forEach(function (tk) {
-      var t = state.traders[tk];
-      var info = state.unlockedTraders[tk];
-      html += '<div class="trader-locked-card">';
-      html += '<div class="trader-locked-name"><span class="lock-icon">&#x1f512;</span> ' + escapeHtml(t.name) + '</div>';
-      html += '<div class="trader-locked-hint">' + escapeHtml(info.hint || 'Locked') + '</div>';
-      html += '</div>';
-    });
-    html += '</div>';
-  }
+  // Locked partners are deliberately NOT listed by name. Listing a
+  // fixed roster (a) spoils the discovery surprise of building a new
+  // hub, and (b) implies a finite ceiling — but the design intent is
+  // an open-ended pool that grows as you expand. Show only an
+  // ambient hint that more exist out there.
+  html += '<div class="trader-locked-footer">'
+       +  '<span class="lock-icon">&#x1f512;</span> '
+       +  'New trade partners appear as you build and upgrade transport hubs.'
+       +  '</div>';
 
   panel.innerHTML = html;
+
+  // Wire the collapse/expand on each card header.
+  panel.querySelectorAll('.trader-card-header').forEach(function (hdr) {
+    hdr.addEventListener('click', function () {
+      var card = hdr.closest('.trader-card');
+      if (!card) return;
+      card.classList.toggle('collapsed');
+      // Persist collapse state across re-renders so user toggles survive
+      // the next process_production tick.
+      var tk = card.dataset.trader;
+      if (!tk) return;
+      state.traderCollapsed = state.traderCollapsed || {};
+      state.traderCollapsed[tk] = card.classList.contains('collapsed');
+    });
+  });
 }
 
 
@@ -950,19 +960,24 @@ function renderTraderCard(tk) {
     var diff = nextVisit.getTime() - Date.now();
     if (diff > 0) visitLabel = '~' + Math.ceil(diff / 60000) + ' min';
   }
-  var html = '<div class="trader-card" data-trader="' + escapeHtml(tk) + '">';
-  html += '<div class="trader-card-header">';
+  var collapsed = state.traderCollapsed && state.traderCollapsed[tk];
+  var cls = 'trader-card' + (collapsed ? ' collapsed' : '');
+  var html = '<div class="' + cls + '" data-trader="' + escapeHtml(tk) + '">';
+  html += '<div class="trader-card-header" title="Click to collapse / expand">';
+  html += '<span class="trader-card-caret" aria-hidden="true">&#x25be;</span>';
   html += '<div class="trader-card-name">' + escapeHtml(t.name) + '</div>';
   html += '<div class="trader-card-meta">';
   html += '<span class="trader-card-mode trader-card-mode-' + escapeHtml(modeLabel) + '">' + escapeHtml(modeLabel) + '</span>';
   html += '<span class="trader-card-cadence">cap ' + t.visit_capacity + '/visit · every ' + t.visit_interval_minutes + 'm</span>';
   if (visitLabel) html += '<span class="trader-card-next">next ~' + visitLabel + '</span>';
   html += '</div></div>';
+  html += '<div class="trader-card-body">';
   if (t.description) {
     html += '<div class="trader-card-desc">' + escapeHtml(t.description) + '</div>';
   }
   html += renderVisitSummary(tk);
   html += renderPartnerGoodsCompact(tk);
+  html += '</div>';
   html += '</div>';
   return html;
 }

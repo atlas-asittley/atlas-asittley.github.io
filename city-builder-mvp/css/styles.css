@@ -1727,7 +1727,12 @@ body.panel-expanded .map-area { display: none; }
 /* ── Trade → Partners: vertical card list (2026-05-09) ── */
 .trader-cards { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
 .trader-card { background: #131c28; border: 1px solid #243447; border-radius: 8px; padding: 10px 12px; }
-.trader-card-header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 12px; }
+.trader-card-header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 12px; cursor: pointer; user-select: none; }
+.trader-card-caret { display: inline-block; width: 12px; color: #7a8a9e; transition: transform 0.15s ease; transform: rotate(0deg); flex-shrink: 0; align-self: center; }
+.trader-card.collapsed .trader-card-caret { transform: rotate(-90deg); }
+.trader-card.collapsed .trader-card-body { display: none; }
+.trader-card.collapsed { padding-bottom: 8px; }
+.trader-card-body { /* default expanded */ }
 .trader-card-name { font-size: 0.95rem; font-weight: 700; color: #e6eef6; }
 .trader-card-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 0.72rem; color: #7a8a9e; margin-left: auto; }
 .trader-card-mode { padding: 1px 8px; border-radius: 10px; background: rgba(120,140,170,0.15); color: #b8c4d4; font-weight: 600; font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.04em; }
@@ -1765,12 +1770,10 @@ body.panel-expanded .map-area { display: none; }
 .best-deals-price { font-weight: 700; }
 .best-deals-nomatch { color: #c0a0a0; font-style: italic; }
 
-/* Locked partner section */
-.trader-locked-section { margin-top: 16px; padding-top: 12px; border-top: 1px dashed #243447; }
-.trader-locked-title { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; color: #7a8a9e; font-weight: 600; margin-bottom: 6px; }
-.trader-locked-card { background: rgba(40,50,70,0.3); border: 1px dashed #2a3a52; border-radius: 6px; padding: 6px 10px; margin-bottom: 4px; }
-.trader-locked-name { font-size: 0.84rem; color: #b0bcd0; opacity: 0.7; }
-.trader-locked-hint { font-size: 0.74rem; color: #7a8a9e; margin-top: 2px; }
+/* Ambient hint that more partners exist out there. Deliberately
+   does not name or count them — see panels.js renderTradePanel. */
+.trader-locked-footer { margin-top: 16px; padding: 10px 12px; border-top: 1px dashed #243447; font-size: 0.78rem; color: #7a8a9e; font-style: italic; text-align: center; }
+.trader-locked-footer .lock-icon { margin-right: 4px; opacity: 0.7; }
 
 /* ── Partner tabs (legacy — superseded by trader-cards) ── */
 .partner-tabs { display: flex; gap: 6px; margin-bottom: 8px; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 2px; }
