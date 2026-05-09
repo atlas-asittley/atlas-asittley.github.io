@@ -104,11 +104,15 @@ def test_quota_is_per_player_not_city_wide(make_player, place, cur, clear_resour
     cur.execute("SELECT public.process_production()")
 
     # Both should have used 15.
+    # Scope to JUST these two test players — live production data also
+    # has rows in this table.
     cur.execute("""
         SELECT player_id, qty_bought FROM public.trader_daily_quota
-        WHERE trader_key = 'river_traders' AND resource_key = 'timber' AND day_bucket = CURRENT_DATE
+        WHERE trader_key = 'river_traders' AND resource_key = 'timber'
+          AND day_bucket = CURRENT_DATE
+          AND player_id IN (%s, %s)
         ORDER BY qty_bought DESC
-    """)
+    """, (str(a['id']), str(b['id'])))
     rows = cur.fetchall()
     assert len(rows) == 2, f'expected 2 quota rows (one per player), got {len(rows)}'
     assert all(r[1] == 15 for r in rows), \
