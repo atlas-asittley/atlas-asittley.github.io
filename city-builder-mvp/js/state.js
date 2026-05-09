@@ -252,21 +252,31 @@ export function computeLaborAllocation() {
   // it, every police building's worker_cost was a phantom "idle
   // worker" in the inspector (Jill saw 15 idle even though she was
   // staffed at full capacity).
+  // Mirror server _pp_staff_buildings: same category list (NO transport
+  // — transport_hub / transport_connector aren't actually staffed,
+  // they're infrastructure with no per-tick effect that depends on
+  // workers), and same ordering — service/police get a category-tier
+  // bonus so they're staffed before production when supply is tight,
+  // then per-building staffing_priority DESC, then created_at ASC.
   var prodBuildings = myBuildings.filter(function (b) {
     var bt = state.buildingTypes[b.building_type_key];
     if (!bt || b.status !== 'active') return false;
     if (bt.category === 'extractor' || bt.category === 'food_extractor'
         || bt.category === 'processor' || bt.category === 'service'
         || bt.category === 'tax' || bt.category === 'booster'
-        || bt.category === 'police'
-        || bt.category === 'transport_hub' || bt.category === 'transport_connector') {
+        || bt.category === 'police') {
       return !!state.roadAccessIds[b.id];
     }
     return false;
   }).sort(function (a, b) {
+    var bta = state.buildingTypes[a.building_type_key];
+    var btb = state.buildingTypes[b.building_type_key];
+    var ta = (bta && (bta.category === 'service' || bta.category === 'police')) ? 2 : 1;
+    var tb = (btb && (btb.category === 'service' || btb.category === 'police')) ? 2 : 1;
+    if (ta !== tb) return tb - ta;  // service/police first
     var pa = a.staffing_priority !== undefined ? a.staffing_priority : 1;
     var pb = b.staffing_priority !== undefined ? b.staffing_priority : 1;
-    if (pa !== pb) return pb - pa;  // higher priority first
+    if (pa !== pb) return pb - pa;
     return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
   });
 
