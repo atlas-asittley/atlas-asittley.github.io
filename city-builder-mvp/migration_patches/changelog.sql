@@ -152,3 +152,11 @@ VALUES (
   E'Houses no longer all devolve at the same instant when a resource runs out. Each house now has its own per-resource pantry that buffers ~30 minutes of consumption. When city stock empties, the pantries drain at each house''s individual rate — devolves now trickle out one at a time over the next half hour instead of cascading.\n\nConcretely: if your furniture supply hits zero, you have ~30 minutes to react before any house actually devolves, and devolves spread out instead of all happening together. Same model applies to food and every lifestyle good (pottery / bread / furniture / statuary).\n\nExisting houses were seeded with full pantries on rollout, so nothing devolves immediately.'
 )
 ON CONFLICT (slug) DO NOTHING;
+
+INSERT INTO public.changelog_entries (slug, title, body)
+VALUES (
+  '2026-05-09-trader-reset-clock',
+  'Trader-cap reset countdown in topbar',
+  E'A new 🔄 pill in the topbar shows when trader daily caps reset, so you can plan your buys and sells around the boundary instead of guessing.\n\nDaily caps refresh at UTC midnight — that''s when each trader''s per-resource buy and sell quotas reset to zero. The countdown shows hours/minutes left in the current day.'
+)
+ON CONFLICT (slug) DO NOTHING;
