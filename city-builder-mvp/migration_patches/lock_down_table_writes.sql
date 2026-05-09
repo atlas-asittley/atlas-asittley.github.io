@@ -46,3 +46,5 @@ DROP POLICY IF EXISTS trade_policies_update_self ON public.trade_policies;
 -- phases, accept_trade, sell_to_trader, black_market_trade).
 DROP POLICY IF EXISTS trader_visits_insert_self ON public.trader_visits;
 DROP POLICY IF EXISTS trade_transactions_insert_self ON public.trade_transactions;
+DROP POLICY IF EXISTS trade_agreements_insert ON public.trade_agreements;
+DROP POLICY IF EXISTS trade_agreements_update ON public.trade_agreements;
