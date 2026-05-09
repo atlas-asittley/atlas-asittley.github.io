@@ -184,6 +184,17 @@ function processProduction() {
     // Auto-trade fired during process_production may have moved the
     // daily quota. Refresh so the partner panel shows current state.
     refreshTraderQuotas();
+    // Drain server-side notifications (currently only fires for
+    // counterparties when someone cancels a recurring trade — Atlas's
+    // 2026-05-08 notification policy: bell shows housing_ready_to_upgrade
+    // + trade_agreement_cancelled, nothing else). RPC marks rows read
+    // in the same call so a slow network can't double-toast.
+    sb.rpc('fetch_unread_notifications').then(function (r) {
+      if (r.error || !r.data) return;
+      r.data.forEach(function (n) {
+        addNotification('info', n.body || n.title);
+      });
+    });
   }).catch(function (err) {
     console.warn('Production fetch error:', err);
   });
