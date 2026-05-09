@@ -262,19 +262,50 @@ function loadGameData() {
     state.allBuildings = results[3].data || [];
     computeGridBounds();
 
-    // Load all trader prices indexed by trader_key then resource_key
+    // Load trader prices indexed by trader_key → resource_key. Mirror the
+    // server's _trader_catalog precedence: a row whose city_id matches
+    // the player's city wins over a global (city_id NULL) row for the
+    // same (trader, resource). Otherwise the random-rolled per-city
+    // catalogs (sky_caravans + friends) collide with the leftover global
+    // defaults from transport_network_schema.sql and the JS picks
+    // whichever arrived last from PostgREST — wrong prices + caps in the
+    // partner panel and computeNetRates.
     state.allTraderPrices = {};
-    if (results[4].data) results[4].data.forEach(function (tp) {
-      if (!state.allTraderPrices[tp.trader_key]) {
-        state.allTraderPrices[tp.trader_key] = {};
-      }
-      state.allTraderPrices[tp.trader_key][tp.resource_key] = {
-        buy_price: tp.buy_price,
-        sell_price: tp.sell_price,
-        daily_buy_cap: tp.daily_buy_cap,
-        daily_sell_cap: tp.daily_sell_cap
-      };
-    });
+    if (results[4].data) {
+      var myCityId = (state.profile && state.profile.city_id) || null;
+      // First pass: index globals.
+      results[4].data.forEach(function (tp) {
+        if (tp.city_id) return;
+        if (!state.allTraderPrices[tp.trader_key]) state.allTraderPrices[tp.trader_key] = {};
+        state.allTraderPrices[tp.trader_key][tp.resource_key] = {
+          buy_price: tp.buy_price,
+          sell_price: tp.sell_price,
+          daily_buy_cap: tp.daily_buy_cap,
+          daily_sell_cap: tp.daily_sell_cap
+        };
+      });
+      // Second pass: per-city rows for THIS city overwrite globals; if
+      // ANY city row exists for a (trader), the trader's catalog is
+      // rebuilt from city rows alone (same as _trader_catalog: city
+      // rows entirely shadow global rows for that trader).
+      var cityTraders = {};
+      results[4].data.forEach(function (tp) {
+        if (tp.city_id !== myCityId) return;
+        cityTraders[tp.trader_key] = true;
+      });
+      Object.keys(cityTraders).forEach(function (tk) {
+        state.allTraderPrices[tk] = {};
+      });
+      results[4].data.forEach(function (tp) {
+        if (tp.city_id !== myCityId) return;
+        state.allTraderPrices[tp.trader_key][tp.resource_key] = {
+          buy_price: tp.buy_price,
+          sell_price: tp.sell_price,
+          daily_buy_cap: tp.daily_buy_cap,
+          daily_sell_cap: tp.daily_sell_cap
+        };
+      });
+    }
 
     state.inventory = {};
     if (results[5].data) results[5].data.forEach(function (inv) { state.inventory[inv.resource_key] = Number(inv.quantity); });
