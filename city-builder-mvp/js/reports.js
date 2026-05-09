@@ -157,6 +157,19 @@ function wireDrilldown(detail, rk) {
       openTradeDialog(btn.dataset.playerId, btn.dataset.playerName);
     });
   });
+  function readPriceFloor() {
+    var el = detail.querySelector('.policy-min-sell-price[data-resource="' + rk + '"]');
+    if (!el || el.value === '') return null;
+    var v = parseInt(el.value, 10);
+    return isNaN(v) ? null : Math.max(0, v);
+  }
+  function readPriceCeiling() {
+    var el = detail.querySelector('.policy-max-buy-price[data-resource="' + rk + '"]');
+    if (!el || el.value === '') return null;
+    var v = parseInt(el.value, 10);
+    return isNaN(v) ? null : Math.max(0, v);
+  }
+
   var modeSel = detail.querySelector('.policy-mode-select');
   var reserveInp = detail.querySelector('.policy-reserve-input');
   if (modeSel) {
@@ -164,7 +177,12 @@ function wireDrilldown(detail, rk) {
     modeSel.addEventListener('change', function () {
       var reserve = reserveInp ? (parseInt(reserveInp.value, 10) || 0) : 0;
       if (reserveInp) reserveInp.disabled = (modeSel.value === 'keep');
-      saveTradePolicy(rk, modeSel.value, reserve);
+      // Mode change re-renders the row (different price input shows /
+      // hides), so save first then refresh the row.
+      saveTradePolicy(rk, modeSel.value, reserve, readPriceFloor(), readPriceCeiling());
+      // Re-render to swap the price-input visibility.
+      var ev = new Event('repaint-resource');
+      detail.dispatchEvent(ev);
     });
   }
   if (reserveInp) {
@@ -176,10 +194,31 @@ function wireDrilldown(detail, rk) {
         var live = document.querySelector('.policy-reserve-input[data-resource="' + rk + '"]');
         var mode = document.querySelector('.policy-mode-select[data-resource="' + rk + '"]');
         if (!live || !mode) return;
-        saveTradePolicy(rk, mode.value, Math.max(0, parseInt(live.value, 10) || 0));
+        saveTradePolicy(rk, mode.value, Math.max(0, parseInt(live.value, 10) || 0),
+                        readPriceFloor(), readPriceCeiling());
       }, 600);
     });
   }
+
+  // Price-floor / -ceiling inputs (only one shows at a time depending
+  // on mode; either may be null = no gate).
+  ['.policy-min-sell-price', '.policy-max-buy-price'].forEach(function (sel) {
+    var el = detail.querySelector(sel + '[data-resource="' + rk + '"]');
+    if (!el) return;
+    el.addEventListener('click', function (e) { e.stopPropagation(); });
+    el.addEventListener('input', function () {
+      if (policyTimers[rk]) clearTimeout(policyTimers[rk]);
+      policyTimers[rk] = setTimeout(function () {
+        delete policyTimers[rk];
+        var mode = document.querySelector('.policy-mode-select[data-resource="' + rk + '"]');
+        var reserveLive = document.querySelector('.policy-reserve-input[data-resource="' + rk + '"]');
+        if (!mode) return;
+        saveTradePolicy(rk, mode.value,
+                        reserveLive ? Math.max(0, parseInt(reserveLive.value, 10) || 0) : 0,
+                        readPriceFloor(), readPriceCeiling());
+      }, 600);
+    });
+  });
 }
 
 function buildResourceRows(rates, flows) {
@@ -323,16 +362,39 @@ function renderResourceDrilldownHtml(resourceKey, flows) {
   //   sell_surplus — sell anything above the reserve threshold
   //   buy_to_reserve — buy from NPCs until you hit the reserve threshold
   var policy = (state.tradePolicies && state.tradePolicies[resourceKey])
-             || { mode: 'keep', reserve_target: 0 };
+             || { mode: 'keep', reserve_target: 0, min_sell_price: null, max_buy_price: null };
+  var sellModes = policy.mode === 'sell_surplus';
+  var buyModes  = policy.mode === 'buy_to_reserve';
   html += '<div class="rsrc-policy">';
   html += '<div class="rsrc-policy-label">NPC trade policy</div>';
   html += '<div class="rsrc-policy-row">';
   html += '<select class="policy-mode-select" data-resource="' + escapeHtml(resourceKey) + '">';
   html += '<option value="keep"' + (policy.mode === 'keep' ? ' selected' : '') + '>Keep (don\'t trade)</option>';
-  html += '<option value="sell_surplus"' + (policy.mode === 'sell_surplus' ? ' selected' : '') + '>Sell surplus above</option>';
-  html += '<option value="buy_to_reserve"' + (policy.mode === 'buy_to_reserve' ? ' selected' : '') + '>Buy to reserve of</option>';
+  html += '<option value="sell_surplus"' + (sellModes ? ' selected' : '') + '>Sell surplus above</option>';
+  html += '<option value="buy_to_reserve"' + (buyModes ? ' selected' : '') + '>Buy to reserve of</option>';
   html += '</select>';
   html += '<input type="number" class="policy-reserve-input" data-resource="' + escapeHtml(resourceKey) + '" min="0" max="9999" value="' + (policy.reserve_target || 0) + '"' + (policy.mode === 'keep' ? ' disabled' : '') + '>';
+  html += '</div>';
+  // Reservation prices: only sell when a partner pays >= min_sell_price,
+  // only buy when a partner asks <= max_buy_price. Blank = no gate.
+  // Hide the irrelevant input based on mode so the UI doesn't suggest
+  // mixing sell + buy thresholds on the same resource.
+  html += '<div class="rsrc-policy-prices">';
+  if (sellModes) {
+    html += '<label class="policy-price-lbl">Sell at <span class="policy-price-prefix">$</span>'
+         +  '<input type="number" class="policy-min-sell-price" data-resource="' + escapeHtml(resourceKey)
+         +  '" min="0" max="9999" placeholder="any"'
+         +  ' value="' + (policy.min_sell_price != null ? policy.min_sell_price : '') + '">'
+         +  '<span class="policy-price-suffix">+</span></label>';
+    html += '<div class="policy-price-hint">Sells only to partners paying at least this per unit. Blank = any price.</div>';
+  } else if (buyModes) {
+    html += '<label class="policy-price-lbl">Buy at <span class="policy-price-prefix">$</span>'
+         +  '<input type="number" class="policy-max-buy-price" data-resource="' + escapeHtml(resourceKey)
+         +  '" min="0" max="9999" placeholder="any"'
+         +  ' value="' + (policy.max_buy_price != null ? policy.max_buy_price : '') + '">'
+         +  '<span class="policy-price-suffix">−</span></label>';
+    html += '<div class="policy-price-hint">Buys only from partners asking at most this per unit. Blank = any price.</div>';
+  }
   html += '</div>';
   html += '</div>';
 

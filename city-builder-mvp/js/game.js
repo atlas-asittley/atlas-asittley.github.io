@@ -311,10 +311,17 @@ function loadGameData() {
     if (results[5].data) results[5].data.forEach(function (inv) { state.inventory[inv.resource_key] = Number(inv.quantity); });
 
     // Trade policies (graceful if table doesn't exist yet)
+    // tradePolicies[resource_key] holds mode/reserve_target plus the
+    // 2026-05-09 reservation-price gates (nullable). null = "no gate".
     state.tradePolicies = {};
     if (results[6].data && !results[6].error) {
       results[6].data.forEach(function (p) {
-        state.tradePolicies[p.resource_key] = { mode: p.mode, reserve_target: p.reserve_target };
+        state.tradePolicies[p.resource_key] = {
+          mode: p.mode,
+          reserve_target: p.reserve_target,
+          min_sell_price: p.min_sell_price,
+          max_buy_price: p.max_buy_price
+        };
       });
     }
 

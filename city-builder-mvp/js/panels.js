@@ -778,152 +778,243 @@ export function formatRunway(minutes) {
 
 // ── Trade panel (Phase 2B: multi-partner trade) ──
 export function renderTradePanel() {
-  // Renders the Partners sub-panel of the Trade tab. The Trade tab also
-  // hosts Missions / Players / Stats sub-panels rendered separately.
+  // Trade → Partners as a vertical scroll list of trader cards (Atlas's
+  // 2026-05-09 redesign). The per-trader tab strip didn't scale past
+  // a handful of partners, and the partner you'd want to see depended
+  // on the resource you were checking — not on a sticky selection.
+  //
+  // Layout:
+  //   1. "Best deals" banner — per resource you've gated, the partner
+  //      whose price beats the gate (or "no one yet" if none).
+  //   2. Unlocked traders, each a card with name + mode + visit cadence
+  //      + a per-resource goods table.
+  //   3. Locked traders at the bottom collapsed with their unlock hint.
   var panel = document.getElementById('panel-trade-partners');
   var html = '';
 
   var traderKeys = Object.keys(state.traders);
 
-  // Gate: NPC trade is locked until the player has 1 extractor + 1 food
-  // extractor + 1 tier-1 housing in their district.
   var unlockInfo = computeTradeUnlockState();
   if (!unlockInfo.unlocked) {
     panel.innerHTML = renderLockedTradeHtml(unlockInfo);
     return;
   }
-
-  // Fallback if no traders loaded
   if (traderKeys.length === 0) {
-    html = '<div style="color:#7a8a9e;text-align:center;padding:16px;">No trade partners loaded. Run the Phase 2B migration first.</div>';
-    panel.innerHTML = html;
+    panel.innerHTML = '<div style="color:#7a8a9e;text-align:center;padding:16px;">No trade partners loaded.</div>';
     return;
   }
 
-  // Phase 2C: recompute unlocks (buildings may have changed)
   computeTraderUnlocks();
 
-  // Ensure selected trader is valid and unlocked
-  if (!state.selectedTrader || !state.traders[state.selectedTrader] ||
-      (state.unlockedTraders[state.selectedTrader] && !state.unlockedTraders[state.selectedTrader].unlocked)) {
-    var firstUnlocked = traderKeys.filter(function (tk) {
-      return !state.unlockedTraders[tk] || state.unlockedTraders[tk].unlocked;
-    })[0];
-    state.selectedTrader = firstUnlocked || traderKeys[0];
-  }
-  state.traderPrices = state.allTraderPrices[state.selectedTrader] || {};
-
-  var trader = state.traders[state.selectedTrader];
-
-  // ── Partner selector tabs (Phase 2C: locked/unlocked) ──
-  html += '<div class="partner-tabs">';
-  traderKeys.forEach(function (tk) {
-    var t = state.traders[tk];
-    var selected = tk === state.selectedTrader;
-    var unlockInfo = state.unlockedTraders[tk] || { unlocked: true, hint: '' };
-    var isLocked = !unlockInfo.unlocked;
-
-    if (isLocked) {
-      html += '<button class="partner-tab locked" data-trader="' + tk + '" data-locked="1" title="' + unlockInfo.hint.replace(/"/g, '&quot;') + '">';
-      html += '<div class="partner-tab-name"><span class="lock-icon">&#x1f512;</span> ' + t.name + '</div>';
-      html += '<div class="partner-tab-hint">' + unlockInfo.hint + '</div>';
-      html += '</button>';
-    } else {
-      var nextVisit = state.nextVisitAts[tk];
-      var visitLabel = '';
-      if (nextVisit) {
-        var diff = nextVisit.getTime() - Date.now();
-        if (diff > 0) {
-          visitLabel = '<span class="partner-tab-timer">~' + Math.ceil(diff / 60000) + 'm</span>';
-        }
-        // Don't show a "Due!" badge anymore — auto-resolve handles it.
-      }
-      html += '<button class="partner-tab' + (selected ? ' selected' : '') + '" data-trader="' + tk + '">';
-      html += '<div class="partner-tab-name">' + t.name + '</div>';
-      html += '<div class="partner-tab-meta">Cap ' + t.visit_capacity + ' &middot; ' + t.visit_interval_minutes + 'm</div>';
-      if (visitLabel) {
-        html += '<div class="partner-tab-visit">' + visitLabel + '</div>';
-      }
-      html += '</button>';
-    }
-  });
-  html += '</div>';
-
-  // ── Visit status (auto-resolve) ──
-  // Trade visits are now resolved automatically every production tick by
-  // _pp_resolve_trader_visits on the server. The player's per-resource
-  // policies (City → Resources) decide what gets sold or bought; nothing
-  // to click here. Show the soonest next-visit time as ambient info.
   var unlockedKeys = traderKeys.filter(function (tk) {
     return !state.unlockedTraders[tk] || state.unlockedTraders[tk].unlocked;
   });
+  var lockedKeys = traderKeys.filter(function (tk) {
+    var info = state.unlockedTraders[tk];
+    return info && !info.unlocked;
+  });
+
+  // ── Visit cadence banner ──
   html += '<div class="visit-status">';
   var soonest = null;
   unlockedKeys.forEach(function (tk) {
     var nv = state.nextVisitAts[tk];
-    if (nv && (!soonest || nv.getTime() < soonest)) {
-      soonest = nv.getTime();
-    }
+    if (nv && (!soonest || nv.getTime() < soonest)) soonest = nv.getTime();
   });
   if (soonest && soonest > Date.now()) {
     var mins = Math.ceil((soonest - Date.now()) / 60000);
     html += '<span class="visit-timer">Next auto-trade in ~' + mins + ' min</span>';
   } else {
-    html += '<span class="visit-timer">Auto-trading on each production tick</span>';
+    html += '<span class="visit-timer">Auto-trading every production tick</span>';
   }
   html += '</div>';
 
-  // ── Selected partner detail ──
-  html += '<div class="partner-detail">';
-  html += '<div class="trader-header">' + trader.name + '</div>';
-  html += '<div class="trader-desc">' + (trader.description || '') + '</div>';
+  // ── Best deals banner — driven by your reservation prices ──
+  html += renderBestDealsBanner(unlockedKeys);
 
-  // Visit status for selected partner — purely informational; no action.
-  var selectedNextVisit = state.nextVisitAts[state.selectedTrader];
-  if (selectedNextVisit) {
-    var sdiff = selectedNextVisit.getTime() - Date.now();
-    html += '<div class="partner-visit-info">';
-    if (sdiff <= 0) {
-      html += '<span class="visit-timer">Auto-trades on the next production tick</span>';
-    } else {
-      html += '<span class="visit-timer">Next auto-trade in ~' + Math.ceil(sdiff / 60000) + ' min</span>';
-    }
+  // ── Unlocked partner cards ──
+  html += '<div class="trader-cards">';
+  unlockedKeys.forEach(function (tk) {
+    html += renderTraderCard(tk);
+  });
+  html += '</div>';
+
+  // ── Locked partners (compact, at the bottom) ──
+  if (lockedKeys.length > 0) {
+    html += '<div class="trader-locked-section">';
+    html += '<div class="trader-locked-title">Locked partners</div>';
+    lockedKeys.forEach(function (tk) {
+      var t = state.traders[tk];
+      var info = state.unlockedTraders[tk];
+      html += '<div class="trader-locked-card">';
+      html += '<div class="trader-locked-name"><span class="lock-icon">&#x1f512;</span> ' + escapeHtml(t.name) + '</div>';
+      html += '<div class="trader-locked-hint">' + escapeHtml(info.hint || 'Locked') + '</div>';
+      html += '</div>';
+    });
     html += '</div>';
   }
 
-  // Last visit summary for selected partner
-  html += renderVisitSummary(state.selectedTrader);
-
-  // Goods this partner trades
-  html += renderPartnerGoods(state.selectedTrader);
-
-  html += '</div>';
-
-  // Black Market lives in its own sub-tab now (renderBlackMarketPanel).
-  // Trade-policy controls live in City → Resources (per-resource).
-  // The Partners view is just the partner picker + selected partner's
-  // goods.
-
   panel.innerHTML = html;
+}
 
-  // ── Wire partner tab clicks (skip locked partners) ──
-  panel.querySelectorAll('.partner-tab').forEach(function (tab) {
-    tab.addEventListener('click', function () {
-      if (tab.dataset.locked === '1') {
-        var tk = tab.dataset.trader;
-        var hint = state.unlockedTraders[tk] ? state.unlockedTraders[tk].hint : 'Locked';
-        showToast(hint, 'info');
-        return;
-      }
-      state.selectedTrader = tab.dataset.trader;
-      state.traderPrices = state.allTraderPrices[state.selectedTrader] || {};
-      renderTradePanel();
-    });
+
+// Per resource that the player has a price gate on, find the best
+// match across the unlocked partners. Best buyer = highest buy_price
+// that meets min_sell_price; best seller = lowest sell_price that
+// meets max_buy_price. Renders nothing if no gates are set.
+function renderBestDealsBanner(unlockedKeys) {
+  var entries = [];
+  if (!state.tradePolicies) return '';
+
+  Object.keys(state.tradePolicies).forEach(function (rk) {
+    var pol = state.tradePolicies[rk];
+    if (!pol) return;
+    if (pol.mode === 'sell_surplus' && pol.min_sell_price != null) {
+      var bestBuyer = null, bestPrice = -Infinity;
+      unlockedKeys.forEach(function (tk) {
+        var prices = state.allTraderPrices[tk] && state.allTraderPrices[tk][rk];
+        if (!prices || !prices.buy_price) return;
+        if (prices.buy_price >= pol.min_sell_price && prices.buy_price > bestPrice) {
+          bestPrice = prices.buy_price;
+          bestBuyer = tk;
+        }
+      });
+      entries.push({
+        rk: rk, mode: 'sell',
+        gate: pol.min_sell_price,
+        partner: bestBuyer,
+        partnerPrice: bestBuyer ? bestPrice : null
+      });
+    } else if (pol.mode === 'buy_to_reserve' && pol.max_buy_price != null) {
+      var bestSeller = null, bestSPrice = Infinity;
+      unlockedKeys.forEach(function (tk) {
+        var prices = state.allTraderPrices[tk] && state.allTraderPrices[tk][rk];
+        if (!prices || !prices.sell_price) return;
+        if (prices.sell_price <= pol.max_buy_price && prices.sell_price < bestSPrice) {
+          bestSPrice = prices.sell_price;
+          bestSeller = tk;
+        }
+      });
+      entries.push({
+        rk: rk, mode: 'buy',
+        gate: pol.max_buy_price,
+        partner: bestSeller,
+        partnerPrice: bestSeller ? bestSPrice : null
+      });
+    }
   });
 
-  // (The Check All button is gone — visits auto-resolve every production
-  // tick via _pp_resolve_trader_visits on the server.)
+  if (entries.length === 0) return '';
 
+  var html = '<div class="best-deals">';
+  html += '<div class="best-deals-title">Your price gates</div>';
+  entries.forEach(function (e) {
+    var name = resourceName(e.rk);
+    html += '<div class="best-deals-row">';
+    html += '<span class="best-deals-res">' + escapeHtml(name) + '</span>';
+    if (e.mode === 'sell') {
+      html += '<span class="best-deals-gate">sell at $' + e.gate + '+</span>';
+      if (e.partner) {
+        var p = state.traders[e.partner];
+        html += '<span class="best-deals-match">→ ' + escapeHtml(p ? p.name : e.partner)
+             +  ' <span class="best-deals-price">$' + e.partnerPrice + '</span></span>';
+      } else {
+        html += '<span class="best-deals-nomatch">no partner pays that yet</span>';
+      }
+    } else {
+      html += '<span class="best-deals-gate">buy at $' + e.gate + '−</span>';
+      if (e.partner) {
+        var p2 = state.traders[e.partner];
+        html += '<span class="best-deals-match">→ ' + escapeHtml(p2 ? p2.name : e.partner)
+             +  ' <span class="best-deals-price">$' + e.partnerPrice + '</span></span>';
+      } else {
+        html += '<span class="best-deals-nomatch">no partner sells that low yet</span>';
+      }
+    }
+    html += '</div>';
+  });
+  html += '</div>';
+  return html;
+}
+
+
+// Single trader card — name, mode badge, cadence, last-visit summary
+// (collapsible), and the per-resource goods table inline.
+function renderTraderCard(tk) {
+  var t = state.traders[tk];
+  if (!t) return '';
+  var modeLabel = t.transport_mode || 'starter';
+  var nextVisit = state.nextVisitAts[tk];
+  var visitLabel = '';
+  if (nextVisit) {
+    var diff = nextVisit.getTime() - Date.now();
+    if (diff > 0) visitLabel = '~' + Math.ceil(diff / 60000) + ' min';
+  }
+  var html = '<div class="trader-card" data-trader="' + escapeHtml(tk) + '">';
+  html += '<div class="trader-card-header">';
+  html += '<div class="trader-card-name">' + escapeHtml(t.name) + '</div>';
+  html += '<div class="trader-card-meta">';
+  html += '<span class="trader-card-mode trader-card-mode-' + escapeHtml(modeLabel) + '">' + escapeHtml(modeLabel) + '</span>';
+  html += '<span class="trader-card-cadence">cap ' + t.visit_capacity + '/visit · every ' + t.visit_interval_minutes + 'm</span>';
+  if (visitLabel) html += '<span class="trader-card-next">next ~' + visitLabel + '</span>';
+  html += '</div></div>';
+  if (t.description) {
+    html += '<div class="trader-card-desc">' + escapeHtml(t.description) + '</div>';
+  }
+  html += renderVisitSummary(tk);
+  html += renderPartnerGoodsCompact(tk);
+  html += '</div>';
+  return html;
+}
+
+
+// Compact per-resource goods table for the inline trader card. Same
+// info as the old renderPartnerGoods but flatter.
+function renderPartnerGoodsCompact(traderKey) {
+  var prices = state.allTraderPrices[traderKey] || {};
+  var resources = Object.keys(prices);
+  if (resources.length === 0) return '';
+  var quotas = (state.traderQuotas && state.traderQuotas[traderKey]) || {};
+  var html = '<table class="trader-goods-table"><thead><tr>'
+           + '<th>Resource</th><th>Buys at</th><th>Sells at</th><th>Today</th>'
+           + '</tr></thead><tbody>';
+  // Sort by resource name for stable ordering.
+  resources.sort(function (a, b) {
+    return resourceName(a).localeCompare(resourceName(b));
+  });
+  resources.forEach(function (rk) {
+    var p = prices[rk];
+    var q = quotas[rk] || {};
+    var todayParts = [];
+    if (p.buy_price && q.buy_cap != null) {
+      var buyUsed = q.buy_used || 0;
+      todayParts.push('<span class="tg-cap' + (buyUsed >= q.buy_cap ? ' tg-cap-full' : '') + '" title="Bought from you today">b ' + buyUsed + '/' + q.buy_cap + '</span>');
+    }
+    if (p.sell_price && q.sell_cap != null) {
+      var sellUsed = q.sell_used || 0;
+      todayParts.push('<span class="tg-cap' + (sellUsed >= q.sell_cap ? ' tg-cap-full' : '') + '" title="Sold to you today">s ' + sellUsed + '/' + q.sell_cap + '</span>');
+    }
+    // Highlight if a player gate matches this row.
+    var pol = state.tradePolicies && state.tradePolicies[rk];
+    var buyHighlight = '';
+    var sellHighlight = '';
+    if (pol) {
+      if (pol.mode === 'sell_surplus' && pol.min_sell_price != null && p.buy_price) {
+        buyHighlight = (p.buy_price >= pol.min_sell_price) ? ' tg-meets' : ' tg-misses';
+      }
+      if (pol.mode === 'buy_to_reserve' && pol.max_buy_price != null && p.sell_price) {
+        sellHighlight = (p.sell_price <= pol.max_buy_price) ? ' tg-meets' : ' tg-misses';
+      }
+    }
+    html += '<tr>'
+         +  '<td class="tg-res">' + escapeHtml(resourceName(rk)) + '</td>'
+         +  '<td class="tg-buy' + buyHighlight + '">' + (p.buy_price ? '$' + p.buy_price : '—') + '</td>'
+         +  '<td class="tg-sell' + sellHighlight + '">' + (p.sell_price ? '$' + p.sell_price : '—') + '</td>'
+         +  '<td class="tg-today">' + todayParts.join(' ') + '</td>'
+         +  '</tr>';
+  });
+  html += '</tbody></table>';
+  return html;
 }
 
 // ── Black Market sub-tab ──
@@ -1107,19 +1198,27 @@ function renderPartnerGoods(traderKey) {
 }
 
 // Called by reports.js's resource-row policy controls.
-export function saveTradePolicy(resourceKey, mode, reserveTarget) {
-  state.tradePolicies[resourceKey] = { mode: mode, reserve_target: reserveTarget };
+// minSellPrice / maxBuyPrice are optional (null = no gate).
+export function saveTradePolicy(resourceKey, mode, reserveTarget, minSellPrice, maxBuyPrice) {
+  if (minSellPrice === undefined) minSellPrice = null;
+  if (maxBuyPrice === undefined) maxBuyPrice = null;
+  state.tradePolicies[resourceKey] = {
+    mode: mode,
+    reserve_target: reserveTarget,
+    min_sell_price: minSellPrice,
+    max_buy_price: maxBuyPrice
+  };
   sb.rpc('save_trade_policy', {
     p_resource_key: resourceKey,
     p_mode: mode,
-    p_reserve_target: reserveTarget
+    p_reserve_target: reserveTarget,
+    p_min_sell_price: minSellPrice,
+    p_max_buy_price: maxBuyPrice
   }).then(function (r) {
     if (r.error) {
       showToast('Policy save failed: ' + r.error.message, 'error');
-      return;
     }
-    showToast(resourceName(resourceKey) + ' policy updated', 'success');
-  }).catch(function (err) {
+  }).catch(function () {
     showToast('Policy save failed', 'error');
   });
 }

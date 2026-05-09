@@ -1724,7 +1724,55 @@ body.panel-expanded .map-area { display: none; }
 .btn-sell { padding: 6px 12px; border-radius: 6px; border: none; background: #e6c65a; color: #0b0f14; font-weight: 600; font-size: 0.78rem; cursor: pointer; }
 .btn-sell:disabled { opacity: 0.3; cursor: default; }
 
-/* ── Partner tabs (Phase 2B) ──────────────────────── */
+/* ── Trade → Partners: vertical card list (2026-05-09) ── */
+.trader-cards { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+.trader-card { background: #131c28; border: 1px solid #243447; border-radius: 8px; padding: 10px 12px; }
+.trader-card-header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 12px; }
+.trader-card-name { font-size: 0.95rem; font-weight: 700; color: #e6eef6; }
+.trader-card-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 0.72rem; color: #7a8a9e; margin-left: auto; }
+.trader-card-mode { padding: 1px 8px; border-radius: 10px; background: rgba(120,140,170,0.15); color: #b8c4d4; font-weight: 600; font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.04em; }
+.trader-card-mode-airport { background: rgba(120,180,240,0.18); color: #80c0e8; }
+.trader-card-mode-seaport { background: rgba(80,180,180,0.18); color: #70c8c0; }
+.trader-card-mode-train { background: rgba(180,140,80,0.18); color: #d8a460; }
+.trader-card-mode-truck { background: rgba(140,180,90,0.18); color: #b0d068; }
+.trader-card-mode-starter { background: rgba(120,140,170,0.15); color: #b8c4d4; }
+.trader-card-cadence { font-size: 0.72rem; }
+.trader-card-next { font-size: 0.72rem; color: #5ec49e; }
+.trader-card-desc { font-size: 0.78rem; color: #8a9aae; line-height: 1.4; margin-top: 6px; font-style: italic; }
+.trader-goods-table { width: 100%; margin-top: 8px; border-collapse: collapse; font-size: 0.78rem; }
+.trader-goods-table thead th { font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.04em; color: #7a8a9e; font-weight: 600; padding: 4px 6px; text-align: left; border-bottom: 1px solid #1e2a3a; }
+.trader-goods-table thead th:nth-child(2), .trader-goods-table thead th:nth-child(3) { text-align: right; }
+.trader-goods-table thead th:nth-child(4) { text-align: right; }
+.trader-goods-table tbody td { padding: 4px 6px; border-bottom: 1px solid rgba(30,42,58,0.5); }
+.trader-goods-table tbody tr:last-child td { border-bottom: none; }
+.tg-res { color: #c8d4e0; font-weight: 500; }
+.tg-buy, .tg-sell { text-align: right; color: #e6eef6; font-variant-numeric: tabular-nums; }
+.tg-meets { color: #5ec49e; font-weight: 700; }
+.tg-misses { color: #c0a0a0; }
+.tg-today { text-align: right; font-size: 0.7rem; color: #7a8a9e; }
+.tg-cap { display: inline-block; padding: 1px 5px; border-radius: 3px; background: rgba(80,140,90,0.15); color: #6eaa78; font-variant-numeric: tabular-nums; }
+.tg-cap-full { background: rgba(220,140,80,0.18); color: #e0a060; }
+.tg-cap + .tg-cap { margin-left: 4px; }
+
+/* Best-deals banner */
+.best-deals { background: #131c28; border: 1px solid #243447; border-left: 3px solid #5ec49e; border-radius: 8px; padding: 10px 12px; margin: 10px 0; }
+.best-deals-title { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: #7a8a9e; margin-bottom: 6px; }
+.best-deals-row { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 12px; padding: 4px 0; font-size: 0.82rem; border-bottom: 1px solid rgba(30,42,58,0.5); }
+.best-deals-row:last-child { border-bottom: none; }
+.best-deals-res { color: #e6eef6; font-weight: 600; min-width: 100px; }
+.best-deals-gate { color: #b8c4d4; font-size: 0.74rem; }
+.best-deals-match { color: #5ec49e; }
+.best-deals-price { font-weight: 700; }
+.best-deals-nomatch { color: #c0a0a0; font-style: italic; }
+
+/* Locked partner section */
+.trader-locked-section { margin-top: 16px; padding-top: 12px; border-top: 1px dashed #243447; }
+.trader-locked-title { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; color: #7a8a9e; font-weight: 600; margin-bottom: 6px; }
+.trader-locked-card { background: rgba(40,50,70,0.3); border: 1px dashed #2a3a52; border-radius: 6px; padding: 6px 10px; margin-bottom: 4px; }
+.trader-locked-name { font-size: 0.84rem; color: #b0bcd0; opacity: 0.7; }
+.trader-locked-hint { font-size: 0.74rem; color: #7a8a9e; margin-top: 2px; }
+
+/* ── Partner tabs (legacy — superseded by trader-cards) ── */
 .partner-tabs { display: flex; gap: 6px; margin-bottom: 8px; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 2px; }
 .partner-tab { flex: 1; min-width: 0; padding: 8px 6px; background: #1a2332; border: 1px solid #1e2a3a; border-radius: 8px; cursor: pointer; text-align: center; transition: border-color 0.2s, background 0.2s; color: #e0e6ed; }
 .partner-tab:hover { border-color: #4fa3e0; }
@@ -1789,6 +1837,13 @@ body.panel-expanded .map-area { display: none; }
 .policy-reserve-input { width: 52px; padding: 5px 6px; background: #0b0f14; border: 1px solid #1e2a3a; border-radius: 6px; color: #e0e6ed; font-size: 0.82rem; text-align: center; }
 .policy-reserve-input:disabled { opacity: 0.3; }
 .policy-reserve-input:focus { outline: none; border-color: #4fa3e0; }
+.rsrc-policy-prices { margin-top: 8px; display: flex; flex-direction: column; gap: 3px; }
+.policy-price-lbl { display: inline-flex; align-items: center; gap: 4px; font-size: 0.78rem; color: #b8c4d4; }
+.policy-price-prefix { color: #7a8a9e; }
+.policy-price-suffix { color: #7a8a9e; font-weight: 600; }
+.policy-min-sell-price, .policy-max-buy-price { width: 70px; padding: 5px 6px; background: #0b0f14; border: 1px solid #1e2a3a; border-radius: 6px; color: #e0e6ed; font-size: 0.82rem; text-align: center; }
+.policy-min-sell-price:focus, .policy-max-buy-price:focus { outline: none; border-color: #4fa3e0; }
+.policy-price-hint { font-size: 0.7rem; color: #7a8a9e; line-height: 1.35; }
 .trade-row-manual { display: flex; align-items: center; gap: 8px; padding: 6px 10px; background: #1a2332; border-radius: 6px; margin-bottom: 6px; }
 .trade-manual-name { font-size: 0.8rem; flex: 1; }
 
