@@ -1930,7 +1930,12 @@ body.panel-expanded .map-area { display: none; }
 .insp-pause-btn.is-paused { background: #2c2418; color: #f0a040; border-color: #6a4818; }
 .insp-pause-btn.is-paused:hover { background: #3a2e20; }
 /* ── Map: paused buildings ─────────────────────────────────── */
-.bldg.paused { opacity: 0.4; filter: grayscale(0.7) !important; animation: none !important; }
+/* Bug report 2026-05-08 (Chester): paused mill at opacity 0.4 +
+   grayscale 0.7 blended into the dark-green tile background and
+   read as "just grass". Bumped opacity to 0.7 + lowered grayscale
+   so the building shape stays visibly recognizable while the
+   pause-overlay ⏸ icon is the dominant signal. */
+.bldg.paused { opacity: 0.7; filter: grayscale(0.5) !important; animation: none !important; }
 .bldg.paused::before, .bldg.paused::after { display: none !important; }
 .bldg.paused-overlay { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 14px; color: #f0c460; text-shadow: 0 0 3px #000, 0 0 2px #000; pointer-events: none; z-index: 4; }
 .demolish-info { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; padding: 0 2px; }
