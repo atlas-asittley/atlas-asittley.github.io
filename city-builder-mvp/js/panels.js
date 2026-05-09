@@ -1124,89 +1124,10 @@ export function saveTradePolicy(resourceKey, mode, reserveTarget) {
   });
 }
 
-// ── Check all trader visits sequentially (only unlocked) ──
-export function checkAllTraderVisits() {
-  // Phase 2C: only resolve visits for unlocked traders
-  var traderKeys = Object.keys(state.traders).filter(function (tk) {
-    return !state.unlockedTraders[tk] || state.unlockedTraders[tk].unlocked;
-  });
-  if (traderKeys.length === 0) return;
-
-  var idx = 0;
-  var totalEarned = 0;
-  var totalSpent = 0;
-  var anyResolved = false;
-  var resolvedNames = [];
-
-  function resolveNext() {
-    if (idx >= traderKeys.length) {
-      // All traders processed — show results
-      if (anyResolved) {
-        var msg = resolvedNames.join(', ') + ' visited!';
-        if (totalEarned > 0) msg += ' Earned $' + totalEarned + '.';
-        if (totalSpent > 0) msg += ' Spent $' + totalSpent + '.';
-        if (totalEarned === 0 && totalSpent === 0) msg += ' No trades this round.';
-        showToast(msg, 'success');
-      }
-      updateMoney();
-      updateCityRunway();
-      refreshActiveDataPanel();
-      renderTradePanel();
-      state.visitChecked = true;
-      return;
-    }
-
-    var tk = traderKeys[idx];
-    idx++;
-
-    sb.rpc('resolve_trader_visit', { p_trader_key: tk }).then(function (r) {
-      if (r.error) {
-        console.warn('Trader visit check (' + tk + '):', r.error.message);
-        resolveNext();
-        return;
-      }
-      var data = r.data;
-      if (!data) { resolveNext(); return; }
-
-      if (data.visit_resolved) {
-        anyResolved = true;
-        totalEarned += data.total_earned || 0;
-        totalSpent += data.total_spent || 0;
-        resolvedNames.push(state.traders[tk] ? state.traders[tk].name : tk);
-
-        state.lastVisits[tk] = {
-          capacity_total: data.capacity_total,
-          capacity_used: data.capacity_used,
-          summary: data.summary,
-          visited_at: new Date().toISOString(),
-          trader_key: tk
-        };
-      }
-
-      if (data.next_visit_at) {
-        state.nextVisitAts[tk] = new Date(data.next_visit_at);
-      }
-
-      // Update inventory/money from each resolved visit (last one has latest state)
-      if (data.money !== undefined) {
-        state.profile.money = data.money;
-      }
-      if (data.inventory) {
-        state.inventory = {};
-        Object.keys(data.inventory).forEach(function (k) {
-          state.inventory[k] = Number(data.inventory[k]);
-        });
-      }
-
-      resolveNext();
-    }).catch(function (err) {
-      console.warn('Trader visit check failed (' + tk + '):', err);
-      resolveNext();
-    });
-  }
-
-  resolveNext();
-}
+// (Removed checkAllTraderVisits — vestigial from the pre-2026-05-06
+// "Check All" button. Trader visits auto-resolve every process_production
+// tick via _pp_resolve_trader_visits server-side. The standalone
+// resolve_trader_visit RPC stays for the test suite's catch-up coverage.)
 
 function blackMarketTrade(resourceKey, quantity, direction, btn) {
   var originalText = btn.textContent;
