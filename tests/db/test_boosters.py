@@ -115,7 +115,21 @@ def test_resource_booster_boosts_adjacent_extractor(make_player, place, cur, cle
             except Exception:
                 cur.execute("ROLLBACK TO SAVEPOINT road_try")
                 continue
-    place('foresters_office', bx + 1, by)
+    # The previous (bx + 1, by) target sometimes lands on the vertical
+    # highway road (when the resource tile happens to sit one tile west
+    # of x=hx). Walk around 4 candidate slots and pick the first one
+    # that's not occupied by a road / building.
+    placement_target = None
+    for tx, ty in [(bx + 1, by), (bx, by + 1), (bx - 1, by), (bx, by - 1)]:
+        cur.execute("SELECT occupied_building_id FROM public.map_tiles WHERE x=%s AND y=%s", (tx, ty))
+        row = cur.fetchone()
+        if row and row[0] is None:
+            cur.execute("UPDATE public.map_tiles SET resource_node_key = NULL WHERE x = %s AND y = %s",
+                        (tx, ty))
+            placement_target = (tx, ty)
+            break
+    assert placement_target is not None, 'no buildable adjacent tile for foresters_office'
+    place('foresters_office', placement_target[0], placement_target[1])
 
     # Run a tick from a fresh state
     cur.execute("""UPDATE public.buildings SET last_processed_at = now() - interval '60 seconds'
