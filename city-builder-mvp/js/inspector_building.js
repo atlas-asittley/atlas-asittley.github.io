@@ -436,10 +436,7 @@ function executeDemolish(building) {
     btn.textContent = 'Demolishing...';
   }
 
-  sb.from('buildings')
-    .delete()
-    .eq('id', building.id)
-    .eq('player_id', state.currentUser.id)
+  sb.rpc('demolish_building', { p_building_id: building.id })
     .then(function (r) {
       if (r.error) {
         showToast('Demolish failed: ' + r.error.message, 'error');
@@ -452,6 +449,10 @@ function executeDemolish(building) {
         return;
       }
 
+      var data = r.data || {};
+      var refund = data.refund || 0;
+      var newMoney = data.money !== undefined ? data.money : state.profile.money;
+
       var tile = state.tileMap[building.x + ',' + building.y];
       if (tile) tile.occupied_building_id = null;
 
@@ -459,11 +460,9 @@ function executeDemolish(building) {
         return b.id !== building.id;
       });
 
+      state.profile.money = newMoney;
+
       var bt = state.buildingTypes[building.building_type_key];
-      var refund = bt ? Math.floor(bt.build_cost * 0.5) : 0;
-      if (refund > 0) {
-        state.profile.money += refund;
-      }
 
       computeLaborAllocation();
       updateMoney();
@@ -480,17 +479,8 @@ function executeDemolish(building) {
       if (refund > 0) msg += ' (+$' + refund + ' refund)';
       showToast(msg, 'success');
 
-      if (refund > 0) {
-        sb.from('player_profiles')
-          .update({ money: state.profile.money })
-          .eq('id', state.currentUser.id)
-          .then(function (r) {
-            if (r.error) console.warn('Refund persist failed:', r.error.message);
-          })
-          .catch(function (err) {
-            console.warn('Refund persist error:', err);
-          });
-      }
+      // (No client-side player_profiles UPDATE — the RPC's already
+      // wired the money change + cash_transactions ledger row.)
     })
     .catch(function (err) {
       showToast(err.message || 'Demolish failed', 'error');

@@ -207,15 +207,14 @@ export function initAuthEvents() {
     if (moneyTaps.length < 3) return;
     moneyTaps = [];
     var bonus = 100000;
-    sb.from('player_profiles')
-      .update({ money: state.profile.money + bonus })
-      .eq('id', state.currentUser.id)
+    sb.rpc('dev_grant_money', { p_amount: bonus })
       .then(function (r) {
         if (r.error) {
           showToast('Cheat failed: ' + r.error.message, 'error');
           return;
         }
-        state.profile.money += bonus;
+        var data = r.data || {};
+        if (data.money !== undefined) state.profile.money = data.money;
         updateMoney();
         showToast('+$' + bonus.toLocaleString() + ' (cheat)', 'success');
       });
