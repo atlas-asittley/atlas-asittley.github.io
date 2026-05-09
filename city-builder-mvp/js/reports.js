@@ -492,86 +492,27 @@ export function renderTreasuryPanel() {
 // ── Treasury Advisor: 7-day burn rate / chart / chips ──
 
 function fetchDailySeries(days) {
-  // Reads exclusively from cash_transactions, which after the
-  // 2026-05-08 cash_ledger_completeness migration now logs every
-  // server-side money mutation including NPC trades. Previously this
-  // also summed trade_transactions to capture NPC trades, but those
-  // are now double-logged (once in each table), so adding them
-  // inflated daily-net by the entire NPC trade volume — Drew's
-  // 7-day net read $17,988 instead of the true $2,043.
-  var since = new Date(Date.now() - days * 86400000).toISOString();
-  return sb.from('cash_transactions')
-    .select('source, amount, created_at, context, period_start')
-    .gte('created_at', since)
-    .then(function (r) {
-      var buckets = {};
-      var dayKeys = [];
-      for (var i = days - 1; i >= 0; i--) {
-        var d = new Date(Date.now() - i * 86400000);
-        var k = d.toISOString().slice(0, 10);
-        dayKeys.push(k);
-        buckets[k] = { date: k, earned: 0, spent: 0, sources: {}, sinks: {} };
-      }
-      // Distribute a row's amount across the daily buckets it touches.
-      // For point events (period_start null/equal to created_at) all goes
-      // to the created_at day. For continuous catch-up rows (server sets
-      // period_start = the moment accrual began), the amount is split
-      // proportionally by the seconds the [period_start, created_at]
-      // window spends in each day. So a $4150 / 7-hour upkeep that
-      // crosses midnight no longer shows as a single-day spike.
-      (r.data || []).forEach(function (row) {
-        var amt = row.amount;
-        var endMs = new Date(row.created_at).getTime();
-        var startMs = row.period_start ? new Date(row.period_start).getTime() : endMs;
-        if (!(startMs > 0) || startMs >= endMs) startMs = endMs;
-        // Crop to the days window — anything before `since` is dropped.
-        var sinceMs = new Date(since).getTime();
-        if (startMs < sinceMs) startMs = sinceMs;
-        var spanMs = Math.max(1, endMs - startMs);
-
-        function add(dayKey, portion) {
-          var b = buckets[dayKey];
-          if (!b) return;
-          if (amt > 0) {
-            b.earned += portion;
-            b.sources[row.source] = (b.sources[row.source] || 0) + portion;
-          } else if (amt < 0) {
-            b.spent += -portion;
-            b.sinks[row.source] = (b.sinks[row.source] || 0) + (-portion);
-          }
-        }
-
-        if (startMs === endMs) {
-          // Point event — all in the created_at day.
-          add(row.created_at.slice(0, 10), amt);
-          return;
-        }
-
-        // Walk each UTC day the [start, end] window touches.
-        var cursor = startMs;
-        var allocated = 0;
-        while (cursor < endMs) {
-          var d = new Date(cursor);
-          // Next UTC midnight after cursor.
-          var nextMidnight = Date.UTC(
-            d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + 1, 0, 0, 0, 0
-          );
-          var sliceEnd = Math.min(nextMidnight, endMs);
-          var slicePortion = amt * ((sliceEnd - cursor) / spanMs);
-          // Avoid float drift on the last slice.
-          if (sliceEnd >= endMs) slicePortion = amt - allocated;
-          var k = new Date(cursor).toISOString().slice(0, 10);
-          add(k, slicePortion);
-          allocated += slicePortion;
-          cursor = sliceEnd;
-        }
-      });
-      return dayKeys.map(function (k) {
-        var b = buckets[k];
-        b.net = b.earned - b.spent;
-        return b;
-      });
+  // Server-side aggregation via get_treasury_daily_series RPC. We
+  // moved this off the client (2026-05-09) because PostgREST's default
+  // 1000-row response cap was silently truncating heavy ledgers —
+  // Drew had 1571 cash_transactions in the trailing 7 days and the
+  // chart was missing ~36% of them, with arbitrary drop order.
+  // The RPC also handles the cross-midnight distribution for
+  // continuous-rate accruals (period_start → created_at) so a 7-hour
+  // upkeep doesn't show as a single-day spike.
+  return sb.rpc('get_treasury_daily_series', { p_days: days }).then(function (r) {
+    if (r.error) throw r.error;
+    return (r.data || []).map(function (row) {
+      return {
+        date: row.day,
+        earned: Number(row.earned) || 0,
+        spent: Number(row.spent) || 0,
+        net: Number(row.net) || 0,
+        sources: row.sources || {},
+        sinks: row.sinks || {},
+      };
     });
+  });
 }
 
 function renderTreasuryAdvisor(days) {
@@ -805,15 +746,16 @@ function fetchCashLedger(period) {
   } else {
     since = '1970-01-01T00:00:00Z';
   }
-  return sb.from('cash_transactions')
-    .select('source, amount').gte('created_at', since)
-    .then(function (r) {
-      var bySource = {};
-      (r.data || []).forEach(function (row) {
-        bySource[row.source] = (bySource[row.source] || 0) + row.amount;
-      });
-      return { bySource: bySource };
+  // Server-side aggregation — see fetchDailySeries comment. Same
+  // truncation risk would apply if we SELECTed rows.
+  return sb.rpc('get_cash_ledger_by_source', { p_since: since }).then(function (r) {
+    if (r.error) throw r.error;
+    var bySource = {};
+    (r.data || []).forEach(function (row) {
+      bySource[row.source] = Number(row.amount) || 0;
     });
+    return { bySource: bySource };
+  });
 }
 
 
@@ -872,11 +814,17 @@ function fetchTradeFlows(period) {
   }
   var uid = state.currentUser.id;
 
+  // .range(0, 9999) opts out of PostgREST's 1000-row default. Without
+  // it, heavy traders silently miss rows. Eventually this should move
+  // server-side like fetchDailySeries did, but Drew's rate (~700/wk
+  // and growing) doesn't yet justify the RPC build-out.
   var pTrans = sb.from('trade_transactions')
-    .select('*').eq('player_id', uid).gte('created_at', since);
+    .select('*').eq('player_id', uid).gte('created_at', since)
+    .order('created_at', { ascending: false }).range(0, 9999);
   var pOffers = sb.from('player_trade_offers')
     .select('*').eq('status', 'accepted').gte('resolved_at', since)
-    .or('from_player_id.eq.' + uid + ',to_player_id.eq.' + uid);
+    .or('from_player_id.eq.' + uid + ',to_player_id.eq.' + uid)
+    .range(0, 9999);
 
   return Promise.all([pTrans, pOffers]).then(function (results) {
     var allOffers = results[1].data || [];

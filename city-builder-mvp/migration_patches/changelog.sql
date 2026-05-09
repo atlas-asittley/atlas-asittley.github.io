@@ -136,3 +136,11 @@ VALUES (
   E'The Trade → Partners tab is now a single scrolling list of trader cards instead of one tab per partner. Each card shows what that trader buys, sells, and how often they visit, and you can collapse a card you''re not focused on.\n\nNew: reservation prices. On City → Resources, set "Sell at $X+" or "Buy at $X−" alongside any auto-trade rule. The auto-trade only fires when a partner''s offer beats your floor (or stays under your ceiling). Leave it blank to accept any price like before.\n\nA "Your price gates" banner at the top of Partners shows — for each resource you''ve gated — which trader currently meets your terms (and at what price), so you can see at a glance whether anyone wants what you''re selling.\n\nMore trade partners will appear as you build and upgrade transport hubs. The locked-partner list is gone — you''ll discover them when they arrive.'
 )
 ON CONFLICT (slug) DO NOTHING;
+
+INSERT INTO public.changelog_entries (slug, title, body)
+VALUES (
+  '2026-05-09-treasury-chart-fix',
+  'Treasury chart — full data restored',
+  E'The Treasury chart was missing data for heavy traders. The client used to download every cash_transactions row and bucket them in JS, but the server caps responses at 1000 rows by default — so once your ledger crossed that, the chart silently dropped older transactions and the daily-net + cumulative-balance lines understated reality.\n\nAggregation now runs server-side. The chart shows the full 7 days regardless of how busy your treasury is, and cross-midnight upkeep events still split proportionally across the days they touch.'
+)
+ON CONFLICT (slug) DO NOTHING;
