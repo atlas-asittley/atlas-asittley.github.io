@@ -48,10 +48,16 @@ BEGIN
       v_iterations := v_iterations + 1;
       v_visit_at := v_next_visit_at;
 
-      -- BUY phase first: fulfill buy_to_reserve policies before
-      -- letting sells consume the visit capacity.
+      -- BUY phase first, but capped at half the visit capacity so
+      -- the SELL phase always has room to fire on the same visit.
+      -- Atlas's directive: "they should both buy and sell each visit."
+      -- If the buy phase uses less than its half (e.g., reserve targets
+      -- already met), the unused remainder rolls over to sells via the
+      -- (visit_capacity - v_buy.capacity_used) below.
       SELECT * INTO v_buy FROM public._rtv_buy_phase(
-        p_player_id, v_trader.key, v_trader.visit_capacity, v_player_money
+        p_player_id, v_trader.key,
+        GREATEST(1, v_trader.visit_capacity / 2),
+        v_player_money
       );
       IF v_buy.spent > 0 THEN
         UPDATE public.player_profiles SET money = money - v_buy.spent WHERE id = p_player_id;
