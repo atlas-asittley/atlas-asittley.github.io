@@ -177,6 +177,25 @@ export function renderBuildingInspector() {
         html += '<div class="insp-row"><span class="insp-label">Tier</span><span class="insp-value insp-good">Max tier reached</span></div>';
       }
 
+      // Pantry section (per-house buffers, 2026-05-09). Show fill ratio
+      // for each gated resource on this tier so the player can see at a
+      // glance how much buffer they have before any actual devolve risk.
+      var pantry = (state.buildingBuffers && state.buildingBuffers[b.id]) || {};
+      var pantryKeys = Object.keys(pantry);
+      if (pantryKeys.length > 0) {
+        html += '<div class="insp-row"><span class="insp-label">Pantry</span><span class="insp-value insp-hint-muted">per-house supply buffer</span></div>';
+        pantryKeys.sort().forEach(function (rk) {
+          var entry = pantry[rk];
+          if (!entry || !entry.capacity) return;
+          var pct = Math.max(0, Math.min(100, Math.round(entry.quantity / entry.capacity * 100)));
+          var label = rk === 'food' ? 'food' : (state.resources[rk] && state.resources[rk].name) || rk;
+          var pctClass = pct === 0 ? 'insp-warn' : pct < 25 ? 'insp-warn' : '';
+          html += '<div class="insp-hint insp-hint-muted">'
+               +    '<span class="' + pctClass + '">' + label + ': ' + entry.quantity.toFixed(2) + ' / ' + entry.capacity.toFixed(2) + ' (' + pct + '%)</span>'
+               +  '</div>';
+        });
+      }
+
       var risks = getHousingDevolveRisks(b, htierCfg);
       if (risks.blockers.length > 0) {
         var prevTier = state.housingTierConfig[htier - 1];

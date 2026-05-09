@@ -189,9 +189,50 @@ export function getHousingUpgradeBlockers(building, tierCfg) {
 // tier, plus a bathhouse-coverage check matching the SQL devolve gate's
 // safeguard (an operating bathhouse within 4 tiles suppresses devolve).
 // Returns { blockers, hasBathhouseCover, willDevolve }.
+//
+// 2026-05-09: food + lifestyle gates now read the building's own pantry
+// buffer (state.buildingBuffers), not city stock. A house with city
+// stock at zero but a half-full pantry is NOT at devolve risk yet.
 export function getHousingDevolveRisks(building, currentTierCfg) {
   if (!currentTierCfg) return { blockers: [], hasBathhouseCover: false, willDevolve: false };
-  var blockers = getHousingUpgradeBlockers(building, currentTierCfg);
+  // Start with non-supply blockers from the standard helper (road, well,
+  // services, desirability, luxury food, industrial luxury) — these are
+  // unchanged. Then re-evaluate food + lifestyle against the per-house
+  // pantry buffer.
+  var globalBlockers = getHousingUpgradeBlockers(building, currentTierCfg);
+  var buf = (state.buildingBuffers && state.buildingBuffers[building.id]) || {};
+  var blockers = globalBlockers.filter(function (b) {
+    if (b === 'food') {
+      // Replace with per-house food buffer check.
+      var foodEntry = buf['food'];
+      return !foodEntry || foodEntry.quantity <= 0;
+    }
+    if (b.indexOf('lifestyle:') === 0) {
+      var rk = b.slice('lifestyle:'.length);
+      var entry = buf[rk];
+      return !entry || entry.quantity <= 0;
+    }
+    return true;
+  });
+  // Also consider buffers that ARE empty even when global stock is
+  // present (e.g., player offline long enough that the pantry drained
+  // despite a refilled inventory). Walk demanded resources for this
+  // tier and add any whose buffer is empty.
+  var demands = state.housingLifestyleDemands && state.housingLifestyleDemands[currentTierCfg.tier];
+  if (demands) {
+    demands.forEach(function (d) {
+      var entry = buf[d.resource_key];
+      if ((!entry || entry.quantity <= 0) && blockers.indexOf('lifestyle:' + d.resource_key) === -1) {
+        blockers.push('lifestyle:' + d.resource_key);
+      }
+    });
+  }
+  if (currentTierCfg.needs_food) {
+    var foodEntry = buf['food'];
+    if ((!foodEntry || foodEntry.quantity <= 0) && blockers.indexOf('food') === -1) {
+      blockers.push('food');
+    }
+  }
   if (blockers.length === 0) {
     return { blockers: [], hasBathhouseCover: false, willDevolve: false };
   }

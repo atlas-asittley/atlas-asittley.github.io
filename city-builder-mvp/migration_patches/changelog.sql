@@ -144,3 +144,11 @@ VALUES (
   E'The Treasury chart was missing data for heavy traders. The client used to download every cash_transactions row and bucket them in JS, but the server caps responses at 1000 rows by default — so once your ledger crossed that, the chart silently dropped older transactions and the daily-net + cumulative-balance lines understated reality.\n\nAggregation now runs server-side. The chart shows the full 7 days regardless of how busy your treasury is, and cross-midnight upkeep events still split proportionally across the days they touch.'
 )
 ON CONFLICT (slug) DO NOTHING;
+
+INSERT INTO public.changelog_entries (slug, title, body)
+VALUES (
+  '2026-05-09-per-house-pantry',
+  'Houses now have pantries — no more cascade devolves',
+  E'Houses no longer all devolve at the same instant when a resource runs out. Each house now has its own per-resource pantry that buffers ~30 minutes of consumption. When city stock empties, the pantries drain at each house''s individual rate — devolves now trickle out one at a time over the next half hour instead of cascading.\n\nConcretely: if your furniture supply hits zero, you have ~30 minutes to react before any house actually devolves, and devolves spread out instead of all happening together. Same model applies to food and every lifestyle good (pottery / bread / furniture / statuary).\n\nExisting houses were seeded with full pantries on rollout, so nothing devolves immediately.'
+)
+ON CONFLICT (slug) DO NOTHING;

@@ -134,16 +134,25 @@ def test_drain_proportional_across_food_resources(make_player, place, cur, clear
 # ── starvation devolve ───────────────────────────────────────
 
 def test_house_devolves_when_drain_empties_food(make_player, place, cur, clear_resources):
-    """A tier-2 cottage with barely-enough food drains it in one tick,
-    fails the food gate next housing eval, and devolves to tier 1
-    (mud hut, which doesn't need food)."""
+    """A tier-2 cottage whose food pantry is empty AND has no city stock
+    to refill from devolves on the next eligibility tick.
+
+    Updated 2026-05-09: per-house buffers absorb a brief city-stock
+    shortage. To reach the devolve state the test now explicitly empties
+    the house's food buffer in addition to the city pool. (Old test
+    relied on city-stock=0 alone forcing immediate devolve; that's no
+    longer the model.)"""
     p = make_player()
     clear_resources(p['id'])
     hx, hy = p['home_x'], p['home_y']
     house_id = _make_tier_1_house(cur, place, p, hx, hy)
     cur.execute("UPDATE public.buildings SET housing_tier = 2 WHERE id = %s", (house_id,))
-    # 0.24 grain / min, give exactly enough for 60s = 0.24
-    _stock(cur, p['id'], grain=0.24)
+    _stock(cur, p['id'], grain=0.0)
+    cur.execute(
+        "UPDATE public.building_resource_buffers SET quantity = 0 "
+        "WHERE building_id = %s AND resource_key = 'food'",
+        (house_id,)
+    )
     _backdate_food_tick(cur, p['id'], 60)
     cur.execute("""UPDATE public.buildings
                    SET last_processed_at = now() - interval '120 seconds'
@@ -152,10 +161,6 @@ def test_house_devolves_when_drain_empties_food(make_player, place, cur, clear_r
     _tick_and_upgrade_all(cur)
     cur.execute("SELECT housing_tier FROM public.buildings WHERE id = %s", (house_id,))
     tier = cur.fetchone()[0]
-    cur.execute("SELECT quantity FROM public.inventories WHERE player_id = %s AND resource_key = 'grain'",
-                (str(p['id']),))
-    grain = float(cur.fetchone()[0])
-    assert grain < 0.01, f"food should be drained to ~0, got {grain}"
     assert tier == 1, f"cottage should have devolved from 2 to 1, got tier {tier}"
 
 

@@ -122,15 +122,26 @@ def test_non_food_resource_does_not_satisfy_food_gate(make_player, place, cur, c
 
 
 def test_cottage_devolves_when_food_runs_out(make_player, place, cur, clear_resources):
-    """A tier-2 cottage with no food in stock should devolve to tier 1
-    mud hut. (Mud huts themselves are food-free now.)"""
+    """A tier-2 cottage with no food in stock AND an empty pantry should
+    devolve to tier 1 mud hut. The pantry is drained explicitly because
+    after the per-house buffer rework (2026-05-09), city food = 0 alone
+    no longer triggers an immediate devolve — the pantry has to deplete
+    first. This test still verifies the end-state: when both city stock
+    AND the per-house buffer are empty, the devolve gate fires."""
     p = make_player()
     clear_resources(p['id'])
     hx, hy = p['home_x'], p['home_y']
     place('well', hx + 2, hy + 1)
     house_id = place('house', hx + 1, hy + 2)['building_id']
     cur.execute("UPDATE public.buildings SET housing_tier = 2 WHERE id = %s", (house_id,))
-    _set_inventory(cur, p['id'])  # no food
+    _set_inventory(cur, p['id'])  # no food in city
+    # Drain the per-house food pantry too, so the devolve gate has nothing
+    # to fall back on.
+    cur.execute(
+        "UPDATE public.building_resource_buffers SET quantity = 0 "
+        "WHERE building_id = %s AND resource_key = 'food'",
+        (house_id,)
+    )
     _backdate(cur, p['id'], 240)
     _tick_and_upgrade_all(cur)
     cur.execute("SELECT housing_tier FROM public.buildings WHERE id = %s", (house_id,))

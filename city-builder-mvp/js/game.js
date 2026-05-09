@@ -248,7 +248,12 @@ function loadGameData() {
     sb.from('traders').select('*').eq('is_active', true),
     sb.from('housing_tier_config').select('*'),
     sb.from('housing_lifestyle_demands').select('*'),
-    sb.from('building_type_resource_costs').select('*')
+    sb.from('building_type_resource_costs').select('*'),
+    // Per-house pantry buffers — drives the inspector's devolve-risk
+    // gate against the building's own buffer rather than city stock.
+    sb.from('building_resource_buffers')
+      .select('building_id, resource_key, quantity, capacity')
+      .range(0, 9999)
   ]).then(function (results) {
     state.buildingTypes = {};
     if (results[0].data) results[0].data.forEach(function (bt) { state.buildingTypes[bt.key] = bt; });
@@ -382,6 +387,19 @@ function loadGameData() {
           resource_key: c.resource_key,
           quantity: c.quantity
         });
+      });
+    }
+
+    // Per-house pantry buffers, indexed [building_id][resource_key].
+    // Inspector reads these to show pantry fill + minutes remaining.
+    state.buildingBuffers = {};
+    if (results[12] && results[12].data) {
+      results[12].data.forEach(function (b) {
+        if (!state.buildingBuffers[b.building_id]) state.buildingBuffers[b.building_id] = {};
+        state.buildingBuffers[b.building_id][b.resource_key] = {
+          quantity: Number(b.quantity),
+          capacity: Number(b.capacity),
+        };
       });
     }
 
