@@ -1569,6 +1569,10 @@ body.panel-expanded .map-area { display: none; }
 .advisor-chip.bad { color: #e0707a; border-color: rgba(224, 112, 122, 0.4); }
 .advisor-chart-label { font-size: 0.7rem; color: #6a7888; margin: 8px 0 2px; }
 .cashflow-chart { display: block; width: 100%; height: 56px; }
+/* Date axis below the bars/line. Equal-width slots align with the
+   chart's evenly-spaced columns (renderDateAxis splits by days.length).*/
+.cashflow-axis { display: flex; width: 100%; margin-top: 2px; font-size: 0.62rem; color: #6a7888; font-variant-numeric: tabular-nums; }
+.cashflow-axis-tick { flex: 1; text-align: center; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 
 .stats-summary { padding: 10px; background: #1a2332; border: 1px solid #243447; border-radius: 8px; margin-bottom: 12px; }
 .stats-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 0.84rem; }

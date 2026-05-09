@@ -578,6 +578,32 @@ function renderTreasuryAdvisor(days) {
   return html;
 }
 
+// Render a row of date labels aligned under a chart that spans
+// `days.length` equal slots. Days flagged as "no activity" still get
+// labeled — the axis is independent of bar/line content. Months are
+// abbreviated; shows month-name only on the first label and on
+// month-boundary days, otherwise just the day-of-month.
+function renderDateAxis(days) {
+  var html = '<div class="cashflow-axis">';
+  days.forEach(function (d, i) {
+    // d.date is a YYYY-MM-DD string from the RPC.
+    var parts = String(d.date || '').split('-');
+    if (parts.length !== 3) { html += '<span></span>'; return; }
+    var dt = new Date(Date.UTC(+parts[0], +parts[1] - 1, +parts[2]));
+    var dom = dt.getUTCDate();
+    var showMonth = (i === 0) || dom === 1;
+    var label;
+    if (showMonth) {
+      label = dt.toLocaleDateString(undefined, { month: 'short', day: 'numeric', timeZone: 'UTC' });
+    } else {
+      label = String(dom);
+    }
+    html += '<span class="cashflow-axis-tick">' + label + '</span>';
+  });
+  html += '</div>';
+  return html;
+}
+
 function renderDailyBars(days) {
   var maxAbs = days.reduce(function (m, d) { return Math.max(m, Math.abs(d.net)); }, 1);
   var n = days.length;
@@ -594,7 +620,8 @@ function renderDailyBars(days) {
   return '<svg class="cashflow-chart" viewBox="0 0 100 56" preserveAspectRatio="none">' +
          '<line x1="0" y1="' + midY + '" x2="100" y2="' + midY + '" stroke="#3a4a5e" stroke-width="0.3"/>' +
          bars +
-         '</svg>';
+         '</svg>' +
+         renderDateAxis(days);
 }
 
 function renderBalanceLine(days, currentMoney) {
@@ -622,7 +649,8 @@ function renderBalanceLine(days, currentMoney) {
   return '<svg class="cashflow-chart" viewBox="0 0 100 56" preserveAspectRatio="none">' +
          '<polygon points="' + areaPts.join(' ') + '" fill="' + stroke + '" fill-opacity="0.12"/>' +
          '<polyline points="' + pts.join(' ') + '" stroke="' + stroke + '" stroke-width="0.7" fill="none" stroke-linejoin="round" stroke-linecap="round"/>' +
-         '</svg>';
+         '</svg>' +
+         renderDateAxis(days);
 }
 
 
