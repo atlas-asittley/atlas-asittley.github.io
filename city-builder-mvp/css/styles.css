@@ -1930,11 +1930,17 @@ body.panel-expanded .map-area { display: none; }
 .insp-pause-btn.is-paused { background: #2c2418; color: #f0a040; border-color: #6a4818; }
 .insp-pause-btn.is-paused:hover { background: #3a2e20; }
 /* ── Map: paused buildings ─────────────────────────────────── */
-/* Bug report 2026-05-08 (Chester): paused mill at opacity 0.4 +
-   grayscale 0.7 blended into the dark-green tile background and
-   read as "just grass". Bumped opacity to 0.7 + lowered grayscale
-   so the building shape stays visibly recognizable while the
-   pause-overlay ⏸ icon is the dominant signal. */
+/* Bug report 2026-05-08 (Chester): paused mill rendered as just
+   grass. Cause: .bldg.mill.producing has a more-specific
+   background-image override (mill_body.svg without sails, paired
+   with a spinning ::after for the sails). When the mill flips to
+   paused, that class is removed — but the cascade fall-back to
+   .bldg { background-image: var(--bldg-sprite) } didn't kick in
+   on his Safari. Force the fallback for any non-producing state
+   with !important. */
+.bldg.paused, .bldg.idle, .bldg.unstaffed, .bldg.disconnected {
+  background-image: var(--bldg-sprite) !important;
+}
 .bldg.paused { opacity: 0.7; filter: grayscale(0.5) !important; animation: none !important; }
 .bldg.paused::before, .bldg.paused::after { display: none !important; }
 .bldg.paused-overlay { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 14px; color: #f0c460; text-shadow: 0 0 3px #000, 0 0 2px #000; pointer-events: none; z-index: 4; }
