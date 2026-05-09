@@ -221,9 +221,9 @@ def clear_resources(cur):
         """, (str(player_id), x_start, x_start + 15, y_start, y_start + 15))
         # Re-place straight-cross roads via the helper used by allocate_district_chunk.
         for offset in range(15):
-            cur.execute("SELECT public.place_pre_road(%s, %s, %s)",
+            cur.execute("SELECT public._place_pre_road(%s, %s, %s)",
                         (str(player_id), x_start + offset, hy))
-            cur.execute("SELECT public.place_pre_road(%s, %s, %s)",
+            cur.execute("SELECT public._place_pre_road(%s, %s, %s)",
                         (str(player_id), hx, y_start + offset))
         # Clear resources across all owned tiles.
         cur.execute(

@@ -103,15 +103,11 @@ BEGIN
     PERFORM public.allocate_district_chunk(v_uid, 0, v_row);
   END IF;
 
-  -- Seed a recent visit so the auto-trader doesn't immediately fire
-  -- a stale catch-up loop on the first tick.
-  INSERT INTO public.trader_visits
-    (trader_key, player_id, capacity_total, capacity_used, summary, visited_at)
-  SELECT 'river_traders', v_uid, 20, 0, '[]'::jsonb, now()
-  WHERE NOT EXISTS (
-    SELECT 1 FROM public.trader_visits
-    WHERE player_id = v_uid AND trader_key = 'river_traders'
-  );
+  -- Original choose_industry didn't seed a trader_visits row;
+  -- _pp_resolve_trader_visits handles the "no visit yet" case
+  -- by treating profile.created_at as the implicit last visit.
+  -- A seed here at now() would block tests that backdate a
+  -- visit + expect catch-up to fire.
 
   RETURN json_build_object(
     'id', v_profile.id,

@@ -46,9 +46,9 @@ def _clear_resources(cur, player_id):
           AND x >= %s AND x < %s AND y >= %s AND y < %s
     """, (str(player_id), x_start, x_start + 15, y_start, y_start + 15))
     for offset in range(15):
-        cur.execute("SELECT public.place_pre_road(%s, %s, %s)",
+        cur.execute("SELECT public._place_pre_road(%s, %s, %s)",
                     (str(player_id), x_start + offset, hy))
-        cur.execute("SELECT public.place_pre_road(%s, %s, %s)",
+        cur.execute("SELECT public._place_pre_road(%s, %s, %s)",
                     (str(player_id), hx, y_start + offset))
     cur.execute("""
         UPDATE public.map_tiles
