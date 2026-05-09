@@ -1459,6 +1459,20 @@ body.panel-expanded .map-area { display: none; }
 
 /* Stat-info popup — same overlay/header as help-modal but compact. */
 .stat-info-modal { background: #131a24; border: 1px solid #243447; border-radius: 10px; max-width: 420px; width: 100%; max-height: 92vh; display: flex; flex-direction: column; box-shadow: 0 6px 24px rgba(0,0,0,0.5); }
+
+/* What's-new modal — same chrome as help/stat-info but slightly wider
+   and with a sticky footer for the Got-it button. */
+.changelog-modal { background: #131a24; border: 1px solid #243447; border-radius: 10px; max-width: 520px; width: 100%; max-height: 92vh; display: flex; flex-direction: column; box-shadow: 0 6px 24px rgba(0,0,0,0.5); }
+.changelog-body { padding: 0; }
+.changelog-empty { padding: 24px; color: #8a99ad; text-align: center; font-style: italic; }
+.changelog-entry { padding: 16px 18px; border-bottom: 1px solid #1e2a3a; }
+.changelog-entry:last-child { border-bottom: none; }
+.changelog-entry-meta { font-size: 0.7rem; color: #7a8a9e; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+.changelog-entry-title { color: #e6eef6; font-weight: 700; font-size: 1rem; margin-bottom: 8px; }
+.changelog-entry-body p { color: #c8d4e0; font-size: 0.88rem; line-height: 1.5; margin: 0 0 10px 0; }
+.changelog-entry-body p:last-child { margin-bottom: 0; }
+.changelog-footer { display: flex; justify-content: flex-end; padding: 12px 16px; border-top: 1px solid #243447; background: #0f161f; border-bottom-left-radius: 10px; border-bottom-right-radius: 10px; }
+.changelog-footer .btn-primary { padding: 8px 18px; font-size: 0.9rem; font-weight: 600; }
 .stat-info-section { margin-bottom: 14px; }
 .stat-info-section:last-child { margin-bottom: 0; }
 .stat-info-label { color: #4fa3e0; font-weight: 600; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }

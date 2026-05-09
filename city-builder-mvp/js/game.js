@@ -9,6 +9,7 @@ import { subscribeRealtime } from './realtime.js';
 import { startWalkers, stopWalkers, spawnImmigrantWalker, spawnEmigrantWalker, renderWalkers } from './walkers.js';
 import { initInspector } from './inspector.js';
 import { initHelp } from './help.js';
+import { fetchAndShowUnseenChangelog } from './changelog.js';
 
 
 // After each production tick, fetch the player's tile metrics
@@ -445,6 +446,10 @@ export function enterGame() {
     refreshTraderQuotas();
     loadNotifications();
     initNotificationBell();
+    // Surface "What's new" entries the player hasn't seen. Runs after
+    // the city is rendered so it's a momentary interrupt, not a
+    // load-blocker. Returns silently if there's nothing new.
+    fetchAndShowUnseenChangelog();
   }).catch(function (err) {
     console.error('Game load failed:', err);
     showToast('Failed to load game data', 'error');

@@ -15,6 +15,7 @@ import { updateIdentity } from './ui.js';
 import { addNotification } from './notifications.js';
 import { computeCityRunway, formatRunway } from './panels.js';
 import { recipeOf, periodSuffix } from './recipe_format.js';
+import { openChangelogHistory } from './changelog.js';
 
 var openOverlay = null;
 
@@ -581,6 +582,13 @@ function openSettingsModal() {
         '</div>' +
         '<div class="settings-row">' +
           '<div class="settings-row-text">' +
+            '<div class="settings-row-title">What\'s new</div>' +
+            '<div class="settings-row-sub">Recent changes to the game.</div>' +
+          '</div>' +
+          '<button class="btn-secondary" id="settings-whatsnew-btn">View</button>' +
+        '</div>' +
+        '<div class="settings-row">' +
+          '<div class="settings-row-text">' +
             '<div class="settings-row-title">Reset district</div>' +
             '<div class="settings-row-sub">Wipe every parcel, building, and resource and start over from industry selection. Cannot be undone.</div>' +
           '</div>' +
@@ -631,6 +639,10 @@ function openSettingsModal() {
       updateIdentity();
     });
     closeHelpModal();
+  });
+  document.getElementById('settings-whatsnew-btn').addEventListener('click', function () {
+    closeHelpModal();
+    openChangelogHistory();
   });
   document.getElementById('settings-reset-btn').addEventListener('click', function () {
     closeHelpModal();
