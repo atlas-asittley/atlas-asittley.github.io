@@ -77,6 +77,9 @@ body {
 .topbar-runway.runway-bad { background: #2a1620; }
 .topbar-runway.runway-bad .v { color: #f0a0a0; }
 .topbar-runway.runway-stable .v { color: #86c98a; }
+.topbar-trader-reset { flex-shrink: 0; display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 12px; background: #1a2230; font-size: 0.85rem; }
+.topbar-trader-reset .trader-reset-icon { font-size: 0.85rem; }
+.topbar-trader-reset .v { font-weight: 600; color: #d8e0e8; font-variant-numeric: tabular-nums; }
 .runway-breakdown { display: flex; flex-direction: column; gap: 6px; }
 .runway-row { display: grid; grid-template-columns: 2fr 1fr auto; gap: 8px; align-items: baseline; padding: 6px 8px; border-radius: 6px; background: #0f1620; font-size: 0.85rem; }
 .runway-row-name { color: #d8e0e8; }

@@ -229,6 +229,32 @@ export function updateCrime() {
 // Topbar "city runway" indicator. Green when nothing is depleting
 // faster than it's being produced; yellow when the bottleneck runs
 // out within 4 hours; red within 1 hour.
+// Trader daily quotas (trader_daily_quota.day_bucket = CURRENT_DATE on
+// the server) reset at UTC midnight. Surface a countdown so players
+// know when caps refresh — Atlas: "we just want to know when the day
+// ends so the traders reset their buy capacities."
+export function updateTraderResetCountdown() {
+  var v = document.getElementById('g-trader-reset-val');
+  if (!v) return;
+  var now = new Date();
+  var nextUtcMidnight = Date.UTC(
+    now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 0, 0, 0, 0
+  );
+  var msLeft = nextUtcMidnight - now.getTime();
+  if (msLeft < 0) msLeft = 0;
+  var totalMin = Math.floor(msLeft / 60000);
+  var h = Math.floor(totalMin / 60);
+  var m = totalMin % 60;
+  if (h >= 1) {
+    v.textContent = h + 'h ' + m + 'm';
+  } else if (m >= 1) {
+    v.textContent = m + 'm';
+  } else {
+    var s = Math.max(0, Math.floor(msLeft / 1000));
+    v.textContent = s + 's';
+  }
+}
+
 export function updateCityRunway() {
   var stat = document.getElementById('g-runway-stat');
   var v = document.getElementById('g-runway');

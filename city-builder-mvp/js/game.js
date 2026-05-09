@@ -1,7 +1,7 @@
 // ── Game entry, data loading, and production loop ──
 import { sb } from './config.js';
 import { state, computeTraderUnlocks, computeLaborAllocation, computeGridBounds } from './state.js';
-import { showScreen, showToast, capitalize, updateMoney, updateWorkers, updateHappiness, updateCrime, updateMigration, updateProductivity, updateCityRunway, updateIdentity, updateTutorialBanner } from './ui.js';
+import { showScreen, showToast, capitalize, updateMoney, updateWorkers, updateHappiness, updateCrime, updateMigration, updateProductivity, updateCityRunway, updateIdentity, updateTutorialBanner, updateTraderResetCountdown } from './ui.js';
 import { addNotification, loadNotifications, initNotificationBell } from './notifications.js';
 import { renderMap, initMapEvents, restoreMapView } from './map.js';
 import { renderBuildPanel, renderTradePanel, refreshActiveDataPanel, initTabs, initPanelCollapse } from './panels.js';
@@ -442,6 +442,11 @@ export function enterGame() {
   updateProductivity();
   updateCityRunway();
   updateTutorialBanner();
+  updateTraderResetCountdown();
+  // Refresh the trader-reset countdown once a minute. Cheap (no DB call,
+  // just date math), so we don't need a smarter cadence.
+  if (state.traderResetTimer) clearInterval(state.traderResetTimer);
+  state.traderResetTimer = setInterval(updateTraderResetCountdown, 60000);
 
   loadGameData().then(function () {
     computeLaborAllocation();
