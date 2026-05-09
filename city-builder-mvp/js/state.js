@@ -146,6 +146,43 @@ export function computeRoadAccess() {
 
   var roadAccessIds = {};
   var noRoadAccessIds = {};
+  // Per-player road set: needed by computeTraderUnlocks's
+  // cityTiersForMode, which counts OTHER players' transport hubs in
+  // the same city. Without this, the client undercounts the city's
+  // transport tier — e.g. if Jill builds an airport in your city,
+  // your client never sees its road access and thinks the city has
+  // tier 0 airports until you reload. Server _city_transport_tiers
+  // joins through has_road_access for every player, so this mirrors
+  // it. Each player's own roads are the only thing that count for
+  // their buildings (you can't piggyback on another player's road).
+  var roadTilesByPlayer = {};
+  state.allBuildings.forEach(function (b) {
+    var bt = state.buildingTypes[b.building_type_key];
+    if (bt && bt.category === 'road' && b.status === 'active') {
+      if (!roadTilesByPlayer[b.player_id]) roadTilesByPlayer[b.player_id] = {};
+      roadTilesByPlayer[b.player_id][b.x + ',' + b.y] = true;
+    }
+  });
+  // city-wide road access map: building_id -> bool, for every player.
+  var allRoadAccessIds = {};
+  state.allBuildings.forEach(function (b) {
+    var bt = state.buildingTypes[b.building_type_key];
+    if (!bt || bt.category === 'road') return;
+    var pRoads = roadTilesByPlayer[b.player_id] || {};
+    var fw = bt.footprint_w || 1;
+    var fh = bt.footprint_h || 1;
+    var ok = false;
+    for (var dx = 0; dx < fw && !ok; dx++) {
+      if (pRoads[(b.x + dx) + ',' + (b.y - 1)]) ok = true;
+      if (pRoads[(b.x + dx) + ',' + (b.y + fh)]) ok = true;
+    }
+    for (var dy = 0; dy < fh && !ok; dy++) {
+      if (pRoads[(b.x - 1) + ',' + (b.y + dy)]) ok = true;
+      if (pRoads[(b.x + fw) + ',' + (b.y + dy)]) ok = true;
+    }
+    if (ok) allRoadAccessIds[b.id] = true;
+  });
+  state.allRoadAccessIds = allRoadAccessIds;
 
   myBuildings.forEach(function (b) {
     var bt = state.buildingTypes[b.building_type_key];
@@ -331,15 +368,27 @@ export function computeTraderUnlocks() {
          : mode === 'seaport' ? 'seaport'
          : mode === 'train'   ? 'train_depot' : null;
   }
+  // Use state.allRoadAccessIds (computed in computeRoadAccess for
+  // every player) so cityTiersForMode counts hubs across the whole
+  // city, matching server _city_transport_tiers. For "do I personally
+  // have access" we still gate on state.roadAccessIds (only my own
+  // roads can connect my own hubs).
   function isHub(b, mode) {
     var bt = state.buildingTypes[b.building_type_key];
     return bt && bt.category === 'transport_hub'
         && b.status === 'active'
         && b.building_type_key === modeHubKey(mode)
-        && state.roadAccessIds[b.id];
+        && state.allRoadAccessIds && state.allRoadAccessIds[b.id];
+  }
+  function isMyHub(b, mode) {
+    return isHub(b, mode) && b.player_id === state.currentUser.id && state.roadAccessIds[b.id];
   }
   function isTruckDepot(b) {
-    return b.building_type_key === 'truck_depot' && b.status === 'active' && state.roadAccessIds[b.id];
+    return b.building_type_key === 'truck_depot' && b.status === 'active'
+      && state.allRoadAccessIds && state.allRoadAccessIds[b.id];
+  }
+  function isMyTruckDepot(b) {
+    return isTruckDepot(b) && b.player_id === state.currentUser.id && state.roadAccessIds[b.id];
   }
   function cityTiersForMode(mode) {
     var t = 0;
@@ -356,12 +405,12 @@ export function computeTraderUnlocks() {
   }
   function playerHasAccess(mode) {
     if (mode === 'truck') {
-      return myBuildings.some(isTruckDepot);
+      return myBuildings.some(isMyTruckDepot);
     }
-    // Owns a hub of mode (road-connected)?
-    if (myBuildings.some(function (b) { return isHub(b, mode); })) return true;
+    // Owns a hub of mode (own road-connected)?
+    if (myBuildings.some(function (b) { return isMyHub(b, mode); })) return true;
     // Owns a road-connected truck depot AND city has any road-connected hub?
-    var hasTruck = myBuildings.some(isTruckDepot);
+    var hasTruck = myBuildings.some(isMyTruckDepot);
     if (!hasTruck) return false;
     return cityBuildings.some(function (b) { return isHub(b, mode); });
   }
