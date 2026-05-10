@@ -1987,9 +1987,13 @@ body.panel-expanded .map-area { display: none; }
 /* ── Building Inspector ───────────────────────────── */
 /* Backdrop is transparent so the map stays bright behind the panel; the
    overlay still catches clicks outside the panel for tap-to-close. */
-.inspector-overlay { position: fixed; inset: 0; background: transparent; z-index: 150; display: none; align-items: flex-end; justify-content: center; }
+/* Overlay is a layout container only — pointer-events: none lets touches
+   on the visible map area (above the panel) pass through to the map so
+   the player can keep scrolling / zooming with the inspector open. The
+   panel itself re-enables pointer-events so its own controls work. */
+.inspector-overlay { position: fixed; inset: 0; background: transparent; z-index: 150; display: none; align-items: flex-end; justify-content: center; pointer-events: none; }
 .inspector-overlay.active { display: flex; }
-.inspector-panel { width: 100%; max-width: 400px; max-height: 50vh; background: #131a24; border: 1px solid #1e2a3a; border-radius: 14px 14px 0 0; padding: 0; display: flex; flex-direction: column; overflow: hidden; animation: insp-slide-up 0.2s ease-out; transition: max-height 0.2s ease-out; }
+.inspector-panel { width: 100%; max-width: 400px; max-height: 50vh; background: #131a24; border: 1px solid #1e2a3a; border-radius: 14px 14px 0 0; padding: 0; display: flex; flex-direction: column; overflow: hidden; animation: insp-slide-up 0.2s ease-out; transition: max-height 0.2s ease-out; pointer-events: auto; }
 @keyframes insp-slide-up { from { transform: translateY(40px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 .inspector-panel.minimized { max-height: 66px; }
 .inspector-panel.minimized .inspector-body,
