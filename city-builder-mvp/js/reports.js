@@ -61,12 +61,61 @@ function saveCollapsedSet(s) {
 // and write a stale value.
 var policyTimers = {};
 
+// Persist the search filter in module scope so a panel re-render
+// (e.g., after a tick when the input isn't focused, or after the
+// player tabs away and back) restores the user's filter without
+// state.* coupling. The render reads this and seeds the input
+// value attribute.
+var resourceFilter = '';
+
+// Apply the prefix-match filter to already-rendered rows. Called once
+// after each renderResourcesPanel completes, and on every input event
+// from the search box. Pure DOM mutation — no re-render — so expand
+// state and scroll position survive.
+function applyResourceFilter(panel) {
+  var q = (resourceFilter || '').toLowerCase().trim();
+  panel.querySelectorAll('.rsrc-tr[data-resource]').forEach(function (tr) {
+    var nameEl = tr.querySelector('.rsrc-name');
+    var name = nameEl ? nameEl.textContent.toLowerCase() : '';
+    var matches = (q === '' || name.indexOf(q) === 0);
+    tr.classList.toggle('rsrc-hidden', !matches);
+    // Mirror on the matching detail row so the expanded drilldown
+    // doesn't orphan if the parent gets filtered out mid-typing.
+    var rk = tr.dataset.resource;
+    var detail = document.getElementById('rsrc-detail-' + rk);
+    if (detail) detail.classList.toggle('rsrc-hidden', !matches);
+  });
+  // Hide categories with no visible rows so the panel collapses
+  // around the matches instead of showing a bunch of empty headers.
+  panel.querySelectorAll('.rsrc-cat').forEach(function (cat) {
+    var anyVisible = cat.querySelector('.rsrc-tr[data-resource]:not(.rsrc-hidden)');
+    cat.classList.toggle('rsrc-cat-empty', !anyVisible);
+  });
+}
+
 export function renderResourcesPanel() {
   var panel = document.getElementById('panel-city-resources');
   if (!panel) return;
   var period = state.tradeStatsPeriod || 'today';
-  panel.innerHTML = renderPeriodToggleHtml(period) + '<div class="trade-loading">Loading…</div>';
+  panel.innerHTML = renderPeriodToggleHtml(period)
+    + '<input type="text" class="rsrc-search" placeholder="Filter resources" value="'
+    + escapeHtml(resourceFilter) + '" autocomplete="off">'
+    + '<div class="trade-loading">Loading…</div>';
   wirePeriodToggle(panel, function (p) { state.tradeStatsPeriod = p; renderResourcesPanel(); });
+
+  // Wire the search input. `input` event fires on every keystroke;
+  // we filter the DOM in place so the user's expand state and
+  // scroll position survive. The input is also self-focused-aware
+  // — the panel-refresh-skip-while-interacting fix in
+  // refreshActiveDataPanelIfIdle stops the 30s tick from killing
+  // the input mid-edit.
+  var searchInput = panel.querySelector('.rsrc-search');
+  if (searchInput) {
+    searchInput.addEventListener('input', function () {
+      resourceFilter = searchInput.value;
+      applyResourceFilter(panel);
+    });
+  }
 
   fetchTradeFlows(period).then(function (flows) {
     var rates = computeNetRates();
@@ -146,6 +195,9 @@ export function renderResourcesPanel() {
         }
       });
     });
+    // Re-apply any in-flight filter (the rows just rendered fresh,
+    // but resourceFilter may have a value from before the re-render).
+    applyResourceFilter(panel);
   }).catch(function (err) {
     replaceLoading(panel, '<div class="trade-error">Failed to load: ' + escapeHtml(err.message || err) + '</div>');
   });
