@@ -104,24 +104,46 @@ def test_district_weight_floor(make_player, cur):
     assert cur.fetchone()[0] >= 1
 
 
-def test_truck_depot_unlocks_regional_hauliers(make_player, place, cur, clear_resources):
-    """Building a road-connected truck_depot unlocks the Regional
-    Hauliers trader (transport_mode='truck'). Without one, the trader
-    is locked even though it's tier 1."""
+def test_truck_depot_unlocks_truck_trader(make_player, place, cur, clear_resources):
+    """Building a road-connected truck_depot unlocks all city truck-
+    mode traders for the player. Rewritten 2026-05-10 for procedural
+    traders: instead of asserting against the retired regional_hauliers
+    key, assert that ANY active truck-mode trader transitions from
+    locked → unlocked when the player gains depot access. The
+    truck_depot INSERT itself also spawns a new procedural truck
+    trader via the AFTER INSERT trigger — verify that too."""
     p = make_player(industry='timber')
     clear_resources(p['id'])
     cur.execute("UPDATE public.player_profiles SET money = 50000 WHERE id = %s", (str(p['id']),))
     hx, hy = p['home_x'], p['home_y']
 
-    # Before: no truck_depot, trader locked.
-    cur.execute("SELECT public._trader_is_unlocked(%s, 'regional_hauliers')",
-                (str(p['id']),))
-    assert cur.fetchone()[0] is False, 'should be locked without a truck_depot'
+    # Capture an active truck trader (from earlier procedural spawns)
+    # to check unlock state. Could be empty in a brand-new test DB —
+    # fall back to placing the depot and re-querying.
+    cur.execute("SELECT key FROM public.traders WHERE transport_mode='truck' AND is_active=true LIMIT 1")
+    row = cur.fetchone()
 
-    # Place a truck_depot adjacent to the highway (y=hy is the test
-    # fixture's horizontal highway road).
+    if row:
+        existing_tk = row[0]
+        cur.execute("SELECT public._trader_is_unlocked(%s, %s)", (str(p['id']), existing_tk))
+        assert cur.fetchone()[0] is False, 'should be locked without a truck_depot'
+
+    # Capture trader count pre-place; the AFTER INSERT trigger spawns one more.
+    cur.execute("SELECT count(*) FROM public.traders WHERE transport_mode='truck' AND is_active=true")
+    pre_count = cur.fetchone()[0]
+
     place('truck_depot', hx + 1, hy + 1)
-    cur.execute("SELECT public._trader_is_unlocked(%s, 'regional_hauliers')",
-                (str(p['id']),))
+
+    cur.execute("SELECT count(*) FROM public.traders WHERE transport_mode='truck' AND is_active=true")
+    post_count = cur.fetchone()[0]
+    assert post_count == pre_count + 1, (
+        f'depot insert should spawn one procedural truck trader; '
+        f'pre={pre_count} post={post_count}'
+    )
+
+    # Any active truck trader should now be unlocked for this player.
+    cur.execute("SELECT key FROM public.traders WHERE transport_mode='truck' AND is_active=true LIMIT 1")
+    a_truck = cur.fetchone()[0]
+    cur.execute("SELECT public._trader_is_unlocked(%s, %s)", (str(p['id']), a_truck))
     assert cur.fetchone()[0] is True, 'should unlock after road-connected truck_depot'
 

@@ -96,14 +96,14 @@ export function renderBuildingInspector() {
       var lvl = b.expansion_level || 0;
       var modeName = b.building_type_key === 'airport' ? 'airport'
                   : b.building_type_key === 'seaport' ? 'seaport' : 'train';
-      var tradersFromThis = 1 + lvl;
-      html += '<div class="insp-row"><span class="insp-label">Traders</span><span class="insp-value">'
-           + tradersFromThis + ' unlocked from this ' + bt.name + ' (city-wide)</span></div>';
+      html += '<div class="insp-row"><span class="insp-label">Role</span><span class="insp-value">'
+           + bt.name + ' — spawned ' + (1 + lvl) + ' procedural ' + modeName
+           + ' trade partner' + ((1 + lvl) === 1 ? '' : 's') + ' for the city.</span></div>';
       if (mine && lvl < 1) {
         var nextCost = bt.build_cost * 2 * (lvl + 1);
         var canAfford = (state.profile && state.profile.money || 0) >= nextCost;
         html += '<div class="insp-row"><span class="insp-label">Expansion</span><span class="insp-value">Level ' + lvl + ' / 1</span></div>';
-        html += '<div class="insp-hint insp-hint-muted">Expanding adds another trader to the city\'s ' + modeName + ' network. Cost $' + nextCost.toLocaleString() + '.</div>';
+        html += '<div class="insp-hint insp-hint-muted">Expanding adds another procedural ' + modeName + ' partner to the city pool. Cost $' + nextCost.toLocaleString() + '.</div>';
         html += '<button class="btn-primary" id="btn-expand-hub"' + (canAfford ? '' : ' disabled') + '>Expand — $' + nextCost.toLocaleString() + '</button>';
       } else if (lvl >= 1) {
         html += '<div class="insp-row"><span class="insp-label">Expansion</span><span class="insp-value insp-good">Maxed out</span></div>';

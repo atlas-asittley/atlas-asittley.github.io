@@ -428,26 +428,20 @@ export function computeTraderUnlocks() {
       // server-side so they don't visit. Locked here too.
       state.unlockedTraders[tk] = { unlocked: false, hint: 'Retired — collapsed into Neighboring City.' };
     } else if (t && t.transport_mode) {
-      // Transport-mode trader: gated on city-tier + per-player access.
-      var cityTiers = cityTiersForMode(t.transport_mode);
+      // Transport-mode trader (procedural since 2026-05-10). Unlocked
+      // if THIS player has access — own a hub of that mode, or own a
+      // truck depot AND any city hub of the mode exists. No tier
+      // ladder anymore; every hub or truck-depot build spawns one
+      // procedural partner server-side and they all stay visible
+      // city-wide once access is established.
       var hasAccess = playerHasAccess(t.transport_mode);
-      var unlocked = (t.tier <= cityTiers) && hasAccess;
       var hint = '';
-      if (!unlocked) {
-        var hubName = (t.transport_mode === 'airport') ? 'Airport'
-                    : (t.transport_mode === 'seaport') ? 'Seaport'
-                    : (t.transport_mode === 'train')   ? 'Train Depot'
-                    : 'Truck Depot';
-        if (t.tier > cityTiers) {
-          hint = 'Build ' + (t.tier === 1 ? 'a' : 'another') + ' '
-               + hubName + ' (or expand an existing one) in the city.';
-        } else if (!hasAccess) {
-          hint = (t.transport_mode === 'truck')
-            ? 'Build a Truck Depot to unlock this trader.'
-            : 'Build a Truck Depot to plug into the city\'s ' + t.transport_mode + ' network.';
-        }
+      if (!hasAccess) {
+        hint = (t.transport_mode === 'truck')
+          ? 'Build a Truck Depot to unlock this trader.'
+          : 'Build a Truck Depot to plug into the city\'s ' + t.transport_mode + ' network.';
       }
-      state.unlockedTraders[tk] = { unlocked: unlocked, hint: hint };
+      state.unlockedTraders[tk] = { unlocked: hasAccess, hint: hint };
     } else {
       state.unlockedTraders[tk] = { unlocked: false, hint: 'Not yet available.' };
     }
