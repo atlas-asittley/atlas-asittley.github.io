@@ -112,10 +112,22 @@ function open(entries, mode) {
 
   if (mode === 'unseen') {
     document.getElementById('changelog-gotit').addEventListener('click', function () {
-      sb.rpc('mark_changelog_seen').then(function (r) {
-        if (r.error) console.warn('mark_changelog_seen failed:', r.error.message);
-        close();
-      });
+      // Close FIRST so the modal feels responsive and a network
+      // hiccup can't trap the user. Previous version awaited the
+      // RPC's .then before calling close — if sb.rpc rejected
+      // (network glitch, auth blip), the modal hung open and the
+      // X was the only escape. Fire-and-forget the RPC; on the
+      // rare failure path the worst case is the modal reappears
+      // next session (which the player can dismiss again).
+      close();
+      var p = sb.rpc('mark_changelog_seen');
+      if (p && typeof p.then === 'function') {
+        p.then(function (r) {
+          if (r && r.error) console.warn('mark_changelog_seen failed:', r.error.message);
+        }, function (err) {
+          console.warn('mark_changelog_seen rejected:', err);
+        });
+      }
     });
   } else {
     document.getElementById('changelog-close').addEventListener('click', close);
