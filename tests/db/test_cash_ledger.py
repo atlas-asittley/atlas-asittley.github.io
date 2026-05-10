@@ -161,7 +161,7 @@ def test_starting_grant_ledger_row_emitted_at_choose_industry(make_player, cur):
     """, (str(p['id']),))
     rows = cur.fetchall()
     assert len(rows) == 1, f'expected one starting_grant row, got {len(rows)}'
-    assert rows[0][0] == 1000, f'starting grant amount mismatch: {rows[0][0]}'
+    assert rows[0][0] == 2000, f'starting grant amount mismatch: {rows[0][0]}'
 
 
 def test_cash_transactions_only_visible_to_owner(make_player, conn, cur):

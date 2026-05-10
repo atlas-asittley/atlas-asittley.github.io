@@ -155,6 +155,14 @@ ON CONFLICT (slug) DO NOTHING;
 
 INSERT INTO public.changelog_entries (slug, title, body)
 VALUES (
+  '2026-05-10-double-starting-money',
+  'Starting money doubled to $2,000',
+  E'New players now start with $2,000 instead of $1,000. Easier ramp into the early roads + first food extractor without budget anxiety.\n\nExisting players are not retroactively credited.'
+)
+ON CONFLICT (slug) DO NOTHING;
+
+INSERT INTO public.changelog_entries (slug, title, body)
+VALUES (
   '2026-05-10-inspector-scroll',
   'Scroll the map with the inspector open',
   E'You can now scroll, zoom, and pan the map while the inspector panel is open at the bottom. Previously the inspector''s invisible overlay was catching every touch in the viewport, freezing the map.\n\nTrade-off: tapping the area above the inspector no longer closes it (those taps go to the map now). Use the X in the inspector header, or tap another building to switch focus.'
