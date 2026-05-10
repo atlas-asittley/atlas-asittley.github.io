@@ -678,6 +678,19 @@ export function computeCityRunway() {
   var totalFoodStock = foodKeys.reduce(function (s, k) {
     return s + (state.inventory[k] || 0);
   }, 0);
+  // Per-house pantries hold real game time the player has before any
+  // house actually devolves. Add them to the food stock — without this
+  // the runway under-reports by (sum of buffer quantities) at 30 min
+  // capacity per house. Skipped when state.buildingBuffers isn't loaded
+  // yet (early render). See feedback_per_house_pantry_model.md.
+  if (state.buildingBuffers) {
+    myActive.forEach(function (b) {
+      var buf = state.buildingBuffers[b.id];
+      if (buf && buf.food && buf.food.quantity > 0) {
+        totalFoodStock += buf.food.quantity;
+      }
+    });
+  }
   var totalFoodDrain = 0;
   myActive.forEach(function (b) {
     var bt = state.buildingTypes[b.building_type_key];
@@ -738,6 +751,16 @@ export function computeCityRunway() {
     });
     Object.keys(seen).forEach(function (key) {
       var stock = state.inventory[key] || 0;
+      // Same per-house pantry adjustment as food — sum the per-house
+      // buffer quantity for this resource into the effective stock.
+      if (state.buildingBuffers) {
+        myActive.forEach(function (b) {
+          var buf = state.buildingBuffers[b.id];
+          if (buf && buf[key] && buf[key].quantity > 0) {
+            stock += buf[key].quantity;
+          }
+        });
+      }
       var flow = computeResourceFlow(key);
       var production = flow.production.reduce(function (s, x) { return s + x.rate; }, 0)
                      + flow.imports.reduce(function (s, x) { return s + x.rate; }, 0);

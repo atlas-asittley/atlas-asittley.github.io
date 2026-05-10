@@ -159,9 +159,14 @@ export function updateHappiness() {
   }
   var stat = document.getElementById('g-happiness-stat');
   if (stat) {
+    // Use the server's actual migration_rate for the rate estimate —
+    // hand-rolled `(h-50)/50` was off by 4× after the 2026-05-06
+    // playtest bump from v_max_rate=1.0 to 4.0 (commit 12c7f87).
+    var rate = Number((state.profile && state.profile.migration_rate) || 0);
+    var absRate = Math.abs(rate);
     stat.title = 'Happiness ' + h + '/100. '
-               + (h > 50 ? 'Citizens slowly moving in (~' + ((h - 50) / 50).toFixed(2) + '/min).'
-                  : h < 50 ? 'Citizens slowly leaving (~' + ((50 - h) / 50).toFixed(2) + '/min).'
+               + (rate > 0.01 ? 'Citizens moving in (' + absRate.toFixed(2) + '/min).'
+                  : rate < -0.01 ? 'Citizens leaving (' + absRate.toFixed(2) + '/min).'
                   : 'Population steady.');
   }
 }
