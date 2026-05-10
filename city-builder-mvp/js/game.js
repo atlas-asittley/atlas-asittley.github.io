@@ -239,8 +239,17 @@ function loadGameData() {
   return Promise.all([
     sb.from('building_types').select('*').eq('is_active', true),
     sb.from('resources').select('*'),
-    sb.from('map_tiles').select('*').order('y', { ascending: true }).order('x', { ascending: true }),
-    sb.from('buildings').select('*, player_profiles(display_name, color_hex)'),
+    // .range(0, 99999) opts out of PostgREST's 1000-row default. As the
+    // shared world grows beyond 1000 tiles (Drew alone has 675, every
+    // new player adds 225, every expansion +225), the cap silently
+    // truncates the rendered map by y — Max's tiles got chopped in half
+    // when world hit 1125. Eventually we'll want viewport-bounded
+    // fetching, but this gets us to ~100k tiles of headroom for now.
+    sb.from('map_tiles').select('*').order('y', { ascending: true }).order('x', { ascending: true }).range(0, 99999),
+    // Same risk — buildings table will eventually outgrow 1000 across
+    // all players. Drew's 100+ buildings + others are well under cap
+    // today but bumped for safety.
+    sb.from('buildings').select('*, player_profiles(display_name, color_hex)').range(0, 99999),
     sb.from('trader_prices').select('*').eq('is_active', true),
     sb.from('inventories').select('resource_key, quantity').eq('player_id', state.currentUser.id),
     sb.from('trade_policies').select('*').eq('player_id', state.currentUser.id),

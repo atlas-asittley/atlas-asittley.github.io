@@ -160,3 +160,11 @@ VALUES (
   E'A new 🔄 pill in the topbar shows when trader daily caps reset, so you can plan your buys and sells around the boundary instead of guessing.\n\nDaily caps refresh at UTC midnight — that''s when each trader''s per-resource buy and sell quotas reset to zero. The countdown shows hours/minutes left in the current day.'
 )
 ON CONFLICT (slug) DO NOTHING;
+
+INSERT INTO public.changelog_entries (slug, title, body)
+VALUES (
+  '2026-05-09-map-tile-cap-fix',
+  'Map fix — full parcels render again',
+  E'Some players were seeing only part of their parcel render — and on a multi-player world, parts of other players'' districts were also getting silently dropped from the map. The cause was the same 1000-row response cap that bit the Treasury chart earlier today. The shared world crossed that line when Max joined.\n\nThe map fetch now requests up to 100,000 tiles, so every parcel renders fully again. Eventually we''ll need viewport-bounded fetching, but this buys plenty of headroom.'
+)
+ON CONFLICT (slug) DO NOTHING;
