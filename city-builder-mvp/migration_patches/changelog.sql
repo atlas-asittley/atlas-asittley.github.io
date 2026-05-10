@@ -155,6 +155,14 @@ ON CONFLICT (slug) DO NOTHING;
 
 INSERT INTO public.changelog_entries (slug, title, body)
 VALUES (
+  '2026-05-10-devolve-reason',
+  'Houses now tell you why they downgraded',
+  E'Tap a house that recently devolved, and the inspector shows the specific reason — "ran out of bread," "lost school coverage," "tile desirability dropped below threshold," etc.\n\nUntil a house downgrades, this section is hidden. Once one does, it stays visible until the next devolve overwrites it. Same vocabulary the inspector already uses for upgrade blockers, so the prose reads consistently.'
+)
+ON CONFLICT (slug) DO NOTHING;
+
+INSERT INTO public.changelog_entries (slug, title, body)
+VALUES (
   '2026-05-10-procedural-traders',
   'Trade partners are now procedurally generated',
   E'The fixed roster of named hub partners (Sky Caravans, Coastal Merchants, Inland Caravans, etc.) is gone. Every time anyone in the city builds or expands a transport hub — airport, seaport, train depot, or truck depot — a new procedurally-generated trade partner shows up.\n\nEach new partner picks a random name from a pool, picks 3-6 random resources to trade, and rolls its own prices and volumes. Partners stay forever once created. Build more hubs, get more partners.\n\nThe starter Neighboring City trader is unchanged. Existing players had procedural partners retroactively generated to replace the old named roster, so no one lost trade routes.'

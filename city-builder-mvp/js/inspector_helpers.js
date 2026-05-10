@@ -256,6 +256,27 @@ export function getHousingDevolveRisks(building, currentTierCfg) {
   };
 }
 
+// Past-tense reason for a house's last devolve. Same key vocabulary
+// as describeUpgradeBlocker but phrased as what happened, not what's
+// needed. Used by the inspector's "Last devolve" section.
+export function describeDevolveReason(key) {
+  if (key === 'road') return 'lost road access to the house';
+  if (key === 'well') return 'lost a well within 4 tiles';
+  if (key === 'food') return 'ran out of food in its pantry';
+  if (key === 'school') return 'the school within 5 tiles stopped operating (unstaffed, or ran out of lumber/flour)';
+  if (key === 'temple') return 'the temple within 6 tiles stopped operating (unstaffed, or ran out of inputs)';
+  if (key === 'luxury_food') return 'ran out of all luxury foods (spirits, caviar, spices, ale)';
+  if (key === 'industrial_luxury') return 'ran out of all industrial luxuries (cabinets, monuments, mosaics, machinery)';
+  if (key === 'all_industrial_luxuries') return 'at least one of the four industrial luxuries ran out (Palace needs all of them at once)';
+  if (key === 'desirability') return 'tile desirability dropped too low (more pollution/crime/tax pressure, or a service went away)';
+  if (key.indexOf('lifestyle:') === 0) {
+    var rk = key.slice('lifestyle:'.length);
+    var name = (state.resources && state.resources[rk] && state.resources[rk].name) || rk;
+    return 'ran out of ' + name + ' in its pantry';
+  }
+  return 'an unspecified gate failed';
+}
+
 export function describeUpgradeBlocker(key) {
   if (key === 'road') return 'a road touching this house';
   if (key === 'well') return 'a well within 4 tiles';

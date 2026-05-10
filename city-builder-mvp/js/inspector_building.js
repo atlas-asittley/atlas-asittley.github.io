@@ -18,6 +18,7 @@ import {
   getHousingUpgradeBlockers,
   getHousingDevolveRisks,
   describeUpgradeBlocker,
+  describeDevolveReason,
   computeBuildingIssues
 } from './inspector_helpers.js';
 import { recipeOf, periodSuffix, resourceName } from './recipe_format.js';
@@ -195,6 +196,22 @@ export function renderBuildingInspector() {
                +    '<span class="' + pctClass + '">' + label + ': ' + entry.quantity.toFixed(2) + ' / ' + entry.capacity.toFixed(2) + ' (' + pct + '%)</span>'
                +  '</div>';
         });
+      }
+
+      // Last-devolve history. Server stamps b.last_devolve_reason +
+      // b.last_devolve_from_tier when _pp_evolve_housing devolves a
+      // house. NULL on a house that's never devolved → section
+      // hidden. Once stamped, stays visible until the next devolve
+      // overwrites it.
+      if (b.last_devolve_reason && b.last_devolve_from_tier != null) {
+        var fromCfg = state.housingTierConfig[b.last_devolve_from_tier];
+        var toCfg = state.housingTierConfig[b.last_devolve_from_tier - 1];
+        var fromName = (fromCfg && fromCfg.name) || ('Tier ' + b.last_devolve_from_tier);
+        var toName = (toCfg && toCfg.name) || ('Tier ' + (b.last_devolve_from_tier - 1));
+        html += '<div class="insp-row"><span class="insp-label">Last devolve</span>'
+             +    '<span class="insp-value insp-hint-muted">' + fromName + ' → ' + toName + '</span>'
+             +  '</div>';
+        html += '<div class="insp-hint insp-hint-muted">Reason: ' + describeDevolveReason(b.last_devolve_reason) + '.</div>';
       }
 
       var risks = getHousingDevolveRisks(b, htierCfg);
