@@ -155,6 +155,14 @@ ON CONFLICT (slug) DO NOTHING;
 
 INSERT INTO public.changelog_entries (slug, title, body)
 VALUES (
+  '2026-05-10-aoe-highlight',
+  'Tap a service / police / booster to see its coverage area',
+  E'Tap a Well, School, Temple, Bathhouse, police building, park, or booster (foresters_office / mine_office / etc.) and the area it covers is now highlighted on the map with a per-kind colored tint.\n\nSame shape as the existing pollution heatmap, but scoped to the building you just tapped — makes it obvious which houses are within school range, which extractors a booster reaches, exactly where a police station''s coverage stops, etc.'
+)
+ON CONFLICT (slug) DO NOTHING;
+
+INSERT INTO public.changelog_entries (slug, title, body)
+VALUES (
   '2026-05-10-animations-toggle',
   'Settings: turn off animations on slow devices',
   E'Settings now has an Animations toggle. Switch it off if your browser or phone is struggling with the animated buildings, walkers, or UI transitions — everything turns static and the rendering load drops significantly.\n\nUseful for slower devices, browsers that get glitchy under load, or anyone who just wants a calmer visual. Setting persists across sessions.'

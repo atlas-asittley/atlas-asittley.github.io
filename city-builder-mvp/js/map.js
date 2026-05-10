@@ -288,6 +288,32 @@ export function renderMap(immediate) {
   });
 }
 
+// Area-of-effect range + kind for a building that has gameplay coverage.
+// Used to highlight the affected cells when the inspector opens. Returns
+// null for buildings without an AoE (housing, extractors, roads, etc.).
+//
+// Ranges match the server-side gate checks in `_pp_evolve_housing` for
+// services and the building_types columns for police / park / booster.
+function getBuildingAoeRange(b, bt) {
+  if (!bt) return null;
+  if (bt.category === 'police' && bt.coverage_radius > 0) {
+    return { range: bt.coverage_radius, kind: 'police' };
+  }
+  if (bt.category === 'park' && bt.pollution_radius > 0) {
+    return { range: bt.pollution_radius, kind: 'park' };
+  }
+  if (bt.category === 'booster' && bt.boost_range > 0) {
+    return { range: bt.boost_range, kind: 'booster' };
+  }
+  if (bt.category === 'service') {
+    if (bt.key === 'well')      return { range: 4, kind: 'well' };
+    if (bt.key === 'school')    return { range: 5, kind: 'school' };
+    if (bt.key === 'temple')    return { range: 6, kind: 'temple' };
+    if (bt.key === 'bathhouse') return { range: 4, kind: 'bathhouse' };
+  }
+  return null;
+}
+
 function _doRenderMap() {
   var grid = document.getElementById('map-grid');
   rebuildPlacementRoadSet();
@@ -345,6 +371,29 @@ function _doRenderMap() {
     }
   }
 
+  // Inspected building's area-of-effect highlight. When the player taps
+  // a service / police / booster / park, paint every cell within its
+  // gameplay range so the AoE is visible at a glance — same idea as
+  // the pollution heatmap but scoped to the one building.
+  var inspectedAoeCovered = {};
+  var inspectedAoeKind = null;
+  var ibAoe = inspectedBuildingHolder.value;
+  if (ibAoe) {
+    var ibtAoe = state.buildingTypes[ibAoe.building_type_key];
+    var aoe = getBuildingAoeRange(ibAoe, ibtAoe);
+    if (aoe) {
+      inspectedAoeKind = aoe.kind;
+      var rAoe = aoe.range;
+      for (var aDx = -rAoe; aDx <= rAoe; aDx++) {
+        for (var aDy = -rAoe; aDy <= rAoe; aDy++) {
+          if (Math.abs(aDx) + Math.abs(aDy) <= rAoe) {
+            inspectedAoeCovered[(ibAoe.x + aDx) + ',' + (ibAoe.y + aDy)] = true;
+          }
+        }
+      }
+    }
+  }
+
   // Dynamic grid columns based on current bounds
   grid.style.gridTemplateColumns = 'repeat(' + state.gridCols + ', 1fr)';
 
@@ -394,6 +443,14 @@ function _doRenderMap() {
         if (fw === 1 && fh === 1) {
           classes.push('inspected-source');
         }
+      }
+
+      // Area-of-effect tint for the inspected building. Cells inside
+      // the AoE get a per-kind colored overlay so the player can see
+      // exactly what gameplay area the building affects.
+      if (inspectedAoeKind && inspectedAoeCovered[x + ',' + y]) {
+        classes.push('aoe-highlight');
+        classes.push('aoe-' + inspectedAoeKind);
       }
 
       // While placing an extractor, soft-pulse all unclaimed matching resource

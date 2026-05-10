@@ -1251,6 +1251,29 @@ body.app-hidden *::after {
 .bldg.bldg-offscreen::before,
 .bldg.bldg-offscreen::after { display: none !important; }
 
+/* Area-of-effect tint for the inspected building. Cell-level overlay
+   (rgba box-shadow inset) keyed by per-kind colors so police vs
+   school vs park are visually distinct. Anchor cell of the inspected
+   building still gets its own .inspected-source ring on top — the
+   AoE tint is a softer wash underneath. */
+.cell.aoe-highlight {
+  position: relative;
+}
+.cell.aoe-highlight::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;  /* above cell bg + ::before; below .bldg (z-index 1+) */
+}
+.cell.aoe-police::after    { background: rgba(220, 80,  80,  0.18); }
+.cell.aoe-school::after    { background: rgba(120, 170, 240, 0.22); }
+.cell.aoe-temple::after    { background: rgba(180, 130, 220, 0.22); }
+.cell.aoe-well::after      { background: rgba(110, 200, 230, 0.20); }
+.cell.aoe-bathhouse::after { background: rgba(100, 220, 200, 0.20); }
+.cell.aoe-park::after      { background: rgba(110, 200, 130, 0.20); }
+.cell.aoe-booster::after   { background: rgba(240, 180, 100, 0.22); }
+
 /* User-toggled "animations off" mode (Settings → Animations).
    Disables every CSS animation + transition globally — escape hatch
    for low-perf devices where the compositor can't keep up.
