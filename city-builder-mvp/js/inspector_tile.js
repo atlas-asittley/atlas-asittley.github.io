@@ -4,6 +4,7 @@
 // on the server). Used when the player taps an unbuilt resource tile.
 
 import { sb } from './config.js';
+import { fetchAllPaged } from './paginate.js';
 import { state, computeLaborAllocation } from './state.js';
 import { showToast } from './ui.js';
 import { renderMap } from './map.js';
@@ -93,8 +94,8 @@ function demolishInspectedTile() {
 // whole reloadMapData export.
 function reloadAfterTileChange() {
   return Promise.all([
-    sb.from('buildings').select('*, player_profiles(display_name, color_hex)'),
-    sb.from('map_tiles').select('*').order('y', { ascending: true }).order('x', { ascending: true })
+    fetchAllPaged(function () { return sb.from('buildings').select('*, player_profiles(display_name, color_hex)').order('id'); }),
+    fetchAllPaged(function () { return sb.from('map_tiles').select('*').order('y', { ascending: true }).order('x', { ascending: true }); })
   ]).then(function (results) {
     state.allBuildings = results[0].data || [];
     state.tiles = results[1].data || [];

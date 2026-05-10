@@ -6,6 +6,7 @@
 // action that ends the inspection completes (demolish).
 
 import { sb } from './config.js';
+import { fetchAllPaged } from './paginate.js';
 import { state, computeLaborAllocation } from './state.js';
 import { showToast, updateMoney, updateWorkers, updateCityRunway } from './ui.js';
 import { renderMap } from './map.js';
@@ -360,7 +361,10 @@ export function renderBuildingInspector() {
         b.evolution_eligible_at = null;
         showToast('Upgraded to ' + (data.tier_name || ('tier ' + data.to_tier)), 'success');
         // Reload buildings so the labor model + map sprite see the new tier.
-        sb.from('buildings').select('*, player_profiles(display_name, color_hex)').then(function (rr) {
+        // Paginated to survive the 1000-row server cap.
+        fetchAllPaged(function () {
+          return sb.from('buildings').select('*, player_profiles(display_name, color_hex)').order('id');
+        }).then(function (rr) {
           if (rr.data) {
             state.allBuildings = rr.data;
             // Re-render map and inspector.

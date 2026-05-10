@@ -10,6 +10,7 @@ import { startWalkers, stopWalkers, spawnImmigrantWalker, spawnEmigrantWalker, r
 import { initInspector } from './inspector.js';
 import { initHelp } from './help.js';
 import { fetchAndShowUnseenChangelog } from './changelog.js';
+import { fetchAllPaged } from './paginate.js';
 
 
 // After each production tick, fetch the player's tile metrics
@@ -139,8 +140,11 @@ function processProduction() {
 
     // Handle housing evolution events
     if (data.evolution_events && data.evolution_events.length > 0) {
-      // Reload buildings to get updated tiers
-      sb.from('buildings').select('*, player_profiles(display_name, color_hex)').then(function (r) {
+      // Reload buildings to get updated tiers — paginated so the
+      // shared buildings table can outgrow 1000 without truncation.
+      fetchAllPaged(function () {
+        return sb.from('buildings').select('*, player_profiles(display_name, color_hex)').order('id');
+      }).then(function (r) {
         if (r.data) {
           state.allBuildings = r.data;
           computeLaborAllocation();
@@ -233,26 +237,6 @@ function initVisibilityPause() {
       }
     }
   });
-}
-
-// Paginated fetcher. Supabase enforces a server-side db-max-rows of
-// 1000 that overrides any client .range() — we discovered this when
-// Max's parcel rendered as half because the world had 1125 tiles
-// and Max's tiles (highest y values) were the dropped 125. The fix
-// is to loop in 1000-row pages until a short page comes back.
-function fetchAllPaged(buildQuery, pageSize) {
-  pageSize = pageSize || 1000;
-  var rows = [];
-  function nextPage(start) {
-    return buildQuery().range(start, start + pageSize - 1).then(function (r) {
-      if (r.error) throw r.error;
-      var batch = r.data || [];
-      rows = rows.concat(batch);
-      if (batch.length < pageSize) return { data: rows, error: null };
-      return nextPage(start + pageSize);
-    });
-  }
-  return nextPage(0);
 }
 
 function loadGameData() {

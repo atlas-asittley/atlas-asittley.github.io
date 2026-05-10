@@ -1,5 +1,6 @@
 // ── Map rendering, placement logic, drag-to-paint roads, and map expansion ──
 import { sb } from './config.js';
+import { fetchAllPaged } from './paginate.js';
 import { state, CITY_CENTER_X, CITY_CENTER_Y, getHomeX, getHomeY, isMyTile, isWildernessTile, inspectedBuildingHolder, computeLaborAllocation, computeGridBounds } from './state.js';
 import { showToast, updateMoney, updateWorkers, updateTutorialBanner, updateCityRunway } from './ui.js';
 import { renderBuildPanel } from './panels.js';
@@ -680,8 +681,8 @@ function refreshTutorialState() {
 
 function reloadMapData() {
   return Promise.all([
-    sb.from('buildings').select('*, player_profiles(display_name, color_hex)'),
-    sb.from('map_tiles').select('*').order('y', { ascending: true }).order('x', { ascending: true })
+    fetchAllPaged(function () { return sb.from('buildings').select('*, player_profiles(display_name, color_hex)').order('id'); }),
+    fetchAllPaged(function () { return sb.from('map_tiles').select('*').order('y', { ascending: true }).order('x', { ascending: true }); })
   ]).then(function (results) {
     state.allBuildings = results[0].data || [];
     state.tiles = results[1].data || [];

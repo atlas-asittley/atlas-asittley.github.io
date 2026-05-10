@@ -5,6 +5,7 @@
 // the proportional-bar / chart helpers — all gathered here.
 
 import { sb } from './config.js';
+import { fetchAllPaged } from './paginate.js';
 import { state } from './state.js';
 import { computeNetRates, computeResourceFlow, resourceName, saveTradePolicy } from './panels.js';
 import { openTradeDialog } from './players.js';
@@ -842,17 +843,22 @@ function fetchTradeFlows(period) {
   }
   var uid = state.currentUser.id;
 
-  // .range(0, 9999) opts out of PostgREST's 1000-row default. Without
-  // it, heavy traders silently miss rows. Eventually this should move
-  // server-side like fetchDailySeries did, but Drew's rate (~700/wk
-  // and growing) doesn't yet justify the RPC build-out.
-  var pTrans = sb.from('trade_transactions')
-    .select('*').eq('player_id', uid).gte('created_at', since)
-    .order('created_at', { ascending: false }).range(0, 9999);
-  var pOffers = sb.from('player_trade_offers')
-    .select('*').eq('status', 'accepted').gte('resolved_at', since)
-    .or('from_player_id.eq.' + uid + ',to_player_id.eq.' + uid)
-    .range(0, 9999);
+  // Paginated to bypass Supabase's server-side db-max-rows=1000 cap
+  // (the previous .range(0, 9999) was a no-op against the server cap).
+  // Drew is at ~750 trade rows / 7d already; will cross the cap soon.
+  // Eventually this should move server-side like fetchDailySeries did,
+  // but pagination buys time without an RPC build-out.
+  var pTrans = fetchAllPaged(function () {
+    return sb.from('trade_transactions')
+      .select('*').eq('player_id', uid).gte('created_at', since)
+      .order('created_at', { ascending: false });
+  });
+  var pOffers = fetchAllPaged(function () {
+    return sb.from('player_trade_offers')
+      .select('*').eq('status', 'accepted').gte('resolved_at', since)
+      .or('from_player_id.eq.' + uid + ',to_player_id.eq.' + uid)
+      .order('resolved_at', { ascending: false });
+  });
 
   return Promise.all([pTrans, pOffers]).then(function (results) {
     var allOffers = results[1].data || [];
