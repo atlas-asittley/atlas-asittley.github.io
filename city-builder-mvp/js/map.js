@@ -642,6 +642,23 @@ function observeBuildings() {
   }
 }
 
+// Diagnostic exposed on the global window for Safari Web Inspector
+// console use. Lets Jill (or anyone) verify perf #1 is active without
+// guessing — `__perfStatus()` returns {total, paused, ratio}. If
+// paused > 0 while scrolled away from the building cluster, the
+// IntersectionObserver pause is working.
+if (typeof window !== 'undefined') {
+  window.__perfStatus = function () {
+    var total = document.querySelectorAll('#grid .bldg').length;
+    var paused = document.querySelectorAll('#grid .bldg.bldg-offscreen').length;
+    return {
+      total: total,
+      paused: paused,
+      ratio: total ? Math.round(paused / total * 100) + '%' : '0%'
+    };
+  };
+}
+
 // ── Placement ──
 
 export function cancelPlacement() {
