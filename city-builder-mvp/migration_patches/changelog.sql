@@ -155,6 +155,14 @@ ON CONFLICT (slug) DO NOTHING;
 
 INSERT INTO public.changelog_entries (slug, title, body)
 VALUES (
+  '2026-05-10-upgrade-button-fix',
+  'Upgrade buttons: real errors + no more stale buttons',
+  E'Two related fixes: (1) When you click an action button (Upgrade, Demolish, Expand, Trade, etc.) and the server rejects it, you now get a popup explaining why — previously these errors disappeared silently and the button just looked broken. Jill reported this on a Townhouse → Villa upgrade where conditions had slipped server-side but the button was still visible.\n\n(2) The server now tells the client when a house''s upgrade eligibility is revoked (e.g., a school stopped operating, food ran out). Previously the client never found out, so the Upgrade button would stick around as stale UI even after the upgrade had been server-side blocked. Now any eligibility transition keeps the client in sync.'
+)
+ON CONFLICT (slug) DO NOTHING;
+
+INSERT INTO public.changelog_entries (slug, title, body)
+VALUES (
   '2026-05-09-trader-reset-clock',
   'Trader-cap reset countdown in topbar',
   E'A new 🔄 pill in the topbar shows when trader daily caps reset, so you can plan your buys and sells around the boundary instead of guessing.\n\nDaily caps refresh at UTC midnight — that''s when each trader''s per-resource buy and sell quotas reset to zero. The countdown shows hours/minutes left in the current day.'

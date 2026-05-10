@@ -210,7 +210,7 @@ export function initAuthEvents() {
     sb.rpc('dev_grant_money', { p_amount: bonus })
       .then(function (r) {
         if (r.error) {
-          showToast('Cheat failed: ' + r.error.message, 'error');
+          alert('Cheat failed: ' + r.error.message);
           return;
         }
         var data = r.data || {};

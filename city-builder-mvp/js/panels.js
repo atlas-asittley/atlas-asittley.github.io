@@ -1254,10 +1254,10 @@ export function saveTradePolicy(resourceKey, mode, reserveTarget, minSellPrice, 
     p_max_buy_price: maxBuyPrice
   }).then(function (r) {
     if (r.error) {
-      showToast('Policy save failed: ' + r.error.message, 'error');
+      alert('Policy save failed: ' + r.error.message);
     }
   }).catch(function () {
-    showToast('Policy save failed', 'error');
+    alert('Policy save failed');
   });
 }
 
@@ -1277,7 +1277,7 @@ function blackMarketTrade(resourceKey, quantity, direction, btn) {
     p_direction: direction
   }).then(function (r) {
     if (r.error) {
-      showToast(r.error.message, 'error');
+      alert(r.error.message);
       btn.disabled = false;
       btn.textContent = originalText;
       return;
@@ -1304,7 +1304,7 @@ function blackMarketTrade(resourceKey, quantity, direction, btn) {
     var preposition = direction === 'sell' ? 'for' : 'for';
     showToast(verb + ' ' + quantity + ' ' + resourceName(resourceKey) + ' on Black Market ' + preposition + ' $' + data.total_price, 'success');
   }).catch(function (err) {
-    showToast(err.message || 'Black Market trade failed', 'error');
+    alert(err.message || 'Black Market trade failed');
     btn.disabled = false;
     btn.textContent = originalText;
   });

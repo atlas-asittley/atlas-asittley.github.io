@@ -352,7 +352,7 @@ export function renderBuildingInspector() {
       upgradeBtn.disabled = true; upgradeBtn.textContent = 'Upgrading…';
       sb.rpc('upgrade_house', { p_building_id: b.id }).then(function (r) {
         if (r.error) {
-          showToast('Upgrade failed: ' + r.error.message, 'error');
+          alert('Upgrade failed: ' + r.error.message);
           upgradeBtn.disabled = false; upgradeBtn.textContent = 'Upgrade';
           return;
         }
@@ -383,7 +383,7 @@ export function renderBuildingInspector() {
     expandBtn.addEventListener('click', function () {
       expandBtn.disabled = true; expandBtn.textContent = 'Expanding…';
       sb.rpc('expand_transport_hub', { p_building_id: b.id }).then(function (r) {
-        if (r.error) { showToast('Expand failed: ' + r.error.message, 'error'); expandBtn.disabled = false; return; }
+        if (r.error) { alert('Expand failed: ' + r.error.message); expandBtn.disabled = false; return; }
         var data = r.data;
         b.expansion_level = data.new_level;
         state.profile.money = data.money;
@@ -400,7 +400,7 @@ function setBuildingPriority(building, priority) {
   if (building.staffing_priority === priority) return;
   sb.rpc('set_building_priority', { p_building_id: building.id, p_priority: priority })
     .then(function (r) {
-      if (r.error) { showToast(r.error.message, 'error'); return; }
+      if (r.error) { alert(r.error.message); return; }
       building.staffing_priority = priority;
       computeLaborAllocation();
       renderBuildingInspector();
@@ -414,7 +414,7 @@ function toggleBuildingPaused(building) {
   var nextPaused = building.status !== 'paused';
   sb.rpc('set_building_paused', { p_building_id: building.id, p_paused: nextPaused })
     .then(function (r) {
-      if (r.error) { showToast(r.error.message, 'error'); return; }
+      if (r.error) { alert(r.error.message); return; }
       building.status = nextPaused ? 'paused' : 'active';
       computeLaborAllocation();
       renderBuildingInspector();
@@ -462,7 +462,7 @@ function executeDemolish(building) {
   sb.rpc('demolish_building', { p_building_id: building.id })
     .then(function (r) {
       if (r.error) {
-        showToast('Demolish failed: ' + r.error.message, 'error');
+        alert('Demolish failed: ' + r.error.message);
         if (btn) {
           btn.disabled = false;
           btn.textContent = 'Demolish';
@@ -506,7 +506,7 @@ function executeDemolish(building) {
       // wired the money change + cash_transactions ledger row.)
     })
     .catch(function (err) {
-      showToast(err.message || 'Demolish failed', 'error');
+      alert(err.message || 'Demolish failed');
       if (btn) {
         btn.disabled = false;
         btn.textContent = 'Demolish';

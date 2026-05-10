@@ -716,14 +716,14 @@ function placeBuilding(tileId, btKey) {
   var bt = state.buildingTypes[btKey];
   if (!bt) return;
   if (state.profile.money < bt.build_cost) {
-    showToast('Not enough money (need $' + bt.build_cost + ')', 'error');
+    alert('Not enough money (need $' + bt.build_cost + ')');
     return;
   }
 
   sb.rpc('place_building', { p_tile_id: tileId, p_building_type_key: btKey })
     .then(function (r) {
       if (r.error) {
-        showToast(r.error.message, 'error');
+        alert(r.error.message);
         return;
       }
       var data = r.data;
@@ -763,7 +763,7 @@ function placeBuilding(tileId, btKey) {
       refreshTutorialState();
     })
     .catch(function (err) {
-      showToast(err.message || 'Placement failed', 'error');
+      alert(err.message || 'Placement failed');
     });
 }
 
@@ -875,7 +875,7 @@ function executeDragPlacements() {
   // Check affordability
   var affordable = Math.floor(state.profile.money / bt.build_cost);
   if (affordable === 0) {
-    showToast('Not enough money', 'error');
+    alert('Not enough money');
     return;
   }
   if (affordable < tiles.length) {
@@ -917,7 +917,7 @@ function executeDragPlacements() {
     // Reload data but keep placement mode active for continued painting
     return reloadMapData();
   }).catch(function (err) {
-    showToast(err.message || 'Some placements failed', 'error');
+    alert(err.message || 'Some placements failed');
     reloadMapData();
   });
 }
@@ -944,20 +944,20 @@ export function expandDistrict() {
   var chunksOwned = state.profile.chunks_owned || 1;
   var cost = 1000 * chunksOwned * chunksOwned;
   if ((state.profile.money || 0) < cost) {
-    showToast('Need $' + cost + ' to expand district', 'error');
+    alert('Need $' + cost + ' to expand district');
     return Promise.resolve(null);
   }
   if (state.selectedBuildType) cancelPlacement();
   return sb.rpc('expansion_candidates', { p_player_id: state.currentUser.id }).then(function (r) {
     if (r.error) {
-      showToast('Could not load expansion options: ' + r.error.message, 'error');
+      alert('Could not load expansion options: ' + r.error.message);
       return null;
     }
     var candidates = (r.data || []).map(function (row) {
       return { chunk_x: row.chunk_x, chunk_y: row.chunk_y };
     });
     if (candidates.length === 0) {
-      showToast('No adjacent parcels available to claim', 'error');
+      alert('No adjacent parcels available to claim');
       return null;
     }
     state.expansionCandidates = candidates;
@@ -969,7 +969,7 @@ export function expandDistrict() {
     bar.classList.add('active');
     return null;
   }).catch(function (err) {
-    showToast('Could not load expansion options: ' + (err.message || err), 'error');
+    alert('Could not load expansion options: ' + (err.message || err));
   });
 }
 
@@ -984,7 +984,7 @@ export function cancelExpansion() {
 function selectExpansionChunk(cx, cy) {
   return sb.rpc('expand_district', { p_chunk_x: cx, p_chunk_y: cy }).then(function (r) {
     if (r.error) {
-      showToast('Expand failed: ' + r.error.message, 'error');
+      alert('Expand failed: ' + r.error.message);
       return null;
     }
     var data = r.data;
@@ -997,7 +997,7 @@ function selectExpansionChunk(cx, cy) {
     document.getElementById('expansion-bar').classList.remove('active');
     return reloadMapData();
   }).catch(function (err) {
-    showToast('Expand failed: ' + (err.message || err), 'error');
+    alert('Expand failed: ' + (err.message || err));
   });
 }
 
@@ -1064,13 +1064,13 @@ export function initMapEvents() {
           var rname = state.resources && state.resources[sbt.placement_resource_node_key]
             ? state.resources[sbt.placement_resource_node_key].name
             : sbt.placement_resource_node_key;
-          showToast('Place on a ' + rname + ' tile', 'error');
+          alert('Place on a ' + rname + ' tile');
         } else if (tile && tile.resource_node_key) {
           var rk = tile.resource_node_key;
           var rn = state.resources && state.resources[rk] ? state.resources[rk].name : rk;
-          showToast('Clear the ' + rn + ' first', 'error');
+          alert('Clear the ' + rn + ' first');
         } else {
-          showToast('Cannot place here', 'error');
+          alert('Cannot place here');
         }
         return;
       }

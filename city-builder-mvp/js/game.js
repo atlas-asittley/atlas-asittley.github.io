@@ -157,9 +157,13 @@ function processProduction() {
         // Server emits one of:
         //   { event: 'devolve', from_tier, to_tier, building_id }  — auto
         //   { event: 'housing_ready_to_upgrade', count }            — manual
-        // (Auto-upgrade is gone: housing only steps up when the player
-        // taps Upgrade in the inspector. Devolves still fire on
-        // condition-slip after the grace window.)
+        //   { event: 'housing_lost_eligibility', count }            — silent
+        // The lost_eligibility event exists purely to keep the
+        // events array non-empty so the buildings refetch above
+        // fires and the client drops stale evolution_eligible_at.
+        // (Auto-upgrade is gone: housing only steps up when the
+        // player taps Upgrade in the inspector. Devolves still
+        // fire on condition-slip after the grace window.)
         if (ev.event === 'housing_ready_to_upgrade') {
           var n = ev.count || 1;
           var msg = n === 1
@@ -486,7 +490,7 @@ export function enterGame() {
     fetchAndShowUnseenChangelog();
   }).catch(function (err) {
     console.error('Game load failed:', err);
-    showToast('Failed to load game data', 'error');
+    alert('Failed to load game data');
   });
 }
 

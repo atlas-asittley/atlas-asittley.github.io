@@ -557,18 +557,18 @@ function sendOffer() {
     || Object.keys(d.giveResources).length > 0
     || Object.keys(d.receiveResources).length > 0;
   if (!nonempty) {
-    showToast('Trade offer must include something', 'error');
+    alert('Trade offer must include something');
     return;
   }
   if (d.giveMoney > (state.profile.money || 0)) {
-    showToast('You only have ' + fmtMoney(state.profile.money), 'error');
+    alert('You only have ' + fmtMoney(state.profile.money));
     return;
   }
   // Spot-check inventory client-side (server re-validates at accept time anyway).
   for (var k in d.giveResources) {
     var have = Math.floor(state.inventory[k] || 0);
     if (d.giveResources[k] > have) {
-      showToast('You only have ' + have + ' ' + resName(k), 'error');
+      alert('You only have ' + have + ' ' + resName(k));
       return;
     }
   }
@@ -580,13 +580,13 @@ function sendOffer() {
   // actually ask them for any money.
   if (d.targetInventory) {
     if (d.receiveMoney > 0 && (d.targetMoney || 0) < d.receiveMoney) {
-      showToast(d.targetName + ' only has $' + Math.max(0, d.targetMoney || 0), 'error');
+      alert(d.targetName + ' only has $' + Math.max(0, d.targetMoney || 0));
       return;
     }
     for (var rk in d.receiveResources) {
       var theyHave = Math.floor(d.targetInventory[rk] || 0);
       if (d.receiveResources[rk] > theyHave) {
-        showToast(d.targetName + ' only has ' + theyHave + ' ' + resName(rk), 'error');
+        alert(d.targetName + ' only has ' + theyHave + ' ' + resName(rk));
         return;
       }
     }
@@ -623,7 +623,7 @@ function sendOffer() {
 
   sb.rpc(rpc, params).then(function (r) {
     if (r.error) {
-      showToast((d.recurring ? 'Agreement failed: ' : 'Trade offer failed: ') + r.error.message, 'error');
+      alert((d.recurring ? 'Agreement failed: ' : 'Trade offer failed: ') + r.error.message);
       btn.disabled = false; btn.textContent = origLabel;
       return;
     }
@@ -636,7 +636,7 @@ function sendOffer() {
 function acceptOffer(offerId) {
   sb.rpc('accept_trade', { p_offer_id: offerId }).then(function (r) {
     if (r.error) {
-      showToast('Accept failed: ' + r.error.message, 'error');
+      alert('Accept failed: ' + r.error.message);
       return;
     }
     showToast('Trade accepted', 'success');
@@ -659,7 +659,7 @@ function acceptOffer(offerId) {
 function rejectOffer(offerId) {
   sb.rpc('reject_trade', { p_offer_id: offerId }).then(function (r) {
     if (r.error) {
-      showToast('Reject failed: ' + r.error.message, 'error');
+      alert('Reject failed: ' + r.error.message);
       return;
     }
     renderPlayersPanel();
@@ -669,7 +669,7 @@ function rejectOffer(offerId) {
 function cancelOffer(offerId) {
   sb.rpc('cancel_trade', { p_offer_id: offerId }).then(function (r) {
     if (r.error) {
-      showToast('Cancel failed: ' + r.error.message, 'error');
+      alert('Cancel failed: ' + r.error.message);
       return;
     }
     renderPlayersPanel();
@@ -679,7 +679,7 @@ function cancelOffer(offerId) {
 function acceptAgreement(agrId) {
   sb.rpc('accept_trade_agreement', { p_agreement_id: agrId }).then(function (r) {
     if (r.error) {
-      showToast('Accept failed: ' + r.error.message, 'error');
+      alert('Accept failed: ' + r.error.message);
       return;
     }
     showToast('Agreement active', 'success');
@@ -690,7 +690,7 @@ function acceptAgreement(agrId) {
 function cancelAgreement(agrId) {
   sb.rpc('cancel_trade_agreement', { p_agreement_id: agrId }).then(function (r) {
     if (r.error) {
-      showToast('Cancel failed: ' + r.error.message, 'error');
+      alert('Cancel failed: ' + r.error.message);
       return;
     }
     renderPlayersPanel();

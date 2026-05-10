@@ -76,7 +76,7 @@ function demolishInspectedTile() {
   var label = resName(inspectedTile.resource_node_key);
   sb.rpc('clear_resource_tile', { p_tile_id: inspectedTile.id }).then(function (r) {
     if (r.error) {
-      showToast('Cannot clear: ' + r.error.message, 'error');
+      alert('Cannot clear: ' + r.error.message);
       if (btn) { btn.disabled = false; btn.textContent = 'Demolish'; }
       return;
     }
@@ -84,7 +84,7 @@ function demolishInspectedTile() {
     closeInspector();
     return reloadAfterTileChange();
   }).catch(function (err) {
-    showToast('Clear failed: ' + (err.message || err), 'error');
+    alert('Clear failed: ' + (err.message || err));
     if (btn) { btn.disabled = false; btn.textContent = 'Demolish'; }
   });
 }
