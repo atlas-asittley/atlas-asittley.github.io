@@ -2,6 +2,7 @@
 // Civilian walkers spawn from road-adjacent housing and walk along roads.
 // Purely visual — no gameplay effect. No server interaction needed.
 import { state } from './state.js';
+import { isAnimationsEnabled } from './ui.js';
 
 // ── Walker config ──
 // Per-building roster model: every spawn-eligible building has a target
@@ -1068,6 +1069,14 @@ var onWalkerClick = null;
 export function setWalkerClickHandler(fn) { onWalkerClick = fn; }
 
 export function startWalkers() {
+  // Animations-off mode (Settings → Animations) is a perf escape
+  // hatch: don't spawn walkers at all. The walker movement loop is
+  // a major compositor / DOM cost on slow phones; freezing them in
+  // place wouldn't help — they have to be removed entirely.
+  if (!isAnimationsEnabled()) {
+    stopWalkers();
+    return;
+  }
   rebuildRoadSet();
   stopWalkers();
   preseedWalkers();

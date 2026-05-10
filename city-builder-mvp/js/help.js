@@ -16,6 +16,7 @@ import { addNotification } from './notifications.js';
 import { computeCityRunway, formatRunway } from './panels.js';
 import { recipeOf, periodSuffix } from './recipe_format.js';
 import { openChangelogHistory } from './changelog.js';
+import { startWalkers, stopWalkers } from './walkers.js';
 
 var openOverlay = null;
 
@@ -654,10 +655,17 @@ function openSettingsModal() {
     openChangelogHistory();
   });
   document.getElementById('settings-anim-toggle').addEventListener('click', function () {
-    setAnimationsEnabled(!isAnimationsEnabled());
-    // Re-render the modal so the button label flips immediately,
-    // and the user sees the change take effect on every visible
-    // animated element (e.g., the loading spinner had it been open).
+    var nowEnabled = !isAnimationsEnabled();
+    setAnimationsEnabled(nowEnabled);
+    // Walkers aren't a CSS-animation thing — they're JS-driven DOM
+    // elements. Freezing animations would just leave them as static
+    // dots, still consuming memory / observer churn. Despawn them
+    // entirely on off; restart spawning on on.
+    if (nowEnabled) {
+      startWalkers();
+    } else {
+      stopWalkers();
+    }
     closeHelpModal();
     openSettingsModal();
   });
