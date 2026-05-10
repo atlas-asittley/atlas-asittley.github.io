@@ -4,7 +4,7 @@ import { state, computeTraderUnlocks, computeLaborAllocation, computeGridBounds 
 import { showScreen, showToast, capitalize, updateMoney, updateWorkers, updateHappiness, updateCrime, updateMigration, updateProductivity, updateCityRunway, updateIdentity, updateTutorialBanner, updateTraderResetCountdown } from './ui.js';
 import { addNotification, loadNotifications, initNotificationBell } from './notifications.js';
 import { renderMap, initMapEvents, restoreMapView } from './map.js';
-import { renderBuildPanel, renderTradePanel, refreshActiveDataPanel, initTabs, initPanelCollapse } from './panels.js';
+import { renderBuildPanel, renderTradePanel, refreshActiveDataPanel, refreshActiveDataPanelIfIdle, initTabs, initPanelCollapse } from './panels.js';
 import { subscribeRealtime } from './realtime.js';
 import { startWalkers, stopWalkers, spawnImmigrantWalker, spawnEmigrantWalker, renderWalkers } from './walkers.js';
 import { initInspector } from './inspector.js';
@@ -135,8 +135,12 @@ function processProduction() {
     // The state values are still set on state.profile so the topbar
     // money chip and crime stat reflect the situation visually.
 
-    // Refresh the visible data-driven panel (Trade or City).
-    refreshActiveDataPanel();
+    // Refresh the visible data-driven panel (Trade or City) — but
+    // skip if the user is mid-interaction so we don't tear down
+    // their expanded rows or focused input. Atlas's report 2026-05-10:
+    // typing in a trade-policy price field, the 30s tick would wipe
+    // the panel and lose the cursor.
+    refreshActiveDataPanelIfIdle();
 
     // Handle housing evolution events
     if (data.evolution_events && data.evolution_events.length > 0) {
@@ -150,7 +154,7 @@ function processProduction() {
           computeLaborAllocation();
           renderMap();
           updateWorkers();
-          refreshActiveDataPanel();
+          refreshActiveDataPanelIfIdle();
         }
       });
       data.evolution_events.forEach(function (ev) {

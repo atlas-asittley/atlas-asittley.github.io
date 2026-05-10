@@ -1439,15 +1439,44 @@ export function renderCityTab() {
   renderSubpanel(active ? active.dataset.subtab : 'resources');
 }
 
-// Re-render whichever data-driven panel is currently visible. Called
-// from game.js after each production tick so the panel reflects the
-// latest server state.
+// Re-render whichever data-driven panel is currently visible.
+//
+// Two entry points:
+//   - refreshActiveDataPanel()       — always re-renders (action-driven).
+//   - refreshActiveDataPanelIfIdle() — skips when the user has an
+//     interaction in progress (expanded detail row, focused input).
+//     Used by the per-tick refresh so a 30-second timer doesn't tear
+//     down a panel mid-edit.
+//
+// Atlas's report (2026-05-10): typing in a trade-policy price field
+// or sitting on an expanded resource row, the tick-time refresh
+// would wipe the panel and reset scroll + collapse state, dropping
+// the user out of their flow. The idle check fixes that.
 export function refreshActiveDataPanel() {
   if (document.getElementById('panel-trade').classList.contains('active')) {
     renderTradeTab();
   } else if (document.getElementById('panel-city').classList.contains('active')) {
     renderCityTab();
   }
+}
+
+function isUserActivelyInteractingWithDataPanel() {
+  // Any expanded detail row inside the data panels.
+  if (document.querySelector('#panel-city .rsrc-tr.expanded')) return true;
+  if (document.querySelector('#panel-city .stats-flow-row.expanded')) return true;
+  // Any focused input/select/textarea INSIDE a data panel (not the
+  // topbar, not a modal). Skipping the refresh keeps the user's
+  // cursor + draft value intact.
+  var ae = document.activeElement;
+  if (ae && (ae.tagName === 'INPUT' || ae.tagName === 'SELECT' || ae.tagName === 'TEXTAREA')) {
+    if (ae.closest('#panel-city, #panel-trade')) return true;
+  }
+  return false;
+}
+
+export function refreshActiveDataPanelIfIdle() {
+  if (isUserActivelyInteractingWithDataPanel()) return;
+  refreshActiveDataPanel();
 }
 
 function renderSubpanel(sub) {
