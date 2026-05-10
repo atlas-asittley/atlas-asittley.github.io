@@ -238,6 +238,34 @@ export function updateCrime() {
 // the server) reset at UTC midnight. Surface a countdown so players
 // know when caps refresh — Atlas: "we just want to know when the day
 // ends so the traders reset their buy capacities."
+// ── Animations preference (perf escape hatch) ──────────────────────
+//
+// User-facing toggle in Settings. When off, body gets `.anim-off`
+// which disables every CSS animation + transition globally.
+// Walker movement keeps happening (JS sets transforms) but snaps
+// instead of tweening. Useful for low-perf phones/browsers where
+// the compositor can't keep up.
+
+var ANIM_DISABLED_KEY = 'city_animations_disabled';
+
+export function applyAnimationsPreference() {
+  var disabled = false;
+  try { disabled = localStorage.getItem(ANIM_DISABLED_KEY) === 'true'; }
+  catch (e) { /* localStorage unavailable — animations stay on */ }
+  document.body.classList.toggle('anim-off', disabled);
+}
+
+export function isAnimationsEnabled() {
+  try { return localStorage.getItem(ANIM_DISABLED_KEY) !== 'true'; }
+  catch (e) { return true; }
+}
+
+export function setAnimationsEnabled(enabled) {
+  try { localStorage.setItem(ANIM_DISABLED_KEY, enabled ? 'false' : 'true'); }
+  catch (e) { /* best effort */ }
+  applyAnimationsPreference();
+}
+
 export function updateTraderResetCountdown() {
   var v = document.getElementById('g-trader-reset-val');
   if (!v) return;

@@ -11,7 +11,7 @@ import { colors, spriteIcons } from './sprites.js';
 import { expandDistrict } from './map.js';
 import { doLogout, doReset } from './auth.js';
 import { sb } from './config.js';
-import { updateIdentity } from './ui.js';
+import { updateIdentity, isAnimationsEnabled, setAnimationsEnabled } from './ui.js';
 import { addNotification } from './notifications.js';
 import { computeCityRunway, formatRunway } from './panels.js';
 import { recipeOf, periodSuffix } from './recipe_format.js';
@@ -589,6 +589,15 @@ function openSettingsModal() {
         '</div>' +
         '<div class="settings-row">' +
           '<div class="settings-row-text">' +
+            '<div class="settings-row-title">Animations</div>' +
+            '<div class="settings-row-sub">Turn off all building / walker / UI animations. Helpful on slower phones or browsers where the animations cause heat or rendering glitches.</div>' +
+          '</div>' +
+          '<button class="btn-secondary" id="settings-anim-toggle">' +
+            (isAnimationsEnabled() ? 'On — turn off' : 'Off — turn on') +
+          '</button>' +
+        '</div>' +
+        '<div class="settings-row">' +
+          '<div class="settings-row-text">' +
             '<div class="settings-row-title">Reset district</div>' +
             '<div class="settings-row-sub">Wipe every parcel, building, and resource and start over from industry selection. Cannot be undone.</div>' +
           '</div>' +
@@ -643,6 +652,14 @@ function openSettingsModal() {
   document.getElementById('settings-whatsnew-btn').addEventListener('click', function () {
     closeHelpModal();
     openChangelogHistory();
+  });
+  document.getElementById('settings-anim-toggle').addEventListener('click', function () {
+    setAnimationsEnabled(!isAnimationsEnabled());
+    // Re-render the modal so the button label flips immediately,
+    // and the user sees the change take effect on every visible
+    // animated element (e.g., the loading spinner had it been open).
+    closeHelpModal();
+    openSettingsModal();
   });
   document.getElementById('settings-reset-btn').addEventListener('click', function () {
     closeHelpModal();

@@ -1250,6 +1250,19 @@ body.app-hidden *::after {
    Don't hide .bldg itself — it stays painted as a static sprite. */
 .bldg.bldg-offscreen::before,
 .bldg.bldg-offscreen::after { display: none !important; }
+
+/* User-toggled "animations off" mode (Settings → Animations).
+   Disables every CSS animation + transition globally — escape hatch
+   for low-perf devices where the compositor can't keep up.
+   Walker movement keeps happening (JS sets transforms) but snaps
+   instead of tweening. */
+body.anim-off,
+body.anim-off *,
+body.anim-off *::before,
+body.anim-off *::after {
+  animation: none !important;
+  transition: none !important;
+}
 .walker-dot {
   position: absolute; width: 10px; height: 14px;
   --wk-scale: 1; --wk-hue: 0deg;

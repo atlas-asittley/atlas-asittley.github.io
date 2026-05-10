@@ -1,7 +1,11 @@
 // ── Entry point: bootstrap the app ──
 import { REPO_OWNER, REPO_NAME } from './version.js';
 import { sb } from './config.js';
-import { showScreen } from './ui.js';
+import { showScreen, applyAnimationsPreference } from './ui.js';
+
+// Apply the user's animations preference before any rendering so the
+// loading screen doesn't briefly animate before being silenced.
+applyAnimationsPreference();
 import { checkProfileAndRoute, initAuthEvents } from './auth.js';
 import { initGameEvents } from './game.js';
 
