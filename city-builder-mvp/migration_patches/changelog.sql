@@ -155,6 +155,14 @@ ON CONFLICT (slug) DO NOTHING;
 
 INSERT INTO public.changelog_entries (slug, title, body)
 VALUES (
+  '2026-05-10-inspector-scroll',
+  'Scroll the map with the inspector open',
+  E'You can now scroll, zoom, and pan the map while the inspector panel is open at the bottom. Previously the inspector''s invisible overlay was catching every touch in the viewport, freezing the map.\n\nTrade-off: tapping the area above the inspector no longer closes it (those taps go to the map now). Use the X in the inspector header, or tap another building to switch focus.'
+)
+ON CONFLICT (slug) DO NOTHING;
+
+INSERT INTO public.changelog_entries (slug, title, body)
+VALUES (
   '2026-05-10-aoe-highlight',
   'Tap a service / police / booster to see its coverage area',
   E'Tap a Well, School, Temple, Bathhouse, police building, park, or booster (foresters_office / mine_office / etc.) and the area it covers is now highlighted on the map with a per-kind colored tint.\n\nSame shape as the existing pollution heatmap, but scoped to the building you just tapped — makes it obvious which houses are within school range, which extractors a booster reaches, exactly where a police station''s coverage stops, etc.'
