@@ -165,6 +165,6 @@ INSERT INTO public.changelog_entries (slug, title, body)
 VALUES (
   '2026-05-09-map-tile-cap-fix',
   'Map fix — full parcels render again',
-  E'Some players were seeing only part of their parcel render — and on a multi-player world, parts of other players'' districts were also getting silently dropped from the map. The cause was the same 1000-row response cap that bit the Treasury chart earlier today. The shared world crossed that line when Max joined.\n\nThe map fetch now requests up to 100,000 tiles, so every parcel renders fully again. Eventually we''ll need viewport-bounded fetching, but this buys plenty of headroom.'
+  E'Some players were seeing only part of their parcel render — and on a multi-player world, parts of other players'' districts were also getting silently dropped from the map. Same 1000-row response cap that bit the Treasury chart earlier today. The shared world crossed it when Max joined.\n\nThe map fetch now paginates in 1000-row chunks, so it can pull arbitrarily many tiles regardless of the server cap. Every parcel renders fully again.'
 )
 ON CONFLICT (slug) DO NOTHING;

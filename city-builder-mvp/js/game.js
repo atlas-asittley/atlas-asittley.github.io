@@ -235,21 +235,39 @@ function initVisibilityPause() {
   });
 }
 
+// Paginated fetcher. Supabase enforces a server-side db-max-rows of
+// 1000 that overrides any client .range() — we discovered this when
+// Max's parcel rendered as half because the world had 1125 tiles
+// and Max's tiles (highest y values) were the dropped 125. The fix
+// is to loop in 1000-row pages until a short page comes back.
+function fetchAllPaged(buildQuery, pageSize) {
+  pageSize = pageSize || 1000;
+  var rows = [];
+  function nextPage(start) {
+    return buildQuery().range(start, start + pageSize - 1).then(function (r) {
+      if (r.error) throw r.error;
+      var batch = r.data || [];
+      rows = rows.concat(batch);
+      if (batch.length < pageSize) return { data: rows, error: null };
+      return nextPage(start + pageSize);
+    });
+  }
+  return nextPage(0);
+}
+
 function loadGameData() {
   return Promise.all([
     sb.from('building_types').select('*').eq('is_active', true),
     sb.from('resources').select('*'),
-    // .range(0, 99999) opts out of PostgREST's 1000-row default. As the
-    // shared world grows beyond 1000 tiles (Drew alone has 675, every
-    // new player adds 225, every expansion +225), the cap silently
-    // truncates the rendered map by y — Max's tiles got chopped in half
-    // when world hit 1125. Eventually we'll want viewport-bounded
-    // fetching, but this gets us to ~100k tiles of headroom for now.
-    sb.from('map_tiles').select('*').order('y', { ascending: true }).order('x', { ascending: true }).range(0, 99999),
-    // Same risk — buildings table will eventually outgrow 1000 across
-    // all players. Drew's 100+ buildings + others are well under cap
-    // today but bumped for safety.
-    sb.from('buildings').select('*, player_profiles(display_name, color_hex)').range(0, 99999),
+    // Paginated — see fetchAllPaged comment. Supabase's server-side
+    // db-max-rows=1000 caps any single response, so we loop in 1000-row
+    // pages until a short page arrives.
+    fetchAllPaged(function () {
+      return sb.from('map_tiles').select('*').order('y', { ascending: true }).order('x', { ascending: true });
+    }),
+    fetchAllPaged(function () {
+      return sb.from('buildings').select('*, player_profiles(display_name, color_hex)').order('id');
+    }),
     sb.from('trader_prices').select('*').eq('is_active', true),
     sb.from('inventories').select('resource_key, quantity').eq('player_id', state.currentUser.id),
     sb.from('trade_policies').select('*').eq('player_id', state.currentUser.id),
