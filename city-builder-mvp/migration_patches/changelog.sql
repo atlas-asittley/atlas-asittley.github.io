@@ -155,6 +155,14 @@ ON CONFLICT (slug) DO NOTHING;
 
 INSERT INTO public.changelog_entries (slug, title, body)
 VALUES (
+  '2026-05-10-hub-trader-volume',
+  'Hub trade partners: 100× more volume',
+  E'Trade partners unlocked through transport hubs (airport / seaport / train / truck) now buy and sell roughly 100× more per visit and per day. Building a hub is now a real volume play instead of an anticlimactic unlock.\n\nThe starter trader (Neighboring City) is unchanged. Prices are unchanged — the bump is purely on quantity. Your reservation-price gates and reserve targets still control when and what you trade.'
+)
+ON CONFLICT (slug) DO NOTHING;
+
+INSERT INTO public.changelog_entries (slug, title, body)
+VALUES (
   '2026-05-10-double-starting-money',
   'Starting money doubled to $2,000',
   E'New players now start with $2,000 instead of $1,000. Easier ramp into the early roads + first food extractor without budget anxiety.\n\nExisting players are not retroactively credited.'
