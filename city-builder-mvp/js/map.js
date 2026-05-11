@@ -225,7 +225,37 @@ export function restoreMapView() {
   }
 }
 
+// Coalesce zoom-button clicks. Each click previously did a sync
+// grid.style.width assignment plus a forced scroll-set, which on a
+// large map costs a full layout reflow + IntersectionObserver +
+// walker snap. Two rapid taps blocked the main thread for hundreds
+// of ms (Atlas 2026-05-11: "you have to click it once and wait a
+// while and then click it again"). Now the click only records the
+// target zoom; rAF applies it once per frame. Multiple clicks in
+// one frame compound correctly because the next click reads from
+// the pending target, not the live state.
+var _pendingZoom = null;
+var _zoomRafScheduled = false;
+function scheduleZoomAtPoint(nextZoom, clientX, clientY) {
+  _pendingZoom = { nextZoom: nextZoom, clientX: clientX, clientY: clientY };
+  if (_zoomRafScheduled) return;
+  _zoomRafScheduled = true;
+  requestAnimationFrame(function () {
+    _zoomRafScheduled = false;
+    var p = _pendingZoom;
+    _pendingZoom = null;
+    if (p) _applySetMapZoomAtPoint(p.nextZoom, p.clientX, p.clientY);
+  });
+}
+function getPendingOrLiveZoom() {
+  return _pendingZoom ? _pendingZoom.nextZoom : state.mapZoom;
+}
+
 function setMapZoomAtPoint(nextZoom, clientX, clientY) {
+  scheduleZoomAtPoint(nextZoom, clientX, clientY);
+}
+
+function _applySetMapZoomAtPoint(nextZoom, clientX, clientY) {
   var viewport = document.getElementById('map-viewport');
   var grid = document.getElementById('map-grid');
   if (!viewport || !grid) {
@@ -1266,19 +1296,19 @@ export function initMapEvents() {
   if (zoomInBtn) {
     zoomInBtn.addEventListener('click', function () {
       var rect = viewport.getBoundingClientRect();
-      setMapZoomAtPoint(state.mapZoom + MAP_ZOOM_STEP, rect.left + rect.width / 2, rect.top + rect.height / 2);
+      scheduleZoomAtPoint(getPendingOrLiveZoom() + MAP_ZOOM_STEP, rect.left + rect.width / 2, rect.top + rect.height / 2);
     });
   }
   if (zoomOutBtn) {
     zoomOutBtn.addEventListener('click', function () {
       var rect = viewport.getBoundingClientRect();
-      setMapZoomAtPoint(state.mapZoom - MAP_ZOOM_STEP, rect.left + rect.width / 2, rect.top + rect.height / 2);
+      scheduleZoomAtPoint(getPendingOrLiveZoom() - MAP_ZOOM_STEP, rect.left + rect.width / 2, rect.top + rect.height / 2);
     });
   }
   if (zoomResetBtn) {
     zoomResetBtn.addEventListener('click', function () {
       var rect = viewport.getBoundingClientRect();
-      setMapZoomAtPoint(1, rect.left + rect.width / 2, rect.top + rect.height / 2);
+      scheduleZoomAtPoint(1, rect.left + rect.width / 2, rect.top + rect.height / 2);
     });
   }
 
