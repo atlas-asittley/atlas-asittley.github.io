@@ -155,6 +155,14 @@ ON CONFLICT (slug) DO NOTHING;
 
 INSERT INTO public.changelog_entries (slug, title, body)
 VALUES (
+  '2026-05-11-auto-upgrade-toggle',
+  'Houses get a per-house auto-upgrade toggle',
+  E'Tap a house in the inspector to find a new "Auto-upgrade" toggle. When ON, the server bumps the house''s tier the moment all the conditions are met — no more tapping Upgrade to confirm each one. When OFF, you keep the manual button you''re used to.\n\nNew houses you place from this point on default to auto-upgrade ON. Your existing houses default to OFF so nothing changes for them unless you flip the switch.'
+)
+ON CONFLICT (slug) DO NOTHING;
+
+INSERT INTO public.changelog_entries (slug, title, body)
+VALUES (
   '2026-05-11-server-side-ticks',
   'Your city now ticks even when you''re offline',
   E'The game world used to advance only when someone was looking at it — a player offline for 8 hours came back to ONE huge catch-up tick that compressed 8 hours of production, consumption, and trading into a single processing step. The phase order in that compressed tick caused weird side-effects, like schools running out of inputs even though imports would have arrived in time during real-time play.\n\nNow a server-scheduled job ticks every player''s city once per minute, online or offline. Your trader imports actually arrive on schedule. Your tax revenue accrues continuously. Your devolves (if any) reflect what would have happened minute-by-minute, not what 8 hours of squashed-together math produces.\n\nNothing about the in-game cadence changes when you''re playing. The change is invisible during active play — it''s the offline experience that''s now honest.'

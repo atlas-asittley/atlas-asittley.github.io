@@ -36,6 +36,10 @@ def test_lost_eligibility_event_fires_when_flag_cleared(cur, make_player, place,
     p = make_player()
     bid = _place_house_with_well(cur, place, clear_resources, p)
     _set_house_tier(cur, bid, 2)
+    # Force manual upgrade mode — lost-eligibility is a manual-flow
+    # concept (auto-upgrade skips the eligible_at stamp and goes
+    # straight to tier bump, so there's no "lost" state to fire).
+    cur.execute("UPDATE public.buildings SET auto_upgrade = FALSE WHERE id = %s", (bid,))
     # Stock everything tier 3 needs (food + bread for lifestyle gate +
     # pottery already there from default tier 2 buffer).
     cur.execute(

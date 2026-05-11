@@ -154,14 +154,20 @@ export function renderBuildingInspector() {
         var canUpgrade = blockers.length === 0;
         // evolution_eligible_at is server-confirmed: set on the tick
         // that all next-tier conditions check out, cleared on a tick
-        // that finds them slipped. Acts as the gate for the manual
-        // Upgrade button — if the server says you're eligible, the
-        // button is live; otherwise we show why.
+        // that finds them slipped. With auto_upgrade ON, the server
+        // bumps the tier directly without ever stamping eligible_at,
+        // so the manual flow only fires when auto_upgrade is OFF.
         var serverEligible = !!b.evolution_eligible_at;
-        if (canUpgrade && serverEligible) {
+        var autoOn = !!b.auto_upgrade;
+        var isMyBuilding = (b.player_id === state.currentUser.id);
+
+        if (canUpgrade && serverEligible && !autoOn) {
           html += '<div class="insp-row"><span class="insp-label">Next</span><span class="insp-value insp-good">' + nextTierCfg.name + ' (+' + nextTierCfg.workers + ' wkrs)</span></div>';
           html += '<div class="insp-hint insp-hint-muted">Ready to upgrade. Tap below to step this house up to ' + nextTierCfg.name + '.</div>';
           html += '<button class="btn-upgrade-house" data-bldg="' + b.id + '">Upgrade to ' + nextTierCfg.name + '</button>';
+        } else if (canUpgrade && autoOn) {
+          html += '<div class="insp-row"><span class="insp-label">Next</span><span class="insp-value insp-good">' + nextTierCfg.name + ' (+' + nextTierCfg.workers + ' wkrs)</span></div>';
+          html += '<div class="insp-hint insp-hint-muted">Auto-upgrade is ON. This house will step up to ' + nextTierCfg.name + ' on the next server tick (~1 min).</div>';
         } else if (canUpgrade) {
           html += '<div class="insp-row"><span class="insp-label">Next</span><span class="insp-value">' + nextTierCfg.name + ' (+' + nextTierCfg.workers + ' wkrs)</span></div>';
           html += '<div class="insp-hint insp-hint-muted">Conditions met — eligibility will be confirmed on the next production tick (~30s), then the Upgrade button appears here.</div>';
@@ -174,6 +180,18 @@ export function renderBuildingInspector() {
             hint += ' "Operating" means staffed AND has both inputs in stock.';
           }
           html += '<div class="insp-hint">' + hint + '</div>';
+        }
+
+        // Per-house auto-upgrade toggle. Always rendered for the
+        // player's own housing so they can flip between "let the
+        // server upgrade for me" (default for new houses) and
+        // "make me tap to confirm each one" (default for existing).
+        if (isMyBuilding) {
+          html += '<div class="insp-row"><span class="insp-label">Auto-upgrade</span>'
+               +    '<button class="btn-toggle-auto-upgrade" data-bldg="' + b.id + '" data-current="' + (autoOn ? '1' : '0') + '">'
+               +      (autoOn ? 'ON — tap to switch to manual' : 'OFF — tap to enable')
+               +    '</button>'
+               +  '</div>';
         }
       } else {
         html += '<div class="insp-row"><span class="insp-label">Tier</span><span class="insp-value insp-good">Max tier reached</span></div>';
@@ -390,6 +408,32 @@ export function renderBuildingInspector() {
             updateWorkers();
           }
         });
+      });
+    });
+  }
+
+  // Wire auto-upgrade toggle. Flips b.auto_upgrade via the
+  // set_house_auto_upgrade RPC and re-renders the inspector so the
+  // button label flips.
+  var autoToggleBtn = document.querySelector('.btn-toggle-auto-upgrade');
+  if (autoToggleBtn) {
+    autoToggleBtn.addEventListener('click', function () {
+      var current = autoToggleBtn.dataset.current === '1';
+      var next = !current;
+      autoToggleBtn.disabled = true;
+      sb.rpc('set_house_auto_upgrade', {
+        p_building_id: b.id, p_enabled: next
+      }).then(function (r) {
+        if (r.error) {
+          alert('Could not update auto-upgrade: ' + r.error.message);
+          autoToggleBtn.disabled = false;
+          return;
+        }
+        // Patch local state + re-render. Don't full-refetch — the
+        // server-side cron tick will catch up tier changes on its
+        // own schedule.
+        b.auto_upgrade = next;
+        renderBuildingInspector();
       });
     });
   }
