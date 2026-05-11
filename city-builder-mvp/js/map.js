@@ -660,6 +660,28 @@ function _doRenderMap() {
   renderWalkers();
 }
 
+// Strip the inspection-highlight classes added during the last
+// _doRenderMap so we can close the inspector without paying for a
+// full grid.innerHTML rebuild. Only the cells with these classes get
+// touched — typically <20 elements vs the whole grid (~3-10k cells).
+// Atlas 2026-05-11: "most of the lag is when I close the inspector."
+export function clearInspectionHighlights() {
+  var grid = document.getElementById('map-grid');
+  if (!grid) return;
+  var nodes = grid.querySelectorAll(
+    '.inspected-target, .inspected-source, .aoe-highlight, .inspected-bldg'
+  );
+  for (var i = 0; i < nodes.length; i++) {
+    var cl = nodes[i].classList;
+    cl.remove(
+      'inspected-target', 'inspected-source', 'inspected-bldg',
+      'aoe-highlight',
+      'aoe-police', 'aoe-park', 'aoe-booster',
+      'aoe-well', 'aoe-school', 'aoe-temple', 'aoe-bathhouse'
+    );
+  }
+}
+
 // IntersectionObserver flips .bldg-offscreen on each building tile when
 // it scrolls out of the map viewport. CSS hides the decorative ::before
 // / ::after pseudo-elements (smoke, glow, figure overlays) for those —

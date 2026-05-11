@@ -17,7 +17,7 @@
 //   getInspectedTile()
 
 import { state, inspectedBuildingHolder } from './state.js';
-import { renderMap } from './map.js';
+import { renderMap, clearInspectionHighlights } from './map.js';
 import { setWalkerClickHandler } from './walkers.js';
 import { renderBuildingInspector } from './inspector_building.js';
 import { renderResourceInspector } from './inspector_tile.js';
@@ -72,7 +72,11 @@ export function closeInspector() {
   inspectedBuildingHolder.value = null;
   document.getElementById('inspector-overlay').classList.remove('active');
   document.body.classList.remove('inspector-open');
-  renderMap();  // re-render to clear the target highlight
+  // Strip the gold ring + AoE tint inline instead of rebuilding the
+  // entire grid via renderMap. A full _doRenderMap on a big city
+  // touches every cell + re-runs IntersectionObserver, which is what
+  // made close feel laggy. Targeted DOM mutation is ~100× faster.
+  clearInspectionHighlights();
 }
 
 // Scroll the map so BOTH the inspected building AND, if present, its
