@@ -41,6 +41,7 @@ export function openInspector(building) {
   // via this class.
   document.body.classList.add('inspector-open');
   renderMap();  // re-render so map can highlight the inspected extractor's target
+  ensureInspectionVisible(building);
 }
 
 export function openResourceInspector(tile) {
