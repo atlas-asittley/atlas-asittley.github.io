@@ -92,22 +92,35 @@ export function subscribeRealtime() {
       // caused them (upgrade_house RPC handler, etc.) and a
       // duplicate refetch would just clobber in-flight state.
       if (newB.player_id === state.currentUser.id) return;
-      // Find the local copy and patch its fields. Safer than
-      // re-inserting since the realtime payload contains every
-      // column.
+
+      // Compare against the local copy to decide whether the change
+      // affects rendering. Cron ticks update last_processed_at on
+      // EVERY building every minute — hundreds of events per minute
+      // for a multiplayer city — and re-rendering the whole grid on
+      // each one causes layout thrash heavy enough to make the
+      // Android nav bar flicker (Atlas 2026-05-11). Patch state
+      // always, but only renderMap when something visually changed.
+      var idx = -1;
       for (var i = 0; i < state.allBuildings.length; i++) {
-        if (state.allBuildings[i].id === newB.id) {
-          // Preserve the joined player_profiles relation (the
-          // realtime payload doesn't include the JOIN).
-          var pp = state.allBuildings[i].player_profiles;
-          state.allBuildings[i] = newB;
-          state.allBuildings[i].player_profiles = pp;
-          break;
-        }
+        if (state.allBuildings[i].id === newB.id) { idx = i; break; }
       }
-      // Re-render so devolved tiers / new sprites + the inspector
-      // (if open on this building) reflect the new state.
-      renderMap();
+      if (idx === -1) return;
+      var oldB = state.allBuildings[idx];
+      var visuallyChanged = (
+        oldB.housing_tier !== newB.housing_tier ||
+        oldB.status !== newB.status ||
+        oldB.expansion_level !== newB.expansion_level ||
+        (!!oldB.evolution_eligible_at) !== (!!newB.evolution_eligible_at) ||
+        oldB.is_staffed !== newB.is_staffed
+      );
+
+      // Preserve the joined player_profiles relation (the realtime
+      // payload doesn't include the JOIN).
+      var pp = oldB.player_profiles;
+      state.allBuildings[idx] = newB;
+      state.allBuildings[idx].player_profiles = pp;
+
+      if (visuallyChanged) renderMap();
     })
     .on('postgres_changes', {
       event: '*', schema: 'public', table: 'player_trade_offers'
