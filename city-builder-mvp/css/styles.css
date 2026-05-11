@@ -957,9 +957,17 @@ body.heatmap-issues .bldg.idle {
 /* ── Pass 2: distinctive motion for buildings whose Pass 1 worker/smoke
    was generic. Layers on top of Pass 1 — the .producing class still
    gates everything, so .idle continues to suppress all of it. ── */
-@keyframes act-glow {
-  0%, 100% { opacity: 0.45; }
-  50%      { opacity: 1; }
+/* One-shot glow pulse — fires when processProduction completes (every
+   ~30s on the client poll). Replaces the infinite act-glow loops on
+   iron_mine / smelter / glassworks / foreman_office / mine_office /
+   mosaic_workshop / distillery / brewery / watch_house. The infinite
+   loops were the heaviest compositor work on mobile (`filter: blur()`
+   + opacity tween every frame, for as many of these as you have built);
+   pulsing once per tick gives the same "alive" feeling at ~5% duty cycle. */
+@keyframes act-tick-glow {
+  0%   { opacity: 0.65; }
+  20%  { opacity: 1; }
+  100% { opacity: 0.65; }
 }
 @keyframes act-buzz {
   0%, 100% { transform: translate(0, 0); }
@@ -987,9 +995,10 @@ body.heatmap-issues .bldg.idle {
   background: radial-gradient(ellipse at center, rgba(255,180,80,0.7) 0%, rgba(255,130,30,0.3) 55%, transparent 100%);
   border-radius: 50%;
   filter: blur(1.5px);
-  animation: act-glow 1.8s ease-in-out infinite;
+  opacity: 0.65;
   pointer-events: none; z-index: 2;
 }
+.bldg.iron_mine.producing.tick-pulse::before { animation: act-tick-glow 1.8s ease-out 1; }
 
 /* Smelter — orange forge glow under the chimney smoke. */
 .bldg.smelter.producing::before {
@@ -998,9 +1007,10 @@ body.heatmap-issues .bldg.idle {
   background: radial-gradient(ellipse at center, rgba(255,140,60,0.75) 0%, rgba(220,80,40,0.3) 60%, transparent 100%);
   border-radius: 50%;
   filter: blur(2px);
-  animation: act-glow 1.3s ease-in-out infinite;
+  opacity: 0.65;
   pointer-events: none; z-index: 2;
 }
+.bldg.smelter.producing.tick-pulse::before { animation: act-tick-glow 1.3s ease-out 1; }
 
 /* Glassworks — golden furnace glow under the (gold-tinted) smoke. */
 .bldg.glassworks.producing::before {
@@ -1009,9 +1019,10 @@ body.heatmap-issues .bldg.idle {
   background: radial-gradient(ellipse at center, rgba(255,200,90,0.8) 0%, rgba(220,140,50,0.35) 55%, transparent 100%);
   border-radius: 50%;
   filter: blur(2px);
-  animation: act-glow 1.5s ease-in-out infinite;
+  opacity: 0.65;
   pointer-events: none; z-index: 2;
 }
+.bldg.glassworks.producing.tick-pulse::before { animation: act-tick-glow 1.5s ease-out 1; }
 
 /* Nail Forge — sparks bursting up off the anvil, repeating. */
 .bldg.nail_forge.producing::before {
@@ -1081,9 +1092,10 @@ body.heatmap-issues .bldg.idle {
   background: radial-gradient(ellipse at center, rgba(255,230,140,0.75) 0%, rgba(220,180,80,0.3) 55%, transparent 100%);
   border-radius: 50%;
   filter: blur(1.5px);
-  animation: act-glow 2.0s ease-in-out infinite;
+  opacity: 0.65;
   pointer-events: none; z-index: 2;
 }
+.bldg.foreman_office.producing.tick-pulse::before { animation: act-tick-glow 2.0s ease-out 1; }
 
 /* Clay Master's Hut — a small pottery wheel spinning beside the worker. */
 .bldg.clay_master_hut.producing::before {
@@ -1102,9 +1114,10 @@ body.heatmap-issues .bldg.idle {
   background: radial-gradient(ellipse at center, rgba(255,180,80,0.7) 0%, rgba(255,130,30,0.3) 55%, transparent 100%);
   border-radius: 50%;
   filter: blur(1.5px);
-  animation: act-glow 1.9s ease-in-out infinite;
+  opacity: 0.65;
   pointer-events: none; z-index: 2;
 }
+.bldg.mine_office.producing.tick-pulse::before { animation: act-tick-glow 1.9s ease-out 1; }
 
 /* Mosaic Workshop — multicolored tiles glint on the workbench. */
 .bldg.mosaic_workshop.producing::before {
@@ -1112,9 +1125,10 @@ body.heatmap-issues .bldg.idle {
   left: 30%; top: 32%; width: 26%; height: 22%;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Crect x='1' y='1' width='2' height='2' fill='%23e8a838'/%3E%3Crect x='4' y='1.5' width='2' height='2' fill='%2348a8c0'/%3E%3Crect x='7' y='1' width='2' height='2' fill='%23c84858'/%3E%3Crect x='2.5' y='4' width='2' height='2' fill='%2360c878'/%3E%3Crect x='5.5' y='4.5' width='2' height='2' fill='%23a058c0'/%3E%3Crect x='8.5' y='4' width='2' height='2' fill='%23e8d038'/%3E%3C/svg%3E");
   background-size: contain; background-repeat: no-repeat; background-position: center;
-  animation: act-glow 1.3s ease-in-out infinite;
+  opacity: 0.65;
   pointer-events: none; z-index: 2;
 }
+.bldg.mosaic_workshop.producing.tick-pulse::before { animation: act-tick-glow 1.3s ease-out 1; }
 
 /* Engineer's Workshop — a gear rotating beside the worker. */
 .bldg.engineer_workshop.producing::before {
@@ -1133,9 +1147,10 @@ body.heatmap-issues .bldg.idle {
   background: radial-gradient(ellipse at center, rgba(255,170,90,0.65) 0%, rgba(220,120,60,0.3) 55%, transparent 100%);
   border-radius: 50%;
   filter: blur(2px);
-  animation: act-glow 1.7s ease-in-out infinite;
+  opacity: 0.65;
   pointer-events: none; z-index: 2;
 }
+.bldg.distillery.producing.tick-pulse::before { animation: act-tick-glow 1.7s ease-out 1; }
 
 /* Brewery — golden tankard glint on the spout side. Multi-tile,
    so positions use the --bldg-fig-* scale like the steam plume above. */
@@ -1148,9 +1163,10 @@ body.heatmap-issues .bldg.idle {
   background: radial-gradient(ellipse at center, rgba(255,210,90,0.7) 0%, rgba(220,160,40,0.3) 55%, transparent 100%);
   border-radius: 50%;
   filter: blur(1.2px);
-  animation: act-glow 1.5s ease-in-out infinite;
+  opacity: 0.65;
   pointer-events: none; z-index: 2;
 }
+.bldg.brewery.producing.tick-pulse::before { animation: act-tick-glow 1.5s ease-out 1; }
 
 /* Cabinetmaker — wood shavings sparks off the bench. */
 .bldg.cabinetmaker.producing::before {
@@ -1179,9 +1195,10 @@ body.app-hidden *::after {
   left: 47%; top: 53%; width: 12%; height: 12%;
   background: radial-gradient(ellipse at center, rgba(255,240,140,0.85) 0%, rgba(220,180,40,0.4) 50%, transparent 100%);
   border-radius: 50%; filter: blur(1.5px);
-  animation: act-glow 1.6s ease-in-out infinite;
+  opacity: 0.65;
   pointer-events: none; z-index: 2;
 }
+.bldg.watch_house.producing.tick-pulse::after { animation: act-tick-glow 1.6s ease-out 1; }
 .bldg.police_station.producing::after {
   content: ''; position: absolute;
   left: 38%; bottom: 8%; width: 24%; height: 32%;

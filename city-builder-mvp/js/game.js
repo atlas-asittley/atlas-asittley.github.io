@@ -130,6 +130,20 @@ function processProduction() {
     updateProductivity();
     updateCityRunway();
 
+    // Perf #2: pulse the previously-infinite act-glow buildings once
+    // per tick instead of running the keyframe loop forever. CSS keeps
+    // them at static opacity 0.65; this transiently animates them up
+    // and back. Animation auto-completes in ~2s; remove the class
+    // after so subsequent ticks can re-trigger from a clean state
+    // (CSS animations don't restart if the class is already present).
+    var pulseTargets = document.querySelectorAll('.bldg.producing');
+    if (pulseTargets.length) {
+      for (var pi = 0; pi < pulseTargets.length; pi++) pulseTargets[pi].classList.add('tick-pulse');
+      setTimeout(function () {
+        for (var ri = 0; ri < pulseTargets.length; ri++) pulseTargets[ri].classList.remove('tick-pulse');
+      }, 2100);
+    }
+
     // Bankruptcy + crime cascade notifications stripped per Atlas
     // (2026-05-08) — the bell log shows ONLY housing_ready_to_upgrade.
     // The state values are still set on state.profile so the topbar
