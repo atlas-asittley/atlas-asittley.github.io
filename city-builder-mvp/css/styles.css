@@ -2035,6 +2035,34 @@ body.panel-expanded .map-area { display: none; }
 .btn-upgrade-house { width: 100%; padding: 11px; border: none; border-radius: 8px; background: linear-gradient(180deg, #2a6a48, #1f5036); color: #e0fff0; font-weight: 700; font-size: 0.88rem; cursor: pointer; margin: 8px 0 4px; transition: background 0.15s; }
 .btn-upgrade-house:hover { background: linear-gradient(180deg, #348058, #265a3e); }
 .btn-upgrade-house:disabled { opacity: 0.55; cursor: not-allowed; }
+
+/* Auto-upgrade toggle (per-house, lives in the inspector row).
+   Distinct pill style so it doesn't get visually confused with the
+   green primary Upgrade button. data-current attribute drives the
+   ON/OFF color via [data-current="1"] / [data-current="0"]. */
+.btn-toggle-auto-upgrade {
+  padding: 5px 12px;
+  border: 1px solid #2a3a52;
+  border-radius: 999px;
+  background: #131c28;
+  color: #c8d4e0;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.btn-toggle-auto-upgrade[data-current="1"] {
+  background: rgba(94, 196, 158, 0.18);
+  border-color: rgba(94, 196, 158, 0.6);
+  color: #5ec49e;
+}
+.btn-toggle-auto-upgrade[data-current="0"] {
+  background: rgba(170, 130, 90, 0.18);
+  border-color: rgba(170, 130, 90, 0.6);
+  color: #cba078;
+}
+.btn-toggle-auto-upgrade:hover { filter: brightness(1.15); }
+.btn-toggle-auto-upgrade:disabled { opacity: 0.55; cursor: not-allowed; }
 .insp-section { font-size: 0.7rem; font-weight: 600; color: #7a8a9e; text-transform: uppercase; letter-spacing: 0.04em; padding: 10px 0 4px; }
 .insp-issues { padding: 4px 0 6px; }
 .insp-issue { display: flex; gap: 6px; align-items: flex-start; padding: 4px 0; }
