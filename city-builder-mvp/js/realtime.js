@@ -74,6 +74,41 @@ export function subscribeRealtime() {
         renderMap();
       }
     })
+    // UPDATE on buildings — primarily so other players' housing
+    // tier changes (devolves, upgrades) propagate without needing
+    // a full tick refetch. Server-side INSERT events already push
+    // for new placements, DELETE for demolish. UPDATE was missing —
+    // the client's state.allBuildings would go stale until ITS
+    // OWN tick had an evolution event, leaving the inspector
+    // showing wrong tiers + missing last_devolve_reason for other
+    // players' houses. Atlas 2026-05-11 spotted Jill's manor
+    // devolves with this exact gap.
+    .on('postgres_changes', {
+      event: 'UPDATE', schema: 'public', table: 'buildings'
+    }, function (payload) {
+      var newB = payload.new;
+      if (!newB || !newB.id) return;
+      // Skip OUR own UPDATEs — they're handled by the action that
+      // caused them (upgrade_house RPC handler, etc.) and a
+      // duplicate refetch would just clobber in-flight state.
+      if (newB.player_id === state.currentUser.id) return;
+      // Find the local copy and patch its fields. Safer than
+      // re-inserting since the realtime payload contains every
+      // column.
+      for (var i = 0; i < state.allBuildings.length; i++) {
+        if (state.allBuildings[i].id === newB.id) {
+          // Preserve the joined player_profiles relation (the
+          // realtime payload doesn't include the JOIN).
+          var pp = state.allBuildings[i].player_profiles;
+          state.allBuildings[i] = newB;
+          state.allBuildings[i].player_profiles = pp;
+          break;
+        }
+      }
+      // Re-render so devolved tiers / new sprites + the inspector
+      // (if open on this building) reflect the new state.
+      renderMap();
+    })
     .on('postgres_changes', {
       event: '*', schema: 'public', table: 'player_trade_offers'
     }, function (payload) {
