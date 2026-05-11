@@ -940,14 +940,26 @@ function executeDragPlacements() {
     showToast('Can only afford ' + affordable + ' road' + (affordable > 1 ? 's' : ''), 'info');
   }
 
-  // Chain placement RPCs sequentially
+  // Chain placement RPCs sequentially. Per-tile errors no longer
+  // throw — they'd abort the chain AND fire the catch alert even
+  // though prior placements succeeded (Atlas's "tile is occupied"
+  // bug 2026-05-10: client state goes stale across a drag of N
+  // roads, the FIRST one places, the SECOND server-rejects because
+  // the client's tile.occupied_building_id wasn't yet refreshed
+  // from the first INSERT, alert fires, but the first road is in
+  // the world). Instead: collect errors, continue, only alert at
+  // the end if NOTHING placed.
   var chain = Promise.resolve();
   var placed = 0;
+  var errors = [];
   tiles.forEach(function (t) {
     chain = chain.then(function () {
       return sb.rpc('place_building', { p_tile_id: t.tileId, p_building_type_key: btKey })
         .then(function (r) {
-          if (r.error) throw new Error(r.error.message);
+          if (r.error) {
+            errors.push(r.error.message);
+            return;
+          }
           placed++;
           var data = r.data;
           state.profile.money = data.money;
@@ -970,11 +982,23 @@ function executeDragPlacements() {
     updateCityRunway();
     if (placed > 0) {
       showToast(placed + ' road' + (placed > 1 ? 's' : '') + ' placed!', 'success');
+    } else if (errors.length > 0) {
+      // Nothing placed at all — surface the first error so the user
+      // sees a real reason (e.g., "Not enough money" rather than
+      // silent failure).
+      alert(errors[0]);
     }
-    // Reload data but keep placement mode active for continued painting
+    // Reload data — captures whatever DID land + the up-to-date
+    // tile-occupancy so the next drag doesn't hit the same stale-
+    // state issue.
     return reloadMapData();
   }).catch(function (err) {
-    alert(err.message || 'Some placements failed');
+    // .catch should never fire now (per-tile errors are caught
+    // above), but keep as a safety net for network/transport-level
+    // failures distinct from server-side rejections.
+    if (placed === 0) {
+      alert(err.message || 'Some placements failed');
+    }
     reloadMapData();
   });
 }
