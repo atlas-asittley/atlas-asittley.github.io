@@ -340,10 +340,70 @@ function selectBuildingType(key) {
   renderBuildPanel();
 }
 
+// ── Production-rate scaling helpers ──
+//
+// Mirror the server's per-tick formulas for UI display:
+//   extractor       output = output_rate × min(1, 4/path_length) × boost × productivity
+//   food_extractor  output = output_rate × boost × productivity (no path)
+//   processor       in/out = rate × productivity (assuming progress=1)
+//
+// Without these the resources panel under/over-reports — e.g. an
+// extractor on a 32-tile path shows full base rate, hiding the
+// path-length penalty; a clay player surrounded by clay master's
+// huts sees no booster effect; a city with productivity 1.15 reads
+// 15% lower than reality. Bug filed by Jill 2026-05-13/14.
+
+function getProductivity() {
+  var p = state.profile && state.profile.productivity;
+  return (p != null) ? Number(p) : 1.0;
+}
+
+// MAX booster multiplier applicable to one extractor or food_extractor
+// — only staffed + active boosters of matching boost_target within
+// Manhattan ≤ boost_range count, multiple in range take the MAX.
+export function getBoosterMultiplier(b, bt) {
+  if (!bt) return 1.0;
+  if (bt.category !== 'extractor' && bt.category !== 'food_extractor') return 1.0;
+  var maxMult = 1.0;
+  for (var i = 0; i < state.allBuildings.length; i++) {
+    var b2 = state.allBuildings[i];
+    if (b2.player_id !== state.currentUser.id) continue;
+    if (b2.status !== 'active') continue;
+    if (state.laborInfo.unstaffedIds && state.laborInfo.unstaffedIds[b2.id]) continue;
+    var bt2 = state.buildingTypes[b2.building_type_key];
+    if (!bt2 || bt2.category !== 'booster') continue;
+    if (bt2.boost_target !== bt.category) continue;
+    var range = Number(bt2.boost_range) || 0;
+    if (Math.abs(b2.x - b.x) + Math.abs(b2.y - b.y) > range) continue;
+    var mult = Number(bt2.boost_multiplier) || 1.0;
+    if (mult > maxMult) maxMult = mult;
+  }
+  return maxMult;
+}
+
+// Effective per-minute output rate for one staffed-active building.
+// Applies path scaling (extractors only), boosters, and productivity.
+// Extractors with no claimed target return 0 (matches server).
+export function effectiveOutputRate(b, bt, productivity) {
+  var base = Number(bt && bt.output_rate) || 0;
+  if (!base) return 0;
+  if (bt.category === 'extractor') {
+    var pl = Number(b.path_length);
+    if (!pl || pl <= 0) return 0;
+    var pathFactor = Math.min(1, 4 / pl);
+    return base * pathFactor * getBoosterMultiplier(b, bt) * productivity;
+  }
+  if (bt.category === 'food_extractor') {
+    return base * getBoosterMultiplier(b, bt) * productivity;
+  }
+  return base * productivity;
+}
+
 // ── Inventory panel ──
 export function computeNetRates() {
   var rates = {};
   if (!state.currentUser) return rates;
+  var productivity = getProductivity();
   var myBuildings = state.allBuildings.filter(function (b) {
     return b.player_id === state.currentUser.id;
   });
@@ -355,13 +415,16 @@ export function computeNetRates() {
     // Processors need road access
     if (bt.category === 'processor' && state.noRoadAccessIds[b.id]) return;
     if (bt.output_resource_key && bt.output_rate) {
-      rates[bt.output_resource_key] = (rates[bt.output_resource_key] || 0) + bt.output_rate;
+      var outRate = effectiveOutputRate(b, bt, productivity);
+      if (outRate > 0) {
+        rates[bt.output_resource_key] = (rates[bt.output_resource_key] || 0) + outRate;
+      }
     }
     if (bt.input_resource_key && bt.input_rate) {
-      rates[bt.input_resource_key] = (rates[bt.input_resource_key] || 0) - bt.input_rate;
+      rates[bt.input_resource_key] = (rates[bt.input_resource_key] || 0) - bt.input_rate * productivity;
     }
     if (bt.input_resource_key_2 && bt.input_rate_2) {
-      rates[bt.input_resource_key_2] = (rates[bt.input_resource_key_2] || 0) - bt.input_rate_2;
+      rates[bt.input_resource_key_2] = (rates[bt.input_resource_key_2] || 0) - bt.input_rate_2 * productivity;
     }
   });
 
@@ -490,33 +553,39 @@ export function computeResourceFlow(resourceKey) {
   // Group worker-consuming buildings by type, only counting those
   // currently staffed (anything else doesn't actually move the
   // resource needle). Housing not relevant here — it's handled by
-  // the citizens branch below.
+  // the citizens branch below. Per-instance prodSum accumulates
+  // because extractors with different path_lengths and booster
+  // coverage produce different rates inside the same type.
+  var productivity = getProductivity();
   var byType = {};
   myActive.forEach(function (b) {
     var bt = state.buildingTypes[b.building_type_key];
     if (!bt) return;
     if (bt.category === 'road' || bt.category === 'housing') return;
     if (state.laborInfo.unstaffedIds && state.laborInfo.unstaffedIds[b.id]) return;
-    if (!byType[bt.key]) byType[bt.key] = { bt: bt, count: 0 };
+    if (!byType[bt.key]) byType[bt.key] = { bt: bt, count: 0, prodSum: 0 };
     byType[bt.key].count++;
+    if (bt.output_resource_key === resourceKey && bt.output_rate > 0) {
+      byType[bt.key].prodSum += effectiveOutputRate(b, bt, productivity);
+    }
   });
 
   Object.keys(byType).forEach(function (k) {
     var bt = byType[k].bt;
     var count = byType[k].count;
-    if (bt.output_resource_key === resourceKey && bt.output_rate > 0) {
-      flow.production.push({ name: bt.name, count: count,
-                             rate: count * Number(bt.output_rate) });
+    var prodSum = byType[k].prodSum;
+    if (bt.output_resource_key === resourceKey && bt.output_rate > 0 && prodSum > 0) {
+      flow.production.push({ name: bt.name, count: count, rate: prodSum });
     }
     if (bt.input_resource_key === resourceKey && bt.input_rate > 0) {
-      var item = { name: bt.name, count: count, rate: count * Number(bt.input_rate) };
+      var item = { name: bt.name, count: count, rate: count * Number(bt.input_rate) * productivity };
       if (bt.output_resource_key && state.resources[bt.output_resource_key]) {
         item.output = state.resources[bt.output_resource_key].name;
       }
       (bt.category === 'service' ? flow.services : flow.processing).push(item);
     }
     if (bt.input_resource_key_2 === resourceKey && bt.input_rate_2 > 0) {
-      var item2 = { name: bt.name, count: count, rate: count * Number(bt.input_rate_2) };
+      var item2 = { name: bt.name, count: count, rate: count * Number(bt.input_rate_2) * productivity };
       if (bt.output_resource_key && state.resources[bt.output_resource_key]) {
         item2.output = state.resources[bt.output_resource_key].name;
       }
