@@ -60,3 +60,56 @@ some townhouses 6+ tiles from the school (tier 4 needs ≤ 5).
 
 **Tests:** `test_housing_lost_eligibility.py` (3 tests pinning the new
 event behavior).
+
+---
+
+## 2026-05-13 — Jill — "clay master's hut isn't boosting"
+
+**Reported:** 2026-05-13 13:57 UTC.
+
+**Description (verbatim):**
+> The clay master's hut does not appear to be boosting clay
+> production. I added additional clay masters huts within 2 tiles
+> of my clay diggers but my clay production did not appear to
+> increase. I need this for increasing revenue or my city is doomed.
+
+## 2026-05-14 — Jill — "clay reserve isn't accumulating"
+
+**Reported:** 2026-05-14 00:52 UTC.
+
+**Description (verbatim):**
+> I should be having a net accumulation of clay at the rate of 9
+> per minute, but my clay reserve is staying unchanged. I am not
+> trading any clay, so it should be accumulating.
+
+**Diagnosis (both):**
+Same root cause. Both clients' City → Resources panel summed
+extractor `output_rate` without applying the per-tick scaling the
+server actually uses:
+
+- `min(1, 4/path_length)` — Jill's 20 clay_pits ranged from path 3
+  to path 37; effective production was ~13/min, not the 30/min the
+  panel implied.
+- Booster MAX multiplier — 14 of her 20 pits WERE in range of a
+  staffed clay_master_hut (×1.25), but the panel showed no effect
+  either before or after she added more huts.
+- Productivity multiplier (`player_profiles.productivity`, currently
+  1.15 for her) — neither production nor consumption was scaled.
+
+Real math: ~17.8 clay/min produced vs. 12 pottery_kiln × 1.5 × 1.15
++ 2 glassworks × 1.0 × 1.15 = 23/min consumed → −5/min net.
+Stockpile sat at 0 because consumption exceeded production. The
+panel said +9/min. Server-side production math was correct; the bug
+was 100% on the UI side.
+
+**Fix:**
+- `9ebd0b4` (citybuilder / v1) — new helpers in
+  `city-builder-mvp/js/panels.js`: `getProductivity`,
+  `getBoosterMultiplier` (Manhattan ≤ boost_range, MAX of matching
+  staffed boosters), `effectiveOutputRate` (per-instance
+  composition). `computeNetRates` + `computeResourceFlow` updated.
+- `f0c610d` (citybuilder-game / v2) — mirror of the same logic in
+  `src/scenes/helpers.js`. 10 new vitest cases including a full
+  reproduction of Jill's clay layout (20 pits + 4 huts + 12 kilns
+  + productivity 1.15) — the panel now reports the deficit instead
+  of a phantom surplus.
