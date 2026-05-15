@@ -113,3 +113,66 @@ was 100% on the UI side.
   reproduction of Jill's clay layout (20 pits + 4 huts + 12 kilns
   + productivity 1.15) — the panel now reports the deficit instead
   of a phantom surplus.
+
+---
+
+## 2026-05-15 — Jill — "required bread to sustain the city is too high"
+
+**Reported:** 2026-05-15 13:34 UTC.
+
+**Description (verbatim):**
+> The required bread to sustain the city is set too high. The amount
+> that can be purchased from available traders is not enough to
+> sustain the city.
+
+**Diagnosis:**
+Bread is a tier-2+ lifestyle good — every cottage/townhouse/villa/etc.
+drains it every minute (rates per `housing_lifestyle_demands`). Jill's
+options for *importing* it were thin: of 10 active NPC partners only
+2 happened to roll bread in their 3-6 random catalog (proc_71fab7296f3e
+and river_traders), and even those priced it near the upper band
+(sell_price 19-20). The base_price-anchored procedural model
+(`_spawn_random_trader`) makes "does this partner sell bread?" a
+coin-flip per partner per spawn, so a player can run a 4-trader hub
+and never get an option to import the staple they need.
+
+**Fix:**
+- `7cbf94d` (citybuilder / v1) — `bread_always_available.sql`:
+  `_spawn_random_trader` now appends a guaranteed bread row to every
+  procedural partner on top of its 3-6 random non-bread picks. Bread
+  sell_price discounted 25% (band 1.05-1.5× × 0.75 = 0.79-1.13×
+  base_price; rolls land at 12-17 vs base 15). Backfill knocked 25%
+  off existing bread sell_prices and inserted a discounted bread row
+  for every active trader that didn't sell bread (8 of 10). buy_price
+  untouched — discount only applies to player-buys-bread, not
+  player-sells-bread. Test now asserts 4-7 trader_prices rows plus a
+  bread row on every spawn.
+
+---
+
+## 2026-05-15 — Jill — "total housing capacity doesn't match old UI"
+
+**Reported:** 2026-05-15 16:28 UTC.
+
+**Description (verbatim):**
+> On the new UI, my total housing capacity does not show as the same
+> number as the old UI.
+
+**Diagnosis:**
+v1's state.js sets `housingCapacity = popFloor + sum(tier.workers)`
+for active road-connected houses and the topbar renders pop/cap from
+it. v2's `state.laborInfo.housingCapacity` had a default of 0 and was
+never recomputed — `tick.js` only mirrored profile.worker_capacity
+(= current workforce supply, not housing cap). With li.housingCapacity
+= 0, `TopBar.refreshTopBar` line 223 fell back to `cap = pop`, so the
+topbar showed pop/pop. For Jill at pop=1149, that's `1149/1149`
+instead of the actual `1149/1291` (15 floor + 27×24 + 17×34 + 1×50).
+
+**Fix:**
+- `b096635` (citybuilder-game / v2) — new
+  `computeHousingCapacity(allBuildings, buildingTypes,
+  housingTierConfig, myId, profile)` helper in `src/scenes/helpers.js`
+  mirroring v1's state.js calc. Called from `TopBar.refreshTopBar`
+  and stashed on `state.laborInfo.housingCapacity` so other consumers
+  can re-use. 5 new vitest cases (floor, tutorial, road requirement,
+  tier-0 shanty without road, foreign/inactive filter).
