@@ -120,6 +120,7 @@ function renderHousingTierBreakdown(bt) {
        +    'Houses evolve through the tiers below as their needs are met. '
        +    'They <i>devolve</i> a tier when a need fails — after a per-tier grace window. '
        +    'Lifestyle goods (pottery/bread/furniture/statuary) stack: once a tier earns a good, every higher tier keeps needing it. '
+       +    'Some goods accept substitutes — the bread requirement is fully satisfied by spices / caviar / spirits in any combination. '
        +    'Click any house in the city to see its exact next-upgrade blockers.'
        + '</span></div>';
 
@@ -135,9 +136,14 @@ function renderHousingTierBreakdown(bt) {
 }
 
 function renderHousingTierBlock(tier, cfg, demands) {
+  var tiers = state.housingTierConfig || {};
   var workers = cfg.workers || 0;
+  var prevWorkers = (tiers[tier - 1] && tiers[tier - 1].workers) || 0;
+  var workerDelta = workers - prevWorkers;
   var foodPerMin = Number(cfg.food_per_minute || 0);
   var foodPerHour = Math.round(foodPerMin * 60);
+  var upgradeSecs = Number(cfg.upgrade_secs || 0);
+  var devolveSecs = Number(cfg.devolve_secs || 0);
 
   var prereqs = [];
   if (tier === 1) {
@@ -170,10 +176,17 @@ function renderHousingTierBlock(tier, cfg, demands) {
     drainParts.push(perHour + ' ' + name.toLowerCase() + '/hr');
   });
 
+  var headerExtras = [];
+  if (workerDelta > 0 && tier > 0) headerExtras.push('+' + workerDelta + ' vs prev tier');
+  if (upgradeSecs > 0) headerExtras.push('upgrade after ' + upgradeSecs + 's');
+  if (devolveSecs > 0) headerExtras.push(devolveSecs + 's devolve grace');
+
   var html = '<div class="help-row help-row-section help-row-tier house-t' + tier + '">';
   html += '<span class="help-label"><span class="help-tier-icon"></span>' + escapeHtml(cfg.name) + '</span>';
   html += '<span class="help-value">';
-  html += '<div class="help-tier-line"><b>Tier ' + tier + '</b> · houses up to <b>' + workers + '</b> people</div>';
+  html += '<div class="help-tier-line"><b>Tier ' + tier + '</b> · houses up to <b>' + workers + '</b> people'
+        + (headerExtras.length ? ' · <small>' + escapeHtml(headerExtras.join(' · ')) + '</small>' : '')
+        + '</div>';
 
   if (prereqs.length > 0) {
     html += '<div class="help-tier-line"><i>Needs:</i> ' + escapeHtml(prereqs.join(' · ')) + '</div>';
@@ -182,10 +195,18 @@ function renderHousingTierBlock(tier, cfg, demands) {
   }
 
   if (lifestyleRows.length > 0) {
-    var goods = lifestyleRows.map(function (d) {
-      return (state.resources && state.resources[d.resource_key] && state.resources[d.resource_key].name) || d.resource_key;
+    var subsMap = state.lifestyleSubstitutes || {};
+    var goodSegs = lifestyleRows.map(function (d) {
+      var name = (state.resources && state.resources[d.resource_key] && state.resources[d.resource_key].name) || d.resource_key;
+      var subs = subsMap[d.resource_key] || [];
+      var safeName = escapeHtml(name);
+      if (subs.length === 0) return safeName;
+      var subNames = subs.map(function (k) {
+        return (state.resources && state.resources[k] && state.resources[k].name) || k;
+      });
+      return safeName + ' <span class="help-sub">(or ' + escapeHtml(subNames.join(' / ')) + ')</span>';
     });
-    html += '<div class="help-tier-line"><i>Lifestyle goods (must stay in stock):</i> ' + escapeHtml(goods.join(' + ')) + '</div>';
+    html += '<div class="help-tier-line"><i>Lifestyle goods (must stay in stock):</i> ' + goodSegs.join(' + ') + '</div>';
   }
 
   if (drainParts.length > 0) {
