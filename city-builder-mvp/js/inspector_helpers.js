@@ -271,12 +271,11 @@ export function describeDevolveReason(key) {
   if (key === 'desirability') return 'tile desirability dropped too low (more pollution/crime/tax pressure, or a service went away)';
   if (key.indexOf('lifestyle:') === 0) {
     var rk = key.slice('lifestyle:'.length);
-    var name = (state.resources && state.resources[rk] && state.resources[rk].name) || rk;
-    var subs = _substituteNames(rk);
-    if (subs.length > 0) {
-      return 'ran out of ' + name + ' and all substitutes (' + subs.join(' / ') + ') in its pantry';
+    var allNames = _lifestyleGroupNames(rk);
+    if (allNames.length > 1) {
+      return 'ran out of all of ' + allNames.join(' / ') + ' in its pantry';
     }
-    return 'ran out of ' + name + ' in its pantry';
+    return 'ran out of ' + allNames[0] + ' in its pantry';
   }
   return 'an unspecified gate failed';
 }
@@ -293,12 +292,11 @@ export function describeUpgradeBlocker(key) {
   if (key === 'desirability') return 'higher tile desirability (build parks/services nearby, reduce pollution + crime + tax pressure)';
   if (key.indexOf('lifestyle:') === 0) {
     var rk = key.slice('lifestyle:'.length);
-    var name = (state.resources && state.resources[rk] && state.resources[rk].name) || rk;
-    var subs = _substituteNames(rk);
-    if (subs.length > 0) {
-      return name + ' (or any of ' + subs.join(' / ') + ') in stock';
+    var allNames = _lifestyleGroupNames(rk);
+    if (allNames.length > 1) {
+      return 'any of ' + allNames.join(' / ') + ' in stock';
     }
-    return name + ' in stock (this tier consumes it ongoingly)';
+    return allNames[0] + ' in stock (this tier consumes it ongoingly)';
   }
   return key;
 }
@@ -312,11 +310,16 @@ function _lifestyleDemandSatisfied(primary) {
   return false;
 }
 
-function _substituteNames(primary) {
+// Every good that satisfies this lifestyle demand, treated as equals
+// (primary + any registered substitutes). Used by blocker/devolve copy
+// so the four-good demand reads as "any of A / B / C / D" with no good
+// singled out.
+function _lifestyleGroupNames(primary) {
+  var resources = state.resources || {};
+  var primaryName = (resources[primary] && resources[primary].name) || primary;
   var subs = (state.lifestyleSubstitutes && state.lifestyleSubstitutes[primary]) || [];
-  return subs.map(function (k) {
-    return (state.resources && state.resources[k] && state.resources[k].name) || k;
-  });
+  var subNames = subs.map(function (k) { return (resources[k] && resources[k].name) || k; });
+  return [primaryName].concat(subNames);
 }
 
 // Issues: consolidated list of reasons this building isn't operational.

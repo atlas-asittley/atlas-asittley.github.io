@@ -1513,7 +1513,7 @@ body.panel-expanded .map-area { display: none; }
 .help-tier-line:first-child { color: #d8e0e8; }
 .help-tier-line i { color: #6a7888; font-style: normal; }
 .help-tier-line small { color: #6a7888; font-size: 0.7rem; }
-.help-sub { color: #8aa; font-style: italic; font-size: 0.72rem; }
+.help-group { color: #d8e0e8; }
 
 /* Stat-info popup — same overlay/header as help-modal but compact. */
 .stat-info-modal { background: #131a24; border: 1px solid #243447; border-radius: 10px; max-width: 420px; width: 100%; max-height: 92vh; display: flex; flex-direction: column; box-shadow: 0 6px 24px rgba(0,0,0,0.5); }

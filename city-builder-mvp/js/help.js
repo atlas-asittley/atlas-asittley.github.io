@@ -119,8 +119,8 @@ function renderHousingTierBreakdown(bt) {
   html += '<div class="help-row help-row-section"><span class="help-label">How it works</span><span class="help-value">'
        +    'Houses evolve through the tiers below as their needs are met. '
        +    'They <i>devolve</i> a tier when a need fails — after a per-tier grace window. '
-       +    'Lifestyle goods (pottery/bread/furniture/statuary) stack: once a tier earns a good, every higher tier keeps needing it. '
-       +    'Some goods accept substitutes — the bread requirement is fully satisfied by spices / caviar / spirits in any combination. '
+       +    'Lifestyle goods stack: once a tier earns a good, every higher tier keeps needing it. '
+       +    'Some demands are satisfied by any of a group of goods, listed equally (e.g. bread / spices / caviar / spirits — keep any of them stocked, in any combination). '
        +    'Click any house in the city to see its exact next-upgrade blockers.'
        + '</span></div>';
 
@@ -170,10 +170,20 @@ function renderHousingTierBlock(tier, cfg, demands) {
   if (foodPerHour > 0) {
     drainParts.push(foodPerHour + ' food/hr');
   }
+  var subsMap = state.lifestyleSubstitutes || {};
   lifestyleRows.forEach(function (d) {
     var perHour = Math.round(Number(d.qty_per_minute) * 60 * 10) / 10;
-    var name = (state.resources && state.resources[d.resource_key] && state.resources[d.resource_key].name) || d.resource_key;
-    drainParts.push(perHour + ' ' + name.toLowerCase() + '/hr');
+    var resources = state.resources || {};
+    var primaryName = (resources[d.resource_key] && resources[d.resource_key].name) || d.resource_key;
+    var subs = subsMap[d.resource_key] || [];
+    if (subs.length > 0) {
+      var labels = [primaryName].concat(subs.map(function (k) {
+        return (resources[k] && resources[k].name) || k;
+      })).map(function (s) { return s.toLowerCase(); });
+      drainParts.push(perHour + ' ' + labels.join('/') + '/hr');
+    } else {
+      drainParts.push(perHour + ' ' + primaryName.toLowerCase() + '/hr');
+    }
   });
 
   var headerExtras = [];
@@ -195,16 +205,14 @@ function renderHousingTierBlock(tier, cfg, demands) {
   }
 
   if (lifestyleRows.length > 0) {
-    var subsMap = state.lifestyleSubstitutes || {};
     var goodSegs = lifestyleRows.map(function (d) {
       var name = (state.resources && state.resources[d.resource_key] && state.resources[d.resource_key].name) || d.resource_key;
       var subs = subsMap[d.resource_key] || [];
-      var safeName = escapeHtml(name);
-      if (subs.length === 0) return safeName;
-      var subNames = subs.map(function (k) {
+      if (subs.length === 0) return escapeHtml(name);
+      var allNames = [name].concat(subs.map(function (k) {
         return (state.resources && state.resources[k] && state.resources[k].name) || k;
-      });
-      return safeName + ' <span class="help-sub">(or ' + escapeHtml(subNames.join(' / ')) + ')</span>';
+      }));
+      return '<span class="help-group">any of ' + escapeHtml(allNames.join(' / ')) + '</span>';
     });
     html += '<div class="help-tier-line"><i>Lifestyle goods (must stay in stock):</i> ' + goodSegs.join(' + ') + '</div>';
   }
