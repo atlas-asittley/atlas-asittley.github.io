@@ -286,7 +286,10 @@ function loadGameData() {
     // gate against the building's own buffer rather than city stock.
     sb.from('building_resource_buffers')
       .select('building_id, resource_key, quantity, capacity')
-      .range(0, 9999)
+      .range(0, 9999),
+    // Acceptable substitutes for lifestyle demands (bread accepts
+    // spices/caviar/spirits, etc.). Mirrors the server upgrade gate.
+    sb.from('lifestyle_substitutes').select('*')
   ]).then(function (results) {
     state.buildingTypes = {};
     if (results[0].data) results[0].data.forEach(function (bt) { state.buildingTypes[bt.key] = bt; });
@@ -433,6 +436,17 @@ function loadGameData() {
           quantity: Number(b.quantity),
           capacity: Number(b.capacity),
         };
+      });
+    }
+
+    // Lifestyle substitutes (primary_key → [substitute_key, ...]).
+    // Mirrors the server's upgrade gate — a demand is satisfied by
+    // the primary OR any substitute.
+    state.lifestyleSubstitutes = {};
+    if (results[13] && results[13].data) {
+      results[13].data.forEach(function (r) {
+        if (!state.lifestyleSubstitutes[r.primary_key]) state.lifestyleSubstitutes[r.primary_key] = [];
+        state.lifestyleSubstitutes[r.primary_key].push(r.substitute_key);
       });
     }
 

@@ -49,6 +49,7 @@ export var state = {
   traders: {},           // trader_key -> trader row
   traderQuotas: {},      // trader_key -> resource_key -> {buy_cap, buy_used, sell_cap, sell_used}
   housingLifestyleDemands: {},  // tier -> [{resource_key, qty_per_minute}]
+  lifestyleSubstitutes: {},     // primary_key -> [substitute_key, ...]
   buildingResourceCosts: {},    // building_type_key -> [{resource_key, quantity}]
   allTraderPrices: {},   // trader_key -> { resource_key -> { buy_price, sell_price } }
   traderPrices: {},      // resource_key -> { buy_price, sell_price } (selected trader, for policy display)

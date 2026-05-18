@@ -162,7 +162,7 @@ export function getHousingUpgradeBlockers(building, tierCfg) {
   var demands = state.housingLifestyleDemands && state.housingLifestyleDemands[tierCfg.tier];
   if (demands) {
     demands.forEach(function (d) {
-      if ((state.inventory[d.resource_key] || 0) <= 0) {
+      if (!_lifestyleDemandSatisfied(d.resource_key)) {
         blockers.push('lifestyle:' + d.resource_key);
       }
     });
@@ -272,6 +272,10 @@ export function describeDevolveReason(key) {
   if (key.indexOf('lifestyle:') === 0) {
     var rk = key.slice('lifestyle:'.length);
     var name = (state.resources && state.resources[rk] && state.resources[rk].name) || rk;
+    var subs = _substituteNames(rk);
+    if (subs.length > 0) {
+      return 'ran out of ' + name + ' and all substitutes (' + subs.join(' / ') + ') in its pantry';
+    }
     return 'ran out of ' + name + ' in its pantry';
   }
   return 'an unspecified gate failed';
@@ -290,9 +294,29 @@ export function describeUpgradeBlocker(key) {
   if (key.indexOf('lifestyle:') === 0) {
     var rk = key.slice('lifestyle:'.length);
     var name = (state.resources && state.resources[rk] && state.resources[rk].name) || rk;
+    var subs = _substituteNames(rk);
+    if (subs.length > 0) {
+      return name + ' (or any of ' + subs.join(' / ') + ') in stock';
+    }
     return name + ' in stock (this tier consumes it ongoingly)';
   }
   return key;
+}
+
+function _lifestyleDemandSatisfied(primary) {
+  if ((state.inventory[primary] || 0) > 0) return true;
+  var subs = (state.lifestyleSubstitutes && state.lifestyleSubstitutes[primary]) || [];
+  for (var i = 0; i < subs.length; i++) {
+    if ((state.inventory[subs[i]] || 0) > 0) return true;
+  }
+  return false;
+}
+
+function _substituteNames(primary) {
+  var subs = (state.lifestyleSubstitutes && state.lifestyleSubstitutes[primary]) || [];
+  return subs.map(function (k) {
+    return (state.resources && state.resources[k] && state.resources[k].name) || k;
+  });
 }
 
 // Issues: consolidated list of reasons this building isn't operational.
