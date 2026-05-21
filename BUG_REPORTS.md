@@ -209,10 +209,10 @@ produces.
   (booster/extractor adjacency, desirability falloff, crime spread)
   remain Manhattan — those model walking and influence diffusion, where
   Manhattan is correct.
-- `<v2 commit>` (citybuilder-game / v2) — `hasNearbyService` in
+- `7ffcb35` (citybuilder-game / v2) — `hasNearbyService` in
   `src/scenes/housing.js` switched to the same Chebyshev formula so
   the inspector's blocker text agrees with the server gate.
-- `<v1 commit>` (citybuilder) — two new tests in
+- `c63b873` (citybuilder) — two new tests in
   `tests/db/test_citizen_services.py`:
   `test_school_uses_chebyshev_distance` (dx=2, dy=4 → Manhattan=6,
   Chebyshev=4: must upgrade) and
@@ -266,7 +266,7 @@ trade is unlocked you can import any input from a partner city, so the
 guardrail no longer applies.
 
 **Fix:**
-- `<v2 commit>` (citybuilder-game / v2) — `BuildTabPanel.renderBuildTab`
+- `49b7358` (citybuilder-game / v2) — `BuildTabPanel.renderBuildTab`
   now gates the producibility filter on `!state.profile.trade_unlocked`.
   Pre-trade tutorial players still get the bakery-without-grain
   guard; everyone else sees every building they own the industry tag
@@ -296,7 +296,7 @@ coverage) had the same delay: `_updatePlacementAoe` only ran from
 pointermove, so the coverage diamond didn't appear until after a hover.
 
 **Fix:**
-- `<v2 commit>` (citybuilder-game / v2) — new `_seedPlacementGhost`
+- `11f1d33` (citybuilder-game / v2) — new `_seedPlacementGhost`
   helper called at the end of `setPlacementMode`. Seeds the ghost
   at the current cursor (if it's over the canvas) or the camera
   center as a mobile-safe fallback, and runs `_updatePlacementAoe`
