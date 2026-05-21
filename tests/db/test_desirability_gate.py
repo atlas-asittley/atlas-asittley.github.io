@@ -218,3 +218,45 @@ def test_desirability_credits_chebyshev_close_services(make_player, place, cur, 
         "should have contributed +5; if 45 or less, the desirability calc "
         "is still using Manhattan and excluding the school."
     )
+
+
+# ── Tax-office desirability penalty is uncapped (2026-05-20) ────
+# Each tax office costs -3 desirability; past the old cap of -15 at
+# five offices the additional offices were free, which made spamming
+# them cost-neutral. Penalty now scales linearly with no cap.
+
+def test_tax_office_penalty_scales_past_five(make_player, place, cur, clear_resources):
+    """Six tax offices should drop city_base by 18 (6×3), not 15 (the
+    old cap). With no services on a fresh parcel, desirability ≈
+    city_base − pollution; placing six tax offices should knock the
+    tile readout below where five offices would have left it."""
+    _enable_gate(cur)
+    p = make_player(industry='timber')
+    clear_resources(p['id'])
+    _set_money(cur, p['id'], 200000)
+    hx, hy = p['home_x'], p['home_y']
+
+    # Tax offices are 2×2, so space them by 2 tiles to avoid footprint
+    # overlap. Skip the column on the vertical road cross.
+    OFFSETS = [-7, -5, -3, 1, 3, 5]   # six x-offsets avoiding x=hx (road)
+    for dx in OFFSETS[:5]:
+        place('tax_man', hx + dx, hy + 3)
+    cur.execute("SELECT public._pp_update_desirability(%s)", (str(p['id']),))
+    cur.execute("""SELECT desirability FROM public.map_tiles
+                   WHERE owner_player_id = %s AND x = %s AND y = %s""",
+                (str(p['id']), hx + 1, hy + 7))
+    des_5 = cur.fetchone()[0]
+
+    # Add a sixth tax office — under the old capped formula this would
+    # have been free. Under the new uncapped formula, -3 more.
+    place('tax_man', hx + OFFSETS[5], hy + 3)
+    cur.execute("SELECT public._pp_update_desirability(%s)", (str(p['id']),))
+    cur.execute("""SELECT desirability FROM public.map_tiles
+                   WHERE owner_player_id = %s AND x = %s AND y = %s""",
+                (str(p['id']), hx + 5, hy + 5))
+    des_6 = cur.fetchone()[0]
+
+    assert des_6 == des_5 - 3, (
+        f"6th tax office should cost -3 desirability (was {des_5}, now {des_6}); "
+        "if equal, the -15 cap is still in place"
+    )
