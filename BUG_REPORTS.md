@@ -379,3 +379,31 @@ returning the correct \$60,225 the whole time.
   for anyone interacting with the panel.
 
 (Resolution for #1 is `0b4614f` from earlier the same day.)
+
+---
+
+## 2026-05-21 — Drew — "the economy is based so much on bread"
+
+**Reported:** 22:05 UTC. Filed as a bug; really design feedback.
+
+**Description (verbatim):**
+> The economy is based so much on bread. Jill buys so much bread just
+> to keep her housing up. We should balance that out more
+
+**Audit:**
+At the time of the report, Jill's 95 houses (5 tier-3, 21 tier-4, 38
+tier-5, 12 tier-6, 9 tier-7, 10 tier-8) drained **26.88 bread/min**
+≈ 1,612/hour. Buying at the cheapest import price ($14/unit) that's
+$376/min — about **14% of her gross tax revenue** going to bread
+alone. Drew's instinct was right.
+
+**Fix:**
+- `halve_bread_demand.sql` — `UPDATE housing_lifestyle_demands SET
+  qty_per_minute = qty_per_minute * 0.5 WHERE resource_key = 'bread'`.
+  Per-tier rates were 0.05 / 0.075 / 0.10 / 0.125 / 0.15 / 0.175 at
+  tiers 3–8; halved across the board. Substitutes (spices / caviar /
+  spirits) still apply at the new lower rate.
+
+No code commit — pure data migration. The next process_production
+tick uses the new rates; pantry buffers naturally refill faster as a
+side effect.
