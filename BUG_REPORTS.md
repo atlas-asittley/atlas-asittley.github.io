@@ -176,3 +176,129 @@ instead of the actual `1149/1291` (15 floor + 27×24 + 17×34 + 1×50).
   and stashed on `state.laborInfo.housingCapacity` so other consumers
   can re-use. 5 new vitest cases (floor, tutorial, road requirement,
   tier-0 shanty without road, foreign/inactive filter).
+
+---
+
+## 2026-05-19 — Jill — "townhouses say no operating school despite schools within 5 tiles"
+
+**Reported:** 2026-05-18 23:25 UTC.
+
+**Description (verbatim):**
+> Townhouses indicate there is not an operating school, but both have
+> schools within 5 tiles so should qualify to upgrade.
+
+**Diagnosis:**
+Jill's two tier-3 townhouses at (-16, 45) and (-14, 51) each had her
+school at (-18, 49) sitting **Manhattan distance 6** away (`|dx|+|dy| =
+2+4`) but **Chebyshev distance 4** (`max(|dx|,|dy|) = 4`). The server
+gate in `_pp_evolve_housing` used Manhattan (`ABS(b2.x-v_house.x) +
+ABS(b2.y-v_house.y) <= 5`), so Manhattan=6 fell just outside the cap
+even though the school was visibly only 4 tiles away on the map. The
+same Manhattan check was also in `has_well_access` (range 4) and the
+frontend mirror `hasNearbyService` (`src/scenes/housing.js:220`).
+Player intuition for "within N tiles" matches Chebyshev (king's-move)
+distance — a 5×5 square around the building — not the diamond Manhattan
+produces.
+
+**Fix:**
+- `service_proximity_chebyshev.sql` (city-builder-mvp / live DB) —
+  rewrote `has_well_access` and `_pp_evolve_housing` to use
+  `GREATEST(ABS(dx), ABS(dy))` for school (5), temple (6), bathhouse (4),
+  and well (4). Service coverage is now an N-tile square instead of an
+  N-tile diamond (~2.5× the area). Other Manhattan uses
+  (booster/extractor adjacency, desirability falloff, crime spread)
+  remain Manhattan — those model walking and influence diffusion, where
+  Manhattan is correct.
+- `<v2 commit>` (citybuilder-game / v2) — `hasNearbyService` in
+  `src/scenes/housing.js` switched to the same Chebyshev formula so
+  the inspector's blocker text agrees with the server gate.
+- `<v1 commit>` (citybuilder) — two new tests in
+  `tests/db/test_citizen_services.py`:
+  `test_school_uses_chebyshev_distance` (dx=2, dy=4 → Manhattan=6,
+  Chebyshev=4: must upgrade) and
+  `test_school_chebyshev_corner_still_excluded` (dy=6 alone: must NOT
+  upgrade) so the cap can't silently drop.
+
+---
+
+## 2026-05-19 — Jill — "clay industry buildings list no longer shows mosaic workshop"
+
+**Reported:** 2026-05-19 16:53 UTC.
+
+**Description (verbatim):**
+> The clay industry available buildings no longer shows a mosaic
+> workshop.
+
+**Diagnosis:**
+Same root cause as the next entry — see "no schools or temples in civic
+services" below. Mosaic Workshop is industry_key='clay' but its second
+input is `nails` (industry_key='iron'). After commit `f2080a3`
+(2026-05-15, v1-parity build tab) added a producibility filter on the
+input chain ("don't show a bakery if nobody in your industry can make
+grain"), any building whose declared inputs reached across industries
+got silently dropped from the menu. Trade is the explicit mechanism for
+bringing in cross-industry inputs, so the filter was overzealous for
+trade-unlocked players.
+
+**Fix:** see entry below — shared fix.
+
+---
+
+## 2026-05-19 — Jill — "no schools or temples in civic services"
+
+**Reported:** 2026-05-19 20:52 UTC.
+
+**Description (verbatim):**
+> There are no schools or temples that are available in the civic
+> services buildings to build.
+
+**Diagnosis:**
+For Jill (clay industry), the school's inputs (lumber + flour) and
+temple's inputs (statuary + brick) are all produced by other industries
+(timber / iron / stone). The producibility filter at
+`src/ui/bottompanel/BuildTabPanel.js:120-121`, added in `f2080a3` to
+catch a bakery-without-grain misplacement, was unconditional — so for
+trade-unlocked players any cross-industry-input building (school,
+temple, bathhouse, tavern, mosaic_workshop, brewery, etc.) silently
+disappeared from the menu. The filter's design intent ("you can't
+make bread if you have no grain") was an early-game guardrail; once
+trade is unlocked you can import any input from a partner city, so the
+guardrail no longer applies.
+
+**Fix:**
+- `<v2 commit>` (citybuilder-game / v2) — `BuildTabPanel.renderBuildTab`
+  now gates the producibility filter on `!state.profile.trade_unlocked`.
+  Pre-trade tutorial players still get the bakery-without-grain
+  guard; everyone else sees every building they own the industry tag
+  for (or that's 'common'). Also fixes the mosaic-workshop dropout
+  reported the same day (see entry above).
+
+---
+
+## 2026-05-19 — Jill — "placement preview squares don't appear"
+
+**Reported:** 2026-05-19 20:53 UTC.
+
+**Description (verbatim):**
+> When you purchase a new type of building or road, the squares to
+> indicate the available spaces to place it do not show.
+
+**Diagnosis:**
+`MainScene.setPlacementMode` created the ghost sprite at world (0, 0)
+and only repositioned it on the next `pointermove` event. On mobile
+there is no pointermove between selecting a building and the first
+map-tap, so the ghost sat far off-screen at the world origin until
+after the first placement attempt — looking to the player like "no
+preview." On desktop the gap was shorter (any cursor motion fixed it)
+but still visible if the player clicked the build tab via keyboard or
+without moving the mouse. The AoE preview (police / park / booster
+coverage) had the same delay: `_updatePlacementAoe` only ran from
+pointermove, so the coverage diamond didn't appear until after a hover.
+
+**Fix:**
+- `<v2 commit>` (citybuilder-game / v2) — new `_seedPlacementGhost`
+  helper called at the end of `setPlacementMode`. Seeds the ghost
+  at the current cursor (if it's over the canvas) or the camera
+  center as a mobile-safe fallback, and runs `_updatePlacementAoe`
+  immediately so the coverage overlay paints on the same frame the
+  player selects the building.

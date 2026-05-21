@@ -249,3 +249,79 @@ def test_unfed_bathhouse_does_not_block_devolve(make_player, place, cur, clear_r
     _tick_and_upgrade_all(cur)
     cur.execute("SELECT housing_tier FROM public.buildings WHERE id = %s", (house_id,))
     assert cur.fetchone()[0] == 2, "unfed bathhouse should not have prevented devolve from 3 to 2"
+
+
+# ── Chebyshev proximity (2026-05-20) ────────────────────────────
+# A school 2 right + 4 up from a townhouse is at Manhattan 6, Chebyshev
+# 4. Under the old Manhattan gate the upgrade was silently refused (Jill
+# bug 7df760b0). Under Chebyshev (king's-move) the school covers an
+# 11×11 square, and the townhouse upgrades.
+
+def test_school_uses_chebyshev_distance(make_player, place, cur, clear_resources):
+    """Townhouse at +2,+4 from a school: Manhattan=6, Chebyshev=4. Was
+    blocked; should now upgrade since the gate is Chebyshev <= 5."""
+    p = make_player()
+    clear_resources(p['id'])
+    _give_money(cur, p['id'])
+    hx, hy = p['home_x'], p['home_y']
+    place('well', hx + 2, hy + 1)
+    house_id = place('house', hx + 1, hy + 2)['building_id']
+    cur.execute("UPDATE public.buildings SET housing_tier = 3 WHERE id = %s", (house_id,))
+    # School 2 right + 4 up from the house → Manhattan 6 (out), Chebyshev 4 (in).
+    # School needs road access to be staffed; conftest stamps a cross at
+    # (hx, *) and (*, hy) — neither touches (hx+3, hy+6), so extend a
+    # branch east from the vertical cross to give the school a perimeter road.
+    place('road', hx + 1, hy + 5)
+    place('road', hx + 2, hy + 5)
+    place('road', hx + 3, hy + 5)
+    place('school', hx + 3, hy + 6)
+    _give_lots_of_workers(cur, p['id'])
+    _stock(cur, p['id'], 'grain', 10.0)
+    _stock(cur, p['id'], 'pottery', 10.0)
+    _stock(cur, p['id'], 'bread', 10.0)
+    _stock(cur, p['id'], 'furniture', 10.0)
+    _stock(cur, p['id'], 'lumber', 5.0)
+    _stock(cur, p['id'], 'flour', 5.0)
+    _backdate(cur, p['id'], 240)
+
+    _tick_and_upgrade_all(cur)
+    cur.execute("SELECT housing_tier FROM public.buildings WHERE id = %s", (house_id,))
+    assert cur.fetchone()[0] == 4, (
+        "townhouse at Chebyshev=4 from a fed school failed to upgrade — "
+        "the proximity check should be Chebyshev, not Manhattan"
+    )
+
+
+def test_school_chebyshev_corner_still_excluded(make_player, place, cur, clear_resources):
+    """Chebyshev cap is still 5: a school 6 tiles away (max axis) is out
+    of range. Guards against accidentally turning the gate off."""
+    p = make_player()
+    clear_resources(p['id'])
+    _give_money(cur, p['id'])
+    hx, hy = p['home_x'], p['home_y']
+    # Well must be within Chebyshev=4 of the house so the tier-3 well
+    # gate keeps holding (otherwise the house devolves before we can see
+    # whether the school covers it).
+    place('well', hx + 2, hy + 6)
+    house_id = place('house', hx + 1, hy + 7)['building_id']
+    cur.execute("UPDATE public.buildings SET housing_tier = 3 WHERE id = %s", (house_id,))
+    # School at (hx-3, hy+1): from house (hx+1, hy+7) the deltas are
+    # dx=-4, dy=-6 → Chebyshev=6, just outside the cap. The school's
+    # 2×2 footprint sits clear of the starter buildings and its top edge
+    # rests on the horizontal cross at y=hy, so it gets road access free.
+    place('school', hx - 3, hy + 1)
+    _give_lots_of_workers(cur, p['id'])
+    _stock(cur, p['id'], 'grain', 10.0)
+    _stock(cur, p['id'], 'pottery', 10.0)
+    _stock(cur, p['id'], 'bread', 10.0)
+    _stock(cur, p['id'], 'furniture', 10.0)
+    _stock(cur, p['id'], 'lumber', 5.0)
+    _stock(cur, p['id'], 'flour', 5.0)
+    _backdate(cur, p['id'], 240)
+
+    _tick_and_upgrade_all(cur)
+    cur.execute("SELECT housing_tier FROM public.buildings WHERE id = %s", (house_id,))
+    assert cur.fetchone()[0] == 3, (
+        "school at Chebyshev=6 should NOT cover the townhouse — gate must "
+        "still be bounded to <= 5"
+    )
