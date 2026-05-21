@@ -302,3 +302,42 @@ pointermove, so the coverage diamond didn't appear until after a hover.
   center as a mobile-safe fallback, and runs `_updatePlacementAoe`
   immediately so the coverage overlay paints on the same frame the
   player selects the building.
+
+---
+
+## 2026-05-21 — Jill — "expanded 4th parcel, charged but no new parcel" + "new parcel squares say not mine"
+
+**Reported:** 2026-05-21 10:25 UTC (4th parcel, no parcel shown) and 15:26 UTC (5th parcel, some squares wrong). Both from iPhone Safari.
+
+**Description (verbatim):**
+> I expanded to a 4th parcel and it charged me the money, but does not show another parcel.
+
+> I expanded my parcel to the parcel above mine, but certain squares inside my new parcel indicate they are not mine to build on even though they are within my parcel.
+
+**Diagnosis:**
+Same root cause. `fetchTileMap` in `src/state/loader.js` did a single
+`sb.from('map_tiles').select(...).eq('owner_player_id', uid)` with no
+pagination. PostgREST's default 1000-row cap silently dropped every
+tile past the first 1000. With 5 parcels × 225 tiles = 1125 tiles,
+the last 125 tiles never made it into `state.tileMap`. The FE then
+treated those tiles as wilderness — UI showed them outside the
+player's parcel boundary; `place_building` checks (`tile.owner === me`)
+failed on the FE side ("not in your parcel"). Server allocation +
+ledger were correct the whole time; the bug was purely client-side
+display.
+
+Bug #1 (4th parcel "doesn't show") at 900 tiles was below the hard
+cap. It still surfaced once, probably a slower mobile fetch returning
+fewer than the full 900 — could be a Supabase JS client pagination
+quirk on smaller default page sizes for some connections. The
+pagination fix resolves both cases.
+
+Same bug class as Max's "half her parcel missing" earlier this year
+(audit 2026-05-09); `fetchAllBuildings` was already paginated then,
+but `fetchTileMap` was missed.
+
+**Fix:**
+- `0b4614f` (citybuilder-game / v2) — paginate `fetchTileMap` in
+  loops of 1000 rows ordered by id, mirroring the existing
+  `fetchAllBuildings` pattern. No FE state changes; the next page
+  reload picks up every tile.
