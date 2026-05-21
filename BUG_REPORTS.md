@@ -341,3 +341,41 @@ but `fetchTileMap` was missed.
   loops of 1000 rows ordered by id, mirroring the existing
   `fetchAllBuildings` pattern. No FE state changes; the next page
   reload picks up every tile.
+
+---
+
+## 2026-05-21 — Drew — "new parcel renders wrong colors" + "I only see Jill pledging \$25"
+
+**Reported:** 22:02 UTC and 22:03 UTC, both from Android Chrome (Trade > Contracts tab open).
+
+**Description (verbatim):**
+> I just bought a parcel, but I don't see it the same colors as my other parcels
+
+> I still only see Jill pledging \$25, but she pledge much more
+
+**Diagnosis (#1, parcel colors):**
+Duplicate root cause of Jill bcd4939d/43933d0b — the same morning.
+Drew bought his 5th parcel (1125 tiles), `fetchTileMap` was running
+the pre-pagination bundle, the 1000-row PostgREST cap dropped the
+last 125 tiles of his new parcel, and the FE rendered them as
+wilderness. The fix shipped in `0b4614f` at 15:00 UTC; Drew's bug
+filed at 22:02 UTC was against the bundle his browser had cached at
+expand time. Reloading picks up the paginated loader.
+
+**Diagnosis (#2, Jill's stake stuck at \$25):**
+`SupplyContractsTab` cached the `list_supply_contracts()` response at
+module scope and only invalidated the cache when the LOCAL player
+contributed or withdrew. Other players' pledges never triggered Drew's
+client to refetch, so his view stayed pinned at Jill's first \$25
+pledge for ~7 hours while she pushed her stake past \$60k. This was a
+pure visibility bug — server-side `list_supply_contracts()` was
+returning the correct \$60,225 the whole time.
+
+**Fix:**
+- `0f07646` (citybuilder-game / v2) — added a 5-second TTL on
+  the contracts cache with stale-while-revalidate. Combined with the
+  existing 30s tick refresh of the bottom panel, other players'
+  activity now lands within 30s for a passive viewer and within 5s
+  for anyone interacting with the panel.
+
+(Resolution for #1 is `0b4614f` from earlier the same day.)
