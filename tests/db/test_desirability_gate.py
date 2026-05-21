@@ -169,3 +169,52 @@ def test_devolve_does_not_fire_in_hysteresis_band(make_player, place, cur, clear
 
     cur.execute("SELECT housing_tier FROM public.buildings WHERE id = %s", (house_id,))
     assert cur.fetchone()[0] == 2, 'should NOT devolve in hysteresis band (25 ≥ 40-30)'
+
+
+# ── Chebyshev service coverage in the desirability formula ──────
+# Companion to the housing-gate Chebyshev switch (2026-05-20). The
+# desirability formula counts +5 per nearby staffed school within range
+# 5. A school at dx=2, dy=4 from a tile is Manhattan-6 (out under the
+# old formula) but Chebyshev-4 (in under the new). Jill's tier-3
+# townhouse at (-14, 51) sat at desirability 53 because of this exact
+# mismatch — 6 services were Chebyshev-close but Manhattan-out.
+
+def test_desirability_credits_chebyshev_close_services(make_player, place, cur, clear_resources):
+    """A staffed school at dx=2, dy=4 should contribute +5 to the tile's
+    desirability. Manhattan=6 (would be excluded), Chebyshev=4 (included).
+    """
+    _enable_gate(cur)
+    p = make_player(industry='timber')
+    clear_resources(p['id'])
+    _set_money(cur, p['id'], 50000)
+    hx, hy = p['home_x'], p['home_y']
+
+    # Tile under test: (hx+1, hy+2). School at (hx+3, hy+6) — diagonals
+    # of 2 and 4 → Manhattan=6, Chebyshev=4. The school's 2×2 footprint
+    # is clear of the road cross; lay a stub road to give it perimeter
+    # access so it staffs.
+    place('road', hx + 1, hy + 5)
+    place('road', hx + 2, hy + 5)
+    place('road', hx + 3, hy + 5)
+    place('school', hx + 3, hy + 6)
+    # Inputs so the school operates (and stays staffed) when the next
+    # _pp_update_desirability run reads is_staffed.
+    cur.execute("INSERT INTO public.inventories (player_id, resource_key, quantity) VALUES (%s, 'lumber', 50) ON CONFLICT (player_id, resource_key) DO UPDATE SET quantity = 50", (str(p['id']),))
+    cur.execute("INSERT INTO public.inventories (player_id, resource_key, quantity) VALUES (%s, 'flour',  50) ON CONFLICT (player_id, resource_key) DO UPDATE SET quantity = 50", (str(p['id']),))
+
+    # Run a tick so the school gets staffed.
+    cur.execute("SELECT public.process_production()")
+
+    # Read the tile under test.
+    cur.execute("""SELECT desirability FROM public.map_tiles
+                   WHERE owner_player_id = %s AND x = %s AND y = %s""",
+                (str(p['id']), hx + 1, hy + 2))
+    desirability = cur.fetchone()[0]
+    # The +5 school credit + tile city_base puts it well above the
+    # Manhattan-only floor; assert at least the +5 came through.
+    # (No other staffed services exist in the test layout.)
+    assert desirability >= 50, (
+        f"desirability {desirability} too low — school at Chebyshev=4 "
+        "should have contributed +5; if 45 or less, the desirability calc "
+        "is still using Manhattan and excluding the school."
+    )
