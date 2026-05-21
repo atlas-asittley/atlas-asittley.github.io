@@ -71,7 +71,7 @@ def test_grain_farm_produces_grain_at_flat_rate(make_player, place, stamp_food_t
     cur.execute("SELECT quantity FROM public.inventories WHERE player_id = %s AND resource_key = 'grain'",
                 (str(p['id']),))
     grain = float(cur.fetchone()[0])
-    assert 1.5 < grain < 2.5, f"grain_farm expected ~2 grain/min flat-rate, got {grain}"
+    assert 3.5 < grain < 4.5, f"grain_farm expected ~4 grain/min flat-rate, got {grain}"
 
 
 def test_iron_mine_produces_iron(make_player, place, cur, clear_resources):

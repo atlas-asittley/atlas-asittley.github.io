@@ -96,7 +96,7 @@ def test_orchard_produces_berries_at_flat_rate(make_player, place, stamp_food_ti
     cur.execute("SELECT quantity FROM public.inventories WHERE player_id = %s AND resource_key = 'berries'",
                 (str(p['id']),))
     berries = float(cur.fetchone()[0])
-    assert 1.5 < berries < 2.5, f"orchard expected ~2 berries/min, got {berries}"
+    assert 3.5 < berries < 4.5, f"orchard expected ~4 berries/min, got {berries}"
 
 
 def test_fishing_pier_produces_fish(make_player, place, stamp_food_tile, cur, clear_resources):
@@ -113,7 +113,7 @@ def test_fishing_pier_produces_fish(make_player, place, stamp_food_tile, cur, cl
     cur.execute("SELECT quantity FROM public.inventories WHERE player_id = %s AND resource_key = 'fish'",
                 (str(p['id']),))
     fish = float(cur.fetchone()[0])
-    assert 1.5 < fish < 2.5, f"fishing pier expected ~2 fish/min, got {fish}"
+    assert 3.5 < fish < 4.5, f"fishing pier expected ~4 fish/min, got {fish}"
 
 
 # ── food extractor needs road access ─────────────────────────

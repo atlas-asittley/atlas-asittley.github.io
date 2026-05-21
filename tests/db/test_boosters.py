@@ -170,8 +170,8 @@ def test_food_booster_boosts_adjacent_food_extractor(make_player, place, stamp_f
     cur.execute("SELECT quantity FROM public.inventories WHERE player_id = %s AND resource_key = 'berries'",
                 (str(p['id']),))
     boosted = float(cur.fetchone()[0])
-    # orchard rate 2/min, +25% = 2.5/min, in 60s ≈ 2.5 berries
-    assert boosted > 2.4, f"orchard with apiary should produce >2.4 berries/min, got {boosted}"
+    # orchard rate 4/min, +25% = 5/min, in 60s ≈ 5 berries
+    assert boosted > 4.8, f"orchard with apiary should produce >4.8 berries/min, got {boosted}"
 
 
 def test_resource_booster_does_not_boost_food_extractor(make_player, place, stamp_food_tile, cur, clear_resources):
@@ -190,9 +190,9 @@ def test_resource_booster_does_not_boost_food_extractor(make_player, place, stam
     cur.execute("SELECT quantity FROM public.inventories WHERE player_id = %s AND resource_key = 'berries'",
                 (str(p['id']),))
     yield_ = float(cur.fetchone()[0])
-    # No boost — should be exactly ~2 (orchard's base rate, no multiplier)
-    assert 1.8 < yield_ < 2.2, \
-        f"resource booster shouldn't boost food extractor; got {yield_} (expected ~2)"
+    # No boost — should be exactly ~4 (orchard's base rate, no multiplier)
+    assert 3.8 < yield_ < 4.2, \
+        f"resource booster shouldn't boost food extractor; got {yield_} (expected ~4)"
 
 
 def test_out_of_range_booster_doesnt_apply(make_player, place, stamp_food_tile, cur, clear_resources):
@@ -212,7 +212,7 @@ def test_out_of_range_booster_doesnt_apply(make_player, place, stamp_food_tile, 
     cur.execute("SELECT quantity FROM public.inventories WHERE player_id = %s AND resource_key = 'berries'",
                 (str(p['id']),))
     yield_ = float(cur.fetchone()[0])
-    assert 1.8 < yield_ < 2.2, f"out-of-range booster should not boost; got {yield_}"
+    assert 3.8 < yield_ < 4.2, f"out-of-range booster should not boost; got {yield_}"
 
 
 def test_unstaffed_booster_doesnt_apply(make_player, place, stamp_food_tile, cur, clear_resources):
@@ -232,7 +232,7 @@ def test_unstaffed_booster_doesnt_apply(make_player, place, stamp_food_tile, cur
     cur.execute("SELECT quantity FROM public.inventories WHERE player_id = %s AND resource_key = 'berries'",
                 (str(p['id']),))
     yield_ = float(cur.fetchone()[0])
-    assert 1.8 < yield_ < 2.2, f"paused booster should not apply; got {yield_}"
+    assert 3.8 < yield_ < 4.2, f"paused booster should not apply; got {yield_}"
 
 
 def test_two_boosters_dont_stack(make_player, place, stamp_food_tile, cur, clear_resources):
@@ -253,5 +253,6 @@ def test_two_boosters_dont_stack(make_player, place, stamp_food_tile, cur, clear
     cur.execute("SELECT quantity FROM public.inventories WHERE player_id = %s AND resource_key = 'berries'",
                 (str(p['id']),))
     yield_ = float(cur.fetchone()[0])
-    # Single 1.25x = ~2.5 berries; stacked 1.5625x would be ~3.125. Should stay at ~2.5.
-    assert 2.4 < yield_ < 2.7, f"two boosters should not stack — got {yield_} (expected ~2.5)"
+    # Single 1.25x = ~5 berries (4 × 1.25); stacked 1.5625x would be
+    # ~6.25. Should stay at ~5.
+    assert 4.8 < yield_ < 5.3, f"two boosters should not stack — got {yield_} (expected ~5)"
