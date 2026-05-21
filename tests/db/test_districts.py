@@ -105,17 +105,99 @@ def test_expansion_candidates_includes_own_row_edges(make_player, cur, as_user):
     assert (-1, pr) in cands, f"missing left-edge candidate: cands={cands}"
 
 
-def test_expansion_candidates_excludes_other_players_reserved_rows(make_player, cur, as_user):
-    """A player cannot claim chunks in someone else's reserved row."""
+def test_expansion_candidates_ignore_reserved_row(make_player, cur, as_user):
+    """Pre-2026-05-21 each player was locked to their reserved row by
+    a filter that excluded chunks on other players' rows. Now
+    candidates only filter on actual ownership — a player can expand
+    in any of the four cardinal directions as long as the target chunk
+    is unclaimed."""
+    p = make_player()
+    # Give p a second chunk in a fresh, isolated region of the world
+    # so we have a clean 4-neighbor pattern to verify against (other
+    # historical / parallel test players might already own (0, row±1)).
+    SEED_X, SEED_Y = 999, 999
+    cur.execute("""INSERT INTO public.district_chunks (chunk_x, chunk_y, owner_player_id)
+                   VALUES (%s, %s, %s)""", (SEED_X, SEED_Y, str(p['id'])))
+    as_user(p['id'])
+    cur.execute("SELECT chunk_x, chunk_y FROM public.expansion_candidates(%s)", (str(p['id']),))
+    cands = set((r[0], r[1]) for r in cur.fetchall())
+    # All four orthogonal neighbors should appear, including the ones
+    # on different rows than p's reserved_row. Before the migration the
+    # vertical pair (above/below) would be filtered.
+    assert (SEED_X + 1, SEED_Y) in cands
+    assert (SEED_X - 1, SEED_Y) in cands
+    assert (SEED_X, SEED_Y + 1) in cands, "vertical candidate (above) missing — reserved_row filter still in play?"
+    assert (SEED_X, SEED_Y - 1) in cands, "vertical candidate (below) missing — reserved_row filter still in play?"
+
+
+def test_expand_district_refuses_to_box_a_player_in(make_player, cur, as_user):
+    """Reachability invariant: a claim that would leave another player
+    with zero expansion candidates is rejected. Constructs a tight
+    scenario in a remote part of the world (chunk coords ~1000) so the
+    surrounding chunks are guaranteed to be unclaimed."""
     p1 = make_player()
     p2 = make_player()
-    cur.execute("SELECT reserved_row FROM public.player_profiles WHERE id = %s", (str(p2['id']),))
-    p2_row = cur.fetchone()[0]
+    cur.execute("UPDATE public.player_profiles SET money = 10000000 WHERE id IN (%s, %s)",
+                (str(p1['id']), str(p2['id'])))
+
+    # Work in a far-off region of the world so no existing test or live
+    # state collides with the chunks we're seeding.
+    VICTIM_X, VICTIM_Y = 1000, 1000
+    # Move p2's "owned" chunk count by giving them a single chunk at
+    # (VICTIM_X, VICTIM_Y). The starter at (0, p2_row) still exists but
+    # is far away — the reachability check evaluates p2's candidates
+    # across ALL their owned chunks, but the (0, p2_row) cluster has
+    # plenty of room so it's not the binding constraint. To make the
+    # test deterministic, we instead REPLACE p2's chunks: delete the
+    # starter, give them only the victim chunk.
+    cur.execute("DELETE FROM public.district_chunks WHERE owner_player_id = %s", (str(p2['id']),))
+    cur.execute("""INSERT INTO public.district_chunks (chunk_x, chunk_y, owner_player_id)
+                   VALUES (%s, %s, %s)""", (VICTIM_X, VICTIM_Y, str(p2['id'])))
+
+    # Now surround the victim chunk on three sides + give p1 a path-in
+    # to the fourth side. p2's only candidate becomes (VICTIM_X-1, VICTIM_Y).
+    for (cx, cy) in [
+        (VICTIM_X + 1, VICTIM_Y),        # east
+        (VICTIM_X,     VICTIM_Y + 1),    # north
+        (VICTIM_X,     VICTIM_Y - 1),    # south
+        (VICTIM_X - 1, VICTIM_Y + 1),    # NW — gives p1 access to (-1, victim_y)
+    ]:
+        cur.execute("""INSERT INTO public.district_chunks (chunk_x, chunk_y, owner_player_id)
+                       VALUES (%s, %s, %s)""", (cx, cy, str(p1['id'])))
+
+    cur.execute("SELECT COUNT(*) FROM public.expansion_candidates(%s)", (str(p2['id']),))
+    assert cur.fetchone()[0] == 1, "setup: p2 should have exactly 1 candidate"
+
     as_user(p1['id'])
-    cur.execute("SELECT chunk_x, chunk_y FROM public.expansion_candidates(%s)", (str(p1['id']),))
-    cands = [(r[0], r[1]) for r in cur.fetchall()]
-    for cx, cy in cands:
-        assert cy != p2_row, f"candidate {(cx, cy)} is in p2's reserved row {p2_row}"
+    # Claiming (VICTIM_X-1, VICTIM_Y) would leave p2 with 0 candidates → reject.
+    with pytest.raises(psycopg2.errors.RaiseException) as exc:
+        cur.execute("SELECT public.expand_district(%s, %s)", (VICTIM_X - 1, VICTIM_Y))
+    msg = str(exc.value).lower()
+    assert 'surround' in msg or 'box' in msg, f"expected boxing-in rejection, got: {exc.value}"
+
+
+def test_expand_district_allows_claim_when_target_player_has_other_options(make_player, cur, as_user):
+    """Inverse of the boxing-in test: when the target player still has
+    other escape routes, the claim succeeds."""
+    p1 = make_player()
+    p2 = make_player()
+    cur.execute("UPDATE public.player_profiles SET money = 10000000 WHERE id IN (%s, %s)",
+                (str(p1['id']), str(p2['id'])))
+
+    VICTIM_X, VICTIM_Y = 1100, 1100
+    cur.execute("DELETE FROM public.district_chunks WHERE owner_player_id = %s", (str(p2['id']),))
+    cur.execute("""INSERT INTO public.district_chunks (chunk_x, chunk_y, owner_player_id)
+                   VALUES (%s, %s, %s)""", (VICTIM_X, VICTIM_Y, str(p2['id'])))
+    # p1 owns only the chunk north of victim — three escape routes remain.
+    cur.execute("""INSERT INTO public.district_chunks (chunk_x, chunk_y, owner_player_id)
+                   VALUES (%s, %s, %s)""", (VICTIM_X, VICTIM_Y + 1, str(p1['id'])))
+    as_user(p1['id'])
+    cur.execute("SELECT public.expand_district(%s, %s)", (VICTIM_X + 1, VICTIM_Y + 1))
+    result = cur.fetchone()[0]
+    assert result is not None
+    # p2 must still have ≥ 2 candidates (E, W, S minus any p1 ate).
+    cur.execute("SELECT COUNT(*) FROM public.expansion_candidates(%s)", (str(p2['id']),))
+    assert cur.fetchone()[0] >= 2
 
 
 def test_expand_district_costs_money(make_player, cur, as_user):
