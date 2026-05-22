@@ -693,3 +693,23 @@ queued at 10:02 UTC, dismissed by Jill at 10:04 UTC. Jill subsequently
 demolished or repositioned the building; all 9 monuments in her city are
 staffed in the live DB as of auto-triage at ~10:40 UTC.
 
+
+---
+
+## 2026-05-22 — Jill — "city runway does not appear to be accurate. For instance, my runway currently indicates that I will run out of furniture in 29 minutes, but based on the math, I should have much longer"
+
+**Filed:** 2026-05-22 20:03 UTC (`a29cdcfc`)
+
+**Diagnosis:**
+`runway.js` used only the per-house pantry buffer stock for lifestyle goods
+(pottery, bread, furniture, statuary) when `buildingBuffers` was loaded,
+discarding city inventory entirely. Since the server refills pantries from
+city stock each tick, the correct effective reserve is pantry + city
+inventory + substitutes. Jill had 16,680 furniture in city stock and 335
+units across 110 house pantries (at full capacity); the FE was computing
+335 / 11.175 ≈ 29 min instead of 17,015 / 11.175 ≈ 1,523 min (~25h).
+
+**Fix:** `c0e9c12` — `src/state/runway.js`: always initialise stock from
+city inventory (+ substitutes), then add pantry on top when buffers are
+loaded. Updated the corresponding test which was asserting the wrong
+expected value. 18/18 tests pass.
