@@ -99,10 +99,11 @@ def test_buffer_extended_on_tier_upgrade(cur, make_player, place, clear_resource
     assert 'bread' in keys, "tier 3 added bread"
     assert 'pottery' in keys
     assert 'food' in keys
-    # Tier 3 rates: food 0.40/min, pottery 0.075/min, bread 0.05/min.
+    # Tier 3 rates: food 0.40/min, pottery 0.075/min, bread 0.025/min
+    # (bread halved 2026-05-21 — see halve_bread_demand migration).
     assert abs(keys['food'] - 0.40 * 30) < 0.01
     assert abs(keys['pottery'] - 0.075 * 30) < 0.01
-    assert abs(keys['bread'] - 0.05 * 30) < 0.01
+    assert abs(keys['bread'] - 0.025 * 30) < 0.01
 
 
 def test_buffer_shrinks_on_devolve(cur, make_player, place, clear_resources):
