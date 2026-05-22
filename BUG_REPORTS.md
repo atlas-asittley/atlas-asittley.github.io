@@ -668,3 +668,28 @@ URIs.
 - `eaab0d8` (citybuilder-game) — re-encoded all 5 new sprite URIs
   with `%` removed from the URL-quote safe set, so literal `%`
   becomes the correct `%25`.
+
+---
+
+## 2026-05-22 — Jill — "One of the monuments still shows unstaffed."
+
+**Filed:** 2026-05-22 09:49 UTC (`c1757cb8`)
+
+**Diagnosis:**
+The monument at tile (-14, 46) had no adjacent road tile — surrounded by
+park (top), house (right/bottom), and empty land (left).
+`has_road_access()` correctly returns false for buildings not touching a
+road, so the staffing loop skipped it. This is correct server behaviour,
+not a bug in the code.
+
+Note: the *civic-category staffing omission* (monuments never getting
+staffed regardless of road access) was a separate bug fixed earlier the
+same day by `civic_staffing_fix.sql`. This report was the follow-up after
+that patch, filed against a monument that still had no road.
+
+**Resolution:**
+No code change. Educational `feedback_prompts` row (`monument_road_access`)
+queued at 10:02 UTC, dismissed by Jill at 10:04 UTC. Jill subsequently
+demolished or repositioned the building; all 9 monuments in her city are
+staffed in the live DB as of auto-triage at ~10:40 UTC.
+
