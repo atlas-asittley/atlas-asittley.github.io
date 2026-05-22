@@ -110,6 +110,42 @@ def test_civic_bonus_decays_outside_radius(make_player, place, cur, clear_resour
     )
 
 
+def test_civic_buildings_auto_staff_through_process_production(make_player, place, cur, clear_resources):
+    """Regression: 2026-05-22 — `_pp_staff_buildings` had a hardcoded
+    category IN(...) list that omitted 'civic', so Public Garden /
+    Monument / Marketplace never flipped is_staffed=true, and every
+    effect that gates on staffing silently no-op'd.
+
+    This test drives the real staffing path (process_production) — it
+    must not hand-set is_staffed.
+    """
+    p = make_player()
+    clear_resources(p['id'])
+    _set_money(cur, p['id'], 100000)
+    _give_lots_of_workers(cur, p['id'])
+    hx, hy = p['home_x'], p['home_y']
+
+    # Place adjacent to the road column (clear_resources stamps a road
+    # cross at x=hx and y=hy). 2x2 garden at (hx+1, hy+1) → its left
+    # perimeter strip sits on x=hx, satisfying has_road_access.
+    place('public_garden', hx + 1, hy + 1)
+    # Sanity: a freshly placed civic building starts unstaffed.
+    cur.execute("""SELECT is_staffed FROM public.buildings
+                   WHERE player_id=%s AND building_type_key='public_garden'""",
+                (str(p['id']),))
+    assert cur.fetchone()[0] is False
+
+    cur.execute("SELECT public.process_production()")
+
+    cur.execute("""SELECT is_staffed FROM public.buildings
+                   WHERE player_id=%s AND building_type_key='public_garden'""",
+                (str(p['id']),))
+    assert cur.fetchone()[0] is True, (
+        'civic building must be staffed after process_production '
+        '(check that _pp_staff_buildings includes the civic category)'
+    )
+
+
 def test_monument_requires_tier_5_unlock(make_player, place, cur, clear_resources):
     """Monument is gated behind highest_housing_tier_ever ≥ 5. A fresh
     player whose watermark is 0 cannot place one."""
