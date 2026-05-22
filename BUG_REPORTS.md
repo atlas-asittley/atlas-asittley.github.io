@@ -503,3 +503,39 @@ rerender entirely, leaving the map stale until manual refresh.
 `ExpansionPanel.js`'s `onPickCandidate` success handler, before the
 caller's callback fires. The map now rerenders unconditionally on
 every successful parcel claim regardless of entry point.
+
+---
+
+## 2026-05-22 — Atlas — "feedback modal hidden under topbar + small gap above infobar"
+
+**Reported:** in chat. Both layout bugs.
+
+**Description (verbatim):**
+> the window that pops up for a response for bug reports is not aligned properly. part of it is covered by the top title bar.
+
+> there is a small gap between the title bar that tells me that I am in the timber industry, and the info bars above that
+
+**Diagnosis:**
+Two unrelated CSS bugs:
+
+1. `FeedbackPromptModal` mounts an overlay with `id="feedback-overlay"`,
+   but the only fixed/centered overlay rule in `styles.css` was scoped
+   to `#bug-overlay`. The modal fell into normal block flow at the top
+   of `<body>` and the `position:fixed` topbar overlapped it. Same root
+   cause as if I'd built the modal without any CSS at all.
+
+2. `#infobar` was positioned at `top: 74px` based on a comment that
+   assumed `box-sizing: content-box` and computed the topbar as
+   `2 × 36px content + 2 × 1px borders = 74px`. The global reset
+   `* { box-sizing: border-box; ... }` means `min-height: 28px`
+   already INCLUDES the padding, so the topbar's actual rendered
+   height is `2 × 28px + 2 × 1px = 58px`. The ~16px gap was exactly
+   the difference.
+
+**Fix:**
+- `ae94366` (citybuilder-game / v2) — extended the `#bug-overlay`
+  CSS rule selector to `#bug-overlay, #feedback-overlay` so the
+  feedback modal inherits its overlay styling. Moved `#infobar`
+  from `top: calc(74px + safe-area-inset)` to
+  `top: calc(58px + safe-area-inset)`. Updated two stale comments
+  referencing the old 74px constant.
