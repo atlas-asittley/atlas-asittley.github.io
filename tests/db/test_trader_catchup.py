@@ -115,7 +115,10 @@ def test_multiple_offline_visits_catch_up(make_player, cur):
 def test_catchup_records_separate_visit_rows(make_player, cur):
     """Each catch-up visit records its own row in trader_visits with a
     distinct visited_at, so the visit history reflects the conceptual
-    timeline rather than collapsing to one big row."""
+    timeline rather than collapsing to one big row.
+
+    Now driven through process_production (resolve_trader_visit was
+    dropped in big_bug_sweep_2026_05_20 as a security-hole orphan)."""
     p = make_player(industry='timber', display_name='visit_history')
     _act_as(cur, p['id'])
     _set_policy(cur, p['id'], 'timber', 'sell_surplus', 0)
@@ -123,14 +126,16 @@ def test_catchup_records_separate_visit_rows(make_player, cur):
     _backdate_profile(cur, p['id'], 35)  # ~3 visits due
     _delete_visits(cur, p['id'])
     _clear_quota(cur, 'river_traders', 'timber')
-    cur.execute("SELECT public.resolve_trader_visit('river_traders')")
+    cur.execute("SELECT public.process_production()")
     cur.execute("""SELECT count(*) FROM public.trader_visits
                    WHERE player_id = %s AND trader_key = 'river_traders'""",
                 (str(p['id']),))
     assert cur.fetchone()[0] >= 3
 
 
-def test_no_visits_due_returns_not_due(make_player, cur):
+def test_no_visits_resolved_when_not_due(make_player, cur):
+    """If the cooldown hasn't elapsed yet, process_production should not
+    record any river_traders visits."""
     p = make_player(industry='timber', display_name='not_due')
     _act_as(cur, p['id'])
     _set_policy(cur, p['id'], 'timber', 'sell_surplus', 0)
@@ -138,16 +143,17 @@ def test_no_visits_due_returns_not_due(make_player, cur):
     # Backdate only a few minutes — less than the 10 min interval.
     _backdate_profile(cur, p['id'], 3)
     _delete_visits(cur, p['id'])
-    cur.execute("SELECT public.resolve_trader_visit('river_traders')")
-    result = cur.fetchone()[0]
-    assert result['visit_resolved'] is False
-    assert result.get('reason') == 'not_due'
+    cur.execute("SELECT public.process_production()")
+    cur.execute("""SELECT count(*) FROM public.trader_visits
+                   WHERE player_id = %s AND trader_key = 'river_traders'""",
+                (str(p['id']),))
+    assert cur.fetchone()[0] == 0
 
 
 def test_catchup_capped_at_50(make_player, cur):
     """Runaway guard: even if a player is offline for years, only 50
-    visits resolve in one call (otherwise the call could lock the row
-    arbitrarily long)."""
+    visits resolve in one process_production call (otherwise the tick
+    could lock the row arbitrarily long)."""
     p = make_player(industry='timber', display_name='capped')
     _act_as(cur, p['id'])
     _set_policy(cur, p['id'], 'timber', 'sell_surplus', 0)
@@ -156,9 +162,12 @@ def test_catchup_capped_at_50(make_player, cur):
     _backdate_profile(cur, p['id'], 1000)
     _delete_visits(cur, p['id'])
     _clear_quota(cur, 'river_traders', 'timber')
-    cur.execute("SELECT public.resolve_trader_visit('river_traders')")
-    result = cur.fetchone()[0]
-    assert result.get('visits_resolved') == 50, f"expected exactly 50 (cap), got {result.get('visits_resolved')}"
+    cur.execute("SELECT public.process_production()")
+    cur.execute("""SELECT count(*) FROM public.trader_visits
+                   WHERE player_id = %s AND trader_key = 'river_traders'""",
+                (str(p['id']),))
+    visits = cur.fetchone()[0]
+    assert visits == 50, f"expected exactly 50 (cap), got {visits}"
 
 
 def test_buy_to_reserve_also_catches_up(make_player, place, cur):
