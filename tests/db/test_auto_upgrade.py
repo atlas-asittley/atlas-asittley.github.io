@@ -69,6 +69,14 @@ def test_auto_upgrade_bumps_tier_immediately(make_player, place, cur, clear_reso
     assert len(auto_evs) == 1, f"expected one auto_upgrade event, got {evs}"
     assert auto_evs[0]['to_tier'] == 3
 
+    # Watermark must advance to match the new tier. Without this,
+    # tier-gated buildings (school ≥3, temple ≥4, mosaic_workshop ≥6)
+    # stay locked for players relying on auto-upgrade. Max hit this
+    # 2026-05-22 (bug bedcdc47): 8 townhouses but watermark stuck at 0.
+    cur.execute("SELECT highest_housing_tier_ever FROM public.player_profiles WHERE id = %s",
+                (str(p['id']),))
+    assert cur.fetchone()[0] >= 3, 'auto-upgrade did not bump highest_housing_tier_ever'
+
 
 def test_manual_path_when_auto_upgrade_false(make_player, place, cur, clear_resources):
     """When auto_upgrade is FALSE, the existing manual flow stays —

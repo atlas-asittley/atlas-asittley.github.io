@@ -539,3 +539,70 @@ Two unrelated CSS bugs:
   from `top: calc(74px + safe-area-inset)` to
   `top: calc(58px + safe-area-inset)`. Updated two stale comments
   referencing the old 74px constant.
+
+---
+
+## 2026-05-22 — Max — "school locked until I reach townhouse, but all my houses ARE townhouses"
+
+**Reported:** 2026-05-22 00:43 UTC.
+
+**Description (verbatim):**
+> The school shows as being locked until I reach townhouse level, but
+> all of my houses are townhouses and cannot evolve further without a
+> school.
+
+**Diagnosis:**
+Server-side bug. The auto-upgrade path inside `_pp_evolve_housing`
+bumped `buildings.housing_tier` correctly but did **not** advance
+`player_profiles.highest_housing_tier_ever`. Only the manual
+`upgrade_house` RPC bumped the watermark.
+
+Auto-upgrade has been the default for new houses since 2026-05-08
+(`buildings.auto_upgrade` defaults to TRUE). Players who relied on
+auto-upgrade evolved through tiers without ever advancing the
+watermark, so tier-gated buildings stayed locked — school (≥3),
+temple (≥4), mosaic_workshop (≥6).
+
+Snapshot at fix time:
+- Max:  watermark=0, current max house tier=3 (8 townhouses) ← the bug
+- Jill: watermark=6, current max house tier=7
+- Drew: watermark=4, current max house tier=4 ← only one in sync, only one who used manual upgrade_house
+
+**Fix:**
+- `auto_upgrade_bumps_watermark.sql` (city-builder-mvp) — adds a
+  matching `UPDATE player_profiles SET highest_housing_tier_ever =
+  GREATEST(..., v_house.housing_tier + 1)` inside the auto_upgrade
+  branch of `_pp_evolve_housing`. Mirrors the GREATEST pattern in
+  `upgrade_house`.
+- One-shot heal at end of migration: `UPDATE player_profiles SET
+  highest_housing_tier_ever = GREATEST(watermark, current_max_tier)`
+  for every player. All three players now in sync.
+- Regression test in `tests/db/test_auto_upgrade.py` —
+  `test_auto_upgrade_bumps_tier_immediately` extended to assert the
+  watermark advances after auto-upgrade.
+
+---
+
+## 2026-05-22 — Jill — "housing capacity dropped 4000 → 3100"
+
+**Reported:** 2026-05-22 00:27 UTC. Auto-triage handled the diagnosis end-to-end.
+
+**Description (verbatim):**
+> I thought I had a housing capacity of over 4000, but now it is
+> showing only about 3100 as a capacity. Can you tell if any housing
+> devolved or if that higher capacity was ever there?
+
+**Diagnosis:**
+Not a software bug. Auto-triage (the hourly cron) correctly identified:
+around 22:10 UTC May 21, Jill's six Temples ran out of Brick (drain
+0.5 Brick/min × 6 = 3/min, no restock). They failed the
+`_pp_run_services` input check, dropped out of `p_operating_services`
+for that tick, and 71 tier-5 houses devolved to tier-4 because their
+needs_temple gate evaluated false. Most re-upgraded once brick
+restocked, but ~20 are still stuck at tier-4 because their tile
+desirability sits at 53–68 vs. the tier-5 gate of 70 — a separate
+gameplay constraint, not a bug.
+
+**Fix:** none — Jill was informed via a queued `feedback_prompts` row
+explaining the brick starvation cause and the desirability re-upgrade
+path. Row closed as working-as-designed.
