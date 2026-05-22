@@ -88,7 +88,7 @@ def _stamp_staffed(cur, player_id):
         FROM public.building_types bt
         WHERE bt.key = b.building_type_key
           AND b.player_id = %s AND b.status = 'active'
-          AND bt.category IN ('extractor','food_extractor','booster','processor','tax','service','police')
+          AND bt.category IN ('extractor','food_extractor','booster','processor','tax','service','police','civic')
     """, (str(player_id),))
 
 
@@ -242,3 +242,84 @@ def test_pd_upkeep_deducts_money_and_logs_ledger_row(make_player, place, cur, cl
     rows = cur.fetchall()
     assert len(rows) == 1, 'upkeep should be logged once per tick'
     assert rows[0][0] < 0
+
+
+# ── civic crime_emit + crime_reduction (2026-05-21) ──────────────
+
+def test_staffed_marketplace_emits_crime(make_player, place, cur, clear_resources):
+    """Marketplace has crime_emit > 0. While staffed, compute_crime
+    should rise by exactly that amount per marketplace."""
+    p = make_player(population=5)
+    clear_resources(p['id'])
+    cur.execute("UPDATE public.player_profiles SET money = 50000 WHERE id = %s", (str(p['id']),))
+    hx, hy = p['home_x'], p['home_y']
+    cur.execute("SELECT public.compute_crime(%s)", (str(p['id']),))
+    base = float(cur.fetchone()[0])
+
+    cur.execute("SELECT crime_emit FROM public.building_types WHERE key='marketplace'")
+    emit = cur.fetchone()[0]
+    assert emit and emit > 0, 'marketplace must declare crime_emit > 0'
+
+    place('marketplace', hx + 1, hy + 1)
+    _stamp_staffed(cur, p['id'])
+    cur.execute("SELECT public.compute_crime(%s)", (str(p['id']),))
+    after = float(cur.fetchone()[0])
+    assert after - base == emit, (
+        f'staffed marketplace should add exactly crime_emit ({emit}); '
+        f'got Δ {after - base}'
+    )
+
+
+def test_unstaffed_marketplace_does_not_emit_crime(make_player, place, cur, clear_resources):
+    """Same setup, but no staffing → no crime contribution."""
+    p = make_player(population=5)
+    clear_resources(p['id'])
+    cur.execute("UPDATE public.player_profiles SET money = 50000 WHERE id = %s", (str(p['id']),))
+    hx, hy = p['home_x'], p['home_y']
+    cur.execute("SELECT public.compute_crime(%s)", (str(p['id']),))
+    base = float(cur.fetchone()[0])
+
+    place('marketplace', hx + 1, hy + 1)
+    # NOT stamping staffed.
+    cur.execute("SELECT public.compute_crime(%s)", (str(p['id']),))
+    after = float(cur.fetchone()[0])
+    assert after == base, (
+        f'unstaffed marketplace must not emit crime; baseline={base}, after={after}'
+    )
+
+
+def test_staffed_hospital_reduces_crime(make_player, place, cur, clear_resources):
+    """Hospital has crime_reduction > 0. Stack with an uncovered house
+    that adds +4 crime; hospital should net that down by crime_reduction.
+
+    Setup: 1 uncovered house = base + 4. With a staffed hospital,
+    crime = base + 4 - crime_reduction.
+    """
+    p = make_player(population=5)
+    clear_resources(p['id'])
+    cur.execute("""UPDATE public.player_profiles SET money=50000,
+                   highest_housing_tier_ever=4 WHERE id=%s""", (str(p['id']),))
+    # Stock ale so hospital can operate (input gate). Won't be drained
+    # because we don't run process_production — just _stamp_staffed.
+    cur.execute("""INSERT INTO public.inventories (player_id, resource_key, quantity)
+                   VALUES (%s, 'ale', 100)
+                   ON CONFLICT (player_id, resource_key) DO UPDATE SET quantity = 100""",
+                (str(p['id']),))
+    hx, hy = p['home_x'], p['home_y']
+    place('house', hx + 1, hy + 1)
+    cur.execute("SELECT public.compute_crime(%s)", (str(p['id']),))
+    pre = float(cur.fetchone()[0])  # base + 4 (house uncovered)
+
+    cur.execute("SELECT crime_reduction FROM public.building_types WHERE key='hospital'")
+    reduce = cur.fetchone()[0]
+    assert reduce and reduce > 0, 'hospital must declare crime_reduction > 0'
+
+    place('hospital', hx + 3, hy + 1)
+    _stamp_staffed(cur, p['id'])
+    cur.execute("SELECT public.compute_crime(%s)", (str(p['id']),))
+    after = float(cur.fetchone()[0])
+    # clamp guard: crime is GREATEST(0, …) so don't go negative.
+    expected = max(0, pre - reduce)
+    assert after == expected, (
+        f'hospital should reduce crime by {reduce}; pre={pre}, after={after}, expected={expected}'
+    )
