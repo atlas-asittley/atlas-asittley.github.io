@@ -455,3 +455,51 @@ moved to 'hold').
 - `5634d6a` (citybuilder / v1) — `trade_mode_keep_to_hold.sql`:
   DROP constraint, UPDATE 3 existing 'keep' rows to 'hold', new
   constraint allowing 'hold'; save_trade_policy IF updated.
+
+---
+
+## 2026-05-22 — Jill — "housing capacity dropped from ~4000 to ~3100"
+
+**Reported:** 2026-05-22 00:27 UTC, in-game bug-report modal.
+
+**Description (verbatim):**
+> I thought I had a housing capacity of over 4000, but now it is showing only about 3100 as a capacity. Can you tell if any housing devolved or if that higher capacity was ever there?
+
+**Diagnosis:**
+Working as designed — no code bug. Jill's 6 temples each consume
+brick (0.5/min) and statuary (0.25/min); with 6 temples that's 3.0
+brick/min. At ~22:10 UTC on 2026-05-21, brick reached zero and the
+temples failed `_pp_run_services`'s input-availability check. They
+were staffed and in-range, but not in `p_operating_services` for that
+tick, so 71 tier-5 houses lost temple coverage and devolved to tier 4.
+Many re-upgraded within minutes as brick restocked. 20 houses remain
+at tier 4 because their desirability (53–68) is below the tier-5 gate
+of 70 — these are correctly blocked.
+
+**Resolution:** Deferred — no code change needed. Queued a
+feedback_prompt explaining the root cause (brick starvation) and
+advising Jill to raise desirability in the affected areas to recover
+full capacity.
+
+---
+
+## 2026-05-22 — Drew — "new parcel didn't show immediately after purchase"
+
+**Reported:** 2026-05-22 00:39 UTC, in-game bug-report modal.
+
+**Description (verbatim):**
+> I just tried to buy a new parcel, and it didn't immediately show as available to me. It might show after a refresh, but it should show immediately.
+
+**Diagnosis:**
+`StatInfoModal.js` opens the expansion picker with an empty callback:
+`openExpansionPanel(() => {})`. The `rerenderWorld()` call that paints
+newly claimed tiles onto the Phaser canvas lives in `main.js`'s
+`mountTopBar` callback — only reached when expansion is triggered from
+the top bar. Expansions from the district stats panel skipped the
+rerender entirely, leaving the map stale until manual refresh.
+
+**Fix:** `db691ba` (citybuilder-game / v2) — added
+`if (sceneRef?.rerenderWorld) sceneRef.rerenderWorld()` directly in
+`ExpansionPanel.js`'s `onPickCandidate` success handler, before the
+caller's callback fires. The map now rerenders unconditionally on
+every successful parcel claim regardless of entry point.
