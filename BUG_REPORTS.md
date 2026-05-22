@@ -606,3 +606,46 @@ gameplay constraint, not a bug.
 **Fix:** none — Jill was informed via a queued `feedback_prompts` row
 explaining the brick starvation cause and the desirability re-upgrade
 path. Row closed as working-as-designed.
+
+---
+
+## 2026-05-22 — Jill — "monument unstaffed despite workers" + "monument shows as gray square"
+
+**Reported:** 22:30-ish UTC, both filed via the in-game modal right after she tried to use today's new civic buildings.
+
+**Description (verbatim):**
+> I built a monument and I have workers available, but it remains unstaffed.
+
+> Also, the monument just shows as a gray square and not a building.
+
+**Diagnosis (#1, staffing):**
+The new `civic` category I added when shipping Public Garden + Monument
++ Marketplace was never wired into `_pp_staff_buildings` or
+`_pp_workers_needed`. Both functions iterate a hard-coded category list
+that included extractor / food_extractor / booster / processor / tax /
+service / police but NOT civic. So civic buildings were never
+considered for staffing — `is_staffed` stayed false forever, and the
+city's worker-shortage warning under-reported by the civic workers'
+worth. Every effect that gates on `is_staffed` (desirability_bonus,
+migration_bonus, trade_sell_bonus_pct, crime_emit) silently no-op'd.
+
+**Diagnosis (#2, gray-square sprite):**
+Two of the five new sprites (Public Garden, Industrial Zone) used
+`radialGradient` with percent-sized attributes — `cx='50%' cy='40%'
+r='55%'`. The literal `%` inside a data URI is invalid percent-
+encoding (must be followed by 2 hex digits). The browser/Phaser
+rasterizer choked and the renderer fell back to the gray-square
+fallback path (`textures.exists(key) ? key : 'square'`). Monument
+itself uses no `%`, so Jill probably saw the gray-square fallback via
+a cache / load-ordering issue triggered by the broken neighbor
+sprites; either way, defense-in-depth re-encoded all five new sprite
+URIs.
+
+**Fix:**
+- `575fbff` (citybuilder) — `civic_staffing_fix.sql` adds `civic` to
+  both `_pp_staff_buildings` and `_pp_workers_needed`. Priority 2
+  (same as service + police) so civic amenities staff before
+  extractors/processors when workers are tight.
+- `eaab0d8` (citybuilder-game) — re-encoded all 5 new sprite URIs
+  with `%` removed from the URL-quote safe set, so literal `%`
+  becomes the correct `%25`.
