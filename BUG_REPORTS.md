@@ -22,7 +22,26 @@ so the table doesn't grow visually as we work through them.
 
 ---
 
-## 2026-05-09 — Jill — "unable to update from a townhouse to a villa"
+## 2026-05-22 — internal (found by pytest sweep) — transport hub expansion didn't spawn a trader
+
+**Reported:** N/A — found 2026-05-22 02:30 UTC during the overnight pytest sweep. `test_airport_build_then_expand_spawns_two` was failing.
+
+**Description:**
+After 2026-05-20, paying to expand a transport hub (airport / seaport / train depot) silently failed to add a new trade partner — the entire documented purpose of expansion. The cash was deducted, the expansion_level bumped, but the trader-spawn step was missing.
+
+**Diagnosis:**
+`big_bug_sweep_2026_05_20.sql` rewrote `expand_transport_hub` to add a `FOR UPDATE` lock on `player_profiles`. The rewrite reproduced the original body but dropped the `PERFORM public._spawn_random_trader(v_mode)` line that the procedural-traders migration had added. Net effect: from 2026-05-21 02:07 UTC onward, every expansion failed to spawn its promised trader.
+
+Found by the pytest sweep — the test was already in the suite and would have caught this on the first sweep after the regression. The reason it slipped: the original sweep that introduced the bug ran with several pre-existing flakes already failing, so a fourth red row didn't ring an alarm.
+
+Impact in production: exactly one expansion happened in the broken window — Jill's train_depot at 2026-05-21 20:39 UTC. She paid \$60k and didn't get the trader.
+
+**Fix:**
+- `restore_expand_hub_trader_spawn.sql`: re-adds the `PERFORM public._spawn_random_trader(v_mode)` block, preserving the lock and ownership check.
+- Live backfill: ran `SELECT _spawn_random_trader('train')` once to add the missed Pinewood Crews trader (her depot was the only affected expansion).
+- Feedback prompt queued for Jill explaining the fix.
+
+**Commit:** `265605a`
 
 **Reported:** 2026-05-09 19:22 UTC, in-game bug-report modal.
 
