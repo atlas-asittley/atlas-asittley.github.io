@@ -407,3 +407,51 @@ alone. Drew's instinct was right.
 No code commit — pure data migration. The next process_production
 tick uses the new rates; pantry buffers naturally refill faster as a
 side effect.
+
+---
+
+## 2026-05-21 — Atlas — "error sending money to another player" + "NPC trade hold fails"
+
+**Reported:** in chat (not via the in-game modal — no bug_reports rows). 2026-05-21 evening.
+
+**Description (verbatim):**
+> I get an error when I try to send money to another player
+
+> for trades with NPC's, you can't hold. it fails if you choose hold
+
+**Diagnosis (#1, P2P send money):**
+The compose form in `TradePlayersTab` built `giveResources` /
+`receiveResources` as **arrays** of `{resource_key, quantity}`. Server
+`propose_trade` + `accept_trade` walk those JSONB columns with
+`jsonb_each_text()`, which **only operates on OBJECTS**. Passing an
+array (or even an empty array `[]` for money-only trades) raised
+`cannot call jsonb_each_text on a non-object`, so every P2P
+proposal failed. The five historical offers stored in
+`player_trade_offers` were all object-shaped — at some point the FE
+diverged from the canonical shape and no one had successfully sent
+a P2P trade since.
+
+Two FE readers had been "fixed" earlier the same day (commit
+`745668a`) to iterate arrays — wrong for the actual stored shape,
+silently dropping P2P data again. Reverted to the object shape
+canonically, with defensive both-shapes acceptance in readers.
+
+**Diagnosis (#2, NPC trade hold):**
+String drift between FE and server. FE dropdowns in CityResourcesTab
++ TradePartnersTab used `value="hold"`. Server CHECK constraint and
+`save_trade_policy`'s IF allowed only `('keep', 'sell_surplus',
+'buy_to_reserve')`. Clicking Hold always raised
+`Invalid trade mode: hold`. 'hold' is the player-facing word —
+brought the server to match. Also fixed
+`src/scenes/helpers.js:315` which still guarded with
+`policy.mode !== 'keep'` (dead code; never matched after the FE
+moved to 'hold').
+
+**Fix:**
+- `a287c93` (citybuilder-game / v2) — TradePlayersTab compose now
+  builds `{ resource_key: qty }` objects. describeBundle +
+  computeInboxBlockers + CityResourcesTab aggregation all defensively
+  accept both shapes. helpers.js:315 corrected from 'keep' to 'hold'.
+- `5634d6a` (citybuilder / v1) — `trade_mode_keep_to_hold.sql`:
+  DROP constraint, UPDATE 3 existing 'keep' rows to 'hold', new
+  constraint allowing 'hold'; save_trade_policy IF updated.
