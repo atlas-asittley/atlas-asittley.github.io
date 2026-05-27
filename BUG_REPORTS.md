@@ -22,6 +22,24 @@ so the table doesn't grow visually as we work through them.
 
 ---
 
+## 2026-05-27 — Jill — "The truck depot indicates I cannot expand it because it is not a transport hub, but it should be able to expand."
+
+**Reported:** 2026-05-27 22:43 UTC, in-game bug-report modal.
+
+**Description (verbatim):**
+> The truck depot indicates I cannot expand it because it is not a transport hub, but it should be able to expand.
+
+**Diagnosis:**
+`expand_transport_hub` contained `IF v_bt.category <> 'transport_hub' THEN RAISE EXCEPTION 'Only transport hubs can be expanded'`. The truck_depot has category `transport_connector` (not `transport_hub`), so every expand attempt was rejected. The frontend already showed the Expand button for `transport_connector` buildings (InspectorPanel.js:410 checks `|| bt.category === 'transport_connector'`), and `_city_transport_tiers` already counted `SUM(1 + expansion_level)` for truck_depots to compute truck transport capacity — the server guard was simply never widened to match.
+
+**Fix:**
+- `expand_transport_connector.sql`: widened the guard to `NOT IN ('transport_hub', 'transport_connector')` and added `WHEN 'truck_depot' THEN 'truck'` to the trader-spawn CASE so expansion adds a new Regional Hauliers partner, consistent with all other hub expansions.
+- New test `test_truck_depot_build_then_expand_spawns_two` added to `tests/db/test_procedural_traders.py`.
+
+**Commit:** (see below)
+
+---
+
 ## 2026-05-22 — internal (found by pytest sweep) — transport hub expansion didn't spawn a trader
 
 **Reported:** N/A — found 2026-05-22 02:30 UTC during the overnight pytest sweep. `test_airport_build_then_expand_spawns_two` was failing.

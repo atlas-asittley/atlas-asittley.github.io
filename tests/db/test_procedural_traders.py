@@ -64,6 +64,30 @@ def test_airport_build_then_expand_spawns_two(make_player, place, cur, clear_res
     assert after_expand == before + 2, f"expand should spawn 1 more; delta={after_expand-before}"
 
 
+def test_truck_depot_build_then_expand_spawns_two(make_player, place, cur, clear_resources):
+    """Build truck_depot → spawn 1 truck trader. Expand it → spawn another.
+    Regression: expand_transport_hub previously rejected transport_connector
+    category with 'Only transport hubs can be expanded'."""
+    p = make_player(industry='timber')
+    clear_resources(p['id'])
+    _give_money(cur, p['id'], 100000)
+    hx, hy = p['home_x'], p['home_y']
+
+    before = _count_active(cur, 'truck')
+    result = place('truck_depot', hx + 1, hy + 1)
+    after_build = _count_active(cur, 'truck')
+    assert after_build == before + 1, f"build should spawn 1 truck trader; delta={after_build-before}"
+
+    bid = result['building_id'] if isinstance(result, dict) else None
+    if bid is None:
+        import json
+        bid = json.loads(result)['building_id']
+
+    cur.execute("SELECT public.expand_transport_hub(%s)", (bid,))
+    after_expand = _count_active(cur, 'truck')
+    assert after_expand == before + 2, f"expand should spawn 1 more truck trader; delta={after_expand-before}"
+
+
 def test_procedural_trader_has_3_to_6_resources(make_player, place, cur, clear_resources):
     """Every newly-spawned procedural trader has 3-6 random resources
     plus a guaranteed bread row (2026-05-15), so 4-7 trader_prices
