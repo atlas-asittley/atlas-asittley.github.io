@@ -36,7 +36,7 @@ so the table doesn't grow visually as we work through them.
 - `expand_transport_connector.sql`: widened the guard to `NOT IN ('transport_hub', 'transport_connector')` and added `WHEN 'truck_depot' THEN 'truck'` to the trader-spawn CASE so expansion adds a new Regional Hauliers partner, consistent with all other hub expansions.
 - New test `test_truck_depot_build_then_expand_spawns_two` added to `tests/db/test_procedural_traders.py`.
 
-**Commit:** (see below)
+**Commit:** `52647cb`
 
 ---
 
