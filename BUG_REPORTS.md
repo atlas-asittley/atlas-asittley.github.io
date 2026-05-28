@@ -731,3 +731,36 @@ units across 110 house pantries (at full capacity); the FE was computing
 city inventory (+ substitutes), then add pantry on top when buffers are
 loaded. Updated the corresponding test which was asserting the wrong
 expected value. 18/18 tests pass.
+
+---
+
+## 2026-05-28 — Drew — "I just bought a parcel that locked Max in place."
+
+**Filed:** 2026-05-28 21:59 UTC (`b337a656`)
+
+**Diagnosis:**
+`expand_district` has a reachability invariant that prevents a player from
+claiming a chunk that would leave another player with zero expansion candidates
+(immediately surrounded). However, it didn't handle the *dead-end* case: a
+claim that reduces another player to exactly one candidate, where that single
+candidate's only unclaimed orthogonal neighbour is the tile being claimed.
+
+Drew's sequence of purchases ending with chunk (-2, 4) left Max at (0, 4) with
+only one available expansion: (-1, 4). But (-1, 4)'s four orthogonal neighbours
+were all owned — east = Max's own (0, 4); north = Jill's (-1, 3); south = Drew's
+(-1, 5); west = Drew's freshly claimed (-2, 4). Expanding to (-1, 4) would have
+enclosed Max with zero further escape.
+
+The existing check: `v_post_count >= 1` → allow. v_post_count was 1, so it passed.
+
+**Fix:**
+- `50ad5ba` — `expansion_dead_end_check.sql`: when a claim would reduce another
+  player to exactly 1 candidate, additionally check that the surviving candidate
+  has ≥ 1 unclaimed orthogonal neighbour (other than the tile being claimed). If
+  not, the claim is rejected with the same "permanently surrounded" exception.
+  Also adds `expansion_refund` to `cash_source_check`.
+- Undo: Drew's chunk (-2, 4) deleted (225 map tiles + 41 auto-roads removed),
+  1,960,000 refunded to Drew's treasury, matching `expansion_refund` ledger row
+  inserted. Drew now has 14 chunks and ~2,150,886 money.
+- Max's only candidate (-1, 4) now has (-2, 4) as a free westward escape.
+- New test `test_expand_district_refuses_dead_end_boxing` added. 16/16 pass.
