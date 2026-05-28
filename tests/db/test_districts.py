@@ -176,6 +176,83 @@ def test_expand_district_refuses_to_box_a_player_in(make_player, cur, as_user):
     assert 'surround' in msg or 'box' in msg, f"expected boxing-in rejection, got: {exc.value}"
 
 
+def test_expand_district_refuses_dead_end_boxing(make_player, cur, as_user):
+    """Extended reachability: a claim that leaves another player with exactly
+    one candidate is also rejected when that surviving candidate is itself a
+    dead-end (taking it would leave zero candidates).
+
+    Scenario mirrors the Drew/Max incident on 2026-05-28.
+
+    Layout (chunk coords, all near 1200,1200):
+
+         p1  p1  p1
+         p1 [W] VIC  p1
+         p1  p1  p1
+       p1 <-- anchor
+
+    p2 owns VIC (1200,1200).
+    p1 owns the six surrounding tiles blocking VIC except VICTIM_W (1199,1200).
+    p1 also owns an anchor at (1197,1200) adjacent to the unclaimed VICTIM_WW (1198,1200).
+    VICTIM_W's only unclaimed neighbor is VICTIM_WW — so if p1 claims VICTIM_WW,
+    VICTIM_W becomes a dead-end and the claim must be rejected.
+    """
+    p1 = make_player()
+    p2 = make_player()
+    cur.execute("UPDATE public.player_profiles SET money = 10000000 WHERE id IN (%s, %s)",
+                (str(p1['id']), str(p2['id'])))
+
+    # Remote region to avoid collisions with live data.
+    VIC_X, VIC_Y = 1200, 1200
+    W_X = VIC_X - 1   # 1199 — VICTIM_W (p2's only remaining candidate)
+    WW_X = VIC_X - 2  # 1198 — VICTIM_WW (unclaimed; p1 will try to claim this)
+
+    cur.execute("DELETE FROM public.district_chunks WHERE owner_player_id = %s", (str(p2['id']),))
+    cur.execute("""INSERT INTO public.district_chunks (chunk_x, chunk_y, owner_player_id)
+                   VALUES (%s, %s, %s)""", (VIC_X, VIC_Y, str(p2['id'])))
+
+    # p1 surrounds VIC on E/N/S and surrounds W on N/S.
+    # p1 anchor is at (WW_X-1, VIC_Y) so p1 can expand to VICTIM_WW.
+    # VICTIM_W and VICTIM_WW stay unclaimed.
+    for (cx, cy) in [
+        (VIC_X + 1, VIC_Y),      # east of VIC
+        (VIC_X,     VIC_Y + 1),  # north of VIC
+        (VIC_X,     VIC_Y - 1),  # south of VIC
+        (W_X,       VIC_Y + 1),  # north of W — blocks W's escape up
+        (W_X,       VIC_Y - 1),  # south of W — blocks W's escape down
+        (WW_X - 1,  VIC_Y),      # p1 anchor west of WW — gives p1 access to WW
+    ]:
+        cur.execute("""INSERT INTO public.district_chunks (chunk_x, chunk_y, owner_player_id)
+                       VALUES (%s, %s, %s)""", (cx, cy, str(p1['id'])))
+
+    # Verify p2 has exactly 1 candidate (W).
+    cur.execute("SELECT COUNT(*) FROM public.expansion_candidates(%s)", (str(p2['id']),))
+    assert cur.fetchone()[0] == 1, "setup: p2 should have exactly 1 candidate (W)"
+
+    # Verify W's only unclaimed neighbor is WW (east=VIC owned, N/S owned by p1, west=WW unclaimed).
+    cur.execute("""
+        SELECT COUNT(*) FROM (
+            SELECT %s+1 AS nx, %s AS ny UNION ALL
+            SELECT %s-1,       %s       UNION ALL
+            SELECT %s,         %s+1     UNION ALL
+            SELECT %s,         %s-1
+        ) n
+        WHERE NOT EXISTS (
+            SELECT 1 FROM public.district_chunks dc WHERE dc.chunk_x = n.nx AND dc.chunk_y = n.ny
+        )
+    """, (W_X, VIC_Y, W_X, VIC_Y, W_X, VIC_Y, W_X, VIC_Y))
+    unclaimed_w_neighbors = cur.fetchone()[0]
+    assert unclaimed_w_neighbors == 1, \
+        f"setup: W should have exactly 1 unclaimed neighbor (WW), got {unclaimed_w_neighbors}"
+
+    as_user(p1['id'])
+    # p1 tries to claim WW. After this, p2 still has 1 candidate (W), but W is a dead-end.
+    with pytest.raises(psycopg2.errors.RaiseException) as exc:
+        cur.execute("SELECT public.expand_district(%s, %s)", (WW_X, VIC_Y))
+    msg = str(exc.value).lower()
+    assert 'surround' in msg or 'box' in msg or 'dead' in msg, \
+        f"expected dead-end boxing rejection, got: {exc.value}"
+
+
 def test_expand_district_allows_claim_when_target_player_has_other_options(make_player, cur, as_user):
     """Inverse of the boxing-in test: when the target player still has
     other escape routes, the claim succeeds."""
