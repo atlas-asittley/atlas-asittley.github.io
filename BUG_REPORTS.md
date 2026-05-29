@@ -859,3 +859,22 @@ function public.refresh_congestion(uuid) does not exist
 - `road_upgrade_congestion_refresh.sql`: original migration file corrected to match (prevents future confusion if re-applied).
 
 **Tests:** No new regression test added — covered by the existing upgrade_road path.
+
+---
+
+## 2026-05-29 — Jill — "unable to place new roads or they are very sporadic in which road segments will eventually load"
+
+**Reported:** 2026-05-29 20:34 UTC, bug `ca81ae1e`
+
+**Description (verbatim):**
+> Road upgrades are now working, but I am still unable to place new roads or they are very sporadic in which road segments will eventually load. Also, my congestion remains at 100% despite upgrading many of my roads.
+
+**Diagnosis:**
+Race condition in drag-paint road placement. Each `pointermove` event fired an independent async `placeBuilding()` RPC. The server-side adjacency check ("Roads must connect to another of your roads") on tile B would run before tile A had committed to the DB — so B would silently fail. The silent-error suppression (errors only surfaced for the first tile of a drag) meant the user saw 5–6 roads appear out of an 8-tile drag sweep with no feedback on the missing ones.
+
+Congestion at 100% is mathematically correct: Jill's traffic load (FLOOR(12556/5) + 2×156 processors + 3×4 transport = 2835) exceeds road capacity (362 dirt×1 + 64 paved×2 + 303 boulevard×4 + 13 avenue×3 = 1741). She needs to upgrade remaining 362+64 roads to Grand Boulevard to bring capacity above 2835.
+
+**Fix (17c637c, v2 repo):**
+`MainScene.js`: Added `_dragPaintQueue` promise chain. When `bt.category === 'road'`, each `placeBuilding()` RPC is chained onto `_dragPaintQueue` rather than fired independently, ensuring each tile commits before the next adjacency check runs. Non-road painting is unchanged.
+
+**Tests:** Covered by existing DB test suite (all pass). Frontend-only change.
