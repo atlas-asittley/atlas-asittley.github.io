@@ -9,18 +9,30 @@ import os
 import re
 import pytest
 
-WASTE = os.path.expanduser("~/citybuilder/city-builder-mvp/migration_patches/waste_management.sql")
-POWER = os.path.expanduser("~/citybuilder/city-builder-mvp/migration_patches/power_energy.sql")
+MIG = os.path.expanduser("~/citybuilder/city-builder-mvp/migration_patches")
+WASTE = f"{MIG}/waste_management.sql"
+POWER = f"{MIG}/power_energy.sql"
+BROWNOUT = f"{MIG}/power_energy_brownout.sql"
 
 
 @pytest.fixture(scope="module", autouse=True)
 def _apply_migrations(conn):
     c = conn.cursor()
-    for path in (WASTE, POWER):   # order matters: power redefines _pp_for_uid on top of waste
+    for path in (WASTE, POWER, BROWNOUT):   # order matters: each layers on the prior
         sql = re.sub(r'(?im)^\s*(BEGIN|COMMIT)\s*;\s*$', '', open(path).read())
         c.execute(sql)
     c.close()
     yield
+
+
+def _set_power(cur, uid, cap, dem):
+    cur.execute("UPDATE public.player_profiles SET power_capacity=%s, power_demand=%s WHERE id=%s",
+                (cap, dem, str(uid)))
+
+
+def _productivity(cur, uid):
+    cur.execute("SELECT public._pp_compute_productivity(%s)", (str(uid),))
+    return float(cur.fetchone()[0])
 
 
 def _profile(cur, uid, col):
@@ -133,19 +145,29 @@ def test_process_production_returns_power(cur, make_player, clear_resources):
 
 
 # ───────────────────────────────────────────────────────────
-# Toothless: the brownout penalty is intentionally NOT wired yet
+# Brownout: electrified-only (no-power cities exempt)
 # ───────────────────────────────────────────────────────────
 
-def test_power_shortage_does_not_yet_hurt_productivity(cur, make_player, place, clear_resources):
-    """A city with demand and zero capacity must NOT be brownout-penalised yet
-    (ship visible-but-toothless). If a brownout were active, productivity would
-    be scaled toward the 0.6 floor; here it stays in the normal range."""
+def test_no_power_city_is_not_penalised(cur, make_player):
+    """A pre-electrification city (capacity 0) is never brownout-penalised,
+    even with demand — so going live changes nothing for existing cities."""
     p = make_player(industry='timber', population=100)
-    clear_resources(p['id'])
-    hx, hy = p['home_x'], p['home_y']
-    place('sawmill', hx + 1, hy + 1)
-    cur.execute("SELECT public.process_production()")
-    assert _profile(cur, p['id'], 'power_demand') >= 3      # real shortage (demand>0)
-    assert _profile(cur, p['id'], 'power_capacity') == 0
-    assert _profile(cur, p['id'], 'productivity') >= 0.9, \
-        "productivity should not be brownout-penalised while power is toothless"
+    _set_power(cur, p['id'], 0, 30)        # demand but no plants
+    assert _productivity(cur, p['id']) == 1.0
+
+
+def test_electrified_shortage_throttles_productivity(cur, make_player):
+    """Once on the grid (capacity > 0) but short, productivity is throttled
+    toward the 0.75 floor."""
+    p = make_player(industry='timber', population=100)
+    _set_power(cur, p['id'], 10, 20)       # 50% supplied → factor floored at 0.75
+    assert _productivity(cur, p['id']) == 0.75
+
+    _set_power(cur, p['id'], 18, 20)       # 90% supplied → factor 0.9
+    assert _productivity(cur, p['id']) == 0.9
+
+
+def test_sufficient_power_no_penalty(cur, make_player):
+    p = make_player(industry='timber', population=100)
+    _set_power(cur, p['id'], 20, 20)       # demand not over capacity
+    assert _productivity(cur, p['id']) == 1.0
