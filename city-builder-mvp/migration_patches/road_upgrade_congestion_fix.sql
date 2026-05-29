@@ -1,14 +1,14 @@
 -- ============================================================================
--- road_upgrade_congestion_refresh.sql
+-- road_upgrade_congestion_fix.sql
 -- ----------------------------------------------------------------------------
--- upgrade_road RPC was not calling refresh_congestion after upgrading, so
--- the player_profiles.congestion metric stayed at the stale tick value until
--- the next server tick (~5 min). Players who upgraded roads saw no immediate
--- change in the displayed congestion stat (Jill bug report 11349ecf, 2026-05-29).
+-- road_upgrade_congestion_refresh.sql shipped a call to refresh_congestion()
+-- which was never created. The correct helper is _pp_update_congestion().
+-- Jill saw "function public.refresh_congestion(uuid) does not exist" on every
+-- road upgrade attempt (bug reports f0cca7c6, 4cb7af6b — 2026-05-29).
 --
--- Fix: call refresh_congestion(v_uid) at the end of upgrade_road and include
--- the updated congestion value in the return JSON so the frontend can apply it
--- immediately via applyRpcResponse.
+-- Fix: replace the non-existent refresh_congestion(v_uid) call with
+-- _pp_update_congestion(v_uid) which computes and writes congestion back to
+-- player_profiles and returns the new value.
 -- ============================================================================
 
 BEGIN;
