@@ -807,3 +807,33 @@ double-adding when the event eventually fires.
 - `src/api/tick.js` (`applyRpcResponse`): now propagates `data.congestion` to `state.profile.congestion`, so the topbar stat refreshes immediately when the RPC returns — no tick wait needed.
 
 **Feedback prompt queued** for Jill explaining the fix and the traffic math.
+
+## 2026-05-29 — Jill — "Roads are still not being placed when a square is selected."
+
+**Reported:** 2026-05-29 13:46 UTC (bug `2cff0a68`)
+
+**Description (verbatim):** Roads are still not being placed when a square is selected.
+
+**Diagnosis:**
+Road placement for single taps uses `_paintAtPointer` (the drag-paint path), which silences all RPC errors to avoid spamming the user during a multi-tile sweep. A single tap sets `_dragPaintActive = true` on `pointerdown`, and `pointerup` clears it and returns before the async RPC response arrives. This means any failure reason — "Roads must connect to another of your roads", "already occupied", etc. — was swallowed silently. Jill tapped tiles and saw nothing happen, no road, no error.
+
+**Fix (270f36c):**
+`MainScene._paintAtPointer` captures `isFirstTile = (dragPaintPlaced.size === 1)` before the `await`. In the `catch` block, if `isFirstTile` is true, `showToast(err.message)` gives the user the actual failure reason. Subsequent tiles in a drag sequence remain silent.
+
+**Tests:** None added — purely a UX feedback path.
+
+---
+
+## 2026-05-29 — Jill — "I am unable to upgrade roads at all at this point."
+
+**Reported:** 2026-05-29 17:18 UTC (bug `56bf6707`)
+
+**Description (verbatim):** I am unable to upgrade roads at all at this point.
+
+**Diagnosis:**
+Jill has 272 Grand Boulevards (road tier 4, the maximum). The inspector correctly shows no upgrade button for max-tier roads — there is no tier 5. But without any label explaining this, the player sees a road she owns with just a Demolish button and assumes the upgrade system is broken. Jill's road distribution: 377 basic roads, 78 paved roads, 19 tiled avenues, 272 grand_boulevards. She can still upgrade the lower-tier roads; she just couldn't tell that grand_boulevards were already maxed.
+
+**Fix (270f36c):**
+`InspectorPanel.renderInspector` now adds a "Road tier" row for road buildings. For max-tier roads (no higher tier in `state.buildingTypes`), the row reads e.g. "Grand Boulevard — max tier". Lower-tier roads show just the tier name without the max label.
+
+**Tests:** None added — UI-only copy fix.
