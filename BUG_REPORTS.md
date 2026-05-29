@@ -794,3 +794,16 @@ pushes a minimal building entry to `state.allBuildings` and calls `rerenderBuild
 so the road/building appears on screen instantly. The realtime handler's existing
 duplicate-id guard (`if (!state.allBuildings.some(b => b.id === data.id))`) prevents
 double-adding when the event eventually fires.
+
+## 2026-05-29 — Jill — "I have upgraded a bunch of roads and it has not changed my city congestion number at all."
+
+**Filed:** 2026-05-29 14:05 UTC (bug `11349ecf`)
+
+**Diagnosis:**
+`upgrade_road` deducts money and materials, swaps `building_type_key` in place, and writes the cash-ledger row — but it never called `public.refresh_congestion()`. The `player_profiles.congestion` column therefore stayed at the value set by the last server tick (every ~5 minutes), regardless of how many roads the player upgraded in the meantime. For Jill in particular, her city is traffic-heavy (population ~11k + 149 staffed processors = ~2,500 traffic units) against ~1,658 road-capacity units, so congestion will remain at 100 until enough roads are upgraded to tier 3–4. The formula itself is correct.
+
+**Fix (e2f3bf2 / 6153ba4):**
+- `road_upgrade_congestion_refresh.sql`: adds `v_new_congestion := public.refresh_congestion(v_uid)` at the end of `upgrade_road` and returns the value in the JSON response.
+- `src/api/tick.js` (`applyRpcResponse`): now propagates `data.congestion` to `state.profile.congestion`, so the topbar stat refreshes immediately when the RPC returns — no tick wait needed.
+
+**Feedback prompt queued** for Jill explaining the fix and the traffic math.
