@@ -765,6 +765,22 @@ The existing check: `v_post_count >= 1` → allow. v_post_count was 1, so it pas
 - Max's only candidate (-1, 4) now has (-2, 4) as a free westward escape.
 - New test `test_expand_district_refuses_dead_end_boxing` added. 16/16 pass.
 
+## 2026-05-29 — Jill — "I am unable to place multiple buildings and get an error that the space is occupied but it is not occupied."
+
+**Filed:** 2026-05-29 01:04 UTC (bug `96a575a6`)
+
+**Description (verbatim):**
+> I am unable to place multiple buildings and get an error that the space is occupied but it is not occupied.
+
+**Diagnosis:**
+Same root cause as the concurrent "roads not showing up" report: after `place_building` RPC succeeded, the placed building was added to the DB but not yet to the client's `state.allBuildings` (waiting on the realtime WebSocket event, which can lag seconds on mobile). The tile visually looked empty to Jill, so she tapped it again to retry. The second RPC call hit the DB where the building already existed → "space occupied" error on a tile that the client showed as empty.
+
+**Fix (d4caff4):** `_addBuildingOptimistically()` in `MainScene.js` pushes the new building into `state.allBuildings` and calls `rerenderBuildings()` immediately after the RPC returns. The building now appears on screen at once, making it obvious that the first placement succeeded and the tile is taken.
+
+**Tests:** no dedicated regression test; covered by the visual invariant that every successful `place_building` call results in an immediate sprite appearance.
+
+---
+
 ## 2026-05-29 — Jill — "Roads are not showing up when I place them. This was an issue before that you fixed, but it was never fixed."
 
 **Root cause:** After `place_building` RPC succeeded, the placed building was only
