@@ -764,3 +764,17 @@ The existing check: `v_post_count >= 1` → allow. v_post_count was 1, so it pas
   inserted. Drew now has 14 chunks and ~2,150,886 money.
 - Max's only candidate (-1, 4) now has (-2, 4) as a free westward escape.
 - New test `test_expand_district_refuses_dead_end_boxing` added. 16/16 pass.
+
+## 2026-05-29 — Jill — "Roads are not showing up when I place them. This was an issue before that you fixed, but it was never fixed."
+
+**Root cause:** After `place_building` RPC succeeded, the placed building was only
+added to `state.allBuildings` via the Supabase realtime INSERT subscription. On mobile
+(especially Safari with background-tab throttling), this WebSocket event can lag several
+seconds, leaving the map visually stale after every placement.
+
+**Fix (d4caff4):** Added `_addBuildingOptimistically()` to `MainScene.js`. Called from
+both single-tap and drag-paint placement paths immediately after the RPC returns, it
+pushes a minimal building entry to `state.allBuildings` and calls `rerenderBuildings()`
+so the road/building appears on screen instantly. The realtime handler's existing
+duplicate-id guard (`if (!state.allBuildings.some(b => b.id === data.id))`) prevents
+double-adding when the event eventually fires.
