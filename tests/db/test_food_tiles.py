@@ -114,15 +114,34 @@ def test_food_extractor_rejected_on_wrong_food_tile(make_player, place, cur, cle
 
 
 def test_non_food_building_rejected_on_food_tile(make_player, place, cur, clear_resources):
-    """A regular building (e.g., a road) must not be placeable on any
-    resource tile, including food tiles."""
+    """A regular (non-paving) building must not be placeable on a resource
+    tile — clear it first. NOTE: roads are the exception (they pave over
+    resources by design, see test_road_paves_over_resource_tile), so this
+    uses a house."""
     p = make_player(industry='stone')
     clear_resources(p['id'])
     cur.execute("UPDATE public.player_profiles SET money = 50000 WHERE id = %s", (str(p['id']),))
     hx, hy = p['home_x'], p['home_y']
     _stamp_food_tile(cur, hx + 1, hy + 2, 'pond')
     with pytest.raises(psycopg2.errors.RaiseException):
-        place('road', hx + 1, hy + 2)
+        place('house', hx + 1, hy + 2)
+
+
+def test_road_paves_over_resource_tile(make_player, place, cur, clear_resources):
+    """Roads intentionally pave over resource tiles (drag-paint UX): place_building
+    clears the resource_node_key before insert for category='road', so the
+    reject_build_on_resource trigger doesn't fire. Documents the deliberate
+    exception to the rule above."""
+    p = make_player(industry='stone')
+    clear_resources(p['id'])
+    cur.execute("UPDATE public.player_profiles SET money = 50000 WHERE id = %s", (str(p['id']),))
+    hx, hy = p['home_x'], p['home_y']
+    # Buildable tile adjacent to the road cross (so connectivity passes), with a
+    # resource stamped on it. (hx+1,hy+1) neighbours the horizontal road at (hx+1,hy).
+    _stamp_food_tile(cur, hx + 1, hy + 1, 'pond')
+    place('road', hx + 1, hy + 1)               # should succeed, paving over the pond
+    cur.execute("""SELECT resource_node_key FROM public.map_tiles WHERE x=%s AND y=%s""", (hx + 1, hy + 1))
+    assert cur.fetchone()[0] is None, "road placement should clear the resource node"
 
 
 def test_extractor_rejected_on_food_tile(make_player, place, cur, clear_resources):

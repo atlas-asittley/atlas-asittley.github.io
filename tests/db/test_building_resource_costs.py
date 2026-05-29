@@ -24,8 +24,14 @@ def _money(cur, player_id, amt):
 
 
 def test_money_only_buildings_have_no_resource_costs(cur):
-    """The seven 'basic' categories Atlas exempted should have NO rows
-    in building_type_resource_costs."""
+    """The 'basic' buildings Atlas exempted should have NO rows in
+    building_type_resource_costs.
+
+    Note (2026-05-29, Civic Metrics Expansion): the UPGRADED road tiers
+    (paved_road / tiled_avenue / grand_boulevard) now legitimately cost
+    materials (brick / tiles / monuments+cabinets+mosaics — the dead-capstone
+    sinks), so 'road' is no longer a blanket money-only category. The base
+    dirt `road` stays money-only and is still asserted via its key."""
     cur.execute("""
         SELECT bt.key
           FROM public.building_types bt
@@ -33,8 +39,8 @@ def test_money_only_buildings_have_no_resource_costs(cur):
             ON btrc.building_type_key = bt.key
          WHERE bt.is_active
            AND (
-             bt.category IN ('housing', 'extractor', 'food_extractor', 'road')
-             OR bt.key IN ('well', 'tree_grove')
+             bt.category IN ('housing', 'extractor', 'food_extractor')
+             OR bt.key IN ('well', 'tree_grove', 'road')
            )
     """)
     leaks = [r[0] for r in cur.fetchall()]

@@ -88,12 +88,12 @@ def test_truck_depot_build_then_expand_spawns_two(make_player, place, cur, clear
     assert after_expand == before + 2, f"expand should spawn 1 more truck trader; delta={after_expand-before}"
 
 
-def test_procedural_trader_has_3_to_6_resources(make_player, place, cur, clear_resources):
-    """Every newly-spawned procedural trader has 3-6 random resources
-    plus a guaranteed bread row (2026-05-15), so 4-7 trader_prices
-    rows total. Catalog generation in _spawn_random_trader picks
-    `3 + floor(random() * 4)` random resources excluding bread, then
-    always appends bread."""
+def test_procedural_trader_has_expanded_catalog(make_player, place, cur, clear_resources):
+    """Every newly-spawned procedural trader carries a broad catalog plus a
+    guaranteed bread row. _spawn_random_trader picks `25 + floor(random()*6)`
+    (25-30) random resources then appends bread → ~26-31 trader_prices rows
+    (capped at the active-resource count; a touch lower if bread is also in
+    the random draw). Expanded from the old 3-6 by 'depot-traders-expanded-catalogs'."""
     p = make_player(industry='timber')
     clear_resources(p['id'])
     _give_money(cur, p['id'], 100000)
@@ -117,7 +117,7 @@ def test_procedural_trader_has_3_to_6_resources(make_player, place, cur, clear_r
     assert len(rows) == 1, f"expected 1 new trader spawned, got {len(rows)}"
     n_resources = rows[0][2]
     has_bread = rows[0][3]
-    assert 4 <= n_resources <= 7, f"expected 4-7 resources, got {n_resources}"
+    assert 24 <= n_resources <= 31, f"expected an expanded ~26-31 catalog, got {n_resources}"
     assert has_bread, "every procedural trader must sell bread"
 
 

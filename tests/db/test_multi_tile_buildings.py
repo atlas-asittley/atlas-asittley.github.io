@@ -37,13 +37,17 @@ def test_default_footprint_is_1x1(cur):
     - truck_depot — 2x2 (transport connector, 2026-05-08)
     - public_garden — 2x2 (civic amenity, 2026-05-21)
     - hospital — 2x2 (service, 2026-05-21)
+    - recycling_center / incinerator — 2x2 (sanitation, Civic Metrics 2026-05-28)
+    - powerhouse — 2x2 (power, Civic Metrics 2026-05-28)
+    - clinic / library — 2x2 (health/education services, Civic Metrics 2026-05-28)
     """
     cur.execute("""SELECT key FROM public.building_types
                    WHERE footprint_w <> 1 OR footprint_h <> 1
                    ORDER BY key""")
     keys = [r[0] for r in cur.fetchall()]
     assert keys == [
-        'airport', 'brewery', 'hospital', 'public_garden', 'school',
+        'airport', 'brewery', 'clinic', 'hospital', 'incinerator', 'library',
+        'powerhouse', 'public_garden', 'recycling_center', 'school',
         'seaport', 'tax_man', 'temple', 'train_depot', 'truck_depot'
     ]
 
