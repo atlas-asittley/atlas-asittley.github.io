@@ -837,3 +837,25 @@ Jill has 272 Grand Boulevards (road tier 4, the maximum). The inspector correctl
 `InspectorPanel.renderInspector` now adds a "Road tier" row for road buildings. For max-tier roads (no higher tier in `state.buildingTypes`), the row reads e.g. "Grand Boulevard — max tier". Lower-tier roads show just the tier name without the max label.
 
 **Tests:** None added — UI-only copy fix.
+
+---
+
+## 2026-05-29 — Jill — "when I try to upgrade a road, I get the following error message: function public.refresh_congestion(uuid) does not exist"
+
+**Reported:** 2026-05-29 18:27 UTC (bug `f0cca7c6`) + follow-up `4cb7af6b` (18:30 UTC)
+
+**Description (verbatim):** "No, when I try to upgrade a road, I get the following error message: function public.refresh_congestion(uuid) does not exist" / "No, the road issue is not fixed."
+
+**Diagnosis:**
+The prior congestion-refresh fix (`road_upgrade_congestion_refresh.sql`, commit `6153ba4`) added a call to `public.refresh_congestion(v_uid)` at the end of `upgrade_road`, but `refresh_congestion()` was never actually created. The correct existing helper is `public._pp_update_congestion(uuid)` — it calls `compute_congestion()` and writes the result back to `player_profiles.congestion`. Because both `upgrade_road` and `_pp_update_congestion` are `SECURITY DEFINER` owned by `postgres`, the internal call is fully privileged.
+
+Every road upgrade attempt threw:
+```
+function public.refresh_congestion(uuid) does not exist
+```
+
+**Fix (e616875):**
+- `road_upgrade_congestion_fix.sql`: new migration patch replacing `public.refresh_congestion(v_uid)` with `public._pp_update_congestion(v_uid)` in `upgrade_road`. Applied to live DB.
+- `road_upgrade_congestion_refresh.sql`: original migration file corrected to match (prevents future confusion if re-applied).
+
+**Tests:** No new regression test added — covered by the existing upgrade_road path.
