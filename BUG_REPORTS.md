@@ -878,3 +878,32 @@ Congestion at 100% is mathematically correct: Jill's traffic load (FLOOR(12556/5
 `MainScene.js`: Added `_dragPaintQueue` promise chain. When `bt.category === 'road'`, each `placeBuilding()` RPC is chained onto `_dragPaintQueue` rather than fired independently, ensuring each tile commits before the next adjacency check runs. Non-road painting is unchanged.
 
 **Tests:** Covered by existing DB test suite (all pass). Frontend-only change.
+
+## 2026-05-30 — Jill — "I am unable to place a road segment to connect the last house I built."
+
+**Filed:** 2026-05-30 15:44 UTC (bug `e763f995`)
+
+**Diagnosis:**
+Jill's house at (-5, 28) is bordered on the north by a 2×2 temple footprint and on
+the west by a 2×2 recycling-centre footprint, leaving only the south and east sides
+open for road placement. The southern route (tap -5,29 connecting to existing GB at
+-5,30) is correct and the server accepts it. The actual failure was in rapid
+successive single-tile road taps.
+
+Each tap starts a new "drag paint" sequence: pointerdown sets `_dragPaintActive=true`,
+calls `_paintAtPointer`, then pointerup clears the state. Before this fix, pointerdown
+also reset `_dragPaintQueue = Promise.resolve()`. So two quick taps — e.g. place
+(-4,29) then place (-4,28) — ran both RPCs concurrently. The (-4,28) adjacency check
+read the DB before (-4,29) had committed, returning "Roads must connect to another of
+your roads." Because this failure falls on the *first tile of the second drag*,
+`isFirstTile=true` and a toast should appear — but on mobile Safari the toast may
+have been obscured or dismissed before Jill read it, making placement look like a
+silent no-op.
+
+**Fix:** Removed the `_dragPaintQueue = Promise.resolve();` reset from the
+pointerdown handler. The queue (initialised once in the constructor) now persists
+across drag sequences, serialising all road RPCs in submission order. Normal-paced
+tapping has no latency cost because the previous RPC is already resolved by the
+time the next tap fires.
+
+**Tests:** Existing test suite passes. Frontend-only change.
