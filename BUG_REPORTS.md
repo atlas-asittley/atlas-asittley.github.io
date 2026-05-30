@@ -907,3 +907,30 @@ tapping has no latency cost because the previous RPC is already resolved by the
 time the next tap fires.
 
 **Tests:** Existing test suite passes. Frontend-only change.
+
+## 2026-05-30 — Jill — "That fix did not fix the road issue. I still can't place road segments at that house (the square south of the house) or any other roads."
+
+**Reported:** 2026-05-30 20:33 UTC (bug `3e11e574`)
+**Description (verbatim):** That fix did not fix the road issue. I still can't place road segments at that house (the square south of the house) or any other roads.
+
+**Diagnosis:**
+Server-side is fine: tile (-5,29) is free, buildable, owned by Jill, and adjacent to a Grand Boulevard at (-5,30) — the adjacency check passes. The `_dragPaintQueue` no-reset fix is deployed.
+
+Root cause: `_dragPaintQueue = _dragPaintQueue.then(doPlace)` — if `doPlace` ever returns a rejected promise (e.g., `showToast` throws on a stale DOM reference inside the catch block), `_dragPaintQueue` becomes a rejected promise. Every subsequent `.then(doPlace)` is then silently skipped — `.then()` ignores rejected promises. All future road taps appear to do nothing with no error shown.
+
+**Fix (e6d4a7a):**
+Added `.catch(() => {})` to the queue assignment: `_dragPaintQueue = _dragPaintQueue.then(doPlace).catch(() => {})`. This resets the queue to fulfilled after each step, preventing a single rejection from permanently blocking all future road placements.
+
+**Tests:** Existing test suite passes. Frontend-only change.
+
+---
+
+## 2026-05-30 — Jill — "All of my inventory has showed as blank all day."
+
+**Reported:** 2026-05-30 20:36 UTC (bug `aac649fc`)
+**Description (verbatim):** All of my inventory has showed as blank all day. Typically, it is sometimes slow to load, but today, none of them are loading at all.
+
+**Diagnosis:**
+Deferred. DB inventory is intact (33 resources, correct quantities). `process_production` RPC works correctly for this player and returns full inventory. `state.inventory` is populated from tick responses only (not on initial load), so there's always a brief blank period before the first tick. The `refreshBottomPanel` guard skips re-renders when a panel input is focused — on mobile Safari, focus may persist on the Resources filter input after keyboard dismissal, blocking tick-time refreshes. Could not confirm root cause within session budget. Needs deeper client-side diagnosis in a live session.
+
+---
