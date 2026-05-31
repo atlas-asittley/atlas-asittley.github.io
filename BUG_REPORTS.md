@@ -939,3 +939,21 @@ Added `fetchInventory()` to `src/state/loader.js` — a simple `SELECT resource_
 **Tests:** No regression test added (loader.js fetch is integration-level; existing test suite passes).
 
 ---
+
+## 2026-05-31 — Jill — "I am still unable to place roads."
+
+**Reported:** 2026-05-31 19:01 UTC (bug `9acd2efb`)
+
+**Description (verbatim):** I am still unable to place roads.
+
+**Diagnosis:**
+`place_building` called `recompute_extractor_paths(uid)` after every road placement. This function runs a full PL/pgSQL Dijkstra BFS for every active extractor owned by the player. Jill has 62 active `clay_pit` extractors; each `verify_extractor_path` call took ~280 ms → 62 calls × 280 ms = **17.4 s total** inside a single transaction, far exceeding PostgREST's HTTP timeout. The transaction was silently rolled back, so no road was ever written to the DB. From Jill's perspective: tapped a tile, saw nothing happen.
+
+The `recompute_extractor_paths` call in `place_building` was an eager optimization — new roads can create shorter paths for extractors. But the server tick already calls `recompute_extractor_paths` periodically, so removing the inline call introduces at most a ~5-minute lag before extractors discover new road shortcuts. That trade-off is completely acceptable.
+
+**Fix (afeecda):**
+- `place_building_skip_repath_on_road.sql`: migration patch that replaces `place_building` with a version that omits the `PERFORM public.recompute_extractor_paths(v_uid)` call from the road-placement branch. Applied to live DB.
+
+**Tests:** `test_road_placement_does_not_call_recompute_extractor_paths` in `tests/db/test_place_building.py` — seeds 5 extractors for the test player, places a road, asserts the RPC completes in under 3 s.
+
+---
