@@ -931,6 +931,11 @@ Added `.catch(() => {})` to the queue assignment: `_dragPaintQueue = _dragPaintQ
 **Description (verbatim):** All of my inventory has showed as blank all day. Typically, it is sometimes slow to load, but today, none of them are loading at all.
 
 **Diagnosis:**
-Deferred. DB inventory is intact (33 resources, correct quantities). `process_production` RPC works correctly for this player and returns full inventory. `state.inventory` is populated from tick responses only (not on initial load), so there's always a brief blank period before the first tick. The `refreshBottomPanel` guard skips re-renders when a panel input is focused — on mobile Safari, focus may persist on the Resources filter input after keyboard dismissal, blocking tick-time refreshes. Could not confirm root cause within session budget. Needs deeper client-side diagnosis in a live session.
+`loadInitialWorld()` fetches 14 data sources in parallel but omitted the `inventories` table entirely. `state.inventory` initialised to `{}` in the store and only populated when the first `process_production` tick response returned (~30s after login). Until that tick, the Resources tab rendered 0 for every resource. For Jill's "all day" case the `refreshBottomPanel` focus guard may also have blocked tick-time re-renders if keyboard focus remained stuck on the filter input (mobile Safari behaviour), compounding the problem.
+
+**Fix (7bb5803):**
+Added `fetchInventory()` to `src/state/loader.js` — a simple `SELECT resource_key, quantity FROM inventories WHERE player_id = ...` — and included it in the `Promise.all` inside `loadInitialWorld()`. `state.inventory` is now populated before the panel mounts, so inventory shows immediately on login.
+
+**Tests:** No regression test added (loader.js fetch is integration-level; existing test suite passes).
 
 ---
