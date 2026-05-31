@@ -121,6 +121,57 @@ def test_common_buildings_allowed_for_any_industry(make_player, place, clear_res
         assert 'building_id' in result
 
 
+def test_road_placement_on_resource_tile(make_player, place, cur, clear_resources):
+    """Regression: roads must be placeable on resource tiles (e.g. clay).
+    place_building was missing the resource_node_key clear that place_pre_road
+    does, so the reject_build_on_resource trigger silently blocked drag-paint
+    road placement on any clay/timber tile (bug e1aa6e45, Jill 2026-05-22)."""
+    p = make_player(industry='clay')
+    clear_resources(p['id'])
+    hx, hy = p['home_x'], p['home_y']
+    # Stamp a clay resource node on the tile we're about to road over.
+    cur.execute(
+        "UPDATE public.map_tiles SET resource_node_key = 'clay' WHERE x = %s AND y = %s",
+        (hx + 1, hy + 1)
+    )
+    # Must succeed — road paves over the clay tile.
+    result = place('road', hx + 1, hy + 1)
+    assert 'building_id' in result
+    # The resource node should be cleared after road placement.
+    cur.execute(
+        "SELECT resource_node_key FROM public.map_tiles WHERE x = %s AND y = %s",
+        (hx + 1, hy + 1)
+    )
+    assert cur.fetchone()[0] is None, "resource_node_key should be NULL after road is placed"
+
+
+def test_road_placement_does_not_call_recompute_extractor_paths(make_player, place, cur, clear_resources):
+    """Regression: place_building used to call recompute_extractor_paths after
+    every road placement. With many extractors (e.g. 62 clay_pits), each BFS
+    took ~280 ms → 17 s total → PostgREST HTTP timeout → silent transaction
+    rollback. Road appeared to succeed on client but was never written.
+    Fix: removed the eager recompute call; the server tick handles it.
+    Bug 9acd2efb — Jill 2026-05-31."""
+    import time
+    p = make_player(industry='clay')
+    clear_resources(p['id'])
+    hx, hy = p['home_x'], p['home_y']
+    # Plant several extractors so the old code would have iterated them.
+    for dx in range(1, 6):
+        cur.execute(
+            "INSERT INTO public.buildings (player_id, building_type_key, tile_id, x, y) "
+            "SELECT %s, 'clay_pit', id, x, y FROM public.map_tiles WHERE x = %s AND y = %s",
+            (str(p['id']), hx + dx, hy - 2)
+        )
+    t0 = time.time()
+    result = place('road', hx + 1, hy + 1)
+    elapsed = time.time() - t0
+    assert 'building_id' in result, "road placement should succeed"
+    # If recompute_extractor_paths were still called this would take multiple
+    # seconds; without it the whole RPC should finish in under 3 s.
+    assert elapsed < 3.0, f"road placement took {elapsed:.2f}s — extractor repath may still be running inline"
+
+
 def test_workers_needed_includes_food_extractor(make_player, place, stamp_food_tile, cur, clear_resources):
     """Regression: place_building's workers_needed query was missing the
     food_extractor and booster categories, so the response immediately
