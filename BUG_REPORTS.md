@@ -957,3 +957,13 @@ The `recompute_extractor_paths` call in `place_building` was an eager optimizati
 **Tests:** `test_road_placement_does_not_call_recompute_extractor_paths` in `tests/db/test_place_building.py` — seeds 5 extractors for the test player, places a road, asserts the RPC completes in under 3 s.
 
 ---
+
+## 2026-06-01 — Jill — "My last two houses are not evolving because they indicate there is not an operating school, but the school is within 6 squares and has the resources to be operational" (follow-up: "Sorry, the school is within 5 tiles as is indicated by the highlighted area for the school operation zone.")
+
+**Reported:** 2026-06-01, two sequential reports from Jill (IDs c5b75301 and 22692b69)
+**Description (verbatim):** First report says school is "within 6 squares"; corrected to "within 5 tiles as indicated by the highlighted area."
+**Diagnosis:** Server snapshot shows two tier-3 houses at (-3,25) and (-3,26). Nearest school is at (-9,25) — Chebyshev distance 6, just outside the 5-tile range. Server is correctly blocking evolution. The root visual bug: the AOE overlay (`showAoe` and `_updatePlacementAoe` in MainScene.js) was rendering a Manhattan diamond (`Math.abs(rx) + Math.abs(ry) <= range`) instead of a Chebyshev square. The server uses `GREATEST(ABS(dx),ABS(dy)) <= range`. This made the coverage zone look smaller at diagonal angles, causing Jill to misinterpret where coverage actually ends. All 9 of Jill's schools are staffed and operating.
+**Fix:** c9bd6ba — Removed the Manhattan filter in both `showAoe()` and `_updatePlacementAoe()`; outer loops already bound rx/ry to ±range (Chebyshev square). Coverage highlight now shows the true square zone matching server behavior.
+**Tests:** None added (visual-only change). Feedback prompt queued for Jill to confirm the updated highlight helps her place a school correctly.
+
+---
