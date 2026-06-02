@@ -967,3 +967,29 @@ The `recompute_extractor_paths` call in `place_building` was an eager optimizati
 **Tests:** None added (visual-only change). Feedback prompt queued for Jill to confirm the updated highlight helps her place a school correctly.
 
 ---
+
+---
+
+## 2026-06-02 — Jill — "The school is within 5 spaces of the homes, not 6 so should allow them to upgrade."
+
+**Reported:** 2026-06-02 18:31 UTC (bug `982e04cf`)
+
+**Description (verbatim):** The school is within 5 spaces of the homes, not 6 so should allow them to upgrade.
+
+**Diagnosis:**
+School (and temple) are 2×2 buildings. `_pp_evolve_housing` was checking proximity using anchor-to-anchor Chebyshev — i.e. distance from the school's top-left corner cell to the house. For a house sitting beside the school's right or bottom edge, this over-counts by exactly 1: the anchor is 6 tiles away but the nearest cell in the footprint is only 5. The school AOE range is 5, so the gate refused even though the house was visually inside the coverage zone.
+
+In Jill's layout the school anchor was at (3,56); its 2×2 footprint spans (3–4, 56–57). Several houses at footprint-perimeter Chebyshev = 5 were being refused because the anchor distance was 6.
+
+**Fix (5b3beda):**
+`school_temple_footprint_proximity.sql`: replaces the `has_school` / `has_temple` EXISTS checks in `_pp_evolve_housing` with a footprint-perimeter Chebyshev formula:
+
+```sql
+dx = GREATEST(b2.x - house.x,  house.x - (b2.x + 1), 0)
+dy = GREATEST(b2.y - house.y,  house.y - (b2.y + 1), 0)
+dist = GREATEST(dx, dy)
+```
+
+This gives the minimum Chebyshev distance from any cell in the 2×2 footprint to the house. For 1×1 buildings it reduces to plain Chebyshev (no change to bathhouse/well checks). Migration applied to live DB prior to the commit.
+
+**Tests:** `test_school_footprint_perimeter_covers_house` (confirms a house at footprint Chebyshev=5 upgrades) and updated `test_school_chebyshev_corner_still_excluded` (confirms footprint Chebyshev=6 is still blocked) in `tests/db/test_citizen_services.py`.
