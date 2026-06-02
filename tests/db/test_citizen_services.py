@@ -292,23 +292,56 @@ def test_school_uses_chebyshev_distance(make_player, place, cur, clear_resources
     )
 
 
-def test_school_chebyshev_corner_still_excluded(make_player, place, cur, clear_resources):
-    """Chebyshev cap is still 5: a school 6 tiles away (max axis) is out
-    of range. Guards against accidentally turning the gate off."""
+def test_school_footprint_perimeter_covers_house(make_player, place, cur, clear_resources):
+    """School anchor 6 tiles from a house, but the school's 2×2 footprint
+    nearest cell is only 5 tiles away → the house should upgrade.
+    This is Jill's 2026-06-02 bug: school at (-9,25), anchor Chebyshev=6
+    from houses at (-3,26)/(-3,25), but footprint Chebyshev=5."""
     p = make_player()
     clear_resources(p['id'])
     _give_money(cur, p['id'])
     hx, hy = p['home_x'], p['home_y']
-    # Well must be within Chebyshev=4 of the house so the tier-3 well
-    # gate keeps holding (otherwise the house devolves before we can see
-    # whether the school covers it).
     place('well', hx + 2, hy + 6)
     house_id = place('house', hx + 1, hy + 7)['building_id']
     cur.execute("UPDATE public.buildings SET housing_tier = 3 WHERE id = %s", (house_id,))
-    # School at (hx-3, hy+1): from house (hx+1, hy+7) the deltas are
-    # dx=-4, dy=-6 → Chebyshev=6, just outside the cap. The school's
-    # 2×2 footprint sits clear of the starter buildings and its top edge
-    # rests on the horizontal cross at y=hy, so it gets road access free.
+    # School at (hx-3, hy+1): anchor→house = (dx=4, dy=6) → anchor Chebyshev=6.
+    # Footprint (hx-3..hx-2, hy+1..hy+2): nearest cell (hx-2, hy+2) →
+    # footprint Chebyshev = max(3, 5) = 5 ≤ 5 → must cover.
+    # Road access: footprint top row at hy+1 is adjacent to horizontal cross at hy.
+    place('school', hx - 3, hy + 1)
+    _give_lots_of_workers(cur, p['id'])
+    _stock(cur, p['id'], 'grain', 10.0)
+    _stock(cur, p['id'], 'pottery', 10.0)
+    _stock(cur, p['id'], 'bread', 10.0)
+    _stock(cur, p['id'], 'furniture', 10.0)
+    _stock(cur, p['id'], 'lumber', 5.0)
+    _stock(cur, p['id'], 'flour', 5.0)
+    _backdate(cur, p['id'], 240)
+
+    _tick_and_upgrade_all(cur)
+    cur.execute("SELECT housing_tier FROM public.buildings WHERE id = %s", (house_id,))
+    assert cur.fetchone()[0] == 4, (
+        "townhouse at footprint-perimeter Chebyshev=5 from a fed school "
+        "failed to upgrade — anchor Chebyshev=6 must not override the "
+        "footprint-based check"
+    )
+
+
+def test_school_chebyshev_corner_still_excluded(make_player, place, cur, clear_resources):
+    """Footprint-perimeter cap is still 5: a school whose nearest footprint
+    cell is 6 tiles from the house must NOT cover it."""
+    p = make_player()
+    clear_resources(p['id'])
+    _give_money(cur, p['id'])
+    hx, hy = p['home_x'], p['home_y']
+    # House at (hx+4, hy-1), adjacent to horizontal road at y=hy → road access.
+    place('well', hx + 4, hy - 2)
+    house_id = place('house', hx + 4, hy - 1)['building_id']
+    cur.execute("UPDATE public.buildings SET housing_tier = 3 WHERE id = %s", (house_id,))
+    # School at (hx-3, hy+1): footprint (hx-3..hx-2, hy+1..hy+2).
+    # Nearest cell to house (hx+4, hy-1): (hx-2, hy+1).
+    # dx=6, dy=2 → footprint Chebyshev = max(6, 2) = 6 > 5 → must NOT cover.
+    # Road access via adjacency to horizontal cross at y=hy.
     place('school', hx - 3, hy + 1)
     _give_lots_of_workers(cur, p['id'])
     _stock(cur, p['id'], 'grain', 10.0)
@@ -322,6 +355,6 @@ def test_school_chebyshev_corner_still_excluded(make_player, place, cur, clear_r
     _tick_and_upgrade_all(cur)
     cur.execute("SELECT housing_tier FROM public.buildings WHERE id = %s", (house_id,))
     assert cur.fetchone()[0] == 3, (
-        "school at Chebyshev=6 should NOT cover the townhouse — gate must "
-        "still be bounded to <= 5"
+        "school at footprint Chebyshev=6 should NOT cover the townhouse — "
+        "gate must still be bounded to <= 5"
     )
