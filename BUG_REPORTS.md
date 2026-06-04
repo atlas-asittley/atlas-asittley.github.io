@@ -993,3 +993,19 @@ dist = GREATEST(dx, dy)
 This gives the minimum Chebyshev distance from any cell in the 2×2 footprint to the house. For 1×1 buildings it reduces to plain Chebyshev (no change to bathhouse/well checks). Migration applied to live DB prior to the commit.
 
 **Tests:** `test_school_footprint_perimeter_covers_house` (confirms a house at footprint Chebyshev=5 upgrades) and updated `test_school_chebyshev_corner_still_excluded` (confirms footprint Chebyshev=6 is still blocked) in `tests/db/test_citizen_services.py`.
+
+---
+
+## 2026-06-04 — Jill — "Upgrading my roads has not changed my traffic congestion at all and still shows 100."
+
+**Diagnosis:**
+The server formula is correct. Jill's city had 156 staffed processors generating ~312 traffic units on top of her 13,319 population (~2,663 pop/5). Total traffic ≈ 2,987 vs a total road capacity of 2,085 (sum of `road_tier` across 790 road tiles, mix of grand_boulevard/tiled_avenue/paved_road/road). The deficit of ~902 means `congestion = min(100, 5 + 4*902) = 100`. Individual road upgrades add 1–3 capacity per tile, so upgrading a handful of roads doesn't visibly move a stat that's clamped at 100 until the entire deficit is closed.
+
+The stat wasn't lying; it just gave no feedback that progress was happening below the cap.
+
+**Fix (2f2cd93):**
+`citybuilder-game/src/ui/TopBar.js`: when congestion > 40, the congestion tooltip now computes actual traffic (pop/5 + 2×staffed_processors + 3×transport) vs road capacity (Σ road_tier across active roads) from client state and displays the deficit with a Grand Boulevard equivalent. Jill's tooltip now reads: *"Traffic 2987 vs road capacity 2085. Need 902 more capacity (~226 Grand Boulevards) before the stat starts falling."* This makes the required effort visible.
+
+Pure frontend display fix — no server, no balance, no migrations.
+
+**Tests:** None added (tooltip-only copy change; the server formula and `compute_congestion` have existing coverage in `tests/db/test_noise_congestion.py`).
