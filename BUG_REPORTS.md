@@ -1009,3 +1009,23 @@ The stat wasn't lying; it just gave no feedback that progress was happening belo
 Pure frontend display fix — no server, no balance, no migrations.
 
 **Tests:** None added (tooltip-only copy change; the server formula and `compute_congestion` have existing coverage in `tests/db/test_noise_congestion.py`).
+
+## 2026-06-04 — Jill — "My citywide trash shows 100 but I have coverage of all houses by a recycling center and the other trash management methods can't be next to housing due to desirability issues."
+
+**Diagnosis:**
+
+Two separate issues:
+
+1. **Perimeter bug (fixed):** `compute_waste` used anchor-to-anchor Manhattan distance for sanitation coverage checks. Recycling centers and incinerators are 2×2 buildings, so houses near the right/bottom edge of a sanitation building appeared uncovered even when visually within range. Same class of bug as the school/temple footprint fix (2026-06-02). Reduced Jill's uncovered houses from 25 → 12.
+
+2. **Industrial floor (deferred):** Jill has 156 staffed processors (pottery kilns, tile makers, canneries, etc.) each emitting 1 industrial waste. The formula floor = 3 + 15 (pop term) + 156 = 174, which always caps at 100 regardless of sanitation coverage. Even if all houses were covered, waste would still be 100. This is a balance issue — the `waste_emit = 1` per processor is too high for large industrial cities. Deferred to Atlas.
+
+**Fix:** `waste_coverage_footprint.sql` — replaces anchor-only check with footprint-perimeter Manhattan formula:
+```sql
+GREATEST(0, s.x - h.x, h.x - (s.x + fw - 1)) + (y-analog) ≤ coverage_radius
+```
+For 1×1 dumps this reduces to the original formula.
+
+**Commit:** ffe7d0a  
+**Tests:** `test_recycling_center_coverage_formula_uses_footprint_perimeter` added to `test_waste_management.py`  
+**Status:** Partial fix shipped. Industrial waste balance deferred to Atlas. Feedback prompt queued for Jill.
