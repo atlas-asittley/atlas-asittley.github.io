@@ -1029,3 +1029,19 @@ For 1×1 dumps this reduces to the original formula.
 **Commit:** ffe7d0a  
 **Tests:** `test_recycling_center_coverage_formula_uses_footprint_perimeter` added to `test_waste_management.py`  
 **Status:** Partial fix shipped. Industrial waste balance deferred to Atlas. Feedback prompt queued for Jill.
+
+---
+
+## 2026-06-04 — Jill — "My citywide trash shows 100 but I have coverage of all houses by a recycling center and the other trash management methods can't be next to housing due to desirability issues." (follow-up, bug 9b97a718)
+
+**Reported:** 2026-06-04 23:24 UTC (bug `9b97a718`)
+**Description (verbatim):** My citywide trash shows 100 but I have coverage of all houses by a recycling center and the other trash management methods can't be next to housing due to desirability issues.
+
+**Diagnosis:**
+This is a second report of the same symptom after the perimeter fix (ffe7d0a). The coverage calculation is now working correctly — only 12 of 135 houses remain uncovered — but the waste score is still 100. Root cause: Jill has 156 staffed processors (69 pottery kilns, 35 tile makers, 18 canneries, 13 spiceries, 12 mosaic workshops, 9 glassworks) each emitting 1 unit of industrial waste. Total industrial waste = 156. Server formula: `3 + 3×12_uncovered + min(15, floor(13369/10)) + 156 = 3 + 36 + 15 + 156 = 210`, capped at 100. Even with perfect coverage (0 uncovered), the floor is `3 + 0 + 15 + 156 = 174`, still 100. Sanitation covers *housing* waste; it cannot offset processor industrial byproduct.
+
+The tooltip was also telling Jill to "add sanitation coverage" when sanitation is irrelevant to her true driver.
+
+**Fix (9dcf5e7):** Updated waste tooltip in `src/ui/TopBar.js` to compute the industrial waste component client-side (summing `waste_emit` for all staffed active buildings — mirrors server formula, data available via `select('*')` on `building_types`). When industrial waste > 0, the tooltip now shows "Industrial waste: X (staffed processors) + base Y" and, if processor output alone saturates the cap, explicitly tells the player "Processor output alone saturates the cap — sanitation covers housing but cannot offset industrial byproduct." Mirrors the congestion tooltip pattern.
+
+**Tests:** No regression test added (FE display-only change, no logic change). Feedback prompt queued for Jill explaining the industrial waste driver.
