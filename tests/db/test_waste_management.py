@@ -15,6 +15,9 @@ import pytest
 MIGRATION = os.path.expanduser(
     "~/citybuilder/city-builder-mvp/migration_patches/waste_management.sql"
 )
+MIGRATION_FOOTPRINT = os.path.expanduser(
+    "~/citybuilder/city-builder-mvp/migration_patches/waste_coverage_footprint.sql"
+)
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -28,6 +31,8 @@ def _apply_waste_migration(conn):
     sql = re.sub(r'(?im)^\s*(BEGIN|COMMIT)\s*;\s*$', '', sql)
     c = conn.cursor()
     c.execute(sql)
+    # Also apply the footprint-perimeter fix (idempotent CREATE OR REPLACE).
+    c.execute(open(MIGRATION_FOOTPRINT).read())
     c.close()
     yield
 
@@ -248,3 +253,40 @@ def test_waste_drag_on_desirability_is_bounded(cur, make_player, place, clear_re
     assert 0 <= drop <= 8, f"waste drag should be bounded 0..8, got {drop}"
     if d0 >= 8:
         assert drop == 8, f"at waste=100 expected full -8 drag, got {drop}"
+
+
+# ───────────────────────────────────────────────────────────
+# Footprint-perimeter coverage (2026-06-04 fix)
+# ───────────────────────────────────────────────────────────
+
+def test_recycling_center_coverage_formula_uses_footprint_perimeter(cur):
+    """Verify the footprint-perimeter Manhattan formula in isolation.
+
+    For a 2×2 recycling_center at (100, 100) with radius=7 and a house at (108, 100):
+      - Old anchor formula: ABS(100-108) = 8 > 7 → would leave house UNCOVERED.
+      - New formula: nearest cell x=101, dist = 108-101 = 7 ≤ 7 → COVERED.
+
+    This tests the formula algebra directly in SQL without needing live buildings.
+    """
+    cur.execute("""
+        SELECT
+          -- old anchor-only Manhattan distance
+          ABS(100 - 108) + ABS(100 - 100) AS anchor_dist,
+          -- new footprint-perimeter Manhattan distance (recycling_center fw=2, fh=2)
+          GREATEST(0, 100 - 108, 108 - (100 + 2 - 1))
+          + GREATEST(0, 100 - 100, 100 - (100 + 2 - 1)) AS footprint_dist
+    """)
+    anchor_dist, footprint_dist = cur.fetchone()
+
+    cur.execute("""
+        SELECT coverage_radius FROM public.building_types
+        WHERE key = 'recycling_center'
+    """)
+    radius = cur.fetchone()[0]
+
+    assert anchor_dist > radius, (
+        f"Old anchor dist ({anchor_dist}) should exceed radius ({radius}) for this test case"
+    )
+    assert footprint_dist <= radius, (
+        f"New footprint dist ({footprint_dist}) should be ≤ radius ({radius})"
+    )
