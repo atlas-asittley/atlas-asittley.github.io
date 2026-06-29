@@ -7,7 +7,7 @@ import {
 // ── Config ───────────────────────────────────────────────────────────────
 // Drew: replace this with your Ko-fi / Buy-Me-a-Coffee URL to turn on the tip
 // jar. While it still contains REPLACE_ME the tip button stays hidden.
-const TIP_URL = 'https://ko-fi.com/REPLACE_ME';
+const TIP_URL = 'https://ko-fi.com/atlasentre';
 const SHARE_URL = 'atlas-asittley.github.io/spectra';
 
 // ── State ────────────────────────────────────────────────────────────────
