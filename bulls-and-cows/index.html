@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>How to Play Bulls and Cows — Rules, Strategy &amp; Free Daily Game</title>
+<meta name="description" content="Learn the rules of Bulls and Cows, see a worked example, and master a simple strategy that cracks any code. Plus a free daily Bulls & Cows game you can play in your browser — no login." />
+<meta name="keywords" content="bulls and cows, bulls and cows rules, how to play bulls and cows, bulls and cows strategy, bulls and cows online, mastermind number game, crack the code game" />
+<link rel="canonical" href="https://atlas-asittley.github.io/bulls-and-cows/" />
+<meta property="og:title" content="How to Play Bulls and Cows — Rules, Strategy & Free Daily Game" />
+<meta property="og:description" content="Rules, a worked example, and a winning strategy — plus a free daily Bulls & Cows game in your browser." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://atlas-asittley.github.io/bulls-and-cows/" />
+<meta property="og:image" content="https://atlas-asittley.github.io/vaultle/og.png" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:image" content="https://atlas-asittley.github.io/vaultle/og.png" />
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "HowTo",
+  "name": "How to Play Bulls and Cows",
+  "description": "The rules and a winning strategy for the classic code-breaking game Bulls and Cows.",
+  "step": [
+    { "@type": "HowToStep", "name": "Set the code", "text": "One player picks a secret number with all different digits (commonly 4 digits)." },
+    { "@type": "HowToStep", "name": "Guess", "text": "The other player guesses a number with the same number of distinct digits." },
+    { "@type": "HowToStep", "name": "Score bulls and cows", "text": "A bull is a correct digit in the correct position; a cow is a correct digit in the wrong position." },
+    { "@type": "HowToStep", "name": "Deduce", "text": "Use the bull and cow counts to narrow down the code, and keep guessing until you score all bulls." }
+  ]
+}
+</script>
+<style>
+  :root{--bg:#0e0f13;--panel:#181a21;--text:#eef0f5;--muted:#9aa0b0;--gold:#e0b341;--gold2:#f4d27a;--green:#3fbf6f;--yellow:#d9b53a;--gray:#3a3f4b}
+  *{box-sizing:border-box} html,body{margin:0}
+  body{background:radial-gradient(1200px 600px at 50% -10%,#201b12 0%,var(--bg) 60%);color:var(--text);font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;line-height:1.65}
+  .wrap{max-width:760px;margin:0 auto;padding:32px 20px 60px}
+  h1{font-size:30px;line-height:1.2;margin:0 0 8px}
+  h2{font-size:21px;margin:34px 0 10px;color:#fff}
+  p,li{color:#cfd3dd;font-size:16px}
+  a{color:var(--gold2)}
+  .lede{color:var(--muted);font-size:17px;margin-top:6px}
+  .cta{display:block;margin:26px 0;padding:18px 22px;background:linear-gradient(90deg,var(--gold),var(--gold2));color:#2a2000;text-decoration:none;border-radius:14px;font-weight:800;font-size:18px;text-align:center;box-shadow:0 8px 30px rgba(0,0,0,.4)}
+  .pip{display:inline-block;width:16px;height:16px;border-radius:4px;vertical-align:middle}
+  .bull{background:var(--green)} .cow{background:var(--yellow)} .none{background:var(--gray)}
+  table{border-collapse:collapse;width:100%;margin:14px 0;font-size:15px}
+  th,td{border:1px solid #2b2f3a;padding:8px 10px;text-align:left} th{color:#fff;background:var(--panel)}
+  .ex{background:var(--panel);border:1px solid #2b2f3a;border-radius:12px;padding:14px 18px;margin:14px 0}
+  code{background:#11131a;border:1px solid #2b2f3a;border-radius:6px;padding:1px 6px;font-size:15px}
+  footer{margin-top:44px;border-top:1px solid #20232c;padding-top:18px;color:var(--muted);font-size:14px}
+  footer a{color:var(--gold2);text-decoration:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>How to Play Bulls and Cows</h1>
+  <p class="lede">The rules, a worked example, and a simple strategy that cracks any code — plus a free daily version you can play right now.</p>
+
+  <a class="cta" href="https://atlas-asittley.github.io/vaultle/">▶ Play today's free Bulls &amp; Cows puzzle — Vaultle</a>
+
+  <h2>What is Bulls and Cows?</h2>
+  <p>Bulls and Cows is a classic code-breaking game for the mind — older than its
+  famous commercial cousin <em>Mastermind</em>. One player thinks of a secret
+  number whose digits are all different (4 digits is the most common version), and
+  the other player tries to crack it with as few guesses as possible.</p>
+
+  <h2>The rules</h2>
+  <ul>
+    <li>The secret code has <strong>4 different digits</strong> (0–9, no repeats).</li>
+    <li>You guess a 4-digit number with no repeated digits.</li>
+    <li>Each guess is scored with two clues:
+      <ul>
+        <li><span class="pip bull"></span> <strong>Bull</strong> — a correct digit in the <em>correct</em> position.</li>
+        <li><span class="pip cow"></span> <strong>Cow</strong> — a correct digit in the <em>wrong</em> position.</li>
+      </ul>
+    </li>
+    <li>You're told only the <em>counts</em> of bulls and cows — not which digit is which. That's the whole challenge.</li>
+    <li>Crack the code when you score <strong>4 bulls</strong>.</li>
+  </ul>
+
+  <h2>A worked example</h2>
+  <p>Say the secret code is <code>1 9 0 5</code>:</p>
+  <table>
+    <tr><th>Your guess</th><th>Bulls</th><th>Cows</th><th>Why</th></tr>
+    <tr><td>0 1 2 3</td><td>0</td><td>2</td><td>0 and 1 are in the code but misplaced</td></tr>
+    <tr><td>1 0 4 5</td><td>2</td><td>1</td><td>1 and 5 are placed right; 0 is in the code but misplaced</td></tr>
+    <tr><td>1 9 0 5</td><td>4</td><td>0</td><td>cracked!</td></tr>
+  </table>
+
+  <h2>Strategy: how to crack it every time</h2>
+  <p>Bulls and Cows is pure deduction — no luck required. Here's a reliable approach:</p>
+  <ol>
+    <li><strong>Open with four distinct digits</strong> (for example <code>0 1 2 3</code>).
+    The total of bulls + cows tells you how many of those four digits appear in the code.</li>
+    <li><strong>Test fresh digits early.</strong> In your next guesses, swap in digits
+    you haven't tried yet so you quickly learn which of the ten digits are in the code.</li>
+    <li><strong>Turn cows into bulls.</strong> Once you know a digit is in the code (a
+    cow), move it to different positions on later guesses until it becomes a bull.</li>
+    <li><strong>Only guess codes that fit every clue so far.</strong> If a candidate
+    code would have produced different bull/cow counts on a past guess, eliminate it.
+    Keep doing this and you converge fast.</li>
+  </ol>
+  <p>With this method almost every code falls in <strong>five or six guesses</strong>,
+  and even the trickiest distinct-digit code is always solvable within nine.</p>
+
+  <h2>Play Bulls and Cows online (free, daily)</h2>
+  <p>Want to practice? <a href="https://atlas-asittley.github.io/vaultle/"><strong>Vaultle</strong></a>
+  is a free daily Bulls &amp; Cows game: everyone gets the same secret code each day,
+  you crack it in nine guesses, and you can share your spoiler-free result grid. No
+  login, no ads, works on mobile — and there's an unlimited practice mode for when
+  you want to keep going.</p>
+
+  <a class="cta" href="https://atlas-asittley.github.io/vaultle/">▶ Crack today's code on Vaultle</a>
+
+  <h2>FAQ</h2>
+  <p><strong>Is Bulls and Cows the same as Mastermind?</strong> They're the same idea.
+  Mastermind is the colored-peg board-game version; Bulls and Cows is the original
+  played with digits.</p>
+  <p><strong>Can the code have repeated digits?</strong> The classic version uses all
+  different digits, which keeps the deduction clean. That's the version Vaultle uses.</p>
+  <p><strong>How many guesses should it take?</strong> A careful player usually needs
+  five or six; nine is plenty of headroom.</p>
+
+  <footer>
+    Like daily puzzles? Also try <a href="https://atlas-asittley.github.io/spectra/">Spectra</a>
+    (guess the hidden color) · <a href="https://atlas-asittley.github.io/">all free games by Atlas</a>.
+  </footer>
+</div>
+</body>
+</html>
