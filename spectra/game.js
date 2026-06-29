@@ -181,6 +181,7 @@ function finish(won) {
 
 function startPractice() {
   try { window.aaTrack && aaTrack('practice'); } catch {}
+  try { window.AAds && AAds.interstitial('practice'); } catch {}
   cur = makeContext('practice', randomTarget());
   guess = [5, 5, 5];
   buildBoard();
