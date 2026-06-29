@@ -2,6 +2,7 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://atlas-asittley.github.io/</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
   <url><loc>https://atlas-asittley.github.io/spectra/</loc><changefreq>daily</changefreq><priority>1.0</priority></url>
+  <url><loc>https://atlas-asittley.github.io/vaultle/</loc><changefreq>daily</changefreq><priority>1.0</priority></url>
   <url><loc>https://atlas-asittley.github.io/realm-of-atlas-rpg/</loc><changefreq>weekly</changefreq><priority>0.6</priority></url>
   <url><loc>https://atlas-asittley.github.io/citybuilder/</loc><changefreq>weekly</changefreq><priority>0.6</priority></url>
   <url><loc>https://atlas-asittley.github.io/dodge-game/</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>

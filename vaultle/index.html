@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<meta name="theme-color" content="#0e0f13" />
+<title>Vaultle — the daily code-cracking game | free Bulls &amp; Cows puzzle</title>
+<meta name="description" content="Vaultle is a free daily code-breaking puzzle. Crack the hidden 4-digit safe code in 9 guesses using bulls &amp; cows clues, then share your result. New code every day — no login, no ads." />
+<meta name="keywords" content="daily code game, bulls and cows, mastermind game, crack the code, wordle alternative, daily puzzle, number guessing game, vaultle" />
+<meta name="author" content="Atlas" />
+<link rel="canonical" href="https://atlas-asittley.github.io/vaultle/" />
+<meta property="og:title" content="Vaultle — the daily code-cracking game" />
+<meta property="og:description" content="Crack the hidden 4-digit safe code in 9 guesses. A new code every day. Free, no login, no ads." />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="https://atlas-asittley.github.io/vaultle/" />
+<meta property="og:image" content="https://atlas-asittley.github.io/vaultle/og.png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:site_name" content="Vaultle" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Vaultle — the daily code-cracking game" />
+<meta name="twitter:description" content="Crack the hidden 4-digit safe code in 9 guesses. New code daily." />
+<meta name="twitter:image" content="https://atlas-asittley.github.io/vaultle/og.png" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%230e0f13'/><circle cx='50' cy='50' r='30' fill='none' stroke='%23e0b341' stroke-width='7'/><circle cx='50' cy='50' r='7' fill='%23e0b341'/><rect x='46' y='14' width='8' height='16' rx='3' fill='%23e0b341'/></svg>" />
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "VideoGame",
+  "name": "Vaultle",
+  "alternateName": "Vaultle daily code game",
+  "url": "https://atlas-asittley.github.io/vaultle/",
+  "image": "https://atlas-asittley.github.io/vaultle/og.png",
+  "description": "A free daily code-cracking puzzle (Bulls & Cows / Mastermind style). Crack the hidden 4-digit code in 9 guesses and share your result.",
+  "genre": ["Puzzle", "Logic game", "Daily game"],
+  "gamePlatform": "Web browser",
+  "applicationCategory": "Game",
+  "operatingSystem": "Any (web)",
+  "author": { "@type": "Person", "name": "Atlas" },
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+}
+</script>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<div id="app">
+  <header>
+    <button class="icon-btn" id="help-btn" aria-label="How to play">?</button>
+    <h1>VAULTLE</h1>
+    <button class="icon-btn" id="stats-btn" aria-label="Statistics">📊</button>
+  </header>
+  <p class="tagline">Crack the safe — <span id="day-label">Day #1</span></p>
+
+  <main>
+    <div class="vault-wrap">
+      <div class="vault" id="vault">
+        <span class="dial" data-i="0">?</span>
+        <span class="dial" data-i="1">?</span>
+        <span class="dial" data-i="2">?</span>
+        <span class="dial" data-i="3">?</span>
+      </div>
+      <div class="vault-caption" id="vault-caption">the hidden code (4 different digits)</div>
+    </div>
+
+    <div id="board" class="board"></div>
+
+    <div id="input-area" class="input-area">
+      <div class="slots" id="slots">
+        <span class="slot" data-i="0"></span>
+        <span class="slot" data-i="1"></span>
+        <span class="slot" data-i="2"></span>
+        <span class="slot" data-i="3"></span>
+      </div>
+      <div class="pad" id="pad"></div>
+      <div class="actions">
+        <button id="back-btn" class="aux-btn" aria-label="Delete">⌫</button>
+        <button id="guess-btn" class="guess-btn" disabled>GUESS</button>
+      </div>
+    </div>
+
+    <div id="endgame" class="endgame hidden">
+      <div class="reveal" id="reveal-text"></div>
+      <button id="share-btn" class="share-btn">SHARE RESULT</button>
+      <button id="practice-btn" class="practice-btn hidden">🎲 PLAY UNLIMITED</button>
+      <div id="tip-nudge" class="tip-nudge hidden"></div>
+      <div class="countdown" id="countdown-wrap">Next code in <span id="countdown">--:--:--</span></div>
+    </div>
+  </main>
+
+  <footer>
+    <a id="tip-link" href="#" target="_blank" rel="noopener" class="tip">☕ Enjoying Vaultle? Tip the dev</a>
+    <div class="cross">Also try <a href="https://atlas-asittley.github.io/spectra/">Spectra</a> — the daily color puzzle.</div>
+    <div class="credit">A daily puzzle. No login, no ads, no tracking.</div>
+  </footer>
+
+  <section class="about">
+    <h2>About Vaultle — the daily code-cracking game</h2>
+    <p>Vaultle is a free <b>daily code-breaking puzzle</b> based on the classic
+    game of <b>Bulls &amp; Cows</b> (also known as Mastermind). Every day there's
+    one hidden 4-digit code — all four digits are different — and the same code is
+    shared by every player. Your goal is to <b>crack it in nine guesses</b>.</p>
+    <p>After each guess you get two clues: the number of <b>bulls</b> (a correct
+    digit in the correct position) and <b>cows</b> (a correct digit in the wrong
+    position). Use those clues to deduce the code, then share your spoiler-free
+    result grid. A brand-new code drops every day.</p>
+
+    <h2>How to play</h2>
+    <ol>
+      <li>Tap four different digits (0–9) to enter a guess, then press <b>Guess</b>.</li>
+      <li>🎯 <b>Bulls</b> = right digit, right spot. ◐ <b>Cows</b> = right digit, wrong spot.</li>
+      <li>No color tells you <i>which</i> digit is which — that's the deduction!</li>
+      <li>Get four bulls within nine guesses to crack the vault.</li>
+    </ol>
+
+    <h2>FAQ</h2>
+    <p><b>Is Vaultle free?</b> Yes — free, no ads, no login. Optional tips support development.</p>
+    <p><b>How often are there new puzzles?</b> A new code every day, the same for everyone, reset at midnight UTC.</p>
+    <p><b>What's the difference from Wordle?</b> Same daily, shareable format, but you crack a number code using bulls &amp; cows logic instead of guessing a word.</p>
+    <p class="more-games">More free daily puzzles:
+      <a href="https://atlas-asittley.github.io/spectra/">Spectra (colors)</a> ·
+      <a href="https://atlas-asittley.github.io/">all games by Atlas</a>.</p>
+  </section>
+</div>
+
+<div class="modal hidden" id="help-modal">
+  <div class="modal-card">
+    <button class="close" data-close>×</button>
+    <h2>How to play</h2>
+    <p>A secret <b>4-digit code</b> is hidden each day. All four digits are
+    <b>different</b> (0–9).</p>
+    <p>Enter a guess of four different digits and press <b>Guess</b>. You'll get:</p>
+    <ul class="legend">
+      <li><span class="chip green"></span> <b>🎯 Bull</b> — right digit, right position.</li>
+      <li><span class="chip yellow"></span> <b>◐ Cow</b> — right digit, wrong position.</li>
+      <li><span class="chip gray"></span> — digit not in the code.</li>
+    </ul>
+    <p>The clues are <b>counts only</b> — they don't tell you which digit is which.
+    That's the puzzle! Crack the code in <b>9 guesses</b>.</p>
+  </div>
+</div>
+
+<div class="modal hidden" id="stats-modal">
+  <div class="modal-card">
+    <button class="close" data-close>×</button>
+    <h2>Statistics</h2>
+    <div class="stats-row" id="stats-row"></div>
+    <h3>Guess distribution</h3>
+    <div class="dist" id="dist"></div>
+    <button id="share-btn-2" class="share-btn">SHARE RESULT</button>
+  </div>
+</div>
+
+<div id="toast" class="toast hidden"></div>
+<script type="module" src="game.js"></script>
+</body>
+</html>
