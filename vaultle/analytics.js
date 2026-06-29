@@ -2,6 +2,7 @@
 // key, insert-only). No cookies, no PII, no fingerprinting — just a random
 // per-browser id so we can count unique players. Never blocks the game.
 (function () {
+  try { if (navigator.webdriver) return; } catch (e) {}
   var URL = 'https://igaulapupbtdcqqjobhs.supabase.co/rest/v1/site_events';
   var KEY = 'sb_publishable_7yi3BNg-J-K5nralw5JSww_c71Pge6e';
   var GAME = 'vaultle';
