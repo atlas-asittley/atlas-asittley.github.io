@@ -4,12 +4,41 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 <meta name="theme-color" content="#0e0f13" />
-<title>Spectra — the daily color deduction game</title>
-<meta name="description" content="Crack the hidden color in 6 guesses. A new color puzzle every day. Free, no login." />
+<title>Spectra — the daily color guessing game | free color deduction puzzle</title>
+<meta name="description" content="Spectra is a free daily color guessing puzzle. Crack the hidden RGB color in 6 guesses using hot/cold feedback, then share your result. New color every day — no login, no ads." />
+<meta name="keywords" content="daily color game, color guessing game, color puzzle, wordle alternative, daily puzzle, RGB guessing game, color deduction, spectra game" />
+<meta name="author" content="Atlas" />
+<link rel="canonical" href="https://atlas-asittley.github.io/spectra/" />
 <!-- Open Graph / share preview -->
-<meta property="og:title" content="Spectra — daily color deduction" />
-<meta property="og:description" content="Crack the hidden color in 6 guesses. A new puzzle every day." />
+<meta property="og:title" content="Spectra — the daily color guessing game" />
+<meta property="og:description" content="Crack the hidden color in 6 guesses. A new color puzzle every day. Free, no login, no ads." />
 <meta property="og:type" content="website" />
+<meta property="og:url" content="https://atlas-asittley.github.io/spectra/" />
+<meta property="og:image" content="https://atlas-asittley.github.io/spectra/og.png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:site_name" content="Spectra" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Spectra — the daily color guessing game" />
+<meta name="twitter:description" content="Crack the hidden color in 6 guesses. A new color puzzle every day." />
+<meta name="twitter:image" content="https://atlas-asittley.github.io/spectra/og.png" />
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "VideoGame",
+  "name": "Spectra",
+  "alternateName": "Spectra daily color game",
+  "url": "https://atlas-asittley.github.io/spectra/",
+  "image": "https://atlas-asittley.github.io/spectra/og.png",
+  "description": "A free daily color-deduction puzzle. Crack the hidden RGB color in 6 guesses using hot/cold feedback and share your result.",
+  "genre": ["Puzzle", "Word game", "Daily game"],
+  "gamePlatform": "Web browser",
+  "applicationCategory": "Game",
+  "operatingSystem": "Any (web)",
+  "author": { "@type": "Person", "name": "Atlas" },
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+}
+</script>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%230e0f13'/><circle cx='38' cy='42' r='22' fill='%23ff4d4d'/><circle cx='62' cy='42' r='22' fill='%234dff88' opacity='0.85'/><circle cx='50' cy='64' r='22' fill='%234d8bff' opacity='0.85'/></svg>" />
 <link rel="stylesheet" href="styles.css" />
 </head>
@@ -61,7 +90,9 @@
     <div id="endgame" class="endgame hidden">
       <div class="reveal" id="reveal-text"></div>
       <button id="share-btn" class="share-btn">SHARE RESULT</button>
-      <div class="countdown">Next puzzle in <span id="countdown">--:--:--</span></div>
+      <button id="practice-btn" class="practice-btn hidden">🎲 PLAY UNLIMITED</button>
+      <div id="tip-nudge" class="tip-nudge hidden"></div>
+      <div class="countdown" id="countdown-wrap">Next puzzle in <span id="countdown">--:--:--</span></div>
     </div>
   </main>
 
@@ -69,6 +100,40 @@
     <a id="tip-link" href="#" target="_blank" rel="noopener" class="tip">☕ Enjoying Spectra? Tip the dev</a>
     <div class="credit">A daily puzzle. No login, no ads, no tracking.</div>
   </footer>
+
+  <section class="about">
+    <h2>About Spectra — the daily color guessing game</h2>
+    <p>Spectra is a free <b>daily color puzzle</b> in the spirit of Wordle, but for
+    color. Every day there's one hidden color shared by all players. Its red, green
+    and blue channels are each a digit from 0 to 9, and your job is to <b>deduce the
+    exact color in six guesses</b>. After each guess, every channel tells you how
+    close you are — exact, within two, or far — plus an arrow showing whether to go
+    higher or lower. It's pure logic, not eyeballing: anyone can solve it.</p>
+    <p>When you crack it, you get a spoiler-free emoji grid to share with friends.
+    Come back tomorrow for a brand-new color. No account, no ads, no tracking, and
+    it works great on phones.</p>
+
+    <h2>How to play</h2>
+    <ol>
+      <li>Pick a value (0–9) for Red, Green and Blue, then press <b>Guess</b>.</li>
+      <li>🟩 means that channel is exact. 🟨 means you're within 2. ⬛ means you're far off.</li>
+      <li>The arrow (▲ / ▼) tells you whether the secret value is higher or lower.</li>
+      <li>Get all three green within six guesses to win, then share your result.</li>
+    </ol>
+
+    <h2>FAQ</h2>
+    <p><b>Is Spectra free?</b> Yes — completely free, no ads, no login. If you enjoy
+    it you can leave an optional tip to support development.</p>
+    <p><b>How often are there new puzzles?</b> A new color every day, the same for
+    everyone, reset at midnight UTC.</p>
+    <p><b>Do I need an account?</b> No. Your stats and streak are saved privately in
+    your own browser.</p>
+    <p><b>Is it like Wordle?</b> If you like Wordle, Mastermind, or other daily
+    deduction puzzles, you'll feel right at home — Spectra applies the same daily,
+    shareable format to colors.</p>
+    <p class="more-games">More free browser games and puzzles:
+      <a href="https://atlas-asittley.github.io/">see all by Atlas</a>.</p>
+  </section>
 </div>
 
 <!-- How-to modal -->

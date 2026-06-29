@@ -178,6 +178,22 @@ main { flex: 1; display: flex; flex-direction: column; }
 .reveal { font-size: 15px; margin-bottom: 12px; line-height: 1.5; }
 .reveal b { color: var(--text); }
 .share-btn { background: linear-gradient(90deg, var(--b), #8db3ff); color: #04122e; }
+.practice-btn {
+  width: 100%; padding: 13px; margin-top: 10px;
+  border: 1px solid #2b2f3a; border-radius: var(--radius);
+  background: var(--panel); color: var(--text);
+  font-size: 15px; font-weight: 700; letter-spacing: 1px; cursor: pointer;
+  transition: transform .1s, background .1s;
+}
+.practice-btn:active { transform: translateY(1px); background: var(--panel-2); }
+.tip-nudge {
+  margin-top: 14px; font-size: 13px; line-height: 1.5; color: var(--muted);
+  background: rgba(217,181,58,.08); border: 1px solid rgba(217,181,58,.25);
+  border-radius: 12px; padding: 10px 14px;
+}
+.tip-nudge a { color: var(--yellow); font-weight: 700; text-decoration: none; white-space: nowrap; }
+.tip-nudge a:hover { text-decoration: underline; }
+.inline-swatch { display: inline-block; width: 16px; height: 16px; border-radius: 4px; vertical-align: middle; border: 1px solid rgba(255,255,255,.15); }
 .countdown { color: var(--muted); font-size: 13px; margin-top: 12px; }
 .countdown span { color: var(--text); font-variant-numeric: tabular-nums; }
 
@@ -195,6 +211,17 @@ footer { text-align: center; margin-top: 20px; }
 }
 .tip:active { transform: scale(0.96); }
 .credit { color: var(--muted); font-size: 11px; margin-top: 10px; }
+
+/* SEO / supporting content — quiet, below the game */
+.about { margin-top: 40px; padding-top: 24px; border-top: 1px solid #20232c; color: var(--muted); }
+.about h2 { color: #c7cbd6; font-size: 16px; margin: 22px 0 8px; }
+.about p, .about li { font-size: 13px; line-height: 1.6; color: #9aa0b0; }
+.about b { color: #c7cbd6; }
+.about ol { padding-left: 18px; margin: 6px 0; }
+.about li { margin: 5px 0; }
+.about a { color: var(--g); text-decoration: none; }
+.about a:hover { text-decoration: underline; }
+.more-games { margin-top: 18px; }
 
 /* modals */
 .modal {
