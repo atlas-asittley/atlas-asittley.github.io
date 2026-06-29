@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<meta name="theme-color" content="#0e0f13" />
+<title>Spectra — the daily color deduction game</title>
+<meta name="description" content="Crack the hidden color in 6 guesses. A new color puzzle every day. Free, no login." />
+<!-- Open Graph / share preview -->
+<meta property="og:title" content="Spectra — daily color deduction" />
+<meta property="og:description" content="Crack the hidden color in 6 guesses. A new puzzle every day." />
+<meta property="og:type" content="website" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%230e0f13'/><circle cx='38' cy='42' r='22' fill='%23ff4d4d'/><circle cx='62' cy='42' r='22' fill='%234dff88' opacity='0.85'/><circle cx='50' cy='64' r='22' fill='%234d8bff' opacity='0.85'/></svg>" />
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<div id="app">
+  <header>
+    <button class="icon-btn" id="help-btn" aria-label="How to play">?</button>
+    <h1>SPECTRA</h1>
+    <button class="icon-btn" id="stats-btn" aria-label="Statistics">📊</button>
+  </header>
+  <p class="tagline">Crack the hidden color — <span id="day-label">Day #1</span></p>
+
+  <main>
+    <div class="target-wrap">
+      <div class="swatch target" id="target-swatch"><span id="target-mark">?</span></div>
+      <div class="target-caption" id="target-caption">the mystery color</div>
+    </div>
+
+    <div id="board" class="board"></div>
+
+    <div id="input-area" class="input-area">
+      <div class="steppers">
+        <div class="stepper" data-ch="0">
+          <span class="ch-label r">R</span>
+          <button class="step up" aria-label="R up">▲</button>
+          <span class="ch-val">5</span>
+          <button class="step down" aria-label="R down">▼</button>
+        </div>
+        <div class="stepper" data-ch="1">
+          <span class="ch-label g">G</span>
+          <button class="step up" aria-label="G up">▲</button>
+          <span class="ch-val">5</span>
+          <button class="step down" aria-label="G down">▼</button>
+        </div>
+        <div class="stepper" data-ch="2">
+          <span class="ch-label b">B</span>
+          <button class="step up" aria-label="B up">▲</button>
+          <span class="ch-val">5</span>
+          <button class="step down" aria-label="B down">▼</button>
+        </div>
+        <div class="preview-wrap">
+          <span class="ch-label">YOU</span>
+          <div class="swatch preview" id="preview-swatch"></div>
+        </div>
+      </div>
+      <button id="guess-btn" class="guess-btn">GUESS</button>
+    </div>
+
+    <div id="endgame" class="endgame hidden">
+      <div class="reveal" id="reveal-text"></div>
+      <button id="share-btn" class="share-btn">SHARE RESULT</button>
+      <div class="countdown">Next puzzle in <span id="countdown">--:--:--</span></div>
+    </div>
+  </main>
+
+  <footer>
+    <a id="tip-link" href="#" target="_blank" rel="noopener" class="tip">☕ Enjoying Spectra? Tip the dev</a>
+    <div class="credit">A daily puzzle. No login, no ads, no tracking.</div>
+  </footer>
+</div>
+
+<!-- How-to modal -->
+<div class="modal hidden" id="help-modal">
+  <div class="modal-card">
+    <button class="close" data-close>×</button>
+    <h2>How to play</h2>
+    <p>A secret color is hidden each day. Its <b>R</b>, <b>G</b> and <b>B</b> values are each a digit from <b>0–9</b>.</p>
+    <p>Pick R, G, B and hit <b>GUESS</b>. Each channel tells you how close you are:</p>
+    <ul class="legend">
+      <li><span class="chip green"></span> <b>Exact</b> — this digit is correct.</li>
+      <li><span class="chip yellow"></span> <b>Close</b> — within 2. Arrow shows which way.</li>
+      <li><span class="chip gray"></span> <b>Far</b> — off by more than 2. Arrow shows which way.</li>
+    </ul>
+    <p>▲ means the secret value is <b>higher</b>; ▼ means <b>lower</b>.</p>
+    <p>Get all three <span class="chip green sm"></span> in <b>6 guesses</b>. A new color drops every day.</p>
+  </div>
+</div>
+
+<!-- Stats modal -->
+<div class="modal hidden" id="stats-modal">
+  <div class="modal-card">
+    <button class="close" data-close>×</button>
+    <h2>Statistics</h2>
+    <div class="stats-row" id="stats-row"></div>
+    <h3>Guess distribution</h3>
+    <div class="dist" id="dist"></div>
+    <button id="share-btn-2" class="share-btn">SHARE RESULT</button>
+  </div>
+</div>
+
+<div id="toast" class="toast hidden"></div>
+
+<script type="module" src="game.js"></script>
+</body>
+</html>
