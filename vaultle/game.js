@@ -246,6 +246,8 @@ function bind() {
     const a = e.target.closest && e.target.closest('a[href*="ko-fi.com"]');
     if (a) { try { window.aaTrack && aaTrack('tip_click'); } catch {} }
   });
+  const cc = $('#cross-cta');
+  if (cc) cc.addEventListener('click', () => { try { window.aaTrack && aaTrack('crosslink'); } catch {} });
 }
 
 function init() {

@@ -186,6 +186,9 @@ main { flex: 1; display: flex; flex-direction: column; }
   transition: transform .1s, background .1s;
 }
 .practice-btn:active { transform: translateY(1px); background: var(--panel-2); }
+.cross-cta { display: block; margin-top: 10px; padding: 12px; border: 1px solid #2b2f3a; border-radius: var(--radius); background: var(--panel); color: var(--text); text-decoration: none; font-size: 14px; font-weight: 600; transition: transform .1s, background .1s; }
+.cross-cta:active { transform: translateY(1px); background: var(--panel-2); }
+.cross-cta b { color: var(--b); }
 .tip-nudge {
   margin-top: 14px; font-size: 13px; line-height: 1.5; color: var(--muted);
   background: rgba(217,181,58,.08); border: 1px solid rgba(217,181,58,.25);

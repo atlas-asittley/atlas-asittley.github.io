@@ -111,6 +111,9 @@ main { flex: 1; display: flex; flex-direction: column; }
   font-size: 15px; font-weight: 700; letter-spacing: 1px; cursor: pointer;
 }
 .practice-btn:active { background: var(--panel-2); }
+.cross-cta { display: block; margin-top: 10px; padding: 12px; border: 1px solid #2b2f3a; border-radius: var(--radius); background: var(--panel); color: var(--text); text-decoration: none; font-size: 14px; font-weight: 600; transition: transform .1s, background .1s; }
+.cross-cta:active { transform: translateY(1px); background: var(--panel-2); }
+.cross-cta b { color: var(--gold-2); }
 .tip-nudge {
   margin-top: 14px; font-size: 13px; line-height: 1.5; color: var(--muted);
   background: rgba(224,179,65,.08); border: 1px solid rgba(224,179,65,.25);
