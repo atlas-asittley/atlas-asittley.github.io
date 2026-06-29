@@ -130,6 +130,7 @@ function finish(won) {
     ? `🔓 Cracked in <b>${n}/${MAX_GUESSES}</b>! The code was ${code}`
     : `🔒 Vault stayed shut. The code was ${code}`;
   const isDaily = cur.mode === 'daily';
+  try { if (window.aaTrack && isDaily) aaTrack(won ? 'win' : 'loss', { n: cur.game.history.length }); } catch {}
   $('#share-btn').classList.toggle('hidden', !isDaily);
   $('#countdown-wrap').classList.toggle('hidden', !isDaily);
   const pb = $('#practice-btn'); pb.classList.remove('hidden');
@@ -144,6 +145,7 @@ function finish(won) {
 }
 
 function startPractice() {
+  try { window.aaTrack && aaTrack('practice'); } catch {}
   cur = makeContext('practice', randomTarget());
   current = [];
   buildBoard(); setMystery(); renderInput();
@@ -239,6 +241,10 @@ function bind() {
   });
   const tip = $('#tip-link');
   if (!TIP_ON) tip.style.display = 'none'; else tip.href = TIP_URL;
+  document.addEventListener('click', (e) => {
+    const a = e.target.closest && e.target.closest('a[href*="ko-fi.com"]');
+    if (a) { try { window.aaTrack && aaTrack('tip_click'); } catch {} }
+  });
 }
 
 function init() {
