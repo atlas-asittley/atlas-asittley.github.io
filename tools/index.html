@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Free Online Tools — Color, CSS &amp; Utilities (No Sign-up)</title>
+<meta name="description" content="A small collection of fast, free, no-sign-up web tools: color converter, CSS gradient generator, world clock, word extractor, and more." />
+<link rel="canonical" href="https://atlas-asittley.github.io/tools/" />
+<meta name="robots" content="index,follow" />
+<meta property="og:title" content="Free Online Tools — Color, CSS & Utilities" />
+<meta property="og:description" content="Fast, free, no-sign-up web tools." />
+<meta property="og:url" content="https://atlas-asittley.github.io/tools/" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%230e0f13'/><circle cx='38' cy='42' r='22' fill='%23ff4d4d'/><circle cx='62' cy='42' r='22' fill='%234dff88' opacity='0.85'/><circle cx='50' cy='64' r='22' fill='%234d8bff' opacity='0.85'/></svg>" />
+<style>
+  :root{--bg:#0e0f13;--card:#171922;--line:#2a2d3a;--ink:#f4f6fa;--mut:#a8acba;--accent:#4d8bff}
+  *{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--ink);line-height:1.55}
+  .wrap{max-width:820px;margin:0 auto;padding:24px 18px 60px}
+  h1{font-size:1.8rem;margin:.2em 0 .1em}.sub{color:var(--mut);margin:.2em 0 1.6em}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px}
+  a.card{display:block;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;text-decoration:none;color:var(--ink);transition:border-color .15s}
+  a.card:hover{border-color:var(--accent)}
+  a.card h2{font-size:1.05rem;margin:.1em 0 .35em}
+  a.card p{margin:0;color:var(--mut);font-size:.9rem}
+  footer{margin-top:34px;color:var(--mut);font-size:.85rem;text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>Free Online Tools</h1>
+<p class="sub">Fast, free, no sign-up. Built by an indie dev — works great on mobile.</p>
+<div class="grid">
+  <a class="card" href="https://atlas-asittley.github.io/color-tools/"><h2>🎨 Color Converter &amp; Palette</h2><p>HEX ⇄ RGB ⇄ HSL, tints &amp; shades, and WCAG contrast checking.</p></a>
+  <a class="card" href="https://atlas-asittley.github.io/gradient-generator/"><h2>🌈 CSS Gradient Generator</h2><p>Linear &amp; radial gradients with live preview — copy the CSS.</p></a>
+  <a class="card" href="https://atlas-asittley.github.io/world-clock/"><h2>🕐 World Clock</h2><p>See the current time across time zones at a glance.</p></a>
+  <a class="card" href="https://atlas-asittley.github.io/word-extractor/"><h2>📝 Word Extractor</h2><p>Pull and clean up words from any block of text.</p></a>
+</div>
+
+<p style="margin-top:30px;color:#d6d9e2">Looking for a game break? Try our daily puzzles
+<a style="color:var(--accent)" href="https://atlas-asittley.github.io/spectra/">Spectra</a> (colors) and
+<a style="color:var(--accent)" href="https://atlas-asittley.github.io/vaultle/">Vaultle</a> (codes).</p>
+<footer>More tools added regularly · no login, no personal tracking</footer>
+</div>
+<script>
+(function(){try{if(navigator.webdriver)return;}catch(e){}
+var U='https://igaulapupbtdcqqjobhs.supabase.co/rest/v1/site_events',K='sb_publishable_7yi3BNg-J-K5nralw5JSww_c71Pge6e';
+function sid(){try{var s=localStorage.getItem('aa_sid');if(!s){s=Math.random().toString(36).slice(2)+Date.now().toString(36);localStorage.setItem('aa_sid',s);}return s;}catch(e){return 'na';}}
+try{fetch(U,{method:'POST',headers:{apikey:K,Authorization:'Bearer '+K,'Content-Type':'application/json',Prefer:'return=minimal'},body:JSON.stringify({game:'tools-hub',type:'visit',sid:sid(),ref:(document.referrer||'').split('/')[2]||null,meta:null}),keepalive:true}).catch(function(){});}catch(e){}
+})();
+</script>
+</body>
+</html>

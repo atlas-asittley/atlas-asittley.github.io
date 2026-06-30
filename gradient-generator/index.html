@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CSS Gradient Generator — Linear &amp; Radial, Copy the Code</title>
+<meta name="description" content="Free CSS gradient generator. Pick colors, angle, and type (linear or radial), preview live, and copy ready-to-use CSS in one tap. No sign-up." />
+<link rel="canonical" href="https://atlas-asittley.github.io/gradient-generator/" />
+<meta name="robots" content="index,follow" />
+<meta property="og:type" content="website" />
+<meta property="og:title" content="CSS Gradient Generator — Linear & Radial" />
+<meta property="og:description" content="Pick colors and angle, preview live, copy ready-to-use CSS. Free, instant, no sign-up." />
+<meta property="og:url" content="https://atlas-asittley.github.io/gradient-generator/" />
+<meta name="twitter:card" content="summary" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23ff4d4d'/><stop offset='1' stop-color='%234d8bff'/></linearGradient></defs><rect width='100' height='100' rx='22' fill='url(%23g)'/></svg>" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebApplication","name":"CSS Gradient Generator","url":"https://atlas-asittley.github.io/gradient-generator/","applicationCategory":"DesignApplication","operatingSystem":"Any (web browser)","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"description":"Generate linear and radial CSS gradients, preview live, and copy the code."}
+</script>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[
+{"@type":"Question","name":"How do I make a CSS gradient?","acceptedAnswer":{"@type":"Answer","text":"Choose two or more colors and an angle. This tool builds the CSS for you — for example background: linear-gradient(90deg, #ff4d4d, #4d8bff); — and you copy it with one tap."}},
+{"@type":"Question","name":"What is the difference between linear and radial gradients?","acceptedAnswer":{"@type":"Answer","text":"A linear gradient blends colors along a straight line at a chosen angle. A radial gradient blends outward from a center point in a circle or ellipse."}}
+]}
+</script>
+<style>
+  :root{--bg:#0e0f13;--card:#171922;--line:#2a2d3a;--ink:#f4f6fa;--mut:#a8acba;--accent:#4d8bff}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--ink);line-height:1.55}
+  .wrap{max-width:860px;margin:0 auto;padding:24px 18px 60px}
+  h1{font-size:1.7rem;margin:.2em 0 .1em}.sub{color:var(--mut);margin:.2em 0 1.4em}
+  .tool{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px;margin-bottom:26px}
+  .preview{height:200px;border-radius:12px;border:1px solid var(--line);margin-bottom:18px}
+  .row{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end;margin-bottom:14px}
+  .field{flex:1 1 120px;min-width:110px}
+  label{display:block;font-size:.78rem;color:var(--mut);margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em}
+  input[type=color]{width:100%;height:44px;border:1px solid var(--line);border-radius:9px;background:#0e0f15;padding:3px;cursor:pointer}
+  input[type=range]{width:100%}
+  select{width:100%;background:#0e0f15;border:1px solid var(--line);color:var(--ink);border-radius:9px;padding:10px}
+  button{background:#222634;color:var(--ink);border:1px solid var(--line);border-radius:9px;padding:10px 14px;font-size:.92rem;cursor:pointer}
+  button:hover{border-color:var(--accent)}
+  .out{display:flex;gap:8px;margin-top:6px}
+  .out code{flex:1;background:#0e0f15;border:1px solid var(--line);border-radius:9px;padding:12px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.9rem;overflow:auto;white-space:pre-wrap;word-break:break-all}
+  h2{font-size:1.2rem;margin:1.6em 0 .4em}.content{color:#d6d9e2}.content a{color:var(--accent)}
+  .faq dt{font-weight:600;margin-top:14px}.faq dd{margin:4px 0 0;color:var(--mut)}
+  .cross{margin-top:30px;padding:16px;border:1px dashed var(--line);border-radius:12px;color:var(--mut)}.cross a{color:var(--accent);text-decoration:none}
+  footer{margin-top:30px;color:var(--mut);font-size:.85rem;text-align:center}
+  .toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#222634;border:1px solid var(--accent);padding:9px 16px;border-radius:10px;opacity:0;transition:opacity .2s;pointer-events:none}
+  .toast.show{opacity:1}
+  #angleWrap{transition:opacity .2s}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>CSS Gradient Generator</h1>
+<p class="sub">Pick colors, type, and angle — preview live and <b>copy the CSS</b>. Free, instant, no sign-up.</p>
+
+<div class="tool">
+  <div id="preview" class="preview"></div>
+  <div class="row">
+    <div class="field"><label>Color 1</label><input type="color" id="c1" value="#ff4d4d"></div>
+    <div class="field"><label>Color 2</label><input type="color" id="c2" value="#4d8bff"></div>
+    <div class="field"><label>Color 3 (opt)</label><input type="color" id="c3" value="#4dff88"></div>
+    <div class="field"><label><input type="checkbox" id="use3"> use 3rd</label></div>
+  </div>
+  <div class="row">
+    <div class="field"><label>Type</label><select id="type"><option value="linear">Linear</option><option value="radial">Radial</option></select></div>
+    <div class="field" id="angleWrap"><label>Angle: <span id="angVal">90</span>°</label><input type="range" id="angle" min="0" max="360" value="90"></div>
+    <div class="field"><label>&nbsp;</label><button id="rand">🎲 Random</button></div>
+  </div>
+  <label>CSS</label>
+  <div class="out"><code id="css"></code><button id="copy">Copy</button></div>
+</div>
+
+<div class="content">
+  <h2>Make a CSS gradient in seconds</h2>
+  <p>Choose two or three colors, pick linear or radial, set the angle, and copy production-ready CSS. Gradients add depth to buttons, hero sections, cards, and backgrounds without a single image file. Everything updates live so you can dial in exactly the look you want.</p>
+  <h2>FAQ</h2>
+  <dl class="faq">
+    <dt>How do I use the generated CSS?</dt>
+    <dd>Paste it as the <code>background</code> of any element, e.g. <code>background: linear-gradient(90deg, #ff4d4d, #4d8bff);</code></dd>
+    <dt>Linear vs radial?</dt>
+    <dd>Linear blends along a straight line at your chosen angle; radial blends outward from the center.</dd>
+  </dl>
+  <div class="cross">More color tools: <a href="https://atlas-asittley.github.io/color-tools/">Color Converter &amp; Palette (HEX/RGB/HSL + contrast)</a> · or play <a href="https://atlas-asittley.github.io/spectra/">Spectra</a>, our daily color puzzle.</div>
+</div>
+<footer>Free color tools · works on mobile · no login</footer>
+</div>
+<div class="toast" id="toast">Copied!</div>
+
+<script>
+var $=function(s){return document.querySelector(s);};
+var c1=$('#c1'),c2=$('#c2'),c3=$('#c3'),use3=$('#use3'),type=$('#type'),angle=$('#angle');
+function build(){
+  var stops=[c1.value,c2.value];if(use3.checked)stops.push(c3.value);
+  var css;
+  if(type.value==='radial'){css='radial-gradient(circle, '+stops.join(', ')+')';$('#angleWrap').style.opacity=.35;}
+  else{css='linear-gradient('+angle.value+'deg, '+stops.join(', ')+')';$('#angleWrap').style.opacity=1;}
+  $('#angVal').textContent=angle.value;
+  $('#preview').style.background=css;
+  $('#css').textContent='background: '+css+';';
+}
+[c1,c2,c3,use3,type,angle].forEach(function(el){el.addEventListener('input',build);});
+function rc(){return '#'+Math.floor(Math.random()*16777216).toString(16).padStart(6,'0');}
+$('#rand').addEventListener('click',function(){c1.value=rc();c2.value=rc();c3.value=rc();angle.value=Math.floor(Math.random()*360);build();});
+var toast=$('#toast');
+$('#copy').addEventListener('click',function(){var v=$('#css').textContent;navigator.clipboard&&navigator.clipboard.writeText(v);toast.classList.add('show');setTimeout(function(){toast.classList.remove('show');},900);});
+build();
+</script>
+<script>
+(function(){try{if(navigator.webdriver)return;}catch(e){}
+var U='https://igaulapupbtdcqqjobhs.supabase.co/rest/v1/site_events',K='sb_publishable_7yi3BNg-J-K5nralw5JSww_c71Pge6e';
+function sid(){try{var s=localStorage.getItem('aa_sid');if(!s){s=Math.random().toString(36).slice(2)+Date.now().toString(36);localStorage.setItem('aa_sid',s);}return s;}catch(e){return 'na';}}
+try{fetch(U,{method:'POST',headers:{apikey:K,Authorization:'Bearer '+K,'Content-Type':'application/json',Prefer:'return=minimal'},body:JSON.stringify({game:'gradient-generator',type:'visit',sid:sid(),ref:(document.referrer||'').split('/')[2]||null,meta:null}),keepalive:true}).catch(function(){});}catch(e){}
+})();
+</script>
+</body>
+</html>
