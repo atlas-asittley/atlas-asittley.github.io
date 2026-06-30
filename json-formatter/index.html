@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>JSON Formatter &amp; Validator — Beautify, Minify, Validate Online</title>
+<meta name="description" content="Free online JSON formatter and validator. Beautify (pretty-print), minify, and validate JSON instantly with clear error messages. Works in your browser — no sign-up, nothing uploaded." />
+<link rel="canonical" href="https://atlas-asittley.github.io/json-formatter/" />
+<meta name="robots" content="index,follow" />
+<meta property="og:type" content="website" />
+<meta property="og:title" content="JSON Formatter & Validator — Beautify, Minify, Validate" />
+<meta property="og:description" content="Beautify, minify, and validate JSON instantly with clear error messages. Free, private (in-browser), no sign-up." />
+<meta property="og:url" content="https://atlas-asittley.github.io/json-formatter/" />
+<meta name="twitter:card" content="summary" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%230e0f13'/><text x='50' y='68' font-size='58' text-anchor='middle' fill='%234d8bff' font-family='monospace'>{ }</text></svg>" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebApplication","name":"JSON Formatter & Validator","url":"https://atlas-asittley.github.io/json-formatter/","applicationCategory":"DeveloperApplication","operatingSystem":"Any (web browser)","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"description":"Beautify, minify, and validate JSON in the browser with clear error messages."}
+</script>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[
+{"@type":"Question","name":"How do I format (beautify) JSON?","acceptedAnswer":{"@type":"Answer","text":"Paste your JSON and click Format. It is pretty-printed with your chosen indentation (2 spaces, 4 spaces, or tabs). Click Copy to grab the result."}},
+{"@type":"Question","name":"Is my JSON uploaded anywhere?","acceptedAnswer":{"@type":"Answer","text":"No. All formatting, minifying, and validation happens locally in your browser. Your data never leaves your device."}},
+{"@type":"Question","name":"What does the validator show on invalid JSON?","acceptedAnswer":{"@type":"Answer","text":"It shows the parser error message and points to the line and column where parsing failed, so you can fix it quickly."}}
+]}
+</script>
+<style>
+  :root{--bg:#0e0f13;--card:#171922;--line:#2a2d3a;--ink:#f4f6fa;--mut:#a8acba;--accent:#4d8bff}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--ink);line-height:1.55}
+  .wrap{max-width:980px;margin:0 auto;padding:24px 18px 60px}
+  h1{font-size:1.7rem;margin:.2em 0 .1em}.sub{color:var(--mut);margin:.2em 0 1.2em}
+  .bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}
+  button{background:#222634;color:var(--ink);border:1px solid var(--line);border-radius:9px;padding:9px 14px;font-size:.92rem;cursor:pointer}
+  button:hover{border-color:var(--accent)}
+  button.primary{background:var(--accent);color:#06122b;border-color:var(--accent);font-weight:600}
+  select{background:#0e0f15;border:1px solid var(--line);color:var(--ink);border-radius:9px;padding:9px}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:760px){.grid{grid-template-columns:1fr}}
+  label{display:block;font-size:.78rem;color:var(--mut);margin:0 0 5px;text-transform:uppercase;letter-spacing:.05em}
+  textarea,pre.out{width:100%;height:340px;background:#0b0c11;border:1px solid var(--line);border-radius:11px;padding:13px;color:var(--ink);font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.9rem;overflow:auto;margin:0}
+  textarea{resize:vertical}
+  pre.out{white-space:pre;tab-size:2}
+  .status{margin:10px 0;padding:10px 13px;border-radius:9px;font-size:.9rem;display:none}
+  .status.ok{display:block;background:#10301f;color:#73e6a4;border:1px solid #1c5837}
+  .status.err{display:block;background:#3a1414;color:#ff9b9b;border:1px solid #5e2020}
+  .key{color:#8ab4ff}.str{color:#7ee0a0}.num{color:#f0b86c}.bool{color:#e07bd8}.null{color:#9aa0b3}
+  h2{font-size:1.2rem;margin:1.7em 0 .4em}.content{color:#d6d9e2}.content a{color:var(--accent)}
+  .faq dt{font-weight:600;margin-top:14px}.faq dd{margin:4px 0 0;color:var(--mut)}
+  .cross{margin-top:26px;padding:16px;border:1px dashed var(--line);border-radius:12px;color:var(--mut)}.cross a{color:var(--accent);text-decoration:none}
+  footer{margin-top:28px;color:var(--mut);font-size:.85rem;text-align:center}
+  .toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#222634;border:1px solid var(--accent);padding:9px 16px;border-radius:10px;opacity:0;transition:opacity .2s;pointer-events:none}
+  .toast.show{opacity:1}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>JSON Formatter &amp; Validator</h1>
+<p class="sub">Beautify, minify, and validate JSON instantly — right in your browser. Nothing is uploaded.</p>
+
+<div class="bar">
+  <button class="primary" id="format">Format</button>
+  <button id="minify">Minify</button>
+  <label style="display:inline;text-transform:none;letter-spacing:0;color:var(--mut)">Indent
+    <select id="indent"><option value="2">2 spaces</option><option value="4">4 spaces</option><option value="\t">Tab</option></select>
+  </label>
+  <button id="sample">Sample</button>
+  <button id="clear">Clear</button>
+  <button id="copy">Copy output</button>
+</div>
+
+<div class="grid">
+  <div><label>Input</label><textarea id="in" spellcheck="false" placeholder='Paste JSON here, e.g. {"name":"Spectra","guesses":6,"daily":true}'></textarea></div>
+  <div><label>Output</label><pre class="out" id="out"></pre></div>
+</div>
+<div class="status" id="status"></div>
+
+<div class="content">
+  <h2>Format, validate, and minify JSON — privately</h2>
+  <p>Paste any JSON and click <b>Format</b> to pretty-print it with your chosen indentation, or <b>Minify</b> to strip whitespace for the smallest payload. If the JSON is invalid, the validator tells you the exact <b>line and column</b> of the problem so you can fix it fast. Everything runs locally in your browser — your data is never sent to a server.</p>
+  <h2>FAQ</h2>
+  <dl class="faq">
+    <dt>Is my data private?</dt><dd>Yes — all processing happens in your browser; nothing is uploaded.</dd>
+    <dt>What is minifying?</dt><dd>Removing all unnecessary whitespace so the JSON is as small as possible — useful for APIs and storage.</dd>
+    <dt>Why did it say invalid?</dt><dd>JSON requires double-quoted keys, no trailing commas, and no comments. The error message points to where parsing failed.</dd>
+  </dl>
+  <div class="cross">More free dev/design tools: <a href="https://atlas-asittley.github.io/tools/">all tools</a> · <a href="https://atlas-asittley.github.io/color-tools/">Color Converter</a> · <a href="https://atlas-asittley.github.io/gradient-generator/">CSS Gradient Generator</a>.</div>
+</div>
+<footer>Free, in-browser, no login · works on mobile</footer>
+</div>
+<div class="toast" id="toast">Copied!</div>
+
+<script>
+var $=function(s){return document.querySelector(s);};
+var inp=$('#in'),out=$('#out'),status=$('#status');
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function highlight(json){
+  return esc(json).replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,function(m){
+    var cls='num';
+    if(/^"/.test(m)) cls=/:$/.test(m)?'key':'str';
+    else if(/true|false/.test(m)) cls='bool';
+    else if(/null/.test(m)) cls='null';
+    return '<span class="'+cls+'">'+m+'</span>';
+  });
+}
+function indentVal(){var v=$('#indent').value;return v==='\\t'?'\t':parseInt(v,10);}
+function lineCol(text,pos){var upto=text.slice(0,pos);var line=upto.split('\n').length;var col=pos-upto.lastIndexOf('\n');return {line:line,col:col};}
+function show(ok,msg){status.className='status '+(ok?'ok':'err');status.textContent=msg;}
+function process(minify){
+  var text=inp.value.trim();
+  if(!text){out.innerHTML='';status.className='status';return;}
+  try{
+    var obj=JSON.parse(text);
+    var result=minify?JSON.stringify(obj):JSON.stringify(obj,null,indentVal());
+    out.innerHTML=highlight(result);
+    var bytes=new Blob([result]).size;
+    show(true,'✓ Valid JSON · '+(minify?'minified':'formatted')+' · '+bytes+' bytes');
+  }catch(e){
+    out.innerHTML='';
+    var msg=e.message||'Invalid JSON';
+    var m=msg.match(/position (\d+)/);
+    if(m){var lc=lineCol(text,parseInt(m[1],10));msg+=' (line '+lc.line+', column '+lc.col+')';}
+    show(false,'✗ '+msg);
+  }
+}
+$('#format').addEventListener('click',function(){process(false);});
+$('#minify').addEventListener('click',function(){process(true);});
+$('#indent').addEventListener('change',function(){if(inp.value.trim())process(false);});
+$('#sample').addEventListener('click',function(){inp.value='{"name":"Spectra","type":"daily puzzle","guesses":6,"channels":["red","green","blue"],"daily":true,"meta":{"shareable":true,"tips":null}}';process(false);});
+$('#clear').addEventListener('click',function(){inp.value='';out.innerHTML='';status.className='status';inp.focus();});
+var toast=$('#toast');
+$('#copy').addEventListener('click',function(){var v=out.textContent;if(!v)return;navigator.clipboard&&navigator.clipboard.writeText(v);toast.classList.add('show');setTimeout(function(){toast.classList.remove('show');},900);});
+inp.addEventListener('input',function(){if(inp.value.trim())process(false);else{out.innerHTML='';status.className='status';}});
+</script>
+<script>
+(function(){try{if(navigator.webdriver)return;}catch(e){}
+var U='https://igaulapupbtdcqqjobhs.supabase.co/rest/v1/site_events',K='sb_publishable_7yi3BNg-J-K5nralw5JSww_c71Pge6e';
+function sid(){try{var s=localStorage.getItem('aa_sid');if(!s){s=Math.random().toString(36).slice(2)+Date.now().toString(36);localStorage.setItem('aa_sid',s);}return s;}catch(e){return 'na';}}
+try{fetch(U,{method:'POST',headers:{apikey:K,Authorization:'Bearer '+K,'Content-Type':'application/json',Prefer:'return=minimal'},body:JSON.stringify({game:'json-formatter',type:'visit',sid:sid(),ref:(document.referrer||'').split('/')[2]||null,meta:null}),keepalive:true}).catch(function(){});}catch(e){}
+})();
+</script>
+</body>
+</html>
