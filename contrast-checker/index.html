@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>WCAG Contrast Checker — Color Contrast Ratio for AA &amp; AAA</title>
+<meta name="description" content="Free WCAG color contrast checker. Enter a text and background color to get the exact contrast ratio and instant AA / AAA pass-fail for normal text, large text, and UI. Get a suggested accessible color in one tap. No sign-up." />
+<link rel="canonical" href="https://atlas-asittley.github.io/contrast-checker/" />
+<meta name="robots" content="index,follow" />
+<meta property="og:type" content="website" />
+<meta property="og:title" content="WCAG Contrast Checker — Color Contrast Ratio for AA &amp; AAA" />
+<meta property="og:description" content="Check any text/background color pair against WCAG AA and AAA, with a live preview and a one-tap accessible-color fix. Free, instant, no sign-up." />
+<meta property="og:url" content="https://atlas-asittley.github.io/contrast-checker/" />
+<meta name="twitter:card" content="summary" />
+<meta name="twitter:title" content="WCAG Contrast Checker" />
+<meta name="twitter:description" content="Contrast ratio + AA/AAA pass-fail for any color pair, with a one-tap accessible fix. Free and instant." />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%230e0f13'/><circle cx='50' cy='50' r='30' fill='%23ffffff'/><path d='M50 20 a30 30 0 0 1 0 60 z' fill='%23111111'/></svg>" />
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "WCAG Contrast Checker",
+  "url": "https://atlas-asittley.github.io/contrast-checker/",
+  "applicationCategory": "DesignApplication",
+  "operatingSystem": "Any (web browser)",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "description": "Check the WCAG contrast ratio between a text color and a background color, with instant AA and AAA pass-fail for normal text, large text, and UI components, plus a suggested accessible color."
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "HowTo",
+  "name": "How to check color contrast for accessibility",
+  "step": [
+    {"@type":"HowToStep","name":"Set the text color","text":"Pick or paste the HEX of your text (foreground) color."},
+    {"@type":"HowToStep","name":"Set the background color","text":"Pick or paste the HEX of the background the text sits on."},
+    {"@type":"HowToStep","name":"Read the ratio","text":"The contrast ratio updates instantly and shows whether it passes WCAG AA and AAA for normal text, large text, and UI components."},
+    {"@type":"HowToStep","name":"Fix it if needed","text":"If a check fails, tap 'Suggest an accessible color' to get the nearest color that passes AA while keeping the same hue."}
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {"@type":"Question","name":"What is a good WCAG contrast ratio?","acceptedAnswer":{"@type":"Answer","text":"WCAG AA requires a contrast ratio of at least 4.5:1 for normal text and 3:1 for large text (18pt, or 14pt bold). AAA is stricter: 7:1 for normal text and 4.5:1 for large text. User-interface components and graphics need at least 3:1."}},
+    {"@type":"Question","name":"How is contrast ratio calculated?","acceptedAnswer":{"@type":"Answer","text":"It is (L1 + 0.05) / (L2 + 0.05), where L1 and L2 are the relative luminance of the lighter and darker colors. Luminance is a weighted, gamma-corrected mix of the red, green, and blue channels as defined by WCAG 2."}},
+    {"@type":"Question","name":"What counts as large text?","acceptedAnswer":{"@type":"Answer","text":"WCAG defines large text as at least 18pt (about 24px) for regular weight, or 14pt (about 18.66px) when bold. Large text only needs a 3:1 ratio for AA."}},
+    {"@type":"Question","name":"Does this contrast checker store my colors?","acceptedAnswer":{"@type":"Answer","text":"No. All calculations run in your browser. Nothing about the colors you test is sent anywhere or saved."}}
+  ]
+}
+</script>
+<style>
+  :root{--bg:#0e0f13;--card:#171922;--line:#2a2d3a;--ink:#f4f6fa;--mut:#a8acba;--accent:#4d8bff}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--ink);line-height:1.55}
+  .wrap{max-width:860px;margin:0 auto;padding:24px 18px 60px}
+  header h1{font-size:1.7rem;margin:.2em 0 .1em}
+  header p.sub{color:var(--mut);margin:.2em 0 1.4em}
+  .tool{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px;margin-bottom:26px}
+  .preview{border-radius:12px;border:1px solid var(--line);margin-bottom:18px;padding:22px 20px}
+  .preview .big{font-size:1.65rem;font-weight:700;margin:0 0 .35em}
+  .preview .norm{font-size:1rem;margin:0}
+  .row{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:12px;align-items:flex-end}
+  .field{flex:1 1 220px;min-width:180px}
+  label{display:block;font-size:.78rem;color:var(--mut);margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em}
+  .inp{display:flex;gap:6px}
+  input[type=text]{flex:1;background:#0e0f15;border:1px solid var(--line);color:var(--ink);border-radius:9px;padding:10px 12px;font-size:1rem;font-family:ui-monospace,Menlo,Consolas,monospace}
+  input[type=color]{width:54px;height:44px;border:1px solid var(--line);border-radius:9px;background:#0e0f15;padding:3px;cursor:pointer}
+  button{background:#222634;color:var(--ink);border:1px solid var(--line);border-radius:9px;padding:10px 14px;font-size:.92rem;cursor:pointer}
+  button:hover{border-color:var(--accent)}
+  .controls{display:flex;flex-wrap:wrap;gap:10px;margin-top:4px}
+  .ratio{text-align:center;margin:6px 0 14px}
+  .ratio .num{font-size:2.6rem;font-weight:800;line-height:1.1}
+  .ratio .lab{color:var(--mut);font-size:.85rem;letter-spacing:.04em;text-transform:uppercase}
+  .checks{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+  .chk{border:1px solid var(--line);border-radius:10px;padding:12px;text-align:center}
+  .chk .t{font-size:.8rem;color:var(--mut);margin-bottom:6px}
+  .chk .req{font-size:.72rem;color:var(--mut);margin-top:5px}
+  .badge{display:inline-block;padding:3px 10px;border-radius:999px;font-size:.8rem;font-weight:700}
+  .pass{background:#173d27;color:#65e29a}.fail{background:#3d1717;color:#ff8a8a}
+  h2{font-size:1.2rem;margin:1.6em 0 .4em}
+  .content{color:#d6d9e2}
+  .content a{color:var(--accent)}
+  table{width:100%;border-collapse:collapse;margin:.6em 0;font-size:.95rem}
+  th,td{border:1px solid var(--line);padding:8px 10px;text-align:left}
+  th{color:var(--mut);font-weight:600}
+  .faq dt{font-weight:600;margin-top:14px}
+  .faq dd{margin:4px 0 0;color:var(--mut)}
+  .cross{margin-top:30px;padding:16px;border:1px dashed var(--line);border-radius:12px;color:var(--mut)}
+  .cross a{color:var(--accent);text-decoration:none}
+  footer{margin-top:30px;color:var(--mut);font-size:.85rem;text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>WCAG Contrast Checker</h1>
+  <p class="sub">Enter a <b>text</b> and <b>background</b> color to get the exact <b>contrast ratio</b> and instant <b>AA / AAA</b> pass-fail. Free, instant, no sign-up.</p>
+</header>
+
+<div class="tool">
+  <div id="preview" class="preview">
+    <p class="big">Large sample text</p>
+    <p class="norm">This is normal body text used to preview how readable your color pair is against this background.</p>
+  </div>
+
+  <div class="row">
+    <div class="field"><label>Text color</label><div class="inp"><input type="color" id="fgPick" value="#8b95a7"><input type="text" id="fgHex" value="#8b95a7" spellcheck="false"></div></div>
+    <div class="field"><label>Background color</label><div class="inp"><input type="color" id="bgPick" value="#ffffff"><input type="text" id="bgHex" value="#ffffff" spellcheck="false"></div></div>
+  </div>
+  <div class="controls">
+    <button id="swap">⇅ Swap</button>
+    <button id="rand">🎲 Random pair</button>
+    <button id="suggest">✓ Suggest an accessible color</button>
+  </div>
+
+  <div class="ratio">
+    <div class="num" id="ratioNum">–</div>
+    <div class="lab">contrast ratio</div>
+  </div>
+
+  <div class="checks" id="checks"></div>
+</div>
+
+<div class="content">
+  <h2>What the contrast ratio means</h2>
+  <p>Contrast ratio measures how different your text color is from its background, on a scale from <b>1:1</b> (identical, invisible) to <b>21:1</b> (pure black on pure white). The Web Content Accessibility Guidelines (WCAG) set minimum ratios so that text stays readable for people with low vision or color-vision differences — and, in practice, for everyone on a glary phone screen outdoors.</p>
+
+  <h2>WCAG thresholds at a glance</h2>
+  <table>
+    <tr><th>Content</th><th>AA (minimum)</th><th>AAA (enhanced)</th></tr>
+    <tr><td>Normal text</td><td>4.5 : 1</td><td>7 : 1</td></tr>
+    <tr><td>Large text (≥18pt, or ≥14pt bold)</td><td>3 : 1</td><td>4.5 : 1</td></tr>
+    <tr><td>UI components &amp; graphics</td><td>3 : 1</td><td>—</td></tr>
+  </table>
+  <p>Aim for <b>AA</b> as your baseline — it's what most accessibility laws and design systems require. Reach for <b>AAA</b> on body copy when you can.</p>
+
+  <h2>How it's calculated</h2>
+  <p>The ratio is <code>(L1 + 0.05) / (L2 + 0.05)</code>, where <code>L1</code> and <code>L2</code> are the relative luminance of the lighter and darker color. Luminance is a gamma-corrected, weighted blend of the red, green, and blue channels (green counts most, blue least), exactly as defined by WCAG 2. This page does the math in your browser as you type.</p>
+
+  <h2>FAQ</h2>
+  <dl class="faq">
+    <dt>What contrast ratio do I need?</dt>
+    <dd>4.5:1 for normal text and 3:1 for large text to pass WCAG AA. AAA wants 7:1 and 4.5:1 respectively.</dd>
+    <dt>What counts as “large” text?</dt>
+    <dd>At least 18pt (~24px) regular, or 14pt (~18.66px) bold. Large text only needs 3:1 for AA.</dd>
+    <dt>My text fails — how do I fix it fast?</dt>
+    <dd>Tap “Suggest an accessible color.” It keeps your text hue and saturation but adjusts lightness to the nearest value that passes AA against your background.</dd>
+    <dt>Are my colors stored anywhere?</dt>
+    <dd>No. Everything runs locally in your browser.</dd>
+  </dl>
+
+  <div class="cross">
+    More free tools: <a href="https://atlas-asittley.github.io/color-tools/">Color Converter &amp; Palette</a> · <a href="https://atlas-asittley.github.io/gradient-generator/">CSS Gradient Generator</a> · <a href="https://atlas-asittley.github.io/tools/">all tools</a>.<br>
+    Into color? Play <a href="https://atlas-asittley.github.io/spectra/">Spectra</a>, a daily puzzle where you crack a hidden RGB color in 6 guesses.
+  </div>
+</div>
+
+<footer>Free WCAG contrast checker · works on mobile · no login, no tracking of personal data</footer>
+</div>
+
+<script>
+function clamp(n,a,b){return Math.min(b,Math.max(a,n));}
+function hexToRgb(h){h=(h||'').replace('#','').trim();if(h.length===3)h=h.split('').map(function(c){return c+c;}).join('');if(!/^[0-9a-fA-F]{6}$/.test(h))return null;return{r:parseInt(h.slice(0,2),16),g:parseInt(h.slice(2,4),16),b:parseInt(h.slice(4,6),16)};}
+function rgbToHex(r,g,b){return '#'+[r,g,b].map(function(x){return clamp(Math.round(x),0,255).toString(16).padStart(2,'0');}).join('');}
+function rgbToHsl(r,g,b){r/=255;g/=255;b/=255;var mx=Math.max(r,g,b),mn=Math.min(r,g,b),h,s,l=(mx+mn)/2;if(mx===mn){h=s=0;}else{var d=mx-mn;s=l>0.5?d/(2-mx-mn):d/(mx+mn);switch(mx){case r:h=(g-b)/d+(g<b?6:0);break;case g:h=(b-r)/d+2;break;default:h=(r-g)/d+4;}h/=6;}return{h:h*360,s:s*100,l:l*100};}
+function hslToRgb(h,s,l){h/=360;s/=100;l/=100;var r,g,b;if(s===0){r=g=b=l;}else{function f(p,q,t){if(t<0)t+=1;if(t>1)t-=1;if(t<1/6)return p+(q-p)*6*t;if(t<1/2)return q;if(t<2/3)return p+(q-p)*(2/3-t)*6;return p;}var q=l<0.5?l*(1+s):l+s-l*s,p=2*l-q;r=f(p,q,h+1/3);g=f(p,q,h);b=f(p,q,h-1/3);}return{r:Math.round(r*255),g:Math.round(g*255),b:Math.round(b*255)};}
+function lum(r,g,b){var a=[r,g,b].map(function(v){v/=255;return v<=0.03928?v/12.92:Math.pow((v+0.055)/1.055,2.4);});return 0.2126*a[0]+0.7152*a[1]+0.0722*a[2];}
+function ratio(a,b){var L1=lum(a.r,a.g,a.b),L2=lum(b.r,b.g,b.b);var hi=Math.max(L1,L2),lo=Math.min(L1,L2);return (hi+0.05)/(lo+0.05);}
+
+var $=function(s){return document.querySelector(s);};
+var fgPick=$('#fgPick'),fgHex=$('#fgHex'),bgPick=$('#bgPick'),bgHex=$('#bgHex');
+
+var CHECKS=[
+  {t:'Normal text · AA',need:4.5},
+  {t:'Normal text · AAA',need:7},
+  {t:'Large text · AA',need:3},
+  {t:'Large text · AAA',need:4.5},
+  {t:'UI &amp; graphics · AA',need:3}
+];
+
+function render(){
+  var fg=hexToRgb(fgHex.value),bg=hexToRgb(bgHex.value);
+  if(!fg||!bg)return;
+  var fhx=rgbToHex(fg.r,fg.g,fg.b),bhx=rgbToHex(bg.r,bg.g,bg.b);
+  fgPick.value=fhx; bgPick.value=bhx;
+  var pv=$('#preview'); pv.style.background=bhx; pv.style.color=fhx; pv.style.borderColor='rgba(255,255,255,.12)';
+  var R=ratio(fg,bg);
+  $('#ratioNum').textContent=R.toFixed(2)+' : 1';
+  var html='';
+  CHECKS.forEach(function(c){
+    var ok=R>=c.need;
+    html+='<div class="chk"><div class="t">'+c.t+'</div><span class="badge '+(ok?'pass':'fail')+'">'+(ok?'Pass':'Fail')+'</span><div class="req">needs '+c.need+':1</div></div>';
+  });
+  $('#checks').innerHTML=html;
+}
+function fixToAA(){
+  var fg=hexToRgb(fgHex.value),bg=hexToRgb(bgHex.value);
+  if(!fg||!bg)return;
+  if(ratio(fg,bg)>=4.5)return; // already passes
+  var hsl=rgbToHsl(fg.r,fg.g,fg.b);
+  var best=null,bestDist=1e9;
+  for(var L=0;L<=100;L++){
+    var c=hslToRgb(hsl.h,hsl.s,L);
+    if(ratio(c,bg)>=4.5){
+      var d=Math.abs(L-hsl.l);
+      if(d<bestDist){bestDist=d;best=c;}
+    }
+  }
+  if(best){fgHex.value=rgbToHex(best.r,best.g,best.b);render();}
+}
+function syncFromPicker(pick,hexEl){hexEl.value=pick.value;render();}
+fgPick.addEventListener('input',function(){syncFromPicker(fgPick,fgHex);});
+bgPick.addEventListener('input',function(){syncFromPicker(bgPick,bgHex);});
+fgHex.addEventListener('input',render);
+bgHex.addEventListener('input',render);
+$('#swap').addEventListener('click',function(){var t=fgHex.value;fgHex.value=bgHex.value;bgHex.value=t;render();});
+$('#rand').addEventListener('click',function(){function rnd(){return rgbToHex(Math.floor(Math.random()*256),Math.floor(Math.random()*256),Math.floor(Math.random()*256));}fgHex.value=rnd();bgHex.value=rnd();render();});
+$('#suggest').addEventListener('click',fixToAA);
+render();
+</script>
+<!-- analytics: privacy-friendly visit count to our own store -->
+<script>
+(function(){try{if(navigator.webdriver)return;}catch(e){}
+var U='https://igaulapupbtdcqqjobhs.supabase.co/rest/v1/site_events',K='sb_publishable_7yi3BNg-J-K5nralw5JSww_c71Pge6e';
+function sid(){try{var s=localStorage.getItem('aa_sid');if(!s){s=Math.random().toString(36).slice(2)+Date.now().toString(36);localStorage.setItem('aa_sid',s);}return s;}catch(e){return 'na';}}
+try{fetch(U,{method:'POST',headers:{apikey:K,Authorization:'Bearer '+K,'Content-Type':'application/json',Prefer:'return=minimal'},body:JSON.stringify({game:'contrast-checker',type:'visit',sid:sid(),ref:(document.referrer||'').split('/')[2]||null,meta:null}),keepalive:true}).catch(function(){});}catch(e){}
+})();
+</script>
+</body>
+</html>
