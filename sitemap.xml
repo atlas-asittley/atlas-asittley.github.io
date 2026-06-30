@@ -17,5 +17,7 @@
   <url><loc>https://atlas-asittley.github.io/contrast-checker/</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
   <url><loc>https://atlas-asittley.github.io/gradient-generator/</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
   <url><loc>https://atlas-asittley.github.io/json-formatter/</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://atlas-asittley.github.io/base64/</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://atlas-asittley.github.io/timestamp/</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
   <url><loc>https://atlas-asittley.github.io/tools/</loc><changefreq>weekly</changefreq><priority>0.6</priority></url>
 </urlset>

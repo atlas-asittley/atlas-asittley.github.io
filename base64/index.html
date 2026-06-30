@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Base64 Encode &amp; Decode — Free Online Base64 Converter</title>
+<meta name="description" content="Free online Base64 encoder and decoder. Convert text to Base64 and back instantly, with full Unicode (UTF-8) and URL-safe support. Runs in your browser — nothing uploaded." />
+<link rel="canonical" href="https://atlas-asittley.github.io/base64/" />
+<meta name="robots" content="index,follow" />
+<meta property="og:type" content="website" />
+<meta property="og:title" content="Base64 Encode & Decode — Free Online Converter" />
+<meta property="og:description" content="Convert text to Base64 and back instantly. Unicode + URL-safe. Private, in-browser, no sign-up." />
+<meta property="og:url" content="https://atlas-asittley.github.io/base64/" />
+<meta name="twitter:card" content="summary" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%230e0f13'/><text x='50' y='64' font-size='34' text-anchor='middle' fill='%234d8bff' font-family='monospace'>b64</text></svg>" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebApplication","name":"Base64 Encode & Decode","url":"https://atlas-asittley.github.io/base64/","applicationCategory":"DeveloperApplication","operatingSystem":"Any (web browser)","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"description":"Encode text to Base64 and decode Base64 to text in the browser, with Unicode and URL-safe support."}
+</script>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[
+{"@type":"Question","name":"How do I encode text to Base64?","acceptedAnswer":{"@type":"Answer","text":"Type or paste your text and it is encoded to Base64 instantly. Switch the mode to Decode to convert Base64 back to text."}},
+{"@type":"Question","name":"Does it support Unicode/emoji?","acceptedAnswer":{"@type":"Answer","text":"Yes. Encoding and decoding are UTF-8 aware, so accented characters and emoji round-trip correctly."}},
+{"@type":"Question","name":"What is URL-safe Base64?","acceptedAnswer":{"@type":"Answer","text":"A variant that replaces + and / with - and _ and drops padding, so the value is safe to use in URLs and filenames. Toggle it on if you need it."}}
+]}
+</script>
+<style>
+  :root{--bg:#0e0f13;--card:#171922;--line:#2a2d3a;--ink:#f4f6fa;--mut:#a8acba;--accent:#4d8bff}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--ink);line-height:1.55}
+  .wrap{max-width:900px;margin:0 auto;padding:24px 18px 60px}
+  h1{font-size:1.7rem;margin:.2em 0 .1em}.sub{color:var(--mut);margin:.2em 0 1.2em}
+  .bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
+  button{background:#222634;color:var(--ink);border:1px solid var(--line);border-radius:9px;padding:9px 14px;font-size:.92rem;cursor:pointer}
+  button:hover{border-color:var(--accent)}
+  button.on{background:var(--accent);color:#06122b;border-color:var(--accent);font-weight:600}
+  label.chk{display:inline-flex;align-items:center;gap:6px;color:var(--mut);font-size:.9rem}
+  label.fld{display:block;font-size:.78rem;color:var(--mut);margin:0 0 5px;text-transform:uppercase;letter-spacing:.05em}
+  textarea{width:100%;height:150px;background:#0b0c11;border:1px solid var(--line);border-radius:11px;padding:13px;color:var(--ink);font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.92rem;resize:vertical}
+  .status{margin:10px 0 0;font-size:.88rem;color:var(--mut)}
+  .status.err{color:#ff9b9b}
+  h2{font-size:1.2rem;margin:1.7em 0 .4em}.content{color:#d6d9e2}.content a{color:var(--accent)}
+  .faq dt{font-weight:600;margin-top:14px}.faq dd{margin:4px 0 0;color:var(--mut)}
+  .cross{margin-top:26px;padding:16px;border:1px dashed var(--line);border-radius:12px;color:var(--mut)}.cross a{color:var(--accent);text-decoration:none}
+  footer{margin-top:28px;color:var(--mut);font-size:.85rem;text-align:center}
+  .toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#222634;border:1px solid var(--accent);padding:9px 16px;border-radius:10px;opacity:0;transition:opacity .2s;pointer-events:none}
+  .toast.show{opacity:1}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>Base64 Encode &amp; Decode</h1>
+<p class="sub">Convert text ⇄ Base64 instantly — Unicode-safe, with a URL-safe option. Nothing is uploaded.</p>
+
+<div class="bar">
+  <button id="mEnc" class="on">Encode</button>
+  <button id="mDec">Decode</button>
+  <label class="chk"><input type="checkbox" id="urlsafe"> URL-safe</label>
+  <button id="swap">⇅ Swap</button>
+  <button id="copy">Copy output</button>
+  <button id="clear">Clear</button>
+</div>
+
+<label class="fld" id="inLbl">Text input</label>
+<textarea id="in" spellcheck="false" placeholder="Type text to encode…"></textarea>
+<div style="height:12px"></div>
+<label class="fld" id="outLbl">Base64 output</label>
+<textarea id="out" spellcheck="false" readonly placeholder="Result appears here…"></textarea>
+<div class="status" id="status"></div>
+
+<div class="content">
+  <h2>Encode and decode Base64 — privately, in your browser</h2>
+  <p>Base64 represents binary or text data using 64 printable ASCII characters, which is handy for embedding data in JSON, data URIs, emails, and config files. Switch between <b>Encode</b> and <b>Decode</b>, and toggle <b>URL-safe</b> output when you need a value that fits in a URL. Everything runs locally — your text never leaves your device.</p>
+  <h2>FAQ</h2>
+  <dl class="faq">
+    <dt>Is my data sent anywhere?</dt><dd>No — encoding and decoding happen entirely in your browser.</dd>
+    <dt>Why did decoding fail?</dt><dd>The input isn't valid Base64 (wrong characters or length). Check for stray spaces or missing padding.</dd>
+    <dt>Does it handle emoji and accents?</dt><dd>Yes, it's UTF-8 aware so Unicode round-trips correctly.</dd>
+  </dl>
+  <div class="cross">More free dev tools: <a href="https://atlas-asittley.github.io/tools/">all tools</a> · <a href="https://atlas-asittley.github.io/json-formatter/">JSON Formatter</a> · <a href="https://atlas-asittley.github.io/timestamp/">Unix Timestamp Converter</a>.</div>
+</div>
+<footer>Free, in-browser, no login · works on mobile</footer>
+</div>
+<div class="toast" id="toast">Copied!</div>
+
+<script>
+var $=function(s){return document.querySelector(s);};
+var inp=$('#in'),out=$('#out'),status=$('#status'),mode='enc';
+function b64encode(str){var b=btoa(unescape(encodeURIComponent(str)));if($('#urlsafe').checked)b=b.replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');return b;}
+function b64decode(b){var s=b.trim().replace(/-/g,'+').replace(/_/g,'/');while(s.length%4)s+='=';return decodeURIComponent(escape(atob(s)));}
+function run(){
+  var v=inp.value;
+  if(!v){out.value='';status.className='status';status.textContent='';return;}
+  try{
+    out.value=mode==='enc'?b64encode(v):b64decode(v);
+    status.className='status';status.textContent=(mode==='enc'?'Encoded':'Decoded')+' · '+out.value.length+' chars';
+  }catch(e){out.value='';status.className='status err';status.textContent='✗ '+(mode==='enc'?'Could not encode':'Not valid Base64')+'.';}
+}
+function setMode(m){mode=m;$('#mEnc').classList.toggle('on',m==='enc');$('#mDec').classList.toggle('on',m==='dec');
+  $('#inLbl').textContent=m==='enc'?'Text input':'Base64 input';$('#outLbl').textContent=m==='enc'?'Base64 output':'Text output';
+  inp.placeholder=m==='enc'?'Type text to encode…':'Paste Base64 to decode…';run();}
+$('#mEnc').addEventListener('click',function(){setMode('enc');});
+$('#mDec').addEventListener('click',function(){setMode('dec');});
+$('#urlsafe').addEventListener('change',run);
+inp.addEventListener('input',run);
+$('#swap').addEventListener('click',function(){inp.value=out.value;setMode(mode==='enc'?'dec':'enc');});
+$('#clear').addEventListener('click',function(){inp.value='';out.value='';status.textContent='';inp.focus();});
+var toast=$('#toast');
+$('#copy').addEventListener('click',function(){if(!out.value)return;navigator.clipboard&&navigator.clipboard.writeText(out.value);toast.classList.add('show');setTimeout(function(){toast.classList.remove('show');},900);});
+</script>
+<script>
+(function(){try{if(navigator.webdriver)return;}catch(e){}
+var U='https://igaulapupbtdcqqjobhs.supabase.co/rest/v1/site_events',K='sb_publishable_7yi3BNg-J-K5nralw5JSww_c71Pge6e';
+function sid(){try{var s=localStorage.getItem('aa_sid');if(!s){s=Math.random().toString(36).slice(2)+Date.now().toString(36);localStorage.setItem('aa_sid',s);}return s;}catch(e){return 'na';}}
+try{fetch(U,{method:'POST',headers:{apikey:K,Authorization:'Bearer '+K,'Content-Type':'application/json',Prefer:'return=minimal'},body:JSON.stringify({game:'base64',type:'visit',sid:sid(),ref:(document.referrer||'').split('/')[2]||null,meta:null}),keepalive:true}).catch(function(){});}catch(e){}
+})();
+</script>
+</body>
+</html>
