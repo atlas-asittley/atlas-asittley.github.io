@@ -177,9 +177,19 @@ function renderResults(products){
 function search(q){
   if(!q.trim())return;
   $('#results').innerHTML='<div class="muted" style="padding:8px 2px">Searching…</div>';
-  fetch('https://world.openfoodfacts.org/cgi/search.pl?search_terms='+encodeURIComponent(q)+'&search_simple=1&action=process&json=1&page_size=25&fields=product_name,brands,nutriments,code')
-    .then(function(r){return r.json();}).then(function(d){renderResults(d.products||[]);})
-    .catch(function(){$('#results').innerHTML='<div class="muted" style="padding:8px 2px">Search failed — check your connection.</div>';});
+  var url='https://world.openfoodfacts.org/cgi/search.pl?search_terms='+encodeURIComponent(q)+'&search_simple=1&action=process&json=1&page_size=25&fields=product_name,brands,nutriments,code';
+  var tries=0;
+  (function attempt(){
+    tries++;
+    fetch(url,{headers:{'Accept':'application/json'}}).then(function(r){
+      if(!r.ok) throw new Error('http '+r.status);
+      return r.json();
+    }).then(function(d){renderResults(d.products||[]);})
+    .catch(function(){
+      if(tries<4){$('#results').innerHTML='<div class="muted" style="padding:8px 2px">Searching…'+(tries>1?' (retrying)':'')+'</div>';setTimeout(attempt,500*tries);}
+      else{$('#results').innerHTML='<div class="muted" style="padding:8px 2px">The food database is busy right now — please try again in a moment.</div>';}
+    });
+  })();
 }
 $('#searchBtn').addEventListener('click',function(){search($('#q').value);});
 $('#q').addEventListener('keydown',function(e){if(e.key==='Enter')search($('#q').value);});
