@@ -69,6 +69,10 @@
   #manualForm input{background:#0e0f15;border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:8px 9px;font-size:.9rem;width:100%}
   #manualToggle{color:var(--accent2);cursor:pointer;font-size:.86rem;display:inline-block;margin-top:10px}
   .mrow{display:flex;gap:6px;margin-top:6px}
+  .support{text-align:center}
+  .supportbtn,.supportbtn2{display:inline-block;text-decoration:none;border-radius:10px;padding:9px 14px;font-size:.9rem;cursor:pointer}
+  .supportbtn{background:#2a2436;color:#ffd479;border:1px solid #4a3f1e}
+  .supportbtn2{background:#12271a;color:var(--accent);border:1px solid #1e4a2e}
 </style>
 </head>
 <body>
@@ -123,6 +127,14 @@
     <dt>Is my data private?</dt><dd>Yes. It's stored only in your browser. No account, no server, no tracking of what you eat.</dd>
     <dt>Does the barcode scanner work on my phone?</dt><dd>It works in browsers with camera barcode support (most Android/Chrome). On any device you can search foods by name.</dd>
   </dl>
+</div>
+<div class="card support">
+  <div style="font-size:.95rem">This tracker is <b>free and always will be</b> — no account, no subscription.</div>
+  <div style="margin-top:11px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+    <a href="https://ko-fi.com/atlasentre" target="_blank" rel="noopener" class="supportbtn" id="supportBtn">☕ Support this free tool</a>
+    <button class="supportbtn2" id="proBtn">⭐ Want one-time Pro? (no subscription)</button>
+  </div>
+  <div id="proMsg" style="display:none;margin-top:11px;font-size:.88rem;color:var(--accent)"></div>
 </div>
 <footer>Free · private · no login · food data by Open Food Facts</footer>
 </div>
@@ -222,6 +234,16 @@ $('#mAdd').addEventListener('click',function(){
   save();render();toast('Added');
   ['#mName','#mKcal','#mP','#mC','#mF'].forEach(function(s){$(s).value='';});
   $('#mGrams').value='100';$('#manualForm').style.display='none';
+});
+// monetization: support + willingness-to-pay signal
+var PUBK='sb_publishable_7yi3BNg-J-K5nralw5JSww_c71Pge6e';
+function beacon(meta){try{fetch('https://igaulapupbtdcqqjobhs.supabase.co/rest/v1/site_events',{method:'POST',headers:{apikey:PUBK,Authorization:'Bearer '+PUBK,'Content-Type':'application/json',Prefer:'return=minimal'},body:JSON.stringify({game:'calorie-tracker',type:'visit',sid:(localStorage.getItem('aa_sid')||'na'),ref:null,meta:meta}),keepalive:true}).catch(function(){});}catch(e){}}
+$('#supportBtn').addEventListener('click',function(){beacon('support_click');});
+$('#proBtn').addEventListener('click',function(){
+  beacon('pro_click');
+  var m=$('#proMsg');m.style.display='block';
+  m.innerHTML='Noted — thanks! If enough people want it I\'ll add one-time Pro features (data export, detailed reports, meal &amp; recipe saving). No subscription, ever. Want to back it now? <a href="https://ko-fi.com/atlasentre" target="_blank" rel="noopener" style="color:var(--accent2)">☕ Ko-fi</a>';
+  this.disabled=true;this.style.opacity=0.55;
 });
 // barcode scanning
 var scanning=false,stream=null;
