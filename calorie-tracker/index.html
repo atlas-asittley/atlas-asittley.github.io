@@ -12,6 +12,13 @@
 <meta property="og:description" content="Track calories & macros with free barcode scanning. No account, no paywall — your data stays on your device. A private, free MyFitnessPal alternative." />
 <meta property="og:url" content="https://atlas-asittley.github.io/calorie-tracker/" />
 <meta name="twitter:card" content="summary" />
+<link rel="manifest" href="manifest.webmanifest" />
+<meta name="theme-color" content="#0f1013" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black" />
+<meta name="apple-mobile-web-app-title" content="Calorie Tracker" />
+<link rel="apple-touch-icon" href="apple-touch-icon.png" />
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%2314141a'/><path d='M50 24c-10 0-18 8-18 20 0 16 18 32 18 32s18-16 18-32c0-12-8-20-18-20z' fill='%2340c463'/></svg>" />
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"WebApplication","name":"Free Calorie & Macro Tracker","url":"https://atlas-asittley.github.io/calorie-tracker/","applicationCategory":"HealthApplication","operatingSystem":"Any (web browser)","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"description":"Free calorie and macro tracker with barcode scanning. No account, no subscription; data stays on the device."}
@@ -247,6 +254,7 @@ function lookupBarcode(code){
 }
 // init
 load();$('#goal').value=state.goal;$('#today').textContent=todayKey();render();
+if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});}
 </script>
 <script>
 (function(){try{if(navigator.webdriver)return;}catch(e){}
