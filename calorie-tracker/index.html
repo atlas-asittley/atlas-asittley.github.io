@@ -59,6 +59,9 @@
   footer{margin-top:26px;color:var(--mut);font-size:.83rem;text-align:center}
   .toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#222634;border:1px solid var(--accent);padding:9px 15px;border-radius:10px;opacity:0;transition:.2s;pointer-events:none}
   .toast.show{opacity:1}
+  #manualForm input{background:#0e0f15;border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:8px 9px;font-size:.9rem;width:100%}
+  #manualToggle{color:var(--accent2);cursor:pointer;font-size:.86rem;display:inline-block;margin-top:10px}
+  .mrow{display:flex;gap:6px;margin-top:6px}
 </style>
 </head>
 <body>
@@ -88,6 +91,13 @@
   </div>
   <div id="scanwrap"><video id="scanvid" playsinline></video><div class="muted" id="scanmsg">Point your camera at a barcode…</div></div>
   <div class="results" id="results"></div>
+  <a id="manualToggle">＋ Can't find a food? Add it manually</a>
+  <div id="manualForm" style="display:none;margin-top:8px">
+    <input id="mName" type="text" placeholder="Food name (e.g. Grandma's stew)">
+    <div class="mrow"><input id="mKcal" type="number" placeholder="Calories" min="0"><input id="mGrams" type="number" placeholder="for how many grams" value="100" min="1"></div>
+    <div class="mrow"><input id="mP" type="number" placeholder="Protein g (opt)" min="0"><input id="mC" type="number" placeholder="Carbs g (opt)" min="0"><input id="mF" type="number" placeholder="Fat g (opt)" min="0"></div>
+    <button id="mAdd" class="primary" style="margin-top:8px;width:100%">Add to today</button>
+  </div>
 </div>
 
 <div class="card">
@@ -195,6 +205,17 @@ $('#searchBtn').addEventListener('click',function(){search($('#q').value);});
 $('#q').addEventListener('keydown',function(e){if(e.key==='Enter')search($('#q').value);});
 $('#clearDay').addEventListener('click',function(){if(confirm('Clear all of today\'s food?')){state.log=[];save();render();}});
 $('#goal').addEventListener('input',function(){state.goal=+$('#goal').value||0;save();render();});
+// manual food entry (for anything not in the database)
+$('#manualToggle').addEventListener('click',function(){var f=$('#manualForm');f.style.display=f.style.display==='none'?'block':'none';if(f.style.display==='block')$('#mName').focus();});
+$('#mAdd').addEventListener('click',function(){
+  var name=$('#mName').value.trim(),kcal=num($('#mKcal').value),g=num($('#mGrams').value)||100;
+  if(!name||!kcal){toast('Enter a food name and its calories');return;}
+  var factor=100/g; // convert "kcal for g grams" -> per-100g
+  state.log.push({name:name,grams:g,kcal100:kcal*factor,p100:num($('#mP').value)*factor,c100:num($('#mC').value)*factor,f100:num($('#mF').value)*factor});
+  save();render();toast('Added');
+  ['#mName','#mKcal','#mP','#mC','#mF'].forEach(function(s){$(s).value='';});
+  $('#mGrams').value='100';$('#manualForm').style.display='none';
+});
 // barcode scanning
 var scanning=false,stream=null;
 $('#scanBtn').addEventListener('click',function(){
