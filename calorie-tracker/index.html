@@ -237,7 +237,7 @@ $('#mAdd').addEventListener('click',function(){
 });
 // monetization: support + willingness-to-pay signal
 var PUBK='sb_publishable_7yi3BNg-J-K5nralw5JSww_c71Pge6e';
-function beacon(meta){try{fetch('https://igaulapupbtdcqqjobhs.supabase.co/rest/v1/site_events',{method:'POST',headers:{apikey:PUBK,Authorization:'Bearer '+PUBK,'Content-Type':'application/json',Prefer:'return=minimal'},body:JSON.stringify({game:'calorie-tracker',type:'visit',sid:(localStorage.getItem('aa_sid')||'na'),ref:null,meta:meta}),keepalive:true}).catch(function(){});}catch(e){}}
+function beacon(meta){try{fetch('https://igaulapupbtdcqqjobhs.supabase.co/rest/v1/site_events',{method:'POST',headers:{apikey:PUBK,Authorization:'Bearer '+PUBK,'Content-Type':'application/json',Prefer:'return=minimal'},body:JSON.stringify({game:'calorie-tracker',type:'event',sid:(localStorage.getItem('aa_sid')||'na'),ref:null,meta:{event:meta}}),keepalive:true}).catch(function(){});}catch(e){}}
 $('#supportBtn').addEventListener('click',function(){beacon('support_click');});
 $('#proBtn').addEventListener('click',function(){
   beacon('pro_click');
@@ -282,7 +282,7 @@ if('serviceWorker' in navigator){window.addEventListener('load',function(){navig
 (function(){try{if(navigator.webdriver)return;}catch(e){}
 var U='https://igaulapupbtdcqqjobhs.supabase.co/rest/v1/site_events',K='sb_publishable_7yi3BNg-J-K5nralw5JSww_c71Pge6e';
 function sid(){try{var s=localStorage.getItem('aa_sid');if(!s){s=Math.random().toString(36).slice(2)+Date.now().toString(36);localStorage.setItem('aa_sid',s);}return s;}catch(e){return 'na';}}
-try{fetch(U,{method:'POST',headers:{apikey:K,Authorization:'Bearer '+K,'Content-Type':'application/json',Prefer:'return=minimal'},body:JSON.stringify({game:'calorie-tracker',type:'visit',sid:sid(),ref:(document.referrer||'').split('/')[2]||null,meta:null}),keepalive:true}).catch(function(){});}catch(e){}
+try{var _src=(new URLSearchParams(location.search)).get('src')||'direct';fetch(U,{method:'POST',headers:{apikey:K,Authorization:'Bearer '+K,'Content-Type':'application/json',Prefer:'return=minimal'},body:JSON.stringify({game:'calorie-tracker',type:'visit',sid:sid(),ref:(document.referrer||'').split('/')[2]||null,meta:{src:_src}}),keepalive:true}).catch(function(){});}catch(e){}
 })();
 </script>
 </body>
