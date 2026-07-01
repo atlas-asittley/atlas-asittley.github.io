@@ -123,22 +123,10 @@ function load(){
 }
 function save(){try{localStorage.setItem('ct_goal',state.goal);localStorage.setItem('ct_log',JSON.stringify({date:todayKey(),log:state.log}));}catch(e){}}
 function kcalOf(f){return f.kcal100*f.grams/100;}
-function render(){
+function itemMacros(f){return Math.round(kcalOf(f))+' kcal · P'+Math.round(f.p100*f.grams/100)+' C'+Math.round(f.c100*f.grams/100)+' F'+Math.round(f.f100*f.grams/100);}
+function updateTotals(){
   var tk=0,tp=0,tc=0,tf=0;
-  var log=$('#log'); log.innerHTML='';
-  state.log.forEach(function(f,i){
-    tk+=kcalOf(f); tp+=f.p100*f.grams/100; tc+=f.c100*f.grams/100; tf+=f.f100*f.grams/100;
-    var row=document.createElement('div'); row.className='logitem';
-    row.innerHTML='<div><div>'+f.name+'</div><div class="macros">'+Math.round(kcalOf(f))+' kcal · P'+Math.round(f.p100*f.grams/100)+' C'+Math.round(f.c100*f.grams/100)+' F'+Math.round(f.f100*f.grams/100)+'</div></div>';
-    var right=document.createElement('div'); right.style.cssText='display:flex;gap:6px;align-items:center';
-    var amt=document.createElement('input'); amt.type='number'; amt.className='amt'; amt.value=f.grams; amt.min=0;
-    amt.addEventListener('input',function(){f.grams=+amt.value||0;save();render();});
-    var g=document.createElement('span'); g.className='muted'; g.textContent='g';
-    var rm=document.createElement('button'); rm.className='rm'; rm.textContent='×';
-    rm.addEventListener('click',function(){state.log.splice(i,1);save();render();});
-    right.appendChild(amt);right.appendChild(g);right.appendChild(rm); row.appendChild(right); log.appendChild(row);
-  });
-  $('#empty').style.display=state.log.length?'none':'block';
+  state.log.forEach(function(f){tk+=kcalOf(f);tp+=f.p100*f.grams/100;tc+=f.c100*f.grams/100;tf+=f.f100*f.grams/100;});
   $('#tKcal').textContent=Math.round(tk); $('#tGoal').textContent=state.goal;
   $('#tP').innerHTML=Math.round(tp)+'<span class="muted">g</span>';
   $('#tC').innerHTML=Math.round(tc)+'<span class="muted">g</span>';
@@ -146,6 +134,25 @@ function render(){
   $('#bar').style.width=Math.min(100,state.goal?tk/state.goal*100:0)+'%';
   $('#bar').style.background = tk>state.goal ? 'var(--warn)' : 'var(--accent)';
 }
+function renderLog(){
+  var log=$('#log'); log.innerHTML='';
+  state.log.forEach(function(f,i){
+    var row=document.createElement('div'); row.className='logitem';
+    var left=document.createElement('div');
+    var nm=document.createElement('div'); nm.textContent=f.name;
+    var mac=document.createElement('div'); mac.className='macros'; mac.textContent=itemMacros(f);
+    left.appendChild(nm); left.appendChild(mac);
+    var right=document.createElement('div'); right.style.cssText='display:flex;gap:6px;align-items:center';
+    var amt=document.createElement('input'); amt.type='number'; amt.className='amt'; amt.value=f.grams; amt.min=0;
+    amt.addEventListener('input',function(){f.grams=+amt.value||0;mac.textContent=itemMacros(f);updateTotals();save();});
+    var g=document.createElement('span'); g.className='muted'; g.textContent='g';
+    var rm=document.createElement('button'); rm.className='rm'; rm.textContent='×';
+    rm.addEventListener('click',function(){state.log.splice(i,1);save();renderLog();updateTotals();});
+    right.appendChild(amt);right.appendChild(g);right.appendChild(rm); row.appendChild(left); row.appendChild(right); log.appendChild(row);
+  });
+  $('#empty').style.display=state.log.length?'none':'block';
+}
+function render(){renderLog();updateTotals();}
 function toast(m){var t=$('#toast');t.textContent=m;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},1400);}
 function num(v){v=parseFloat(v);return isNaN(v)?0:v;}
 function kcal100(n){if(n['energy-kcal_100g']!=null)return num(n['energy-kcal_100g']);if(n.energy_100g!=null)return num(n.energy_100g)/4.184;return 0;}
