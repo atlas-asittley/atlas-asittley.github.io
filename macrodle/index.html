@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Macrodle — the daily food guessing game</title>
+<meta name="description" content="A free daily food guessing game. Guess the mystery food from its calories and macros in 6 tries, then share your grid. New puzzle every day. No account, no app." />
+<link rel="canonical" href="https://atlas-asittley.github.io/macrodle/" />
+<meta name="robots" content="index,follow" />
+<meta property="og:type" content="website" />
+<meta property="og:title" content="Macrodle — the daily food guessing game" />
+<meta property="og:description" content="Guess the mystery food from its calories & macros in 6 tries. New puzzle daily. Share your grid!" />
+<meta property="og:url" content="https://atlas-asittley.github.io/macrodle/" />
+<meta name="twitter:card" content="summary" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%2314141a'/><text x='50' y='72' font-size='60' text-anchor='middle'>🍎</text></svg>" />
+<style>
+  :root{--bg:#0f1013;--card:#181a20;--line:#2a2e37;--ink:#f2f4f7;--mut:#9aa0ac;--accent:#40c463;--accent2:#4d8bff;--warn:#e6a23c;--bad:#e05555}
+  *{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--ink);line-height:1.5}
+  .wrap{max-width:560px;margin:0 auto;padding:18px 14px 50px}
+  h1{font-size:1.6rem;margin:.1em 0 0;text-align:center}
+  .sub{color:var(--mut);text-align:center;font-size:.86rem;margin:.2em 0 1em}
+  .head{display:grid;grid-template-columns:2fr repeat(4,1fr);gap:5px;font-size:.62rem;color:var(--mut);text-transform:uppercase;letter-spacing:.02em;text-align:center;margin-bottom:6px;font-weight:700}
+  .head div:first-child{text-align:left}
+  .row{display:grid;grid-template-columns:2fr repeat(4,1fr);gap:5px;margin-bottom:5px}
+  .cell{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:9px 4px;text-align:center;font-size:.9rem;font-weight:600;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:46px}
+  .cell.name{text-align:left;align-items:flex-start;font-size:.82rem;padding-left:9px}
+  .cell .v{font-size:.68rem;color:var(--mut);font-weight:400}
+  .g{background:#123021;border-color:#1e5136;color:var(--accent)}
+  .arrow{font-size:1.05rem;line-height:1}
+  .searchrow{display:flex;gap:7px;margin:14px 0 4px}
+  input{flex:1;background:#0e0f15;border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:11px 12px;font-size:1rem}
+  button{background:var(--accent);color:#062611;border:none;border-radius:10px;padding:11px 15px;font-weight:800;font-size:.95rem;cursor:pointer}
+  button:disabled{opacity:.5}
+  .guesses-left{text-align:center;color:var(--mut);font-size:.8rem;margin-top:4px}
+  .end{text-align:center;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-top:14px;display:none}
+  .end h2{margin:.1em 0 .3em;font-size:1.2rem}
+  .share{background:var(--accent2);color:#03122e;margin-top:8px}
+  .links{margin-top:12px;font-size:.85rem}.links a{color:var(--accent2)}
+  details{margin-top:16px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 14px;font-size:.86rem;color:var(--mut)}
+  summary{cursor:pointer;color:var(--ink);font-weight:600}
+  footer{margin-top:22px;text-align:center;color:var(--mut);font-size:.8rem}
+  .toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#222634;border:1px solid var(--accent);padding:9px 15px;border-radius:10px;opacity:0;transition:.2s;pointer-events:none}
+  .toast.show{opacity:1}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>🍎 Macrodle</h1>
+<p class="sub">Guess the mystery food from its calories &amp; macros in 6 tries. New puzzle daily.</p>
+
+<div class="head"><div>Food</div><div>Cal</div><div>Protein</div><div>Carbs</div><div>Fat</div></div>
+<div id="board"></div>
+
+<div id="play">
+  <div class="searchrow">
+    <input list="foods" id="guess" placeholder="Type a food & pick it…" autocomplete="off" />
+    <button id="go">Guess</button>
+  </div>
+  <datalist id="foods"></datalist>
+  <div class="guesses-left" id="left"></div>
+</div>
+
+<div class="end" id="end">
+  <h2 id="endmsg"></h2>
+  <div id="answer" class="links"></div>
+  <button class="share" id="share">📋 Share your grid</button>
+  <div class="links">
+    <p>Track your own food free (no account): <a href="https://atlas-asittley.github.io/calorie-tracker/?src=macrodle">Calorie &amp; Macro Tracker</a></p>
+    <p>Like a challenge? <a href="https://ko-fi.com/atlasentre" target="_blank" rel="noopener">☕ buy the game a coffee</a></p>
+  </div>
+</div>
+
+<details><summary>How to play</summary>
+<p>Each guess compares your food's values (per 100g) to the mystery food:</p>
+<p>🟩 = within 15% (close!) · 🔼 = the answer is higher · 🔽 = the answer is lower · 🟩 category = same food group.</p>
+<p>Solve it in 6 guesses. Everyone gets the same food each day — come back tomorrow for a new one.</p>
+</details>
+<footer>Free · daily · no account · a tiny game by <a href="https://atlas-asittley.github.io/calorie-tracker/?src=macrodle" style="color:var(--mut)">the free calorie tracker</a> folks</footer>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+// per-100g: [name, category, kcal, protein, carbs, fat]
+var FOODS=[
+["Apple","Fruit",52,0.3,14,0.2],["Banana","Fruit",89,1.1,23,0.3],["Avocado","Fruit",160,2,9,15],["Strawberry","Fruit",32,0.7,8,0.3],["Orange","Fruit",47,0.9,12,0.1],["Grapes","Fruit",69,0.7,18,0.2],["Watermelon","Fruit",30,0.6,8,0.2],["Mango","Fruit",60,0.8,15,0.4],
+["Broccoli","Vegetable",34,2.8,7,0.4],["Carrot","Vegetable",41,0.9,10,0.2],["Potato","Vegetable",77,2,17,0.1],["Sweet potato","Vegetable",86,1.6,20,0.1],["Spinach","Vegetable",23,2.9,3.6,0.4],["Tomato","Vegetable",18,0.9,3.9,0.2],["Cucumber","Vegetable",15,0.7,3.6,0.1],["Corn","Vegetable",86,3.2,19,1.2],
+["Chicken breast","Protein",165,31,0,3.6],["Egg","Protein",155,13,1.1,11],["Salmon","Protein",208,20,0,13],["Beef steak","Protein",250,26,0,15],["Tuna","Protein",132,28,0,1],["Tofu","Protein",76,8,1.9,4.8],["Shrimp","Protein",99,24,0.2,0.3],["Bacon","Protein",541,37,1.4,42],["Lentils","Protein",116,9,20,0.4],
+["Milk","Dairy",42,3.4,5,1],["Greek yogurt","Dairy",59,10,3.6,0.4],["Cheddar cheese","Dairy",403,25,1.3,33],["Butter","Dairy",717,0.9,0.1,81],["Mozzarella","Dairy",280,28,3.1,17],
+["White rice","Grain",130,2.7,28,0.3],["Bread","Grain",265,9,49,3.2],["Oats","Grain",389,17,66,7],["Pasta","Grain",131,5,25,1.1],["Quinoa","Grain",120,4.4,21,1.9],
+["Chocolate","Sweet",546,4.9,61,31],["Potato chips","Sweet",536,7,53,35],["Ice cream","Sweet",207,3.5,24,11],["Cookie","Sweet",502,5,64,25],["Donut","Sweet",452,5,51,25],["Honey","Sweet",304,0.3,82,0],
+["Almonds","Nuts/Fat",579,21,22,50],["Peanut butter","Nuts/Fat",588,25,20,50],["Olive oil","Nuts/Fat",884,0,0,100],["Walnuts","Nuts/Fat",654,15,14,65],
+["Orange juice","Drink",45,0.7,10,0.2],["Cola","Drink",42,0,11,0],["Beer","Drink",43,0.5,3.6,0]
+];
+var $=function(s){return document.querySelector(s);};
+// daily seed
+var epoch=Date.UTC(2026,0,1);
+function dayNum(){var d=new Date();var t=Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate());return Math.floor((t-epoch)/864e5);}
+var DAY=dayNum();
+var secret=FOODS[((DAY%FOODS.length)+FOODS.length)%FOODS.length];
+var MAX=6, guesses=[], done=false;
+// populate datalist
+var dl=$('#foods');FOODS.forEach(function(f){var o=document.createElement('option');o.value=f[0];dl.appendChild(o);});
+// restore today's state
+var KEY='macrodle_'+DAY;
+try{var s=JSON.parse(localStorage.getItem(KEY));if(s){guesses=s.g||[];done=s.done||false;}}catch(e){}
+
+function cmp(gv,sv){ // returns emoji + arrow class
+  if(sv===0&&gv===0) return ['g','🟩',''];
+  var diff=Math.abs(gv-sv), tol=Math.max(sv*0.15, 2);
+  if(diff<=tol) return ['g','🟩',''];
+  return sv>gv ? ['','🔼','up'] : ['','🔽','down'];
+}
+function findFood(name){name=name.trim().toLowerCase();for(var i=0;i<FOODS.length;i++)if(FOODS[i][0].toLowerCase()===name)return FOODS[i];return null;}
+
+function renderRow(f){
+  var row=document.createElement('div');row.className='row';
+  var attrs=[['Cal',2],['P',3],['C',4],['F',5]];
+  // name + category cell
+  var catG = f[1]===secret[1];
+  var nc=document.createElement('div');nc.className='cell name'+(catG?' g':'');
+  nc.innerHTML=f[0]+'<span class="v">'+f[1]+(catG?' 🟩':'')+'</span>';
+  row.appendChild(nc);
+  attrs.forEach(function(a){
+    var gv=f[a[1]], sv=secret[a[1]];
+    var r=cmp(gv,sv);
+    var c=document.createElement('div');c.className='cell'+(r[0]?' g':'');
+    c.innerHTML='<span class="arrow">'+r[1]+'</span><span class="v">'+gv+'</span>';
+    row.appendChild(c);
+  });
+  return row;
+}
+function shareRow(f){
+  var out = f[1]===secret[1]?'🟩':'⬜';
+  [2,3,4,5].forEach(function(i){out+=cmp(f[i],secret[i])[1];});
+  return out;
+}
+function draw(){
+  var b=$('#board');b.innerHTML='';
+  guesses.forEach(function(name){var f=findFood(name);if(f)b.appendChild(renderRow(f));});
+  $('#left').textContent = done?'':(MAX-guesses.length)+' guesses left';
+  if(done) finish();
+}
+function save(){try{localStorage.setItem(KEY,JSON.stringify({g:guesses,done:done}));}catch(e){}}
+function toast(m){var t=$('#toast');t.textContent=m;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},1500);}
+
+function submit(){
+  if(done)return;
+  var f=findFood($('#guess').value);
+  if(!f){toast('Pick a food from the list');return;}
+  if(guesses.indexOf(f[0])>=0){toast('Already guessed that');return;}
+  guesses.push(f[0]);$('#guess').value='';
+  var win = f[0]===secret[0];
+  if(win || guesses.length>=MAX){done=true;}
+  save();draw();
+  beacon(win?'win':(done?'lose':'guess'));
+}
+function finish(){
+  $('#play').style.display='none';
+  var won=guesses[guesses.length-1]===secret[0];
+  $('#end').style.display='block';
+  $('#endmsg').textContent = won ? '🎉 Got it in '+guesses.length+'!' : '😅 Out of guesses';
+  $('#answer').innerHTML='The food was <b>'+secret[0]+'</b> ('+secret[2]+' cal, '+secret[3]+'g P / '+secret[4]+'g C / '+secret[5]+'g F per 100g).';
+}
+$('#go').addEventListener('click',submit);
+$('#guess').addEventListener('keydown',function(e){if(e.key==='Enter')submit();});
+$('#share').addEventListener('click',function(){
+  var won=guesses[guesses.length-1]===secret[0];
+  var head='Macrodle #'+DAY+'  '+(won?guesses.length:'X')+'/6';
+  var grid=guesses.map(function(n){return shareRow(findFood(n));}).join('\n');
+  var txt=head+'\n'+grid+'\nhttps://atlas-asittley.github.io/macrodle/';
+  if(navigator.share){navigator.share({text:txt}).catch(function(){});}
+  else if(navigator.clipboard){navigator.clipboard.writeText(txt).then(function(){toast('Copied! Paste it anywhere 📋');}).catch(function(){toast('Copy failed');});}
+  else toast('Copy not supported');
+  beacon('share');
+});
+draw();
+
+// analytics
+var PUBK='sb_publishable_7yi3BNg-J-K5nralw5JSww_c71Pge6e';
+function sid(){try{var s=localStorage.getItem('aa_sid');if(!s){s=Math.random().toString(36).slice(2)+Date.now().toString(36);localStorage.setItem('aa_sid',s);}return s;}catch(e){return 'na';}}
+function beacon(ev){try{if(navigator.webdriver)return;fetch('https://igaulapupbtdcqqjobhs.supabase.co/rest/v1/site_events',{method:'POST',headers:{apikey:PUBK,Authorization:'Bearer '+PUBK,'Content-Type':'application/json',Prefer:'return=minimal'},body:JSON.stringify({game:'macrodle',type:ev==='guess'||ev==='win'||ev==='lose'||ev==='share'?'event':'visit',sid:sid(),ref:(document.referrer||'').split('/')[2]||null,meta:ev==='visit'?{src:(new URLSearchParams(location.search)).get('src')||'direct'}:{event:ev}}),keepalive:true}).catch(function(){});}catch(e){}}
+beacon('visit');
+</script>
+</body>
+</html>
