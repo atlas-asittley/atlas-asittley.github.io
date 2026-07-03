@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>What's Your Eating Personality? — Free 60-second quiz</title>
+<meta name="description" content="A fun, free 60-second quiz that reveals your eating personality — Grazer, Meal-Prepper, Intuitive Eater, Adventurer, Comfort Seeker, or Optimizer. No account. Share your result!" />
+<link rel="canonical" href="https://atlas-asittley.github.io/eating-personality/" />
+<meta name="robots" content="index,follow" />
+<meta property="og:type" content="website" />
+<meta property="og:title" content="What's Your Eating Personality?" />
+<meta property="og:description" content="A fun 60-second quiz — which of the 6 eating types are you? Free, no account, share your result." />
+<meta property="og:url" content="https://atlas-asittley.github.io/eating-personality/" />
+<meta name="twitter:card" content="summary" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%2314141a'/><text x='50' y='72' font-size='58' text-anchor='middle'>🍽️</text></svg>" />
+<style>
+  :root{--bg:#0f1013;--card:#181a20;--line:#2a2e37;--ink:#f2f4f7;--mut:#9aa0ac;--accent:#40c463;--accent2:#4d8bff}
+  *{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--ink);line-height:1.5}
+  .wrap{max-width:540px;margin:0 auto;padding:22px 16px 50px}
+  h1{font-size:1.7rem;text-align:center;margin:.1em 0 .1em}.sub{color:var(--mut);text-align:center;font-size:.9rem;margin:.2em 0 1.2em}
+  .bar{height:6px;background:#0e0f13;border:1px solid var(--line);border-radius:6px;overflow:hidden;margin-bottom:16px}
+  .bar>i{display:block;height:100%;background:var(--accent);width:0;transition:.25s}
+  .q{font-size:1.18rem;font-weight:700;margin:0 0 14px}
+  .opt{display:block;width:100%;text-align:left;background:var(--card);border:1px solid var(--line);color:var(--ink);border-radius:12px;padding:14px 15px;margin-bottom:10px;font-size:1rem;cursor:pointer}
+  .opt:hover{border-color:var(--accent)}
+  .result{text-align:center;display:none}
+  .card{background:linear-gradient(160deg,#1a2033,#181a20);border:1px solid var(--line);border-radius:18px;padding:26px 18px;margin:8px 0 14px}
+  .emoji{font-size:4rem;line-height:1}.rname{font-size:1.6rem;font-weight:800;margin:.2em 0}
+  .rdesc{color:#d3d7de;font-size:.98rem}
+  .traits{color:var(--accent);font-size:.85rem;margin-top:10px}
+  button.cta{background:var(--accent);color:#062611;border:none;border-radius:11px;padding:12px 18px;font-weight:800;font-size:1rem;cursor:pointer;margin:4px}
+  .share{background:var(--accent2);color:#03122e}
+  .links{margin-top:14px;font-size:.88rem}.links a{color:var(--accent2)}
+  footer{margin-top:22px;text-align:center;color:var(--mut);font-size:.8rem}
+  .toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#222634;border:1px solid var(--accent);padding:9px 15px;border-radius:10px;opacity:0;transition:.2s;pointer-events:none}
+  .toast.show{opacity:1}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>🍽️ What's Your Eating Personality?</h1>
+<p class="sub">A fun 60-second quiz — which of the 6 food types are you?</p>
+<div class="bar"><i id="bar"></i></div>
+<div id="quiz"></div>
+
+<div class="result" id="result">
+  <div class="card">
+    <div class="emoji" id="rEmoji"></div>
+    <div class="rname" id="rName"></div>
+    <div class="rdesc" id="rDesc"></div>
+    <div class="traits" id="rTraits"></div>
+  </div>
+  <button class="cta share" id="share">📋 Share my result</button>
+  <button class="cta" id="retry">↺ Retake</button>
+  <div class="links" id="rLinks"></div>
+</div>
+<footer>Free · no account · for fun · made by <a href="https://atlas-asittley.github.io/calorie-tracker/?src=quiz" style="color:var(--mut)">the free calorie tracker</a> folks</footer>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+var $=function(s){return document.querySelector(s);};
+var TYPES={
+  grazer:{e:'🥡',n:'The Grazer',d:"You don't really do 'meals' — you graze all day on a steady stream of snacks and little bites, and honestly it works for you.",t:'Spontaneous · snack-powered · always nibbling'},
+  prepper:{e:'📦',n:'The Meal-Prepper',d:"Sunday-you is a hero. Organized, disciplined, batch-cooked, and never caught hungry without a plan.",t:'Organized · consistent · always ready'},
+  intuitive:{e:'🌿',n:'The Intuitive Eater',d:"No rules, no tracking. You eat by hunger and mood, trust your body, and it keeps you balanced.",t:'Relaxed · body-led · no-rules'},
+  adventurer:{e:'🌶️',n:'The Adventurer',d:"Variety is the spice. New cuisines, weird ingredients, that place nobody's heard of — you'll try anything once.",t:'Curious · bold · variety-seeking'},
+  comfort:{e:'🛋️',n:'The Comfort Seeker',d:"Food is a hug. You lean into cozy, familiar favorites and there's real joy in the classics.",t:'Cozy · loyal · joy-first'},
+  optimizer:{e:'📊',n:'The Optimizer',d:"Food is fuel and data. You track, tweak, and hit your targets — and you love the numbers.",t:'Data-driven · precise · goal-focused'}
+};
+var Q=[
+ ["It's noon — what are you eating?",[["A handful of whatever's around","grazer"],["The lunch I prepped Sunday","prepper"],["Whatever I'm craving","intuitive"],["That new place everyone's hyping","adventurer"]]],
+ ["Your ideal dinner is…",[["A grazing board of small bites","grazer"],["Balanced — it hits my macros","optimizer"],["Mac & cheese, something cozy","comfort"],["A cuisine I've never tried","adventurer"]]],
+ ["How do you grocery shop?",[["Detailed list, same staples","prepper"],["I track what fits my goals","optimizer"],["Vibes — whatever looks good","intuitive"],["Snacks. Lots of snacks","grazer"]]],
+ ["A recipe needs something you don't have…",[["Improvise and swap it","intuitive"],["Go buy the exact thing","prepper"],["Perfect excuse to try something new","adventurer"],["Order the comfort takeout instead","comfort"]]],
+ ["Your relationship with food-tracking apps?",[["I live in them — love the data","optimizer"],["Too much effort, I just graze","grazer"],["I eat when hungry, no apps","intuitive"],["I meal-prep so I don't need to","prepper"]]],
+ ["Friday-night food mood?",[["Comfort classics, no notes","comfort"],["Something adventurous","adventurer"],["Grazing + snacks on the couch","grazer"],["Balanced, staying on plan","optimizer"]]],
+ ["How many different meals in a week?",[["Same few on repeat","prepper"],["Tons — I love variety","adventurer"],["Whatever mood strikes","intuitive"],["Constant little snacks","grazer"]]],
+ ["Your kitchen superpower?",[["Batch-cooking the whole week","prepper"],["Hitting my protein target","optimizer"],["The perfect comfort dish","comfort"],["Grazing-board artistry","grazer"]]]
+];
+var i=0, scores={};
+function render(){
+  if(i>=Q.length){return finish();}
+  $('#bar').style.width=(i/Q.length*100)+'%';
+  var q=Q[i], el=$('#quiz'); el.innerHTML='<div class="q">'+q[0]+'</div>';
+  q[1].forEach(function(o){
+    var b=document.createElement('button');b.className='opt';b.textContent=o[0];
+    b.addEventListener('click',function(){scores[o[1]]=(scores[o[1]]||0)+1;i++;render();});
+    el.appendChild(b);
+  });
+}
+function winner(){var best=null,bv=-1;for(var k in TYPES){var v=scores[k]||0;if(v>bv){bv=v;best=k;}}return best;}
+function finish(){
+  $('#bar').style.width='100%';$('#quiz').style.display='none';
+  var w=winner(), t=TYPES[w];
+  $('#rEmoji').textContent=t.e;$('#rName').textContent=t.n;$('#rDesc').textContent=t.d;$('#rTraits').textContent=t.t;
+  var links=w==='optimizer'||w==='prepper'
+    ? '<p>Your type loves a system → <a href="https://atlas-asittley.github.io/calorie-tracker/?src=quiz">free calorie & macro tracker</a> + <a href="https://atlas-asittley.github.io/macro-pack/?src=quiz">printable planner pack</a>.</p>'
+    : '<p>Curious about your numbers? Try the <a href="https://atlas-asittley.github.io/calorie-tracker/?src=quiz">free, private calorie tracker</a> (no account).</p>';
+  links+='<p>Fun food game: <a href="https://atlas-asittley.github.io/macrodle/?src=quiz">Macrodle</a> · <a href="https://ko-fi.com/atlasentre" target="_blank" rel="noopener">☕ support these free tools</a></p>';
+  $('#rLinks').innerHTML=links;
+  $('#result').style.display='block';
+  beacon('result_'+w);
+}
+function toast(m){var t=$('#toast');t.textContent=m;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},1500);}
+$('#share').addEventListener('click',function(){
+  var t=TYPES[winner()];
+  var txt="I'm "+t.e+" "+t.n+"! What's your eating personality? Take the 60-sec quiz: https://atlas-asittley.github.io/eating-personality/";
+  if(navigator.share)navigator.share({text:txt}).catch(function(){});
+  else if(navigator.clipboard)navigator.clipboard.writeText(txt).then(function(){toast('Copied! Paste it anywhere 📋');});
+  else toast('Copy not supported');
+  beacon('share');
+});
+$('#retry').addEventListener('click',function(){i=0;scores={};$('#quiz').style.display='block';$('#result').style.display='none';render();});
+render();
+
+var PUBK='sb_publishable_7yi3BNg-J-K5nralw5JSww_c71Pge6e';
+function sid(){try{var s=localStorage.getItem('aa_sid');if(!s){s=Math.random().toString(36).slice(2)+Date.now().toString(36);localStorage.setItem('aa_sid',s);}return s;}catch(e){return 'na';}}
+function beacon(ev){try{if(navigator.webdriver)return;fetch('https://igaulapupbtdcqqjobhs.supabase.co/rest/v1/site_events',{method:'POST',headers:{apikey:PUBK,Authorization:'Bearer '+PUBK,'Content-Type':'application/json',Prefer:'return=minimal'},body:JSON.stringify({game:'eating-personality',type:ev==='visit'?'visit':'event',sid:sid(),ref:(document.referrer||'').split('/')[2]||null,meta:ev==='visit'?{src:(new URLSearchParams(location.search)).get('src')||'direct'}:{event:ev}}),keepalive:true}).catch(function(){});}catch(e){}}
+beacon('visit');
+</script>
+</body>
+</html>
