@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Workout Tracker</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #1a1a2e; --card: #16213e; --border: #0f3460;
+    --green: #16c79a; --red: #e94560; --text: #eee; --dim: #8a97b1;
+  }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: 'Courier New', monospace;
+    padding: 16px 14px 120px; max-width: 640px; margin: 0 auto;
+    -webkit-text-size-adjust: 100%;
+  }
+  header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 6px; }
+  h1 { font-size: 24px; color: var(--green); }
+  .back { color: var(--dim); text-decoration: none; font-size: 13px; }
+  .back:hover { color: var(--green); }
+  #session-head { color: var(--dim); font-size: 13px; margin-bottom: 18px; line-height: 1.5; }
+  #session-head b { color: var(--text); }
+
+  .msg { padding: 40px 12px; text-align: center; color: var(--dim); line-height: 1.6; }
+  .msg.err { color: #f0a0a0; }
+
+  .exercise { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px; margin-bottom: 14px; }
+  .exercise h2 { font-size: 17px; color: var(--red); margin-bottom: 4px; }
+  .ex-meta { font-size: 12px; color: var(--dim); margin-bottom: 4px; }
+  .ex-note { font-size: 12px; color: var(--green); margin-bottom: 4px; line-height: 1.4; }
+  .ex-last { font-size: 12px; color: var(--dim); margin-bottom: 10px; }
+  .ex-last b { color: var(--text); }
+
+  .set-row { display: grid; grid-template-columns: 44px 1fr 1fr auto; gap: 8px; align-items: center; margin-bottom: 8px; }
+  .set-lbl { font-size: 13px; color: var(--dim); }
+  .field { display: flex; flex-direction: column; }
+  .field span { font-size: 10px; color: var(--dim); margin-bottom: 2px; text-transform: uppercase; letter-spacing: .5px; }
+  input[type=number], input[type=text], textarea {
+    background: var(--bg); border: 1px solid var(--border); color: var(--text);
+    border-radius: 6px; padding: 9px 8px; font-family: inherit; font-size: 16px; width: 100%;
+  }
+  input:focus, textarea:focus { outline: none; border-color: var(--green); }
+  .rest-btn {
+    background: var(--border); color: var(--text); border: none; border-radius: 6px;
+    padding: 9px 10px; font-family: inherit; font-size: 12px; cursor: pointer; white-space: nowrap; align-self: end;
+  }
+  .rest-btn:active { background: var(--green); color: var(--bg); }
+
+  .session-extras { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px; margin-bottom: 14px; }
+  .session-extras label { display: block; font-size: 12px; color: var(--dim); margin-bottom: 6px; }
+  .session-extras input, .session-extras textarea { margin-bottom: 12px; }
+  textarea { min-height: 60px; resize: vertical; }
+
+  #submit {
+    position: fixed; left: 0; right: 0; bottom: 0; width: 100%;
+    background: var(--green); color: var(--bg); border: none; padding: 18px;
+    font-family: inherit; font-size: 17px; font-weight: bold; cursor: pointer; letter-spacing: .5px;
+  }
+  #submit:disabled { background: var(--border); color: var(--dim); }
+
+  #rest-bar {
+    position: fixed; left: 0; right: 0; top: 0; background: var(--red); color: #fff;
+    text-align: center; padding: 12px; font-size: 20px; font-weight: bold; display: none; z-index: 10;
+  }
+  #rest-bar.done { background: var(--green); color: var(--bg); }
+  #rest-bar small { display: block; font-size: 11px; font-weight: normal; opacity: .85; }
+  #rest-bar .stop { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); font-size: 13px; text-decoration: underline; cursor: pointer; }
+</style>
+</head>
+<body>
+
+<div id="rest-bar"><span id="rest-txt"></span><small>rest timer</small><span class="stop" onclick="stopRest()">stop</span></div>
+
+<header>
+  <h1>💪 Workout</h1>
+  <a class="back" href="https://atlas-asittley.github.io/">← Atlas</a>
+</header>
+<div id="session-head"></div>
+
+<div id="content"><div class="msg">Loading today's workout…</div></div>
+
+<div id="extras-slot"></div>
+
+<button id="submit" style="display:none" onclick="submitSession()">Save workout</button>
+
+<script>
+(function () {
+  var SUPABASE_URL = 'https://igaulapupbtdcqqjobhs.supabase.co';
+  var SUPABASE_ANON_KEY = 'sb_publishable_7yi3BNg-J-K5nralw5JSww_c71Pge6e';
+
+  if (!window.supabase || typeof window.supabase.createClient !== 'function') {
+    document.getElementById('content').innerHTML =
+      '<div class="msg err">Failed to load Supabase library.<br>Check your connection and reload.</div>';
+    return;
+  }
+  var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  var session = null;      // the prescribed session row
+  var sets = [];           // its sets (with a ._el reference after render)
+
+  // ---------- helpers ----------
+  function fmtSet(s) {
+    var w = (s.actual_weight === 0 || s.actual_weight) ? s.actual_weight : '';
+    return s.actual_reps + (w !== '' ? '×' + w : '');
+  }
+  function num(v) { if (v === '' || v === null || v === undefined) return null; var n = Number(v); return isNaN(n) ? null : n; }
+  function todayISO() { var d = new Date(); return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
+
+  // ---------- rest timer ----------
+  var restInt = null;
+  window.stopRest = function () { if (restInt) clearInterval(restInt); restInt = null; document.getElementById('rest-bar').style.display = 'none'; };
+  function beep() {
+    try {
+      var ctx = new (window.AudioContext || window.webkitAudioContext)();
+      var o = ctx.createOscillator(), g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination); o.frequency.value = 880; o.type = 'sine';
+      g.gain.setValueAtTime(0.4, ctx.currentTime); o.start();
+      o.stop(ctx.currentTime + 0.35); g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
+    } catch (e) {}
+    if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+  }
+  function startRest(seconds) {
+    if (!seconds || seconds < 1) seconds = 90;
+    if (restInt) clearInterval(restInt);
+    var bar = document.getElementById('rest-bar'), txt = document.getElementById('rest-txt');
+    bar.className = ''; bar.style.display = 'block';
+    var left = seconds;
+    function paint() {
+      var m = Math.floor(left / 60), s = left % 60;
+      txt.textContent = m + ':' + String(s).padStart(2, '0');
+    }
+    paint();
+    restInt = setInterval(function () {
+      left--;
+      if (left <= 0) { clearInterval(restInt); restInt = null; txt.textContent = 'Go! 💪'; bar.className = 'done'; beep(); return; }
+      paint();
+    }, 1000);
+  }
+
+  // ---------- load ----------
+  async function load() {
+    try {
+      var sess = await sb.from('workout_sessions').select('*')
+        .eq('status', 'prescribed').order('created_at', { ascending: false }).limit(1);
+      if (sess.error) throw sess.error;
+      if (!sess.data.length) { renderEmpty(); return; }
+      session = sess.data[0];
+
+      var st = await sb.from('workout_sets').select('*')
+        .eq('session_id', session.id).order('exercise_order').order('set_index');
+      if (st.error) throw st.error;
+      sets = st.data;
+
+      var names = sets.map(function (s) { return s.exercise; }).filter(function (v, i, a) { return a.indexOf(v) === i; });
+      var lastByExercise = await loadLast(names);
+      render(lastByExercise);
+    } catch (e) {
+      document.getElementById('content').innerHTML = '<div class="msg err">Error loading workout:<br>' + (e.message || e) + '</div>';
+    }
+  }
+
+  async function loadLast(names) {
+    var out = {};
+    if (!names.length) return out;
+    var res = await sb.from('workout_sets')
+      .select('exercise,set_index,actual_reps,actual_weight,session_id,workout_sessions!inner(completed_at,status)')
+      .in('exercise', names).eq('workout_sessions.status', 'completed');
+    if (res.error || !res.data) return out;
+    var rows = res.data.filter(function (r) { return r.session_id !== session.id; });
+    // pick the most-recent completed session per exercise
+    var latestSess = {};
+    rows.forEach(function (r) {
+      var t = r.workout_sessions.completed_at || '';
+      if (!latestSess[r.exercise] || t > latestSess[r.exercise]) latestSess[r.exercise] = t;
+    });
+    names.forEach(function (n) {
+      var picked = rows.filter(function (r) { return r.exercise === n && (r.workout_sessions.completed_at || '') === latestSess[n]; })
+        .sort(function (a, b) { return a.set_index - b.set_index; });
+      if (picked.length) out[n] = picked.map(fmtSet).join(', ');
+    });
+    return out;
+  }
+
+  function renderEmpty() {
+    document.getElementById('content').innerHTML =
+      '<div class="msg">No workout queued right now.<br><br>Tell your coach you’re ready to lift and what equipment you’ve got — a session will show up here.</div>';
+  }
+
+  // ---------- render ----------
+  function render(lastByExercise) {
+    var head = 'Session for <b>' + session.session_date + '</b> · <b>' + session.day_type + '</b>';
+    if (session.equipment) head += ' · ' + session.equipment;
+    document.getElementById('session-head').innerHTML = head;
+
+    var groups = {}; var order = [];
+    sets.forEach(function (s) {
+      if (!groups[s.exercise_order]) { groups[s.exercise_order] = { name: s.exercise, note: s.exercise_note, rest: s.rest_seconds, sets: [] }; order.push(s.exercise_order); }
+      groups[s.exercise_order].sets.push(s);
+    });
+    order.sort(function (a, b) { return a - b; });
+
+    var c = document.getElementById('content'); c.innerHTML = '';
+    order.forEach(function (ord) {
+      var g = groups[ord];
+      var box = document.createElement('div'); box.className = 'exercise';
+      var h = '<h2>' + g.name + '</h2>';
+      var repRange = g.sets[0].target_reps ? (g.sets.length + ' × ' + g.sets[0].target_reps + ' reps') : (g.sets.length + ' sets');
+      var rest = g.rest ? (' · rest ' + (g.rest >= 60 ? (g.rest/60) + ' min' : g.rest + 's')) : '';
+      h += '<div class="ex-meta">' + repRange + rest + '</div>';
+      if (g.note) h += '<div class="ex-note">→ ' + g.note + '</div>';
+      if (lastByExercise[g.name]) h += '<div class="ex-last">Last time: <b>' + lastByExercise[g.name] + '</b></div>';
+      box.innerHTML = h;
+
+      g.sets.forEach(function (s) {
+        var row = document.createElement('div'); row.className = 'set-row';
+        var tgt = (s.target_weight === 0 || s.target_weight) ? s.target_weight : '';
+        var tnote = s.target_note ? (' – ' + s.target_note) : '';
+        row.innerHTML =
+          '<div class="set-lbl">Set ' + s.set_index + '</div>' +
+          '<div class="field"><span>reps' + tnote + '</span><input type="number" inputmode="numeric" data-id="' + s.id + '" data-k="reps" placeholder="' + (s.target_reps || '') + '"></div>' +
+          '<div class="field"><span>lbs</span><input type="number" inputmode="decimal" data-id="' + s.id + '" data-k="weight" value="' + tgt + '"></div>' +
+          '<button class="rest-btn" data-rest="' + (g.rest || 90) + '">Rest</button>';
+        row.querySelector('.rest-btn').addEventListener('click', function () { startRest(parseInt(this.getAttribute('data-rest'), 10)); });
+        box.appendChild(row);
+      });
+      c.appendChild(box);
+    });
+
+    document.getElementById('extras-slot').innerHTML =
+      '<div class="session-extras">' +
+      '<label>Bodyweight (lbs, optional)</label><input id="bw" type="number" inputmode="decimal" placeholder="track the bulk">' +
+      '<label>How did it feel? (optional)</label><textarea id="snotes" placeholder="notes for your coach"></textarea>' +
+      '</div>';
+
+    document.getElementById('submit').style.display = 'block';
+  }
+
+  // ---------- submit ----------
+  window.submitSession = async function () {
+    var btn = document.getElementById('submit');
+    btn.disabled = true; btn.textContent = 'Saving…';
+    try {
+      var inputs = document.querySelectorAll('input[data-id]');
+      var byId = {};
+      inputs.forEach(function (el) {
+        var id = el.getAttribute('data-id'), k = el.getAttribute('data-k');
+        byId[id] = byId[id] || {};
+        byId[id][k === 'reps' ? 'actual_reps' : 'actual_weight'] = num(el.value);
+      });
+      for (var id in byId) {
+        var r = await sb.from('workout_sets').update(byId[id]).eq('id', id);
+        if (r.error) throw r.error;
+      }
+      var bw = num(document.getElementById('bw').value);
+      var notes = document.getElementById('snotes').value.trim() || null;
+      var upd = await sb.from('workout_sessions').update({
+        status: 'completed', completed_at: new Date().toISOString(),
+        session_date: todayISO(), bodyweight: bw, notes: notes
+      }).eq('id', session.id);
+      if (upd.error) throw upd.error;
+
+      document.getElementById('content').innerHTML = '<div class="msg">✅ Logged. Nice work.<br><br>Your coach will read these numbers and program the next session.</div>';
+      document.getElementById('extras-slot').innerHTML = '';
+      document.getElementById('session-head').innerHTML = '';
+      btn.style.display = 'none';
+      window.scrollTo(0, 0);
+    } catch (e) {
+      alert('Save failed: ' + (e.message || e));
+      btn.disabled = false; btn.textContent = 'Save workout';
+    }
+  };
+
+  load();
+})();
+</script>
+</body>
+</html>
