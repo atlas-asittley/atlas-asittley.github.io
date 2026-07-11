@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Diet</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root { --bg:#1a1a2e; --card:#16213e; --border:#0f3460; --green:#16c79a; --red:#e94560; --text:#eee; --dim:#8a97b1; }
+  body { background:var(--bg); color:var(--text); font-family:'Courier New',monospace; padding:16px 14px 60px; max-width:640px; margin:0 auto; -webkit-text-size-adjust:100%; }
+  header { display:flex; align-items:baseline; justify-content:space-between; margin-bottom:12px; }
+  h1 { font-size:24px; color:var(--green); }
+  .back { color:var(--dim); text-decoration:none; font-size:13px; }
+  .back:hover { color:var(--green); }
+  nav { display:flex; gap:8px; margin-bottom:18px; }
+  nav a { flex:1; text-align:center; padding:9px; border:1px solid var(--border); border-radius:8px; text-decoration:none; color:var(--dim); font-size:13px; }
+  nav a.active { background:var(--card); color:var(--green); border-color:var(--green); }
+
+  .card { background:var(--card); border:1px solid var(--border); border-radius:10px; padding:14px; margin-bottom:14px; }
+  .card h2 { font-size:16px; color:var(--red); margin-bottom:10px; }
+  .card h3 { font-size:14px; color:var(--green); margin:12px 0 4px; }
+  p, li { font-size:13px; line-height:1.55; color:var(--text); }
+  ul { padding-left:18px; }
+  .dim { color:var(--dim); }
+  .green { color:var(--green); }
+
+  .bw-now { font-size:34px; color:var(--green); font-weight:bold; }
+  .bw-sub { font-size:12px; color:var(--dim); }
+  .bw-list { margin-top:10px; font-size:12px; color:var(--dim); }
+  .bw-list div { display:flex; justify-content:space-between; padding:3px 0; border-top:1px solid var(--border); }
+
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  td, th { text-align:left; padding:7px 6px; border-bottom:1px solid var(--border); }
+  th { color:var(--dim); font-weight:normal; font-size:11px; text-transform:uppercase; letter-spacing:.5px; }
+  td.n { text-align:right; }
+  tr.total td { font-weight:bold; color:var(--green); border-top:1px solid var(--border); }
+  tr.target td { color:var(--dim); }
+  tr.left td { font-weight:bold; color:var(--red); }
+
+  .recipe { margin-bottom:14px; }
+  .recipe b { color:var(--text); }
+  .cal { color:var(--dim); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🥩 Diet</h1>
+  <a class="back" href="https://atlas-asittley.github.io/">← Atlas</a>
+</header>
+
+<nav>
+  <a href="./">Workout</a>
+  <a class="active" href="./diet.html">Diet</a>
+</nav>
+
+<div class="card">
+  <h2>Bodyweight</h2>
+  <div id="bw"><span class="bw-sub">loading…</span></div>
+</div>
+
+<div class="card">
+  <h2>Daily Targets</h2>
+  <p><b>~180g protein</b> · <b>~3,000–3,400 calories</b> (slight surplus over ~2,800–3,000 maintenance).</p>
+  <p class="dim" style="margin-top:6px">The lever is <span class="green">total calories</span>, not protein — appetite is the bottleneck, so eat calorie-dense, not high-volume. Aim ~0.5 lb/week up. Flat = eat more; &gt;1 lb/week = mostly fat, ease off.</p>
+</div>
+
+<div class="card">
+  <h2>Where It Comes From</h2>
+  <table>
+    <tr><th>Source</th><th class="n">Cal</th><th class="n">Protein</th></tr>
+    <tr><td>Mass Gainer shake</td><td class="n">~895</td><td class="n">~100g</td></tr>
+    <tr><td>Yogurt bowl</td><td class="n">~560</td><td class="n">~45g</td></tr>
+    <tr class="total"><td>Subtotal</td><td class="n">~1,455</td><td class="n">~145g</td></tr>
+    <tr class="target"><td>Daily target</td><td class="n">~3,000–3,400</td><td class="n">~180g</td></tr>
+    <tr class="left"><td>Left for meals</td><td class="n">~1,550–1,950</td><td class="n">~35g</td></tr>
+  </table>
+  <p class="dim" style="margin-top:10px">Protein is nearly done before meals — ~35g left is one chicken breast or a can of tuna. Your meals are a <span class="green">calorie job</span>: lean on rice, potatoes, pasta, olive oil, nuts, avocado.</p>
+</div>
+
+<div class="card">
+  <h2>Recipes</h2>
+
+  <div class="recipe">
+    <h3>1. Protein shake (as-is)</h3>
+    <p>Body Fortress (~60g protein) in a <b>shaker bottle</b> — no blender, no froth.</p>
+  </div>
+
+  <div class="recipe">
+    <h3>2. Mass Gainer Shake <span class="cal">~900 cal / ~100g P</span></h3>
+    <p class="dim">Liquids first, protein powder <b>last</b>, pulse briefly, let it sit 2–3 min so foam collapses.</p>
+    <ul>
+      <li>2 cups Fairlife lactose-free milk</li>
+      <li>½ cup dry oats</li>
+      <li>2 tbsp peanut butter</li>
+      <li>1 banana</li>
+      <li>1 serving protein powder (~60g P)</li>
+    </ul>
+    <p class="dim">This replaces the plain shake (it already has a full protein serving).</p>
+  </div>
+
+  <div class="recipe">
+    <h3>3. No-Blend Overnight Oats <span class="cal">~600–800 cal</span></h3>
+    <p class="dim">Stir in a jar, fridge overnight, eat with a spoon.</p>
+    <ul>
+      <li>½–¾ cup rolled oats</li>
+      <li>1 cup Fairlife or soy milk (or Greek yogurt for a thicker base)</li>
+      <li>2 tbsp peanut butter + 1 sliced banana</li>
+      <li>handful of nuts + drizzle of honey</li>
+      <li>optional: ½–1 scoop protein stirred in</li>
+    </ul>
+  </div>
+
+  <div class="recipe">
+    <h3>4. Greek Yogurt Power Bowl <span class="cal">~560 cal / ~45g P</span></h3>
+    <p class="dim">Stir protein powder into the yogurt first (smooth, no froth), then top.</p>
+    <ul>
+      <li>1 cup plain Greek yogurt</li>
+      <li>½ scoop protein powder</li>
+      <li>¼ cup granola</li>
+      <li>1 tbsp honey</li>
+      <li>handful of nuts (~1 oz)</li>
+      <li>optional: berries</li>
+    </ul>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Notes & Constraints</h2>
+  <ul>
+    <li><b>Lactose intolerant</b> → Fairlife (lactose-free, ~13g P/cup), lactose-free/soy milk. Lactaid pills for regular dairy. Greek yogurt is fine.</li>
+    <li><b>Blending froths the protein</b> → shaker bottle or no-blend options; add powder last.</li>
+    <li><b>Eat on a clock</b>, not on hunger — small amounts every 2–3 hrs.</li>
+    <li>Dense add-ons: olive oil (1 tbsp ≈ 120 cal), nuts & nut butter, avocado, cheese (w/ Lactaid), rice, potatoes, pasta, dried fruit.</li>
+  </ul>
+</div>
+
+<script>
+(function () {
+  var URL = 'https://igaulapupbtdcqqjobhs.supabase.co';
+  var KEY = 'sb_publishable_7yi3BNg-J-K5nralw5JSww_c71Pge6e';
+  var el = document.getElementById('bw');
+  if (!window.supabase) { el.innerHTML = '<span class="bw-sub">—</span>'; return; }
+  var sb = window.supabase.createClient(URL, KEY);
+  sb.from('workout_bodyweight').select('log_date,weight,note').order('log_date', { ascending: false }).limit(8)
+    .then(function (res) {
+      if (res.error || !res.data || !res.data.length) { el.innerHTML = '<span class="bw-sub">No weigh-ins logged yet.</span>'; return; }
+      var rows = res.data, latest = rows[0];
+      var h = '<span class="bw-now">' + latest.weight + ' lb</span> <span class="bw-sub">as of ' + latest.log_date + '</span>';
+      if (rows.length > 1) {
+        h += '<div class="bw-list">';
+        rows.forEach(function (r) { h += '<div><span>' + r.log_date + '</span><span>' + r.weight + ' lb</span></div>'; });
+        h += '</div>';
+      }
+      el.innerHTML = h;
+    });
+})();
+</script>
+</body>
+</html>

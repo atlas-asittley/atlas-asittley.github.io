@@ -21,6 +21,9 @@
   h1 { font-size: 24px; color: var(--green); }
   .back { color: var(--dim); text-decoration: none; font-size: 13px; }
   .back:hover { color: var(--green); }
+  nav { display: flex; gap: 8px; margin-bottom: 16px; }
+  nav a { flex: 1; text-align: center; padding: 9px; border: 1px solid var(--border); border-radius: 8px; text-decoration: none; color: var(--dim); font-size: 13px; }
+  nav a.active { background: var(--card); color: var(--green); border-color: var(--green); }
   #session-head { color: var(--dim); font-size: 13px; margin-bottom: 18px; line-height: 1.5; }
   #session-head b { color: var(--text); }
 
@@ -78,6 +81,10 @@
   <h1>💪 Workout</h1>
   <a class="back" href="https://atlas-asittley.github.io/">← Atlas</a>
 </header>
+<nav>
+  <a class="active" href="./">Workout</a>
+  <a href="./diet.html">Diet</a>
+</nav>
 <div id="session-head"></div>
 
 <div id="content"><div class="msg">Loading today's workout…</div></div>

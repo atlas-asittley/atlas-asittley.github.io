@@ -53,3 +53,16 @@ create policy workout_sessions_anon_all on workout_sessions
 drop policy if exists workout_sets_anon_all on workout_sets;
 create policy workout_sets_anon_all on workout_sets
   for all to anon using (true) with check (true);
+
+-- Standalone bodyweight log (weigh-ins independent of workout days)
+create table if not exists workout_bodyweight (
+  id         uuid primary key default gen_random_uuid(),
+  log_date   date not null,
+  weight     numeric not null,
+  note       text,
+  created_at timestamptz not null default now()
+);
+alter table workout_bodyweight enable row level security;
+drop policy if exists workout_bodyweight_anon_all on workout_bodyweight;
+create policy workout_bodyweight_anon_all on workout_bodyweight
+  for all to anon using (true) with check (true);
