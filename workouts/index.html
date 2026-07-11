@@ -52,6 +52,12 @@
   }
   .rest-btn:active { background: var(--green); color: var(--bg); }
 
+  .how { background: none; border: 1px solid var(--border); color: var(--dim); border-radius: 6px; padding: 6px 10px; font-family: inherit; font-size: 12px; cursor: pointer; margin-bottom: 10px; }
+  .how:active { color: var(--green); border-color: var(--green); }
+  .demo { margin-bottom: 12px; }
+  .demo img { width: 100%; max-width: 300px; border-radius: 8px; border: 1px solid var(--border); background: #fff; display: block; }
+  .demo-cap { font-size: 10px; color: var(--dim); margin-top: 4px; }
+
   .session-extras { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px; margin-bottom: 14px; }
   .session-extras label { display: block; font-size: 12px; color: var(--dim); margin-bottom: 6px; }
   .session-extras input, .session-extras textarea { margin-bottom: 12px; }
@@ -115,6 +121,38 @@
   }
   function num(v) { if (v === '' || v === null || v === undefined) return null; var n = Number(v); return isNaN(n) ? null : n; }
   function todayISO() { var d = new Date(); return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
+
+  // exercise name -> local demo folder (public-domain free-exercise-db image pairs)
+  var DEMOS = {
+    'db bench press': 'Dumbbell_Bench_Press',
+    'one-arm db row': 'One-Arm_Dumbbell_Row',
+    'db shoulder press': 'Dumbbell_Shoulder_Press',
+    'db lateral raise': 'Side_Lateral_Raise',
+    'db pullover': 'Straight-Arm_Dumbbell_Pullover',
+    'db shrugs': 'Dumbbell_Shrug',
+    'db curls': 'Dumbbell_Bicep_Curl',
+    'overhead db triceps ext': 'Standing_Dumbbell_Triceps_Extension',
+    'db squat': 'Dumbbell_Squat',
+    'goblet squat': 'Dumbbell_Squat',
+    'goblet or db squat': 'Dumbbell_Squat',
+    'db romanian deadlift': 'Stiff-Legged_Dumbbell_Deadlift',
+    'walking lunges': 'Dumbbell_Lunges',
+    'bulgarian split squat': 'Split_Squat_with_Dumbbells',
+    'db calf raise': 'Standing_Dumbbell_Calf_Raise',
+    'db calf raises': 'Standing_Dumbbell_Calf_Raise'
+  };
+  function wireDemo(box, slug) {
+    var btn = box.querySelector('.how'), demo = box.querySelector('.demo'), img = demo.querySelector('img');
+    var base = 'exercises/' + slug + '/', frame = 0, timer = null;
+    img.src = base + '0.jpg';
+    btn.addEventListener('click', function () {
+      var open = demo.style.display === 'none';
+      demo.style.display = open ? 'block' : 'none';
+      btn.textContent = open ? '▼ Hide demo' : '▶ How to do it';
+      if (open && !timer) { timer = setInterval(function () { frame ^= 1; img.src = base + frame + '.jpg'; }, 900); }
+      else if (!open && timer) { clearInterval(timer); timer = null; }
+    });
+  }
 
   // ---------- rest timer ----------
   var restInt = null;
@@ -219,7 +257,11 @@
       h += '<div class="ex-meta">' + repRange + rest + '</div>';
       if (g.note) h += '<div class="ex-note">→ ' + g.note + '</div>';
       if (lastByExercise[g.name]) h += '<div class="ex-last">Last time: <b>' + lastByExercise[g.name] + '</b></div>';
+      var slug = DEMOS[g.name.toLowerCase().trim()];
+      if (slug) h += '<button class="how" type="button">▶ How to do it</button>' +
+        '<div class="demo" style="display:none"><img alt="' + g.name + ' demo"><div class="demo-cap">Public-domain demo · free-exercise-db</div></div>';
       box.innerHTML = h;
+      if (slug) wireDemo(box, slug);
 
       g.sets.forEach(function (s) {
         var row = document.createElement('div'); row.className = 'set-row';
