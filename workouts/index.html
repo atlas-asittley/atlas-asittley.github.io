@@ -322,6 +322,10 @@
     }
   };
 
+  // Re-check for a queued workout when the page is restored from the mobile
+  // back-forward cache (otherwise a tab opened earlier stays stale).
+  window.addEventListener('pageshow', function (e) { if (e.persisted) location.reload(); });
+
   load();
 })();
 </script>
