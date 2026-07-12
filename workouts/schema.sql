@@ -39,20 +39,23 @@ create index if not exists workout_sessions_status_idx on workout_sessions(statu
 
 -- =========================================================================
 -- Row-Level Security  (anon key is public, so policies are required)
--- Personal single-user app with non-sensitive data → allow anon read/write
--- on these two tables only. Game tables are untouched.
+-- Personal single-user app with non-sensitive data → allow read/write to ALL
+-- roles (public = anon + authenticated). Using `to public` (not `to anon`) is
+-- important: apps on the same origin share this Supabase project's stored login,
+-- so a request may arrive as the `authenticated` role — an anon-only policy would
+-- hide the data. Game tables are untouched.
 -- =========================================================================
 
 alter table workout_sessions enable row level security;
 alter table workout_sets     enable row level security;
 
-drop policy if exists workout_sessions_anon_all on workout_sessions;
-create policy workout_sessions_anon_all on workout_sessions
-  for all to anon using (true) with check (true);
+drop policy if exists workout_sessions_all on workout_sessions;
+create policy workout_sessions_all on workout_sessions
+  for all to public using (true) with check (true);
 
-drop policy if exists workout_sets_anon_all on workout_sets;
-create policy workout_sets_anon_all on workout_sets
-  for all to anon using (true) with check (true);
+drop policy if exists workout_sets_all on workout_sets;
+create policy workout_sets_all on workout_sets
+  for all to public using (true) with check (true);
 
 -- Standalone bodyweight log (weigh-ins independent of workout days)
 create table if not exists workout_bodyweight (
@@ -63,6 +66,6 @@ create table if not exists workout_bodyweight (
   created_at timestamptz not null default now()
 );
 alter table workout_bodyweight enable row level security;
-drop policy if exists workout_bodyweight_anon_all on workout_bodyweight;
-create policy workout_bodyweight_anon_all on workout_bodyweight
-  for all to anon using (true) with check (true);
+drop policy if exists workout_bodyweight_all on workout_bodyweight;
+create policy workout_bodyweight_all on workout_bodyweight
+  for all to public using (true) with check (true);

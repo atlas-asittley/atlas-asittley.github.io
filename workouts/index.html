@@ -109,7 +109,9 @@
       '<div class="msg err">Failed to load Supabase library.<br>Check your connection and reload.</div>';
     return;
   }
-  var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  // persistSession:false so this app never inherits a login from another app on
+  // the same origin (which would change our DB role and hide anon data).
+  var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
 
   var session = null;      // the prescribed session row
   var sets = [];           // its sets (with a ._el reference after render)

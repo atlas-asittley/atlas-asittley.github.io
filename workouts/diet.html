@@ -115,7 +115,7 @@
   var KEY = 'sb_publishable_7yi3BNg-J-K5nralw5JSww_c71Pge6e';
   var el = document.getElementById('bw');
   if (!window.supabase) { el.innerHTML = '<span class="bw-sub">—</span>'; return; }
-  var sb = window.supabase.createClient(URL, KEY);
+  var sb = window.supabase.createClient(URL, KEY, { auth: { persistSession: false, autoRefreshToken: false } });
   sb.from('workout_bodyweight').select('log_date,weight,note').order('log_date', { ascending: false }).limit(8)
     .then(function (res) {
       if (res.error || !res.data || !res.data.length) { el.innerHTML = '<span class="bw-sub">No weigh-ins logged yet.</span>'; return; }
