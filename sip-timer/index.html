@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sip Timer — Download</title>
+<style>
+  :root {
+    --bg: #0e1418;
+    --card: #161f26;
+    --line: #26333d;
+    --text: #e8f1f5;
+    --muted: #93a6b3;
+    --accent: #29b6f6;
+    --accent-ink: #05222e;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 32px 20px 64px;
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  .wrap { max-width: 640px; margin: 0 auto; }
+  header { text-align: center; margin-bottom: 32px; }
+  .drop { font-size: 56px; line-height: 1; }
+  h1 { margin: 12px 0 4px; font-size: 30px; letter-spacing: -0.5px; }
+  .subtitle { color: var(--muted); margin: 0; }
+  .dl {
+    display: block;
+    margin: 28px 0 10px;
+    padding: 18px;
+    background: var(--accent);
+    color: var(--accent-ink);
+    text-align: center;
+    font-size: 18px;
+    font-weight: 700;
+    text-decoration: none;
+    border-radius: 12px;
+  }
+  .dl:active { transform: translateY(1px); }
+  .meta { text-align: center; color: var(--muted); font-size: 13px; margin: 0 0 32px; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 20px 22px;
+    margin-bottom: 20px;
+  }
+  h2 { margin: 0 0 12px; font-size: 17px; }
+  ol, ul { margin: 0; padding-left: 22px; }
+  li { margin-bottom: 10px; }
+  li:last-child { margin-bottom: 0; }
+  code {
+    background: #0a1014;
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    padding: 1px 6px;
+    font-size: 13px;
+  }
+  .note {
+    border-left: 3px solid var(--accent);
+    background: #12222c;
+    padding: 14px 16px;
+    border-radius: 0 8px 8px 0;
+    color: var(--muted);
+    font-size: 14px;
+  }
+  .note strong { color: var(--text); }
+  footer { text-align: center; margin-top: 36px; }
+  footer a { color: var(--muted); font-size: 14px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="drop">💧</div>
+    <h1>Sip Timer</h1>
+    <p class="subtitle">A repeating vibration nudge to drink water.</p>
+  </header>
+
+  <a class="dl" href="sip-timer-1.0.apk" download>Download APK — v1.0</a>
+  <p class="meta">5.7 MB · Android 8.0+ · debug-signed</p>
+
+  <div class="card">
+    <h2>Install it on your phone</h2>
+    <ol>
+      <li>Open <strong>this page on the phone itself</strong> and tap Download. Chrome will warn that this file type can harm your device — tap <strong>Download anyway</strong>.</li>
+      <li>Tap the downloaded file (or open <strong>Files → Downloads</strong> and tap it).</li>
+      <li>Android will say the source isn't allowed. Tap <strong>Settings</strong> on that prompt, then turn on <strong>Allow from this source</strong> for the app you're installing from — usually Chrome or Files. Then go back.</li>
+      <li>Tap <strong>Install</strong>. If Play Protect warns about an unknown developer, choose <strong>Install anyway</strong> — that's expected for a self-signed app.</li>
+    </ol>
+    <p style="margin:12px 0 0;color:var(--muted);font-size:14px;">
+      The permission lives at <em>Settings → Apps → Special app access → Install unknown apps</em> if you'd rather set it beforehand.
+    </p>
+  </div>
+
+  <div class="card">
+    <h2>First run — grant these three</h2>
+    <ul>
+      <li><strong>Notifications</strong> — asked on launch. The ongoing notification <em>is</em> the running UI, so this one is mandatory.</li>
+      <li><strong>Alarms &amp; reminders</strong> — opens when you first tap Start. Without it the buzz drifts late in Doze.</li>
+      <li><strong>Battery: Unrestricted</strong> — also prompted at Start. This is what keeps it firing with the screen locked.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>How it works</h2>
+    <ul>
+      <li>Pick an interval (1–30 min, default 5) and tap <strong>Start</strong>.</li>
+      <li>Every interval it gives a short double buzz — no sound — then restarts the countdown on its own.</li>
+      <li>The notification counts down live and carries <strong>Reset</strong>, <strong>Pause</strong>, and <strong>Stop</strong>. All three work straight from the lock screen, one tap, no unlock.</li>
+      <li><strong>Reset</strong> restarts the full interval early — for when you drink before the buzz.</li>
+      <li>The app screen keeps a tally of buzzes fired today; it clears at midnight.</li>
+    </ul>
+  </div>
+
+  <div class="note">
+    <strong>Heads up:</strong> this build was compiled and signed but never launched on a real device — the build box can't run an emulator. It should be considered untested until you've had it running for a couple of intervals. If the first buzz doesn't land, the culprit is almost always the battery setting in step 3 above.
+  </div>
+
+  <footer>
+    <a href="https://atlas-asittley.github.io/">← All projects</a>
+  </footer>
+
+</div>
+</body>
+</html>
