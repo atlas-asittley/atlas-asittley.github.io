@@ -243,9 +243,12 @@
 
   // ---------- draft autosave (survives an accidental refresh mid-workout) ----------
   function draftKey() { return 'workout_draft_' + (session && session.id); }
+  function fmtDur(min) { if (min < 60) return min + ' min'; var h = Math.floor(min / 60), m = min % 60; return h + 'h' + (m ? ' ' + m + 'm' : ''); }
   function saveDraft() {
     if (!session) return;
-    var d = { sets: {}, bw: '', notes: '' };
+    var prev = {}; try { prev = JSON.parse(localStorage.getItem(draftKey()) || '{}'); } catch (e) {}
+    // stamp the workout start on the first entry; keep it stable across refreshes
+    var d = { sets: {}, bw: '', notes: '', startedAt: prev.startedAt || new Date().toISOString() };
     document.querySelectorAll('input[data-id]').forEach(function (el) {
       var id = el.getAttribute('data-id'), k = el.getAttribute('data-k');
       if (!d.sets[id]) d.sets[id] = {};
@@ -337,6 +340,9 @@
     var btn = document.getElementById('submit');
     btn.disabled = true; btn.textContent = 'Saving…';
     try {
+      var startedAt = null;
+      try { startedAt = (JSON.parse(localStorage.getItem(draftKey()) || '{}')).startedAt || null; } catch (e) {}
+      var endISO = new Date().toISOString();
       var inputs = document.querySelectorAll('input[data-id]');
       var byId = {};
       inputs.forEach(function (el) {
@@ -351,13 +357,18 @@
       var bw = num(document.getElementById('bw').value);
       var notes = document.getElementById('snotes').value.trim() || null;
       var upd = await sb.from('workout_sessions').update({
-        status: 'completed', completed_at: new Date().toISOString(),
+        status: 'completed', completed_at: endISO, started_at: startedAt,
         session_date: todayISO(), bodyweight: bw, notes: notes
       }).eq('id', session.id);
       if (upd.error) throw upd.error;
       clearDraft();
 
-      document.getElementById('content').innerHTML = '<div class="msg">✅ Logged. Nice work.<br><br>Your coach will read these numbers and program the next session.</div>';
+      var durMsg = '';
+      if (startedAt) {
+        var mins = Math.round((new Date(endISO) - new Date(startedAt)) / 60000);
+        if (mins > 0 && mins < 600) durMsg = '<br><br>⏱ ' + fmtDur(mins) + ' in the gym';
+      }
+      document.getElementById('content').innerHTML = '<div class="msg">✅ Logged. Nice work.' + durMsg + '<br><br>Your coach will read these numbers and program the next session.</div>';
       document.getElementById('extras-slot').innerHTML = '';
       document.getElementById('session-head').innerHTML = '';
       btn.style.display = 'none';

@@ -52,6 +52,7 @@
   if (!window.supabase) { c.innerHTML = '<div class="msg">Failed to load.</div>'; return; }
   var sb = window.supabase.createClient(URL, KEY, { auth: { persistSession: false, autoRefreshToken: false } });
 
+  function fmtDur(min) { if (min < 60) return min + ' min'; var h = Math.floor(min / 60), m = min % 60; return h + 'h' + (m ? ' ' + m + 'm' : ''); }
   function fmtSet(s) {
     if (s.actual_reps == null) return null;
     var w = (s.actual_weight === 0 || s.actual_weight == null) ? '' : ('×' + s.actual_weight);
@@ -61,7 +62,7 @@
   async function load() {
     try {
       var ses = await sb.from('workout_sessions')
-        .select('id,session_date,day_type,equipment,bodyweight,created_at,completed_at')
+        .select('id,session_date,day_type,equipment,bodyweight,created_at,completed_at,started_at')
         .eq('status', 'completed').order('completed_at', { ascending: false });
       if (ses.error) throw ses.error;
       if (!ses.data.length) { c.innerHTML = '<div class="msg">No completed workouts yet.</div>'; return; }
@@ -79,8 +80,10 @@
       var groups = {}, order = [];
       ses.data.forEach(function (s) {
         var k = s.session_date + '|' + s.day_type;
-        if (!groups[k]) { groups[k] = { date: s.session_date, type: s.day_type, equipment: s.equipment, bw: s.bodyweight, sets: [] }; order.push(k); }
+        if (!groups[k]) { groups[k] = { date: s.session_date, type: s.day_type, equipment: s.equipment, bw: s.bodyweight, durSec: 0, sets: [] }; order.push(k); }
         if (s.bodyweight != null && groups[k].bw == null) groups[k].bw = s.bodyweight;
+        // sum each session's own start→save time (avoids counting the gap between split same-day sessions)
+        if (s.started_at && s.completed_at) groups[k].durSec += Math.max(0, (new Date(s.completed_at) - new Date(s.started_at)) / 1000);
       });
       st.data.forEach(function (row) {
         var m = sMeta[row.session_id]; if (!m) return;
@@ -108,7 +111,8 @@
         }).join('');
         var d = new Date(g.date + 'T00:00:00');
         var pretty = d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
-        var sub = (g.equipment || '') + (g.bw != null ? ' · ' + g.bw + ' lb' : '');
+        var dur = g.durSec ? fmtDur(Math.round(g.durSec / 60)) : '';
+        var sub = [g.equipment, (g.bw != null ? g.bw + ' lb' : ''), (dur ? '⏱ ' + dur : '')].filter(Boolean).join(' · ');
         var open = idx < 3; // most recent 3 expanded
         box.innerHTML =
           '<div class="day-head"><div><div class="day-date">' + pretty + '</div>' +
