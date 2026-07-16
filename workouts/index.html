@@ -241,6 +241,40 @@
       '<div class="msg">No workout queued right now.<br><br>Tell your coach you’re ready to lift and what equipment you’ve got — a session will show up here.</div>';
   }
 
+  // ---------- draft autosave (survives an accidental refresh mid-workout) ----------
+  function draftKey() { return 'workout_draft_' + (session && session.id); }
+  function saveDraft() {
+    if (!session) return;
+    var d = { sets: {}, bw: '', notes: '' };
+    document.querySelectorAll('input[data-id]').forEach(function (el) {
+      var id = el.getAttribute('data-id'), k = el.getAttribute('data-k');
+      if (!d.sets[id]) d.sets[id] = {};
+      d.sets[id][k] = el.value;
+    });
+    var bw = document.getElementById('bw'); if (bw) d.bw = bw.value;
+    var sn = document.getElementById('snotes'); if (sn) d.notes = sn.value;
+    try { localStorage.setItem(draftKey(), JSON.stringify(d)); } catch (e) {}
+  }
+  function restoreDraft() {
+    // drop drafts from older sessions so they don't accumulate
+    try {
+      for (var i = localStorage.length - 1; i >= 0; i--) {
+        var key = localStorage.key(i);
+        if (key && key.indexOf('workout_draft_') === 0 && key !== draftKey()) localStorage.removeItem(key);
+      }
+    } catch (e) {}
+    var raw; try { raw = localStorage.getItem(draftKey()); } catch (e) { return; }
+    if (!raw) return;
+    var d; try { d = JSON.parse(raw); } catch (e) { return; }
+    document.querySelectorAll('input[data-id]').forEach(function (el) {
+      var id = el.getAttribute('data-id'), k = el.getAttribute('data-k');
+      if (d.sets && d.sets[id] && d.sets[id][k] != null && d.sets[id][k] !== '') el.value = d.sets[id][k];
+    });
+    var bw = document.getElementById('bw'); if (bw && d.bw) bw.value = d.bw;
+    var sn = document.getElementById('snotes'); if (sn && d.notes) sn.value = d.notes;
+  }
+  function clearDraft() { try { localStorage.removeItem(draftKey()); } catch (e) {} }
+
   // ---------- render ----------
   function render(lastByExercise) {
     var head = 'Session for <b>' + session.session_date + '</b> · <b>' + session.day_type + '</b>';
@@ -291,6 +325,10 @@
       '<label>How did it feel? (optional)</label><textarea id="snotes" placeholder="notes for your coach"></textarea>' +
       '</div>';
 
+    restoreDraft();
+    document.getElementById('content').addEventListener('input', saveDraft);
+    document.getElementById('extras-slot').addEventListener('input', saveDraft);
+
     document.getElementById('submit').style.display = 'block';
   }
 
@@ -317,6 +355,7 @@
         session_date: todayISO(), bodyweight: bw, notes: notes
       }).eq('id', session.id);
       if (upd.error) throw upd.error;
+      clearDraft();
 
       document.getElementById('content').innerHTML = '<div class="msg">✅ Logged. Nice work.<br><br>Your coach will read these numbers and program the next session.</div>';
       document.getElementById('extras-slot').innerHTML = '';
