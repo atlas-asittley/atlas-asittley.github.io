@@ -193,14 +193,20 @@
     var el = document.getElementById('trend');
     if (!sb) { el.innerHTML = '<span class="dim">—</span>'; return; }
     var symQ = await sb.from('workout_hip_log').select('log_date,back_pain,pinch_left,pinch_right,note').order('log_date', { ascending: false }).limit(21);
-    var rtQ = await sb.from('workout_hip_routine_log').select('log_date').order('log_date', { ascending: false }).limit(200);
+    // hip work now lives inside workout sessions; older entries are in workout_hip_routine_log
+    var HIPNAMES = ['90/90 hip switches','Hip airplanes (supported)','Couch stretch','Side-lying hip abduction','Banded lateral walks','Step-downs','Suitcase carry','Side plank','Pallof press','Single-leg RDL'];
+    var setQ = await sb.from('workout_sets').select('workout_sessions!inner(session_date,status)').in('exercise', HIPNAMES).eq('workout_sessions.status', 'completed');
+    var legacyQ = await sb.from('workout_hip_routine_log').select('log_date');
 
-    var adher = '';
-    if (rtQ.data && rtQ.data.length) {
+    var adher = '', allDates = [];
+    if (setQ.data) setQ.data.forEach(function (r) { if (r.workout_sessions) allDates.push(r.workout_sessions.session_date); });
+    if (legacyQ.data) legacyQ.data.forEach(function (r) { allDates.push(r.log_date); });
+    if (allDates.length) {
+      allDates.sort();
       var cutoff = new Date(todayISO() + 'T00:00:00'); cutoff.setDate(cutoff.getDate() - 6);
-      var days = {}; var lastDone = rtQ.data[0].log_date;
-      rtQ.data.forEach(function (r) { if (new Date(r.log_date + 'T00:00:00') >= cutoff) days[r.log_date] = 1; });
-      adher = '<div class="adher">🗒️ Routine: done <b class="green">' + Object.keys(days).length + '</b> day(s) in the last 7 · last ' + lastDone + '</div>';
+      var days = {}, lastDone = allDates[allDates.length - 1];
+      allDates.forEach(function (d) { if (new Date(d + 'T00:00:00') >= cutoff) days[d] = 1; });
+      adher = '<div class="adher">🗒️ Hip work: <b class="green">' + Object.keys(days).length + '</b> day(s) in the last 7 · last ' + lastDone + '</div>';
     }
 
     var rows = (symQ.data || []);

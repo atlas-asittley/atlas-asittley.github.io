@@ -125,8 +125,6 @@
 
 <button id="submit" style="display:none" onclick="submitSession()">Save workout</button>
 
-<div id="hip-section"></div>
-
 <script>
 (function () {
   var SUPABASE_URL = 'https://igaulapupbtdcqqjobhs.supabase.co';
@@ -171,29 +169,17 @@
 
       var main, sub = '', cls = 'today';
       if (pres) {
-        var pl = (pres.day_type === 'lower' ? 'Lower / legs' : 'Upper') + ' lift';
-        main = '🏋️ Today: <b>' + pl + '</b> — it’s queued below 👇';
-        if (pres.day_type === 'lower') sub = 'Glute-med warm-up first (see Hip), depth-capped squats.';
+        var pl = pres.day_type === 'lower' ? 'Lower / legs' : pres.day_type === 'upper' ? 'Upper' : 'Session';
+        main = '🏋️ Today: <b>' + pl + '</b> — ready below 👇';
         cls += ' tb-train';
-      } else if (!last) {
-        main = '🏋️ Start with an <b>Upper</b> lift.'; sub = 'Tell your coach which gym to get it queued.'; cls += ' tb-train';
+      } else if (last && daysBetween(last.session_date, todayISO()) <= 0) {
+        main = '✅ <b>Done for today.</b> Nice work.'; cls += ' tb-done';
       } else {
-        var next = opp(last.day_type), days = daysBetween(last.session_date, todayISO());
-        if (days <= 0) {
-          main = '✅ <b>Trained today</b> (' + (last.day_type === 'lower' ? 'lower' : 'upper') + ').';
-          sub = 'Tomorrow: rest + hip mobility. Then: ' + next + ' lift.'; cls += ' tb-done';
-        } else if (days === 1) {
-          main = '🧘 <b>Rest day.</b>';
-          sub = 'Do your ~5-min hip mobility. Next up: <b>' + next + '</b> lift — tell your coach the gym.';
-        } else {
-          main = '🏋️ <b>' + next + ' lift</b> is due today.';
-          sub = 'Tell your coach which gym to queue it' + (isLegs(next) ? ' — Park West (barbell) is best for legs; glute-med warm-up first.' : '.');
-          cls += ' tb-train';
-        }
+        main = '🌙 Nothing queued right now.';
+        sub = 'When you’re ready for your next session, tell your coach and it’ll show up here — lifts and hip work together.';
       }
-      var hip = '<div class="tb-hip">🦵 Daily: ~5-min hip mobility (90/90 + airplanes). <a class="tb-link" href="./hip.html">Hip ›</a></div>';
       el.className = cls;
-      el.innerHTML = '<div class="tb-main">' + main + '</div>' + (sub ? '<div class="tb-sub">' + sub + '</div>' : '') + hip;
+      el.innerHTML = '<div class="tb-main">' + main + '</div>' + (sub ? '<div class="tb-sub">' + sub + '</div>' : '');
     } catch (e) { el.innerHTML = ''; }
   }
 
@@ -219,7 +205,12 @@
     'walking lunges': 'Dumbbell_Lunges',
     'bulgarian split squat': 'Split_Squat_with_Dumbbells',
     'db calf raise': 'Standing_Dumbbell_Calf_Raise',
-    'db calf raises': 'Standing_Dumbbell_Calf_Raise'
+    'db calf raises': 'Standing_Dumbbell_Calf_Raise',
+    'side plank': 'Side_Bridge',
+    'pallof press': 'Pallof_Press',
+    'single-leg rdl': 'Kettlebell_One-Legged_Deadlift',
+    'step-downs': 'Dumbbell_Step_Ups',
+    'step-down': 'Dumbbell_Step_Ups'
   };
   function wireDemo(box, slug) {
     var btn = box.querySelector('.how'), demo = box.querySelector('.demo'), img = demo.querySelector('img');
@@ -266,104 +257,13 @@
   }
 
   // ---------- load ----------
-  // ---------- hip routine (consolidated onto this page) ----------
-  var HIP = [
-    { g:'Daily mobility (~5 min)', n:'90/90 hip switches', t:'2 × 8–10 / side', u:'reps', sets:2, ph:'10',
-      how:'Sit with both knees bent 90° — one shin in front, one out to the side. Rotate both knees to the other side under control, chest tall. Add a gentle lift-off of the back knee for active internal rotation. Slow. Out of any groin pinch.' },
-    { g:'Daily mobility (~5 min)', n:'Hip airplanes (supported)', t:'2 × 5 / side', u:'reps', sets:2, ph:'5',
-      how:'Stand on one leg, hold something for balance. Hinge forward and rotate your pelvis open, then back closed, over the planted foot. Slow and controlled — trains internal-rotation control under load.' },
-    { g:'Daily mobility (~5 min)', n:'Couch stretch', t:'2 × 30–60s / side', u:'sec', sets:2, ph:'45',
-      how:'Kneel with your rear foot up a wall/couch, torso tall. Gentle hip-flexor stretch. Keep it, but ease off if it ever refers into the groin pinch.' },
-    { g:'Glute-med warm-up (do before your lift)', n:'Side-lying hip abduction', t:'3 × 12–15 / side', u:'reps', sets:3, ph:'15',
-      how:'Lie on your side. Raise the top leg with it slightly BEHIND your body — not straight up (straight up recruits the TFL we\'re quieting). Slow up, slow down. Both sides. Add an ankle weight to load it.' },
-    { g:'Glute-med warm-up (do before your lift)', n:'Banded lateral walks', t:'3 × 10 steps ea. way', u:'steps', sets:3, ph:'10',
-      how:'Band above the knees, drop into a low athletic stance. Step sideways staying low, no torso sway, tension on the band the whole set.' },
-    { g:'Glute-med warm-up (do before your lift)', n:'Step-downs', t:'3 × 8 / side', u:'reps', sets:3, ph:'8', demo:'Dumbbell_Step_Ups',
-      how:'Stand on a low box on one leg. Slowly lower the OTHER heel to tap the floor, then drive back up. Don\'t let the standing knee cave in. (Demo shows a step-up — do it as the slow lowering.) Hold DBs to load it.' },
-    { g:'Anti-QL core + single-leg', n:'Suitcase carry', t:'3 × 30–40 steps', u:'steps', sets:3, tw:80, ph:'40',
-      how:'Hold one heavy DB at your side, walk tall, do NOT let it pull you sideways. Load the LEFT hand to force the RIGHT side to stabilize; alternate to train both. You hit 70 lb and had more — aim 80.' },
-    { g:'Anti-QL core + single-leg', n:'Side plank', t:'3 × 20–40s / side', u:'sec', sets:3, ph:'40', demo:'Side_Bridge',
-      how:'From knees or feet, stack your body in one straight line and lift the hips. Hold. Both sides — note if one is weaker.' },
-    { g:'Anti-QL core + single-leg', n:'Pallof press', t:'3 × 10 / side', u:'reps', sets:3, tw:20, ph:'10', demo:'Pallof_Press',
-      how:'Band/cable at chest height from your side. Press straight out and resist the twist — that anti-rotation is the point. Both sides.' },
-    { g:'Anti-QL core + single-leg', n:'Single-leg RDL', t:'3 × 8 / side', u:'reps', sets:3, tw:30, ph:'8', demo:'Kettlebell_One-Legged_Deadlift',
-      how:'Light. Balance on one leg, hinge at the hip, back leg extends behind, neutral spine. Hip stability + posterior chain. Stop before any pinch.' }
-  ];
-  var HG_MOB = 'Daily mobility (~5 min)', HG_WARM = 'Glute-med warm-up (do before your lift)', HG_CORE = 'Anti-QL core + single-leg';
-
-  // dayType: 'lower' → mobility + warm-up ; 'upper' → mobility + core ; null (rest) → mobility only
-  function renderHipToday(dayType) {
-    var host = document.getElementById('hip-section');
-    var groups = [HG_MOB];
-    if (dayType === 'lower') groups.push(HG_WARM);
-    else if (dayType === 'upper') groups.push(HG_CORE);
-
-    host.innerHTML = '<h2 class="section-h">🦵 Hip routine — today</h2>';
-    if (dayType === 'lower') host.innerHTML += '<div class="hip-note" style="color:var(--green)">Do the glute-med warm-up BEFORE you lift — it pre-fires the glutes so your back doesn’t compensate.</div>';
-    host.innerHTML += '<div class="hip-note" style="color:var(--dim)">Mobility is daily; the strengthening follows your training day. Leave weight blank for bodyweight moves. <a href="./hip.html">Details &amp; progress ›</a></div>';
-
-    var lastG = '';
-    HIP.filter(function (ex) { return groups.indexOf(ex.g) !== -1; }).forEach(function (ex) {
-      if (ex.g !== lastG) { var gh = document.createElement('div'); gh.className = 'group-h'; gh.textContent = ex.g; host.appendChild(gh); lastG = ex.g; }
-      var box = document.createElement('div'); box.className = 'exercise';
-      var amt = ex.u === 'sec' ? 'sec' : ex.u === 'steps' ? 'steps' : 'reps';
-      var demoImg = ex.demo ? '<img alt="' + ex.n + ' demo"><div class="demo-cap">Public-domain demo · free-exercise-db</div>' : '';
-      var imgs = 'https://www.google.com/search?tbm=isch&q=' + encodeURIComponent(ex.n + ' exercise');
-      box.innerHTML =
-        '<h2 style="font-size:15px">' + ex.n + '</h2>' +
-        '<div class="ex-meta">target ' + ex.t + (ex.tw ? ' · aim ' + ex.tw + ' lb' : '') + '</div>' +
-        '<button class="how" type="button">▶ How to do it</button>' +
-        '<a class="vid" href="' + imgs + '" target="_blank" rel="noopener">🖼 images ↗</a>' +
-        '<div class="demo" style="display:none">' + demoImg + '<div class="demo-how">' + ex.how + '</div></div>';
-      (function () {
-        var b = box.querySelector('.how'), demo = box.querySelector('.demo'), img = demo.querySelector('img');
-        var base = ex.demo ? 'exercises/' + ex.demo + '/' : null, frame = 0, timer = null;
-        if (img) img.src = base + '0.jpg';
-        b.addEventListener('click', function () {
-          var open = demo.style.display === 'none';
-          demo.style.display = open ? 'block' : 'none';
-          b.textContent = open ? '▼ Hide' : '▶ How to do it';
-          if (img) { if (open && !timer) timer = setInterval(function () { frame ^= 1; img.src = base + frame + '.jpg'; }, 900); else if (!open && timer) { clearInterval(timer); timer = null; } }
-        });
-      })();
-      for (var i = 1; i <= (ex.sets || 3); i++) {
-        var row = document.createElement('div'); row.className = 'set-row';
-        row.innerHTML =
-          '<div class="set-lbl">Set ' + i + '</div>' +
-          '<div class="field"><span>' + amt + '</span><input type="number" inputmode="numeric" data-hip="' + ex.n + '" data-set="' + i + '" data-k="amount" data-unit="' + ex.u + '" placeholder="' + (ex.ph || '') + '"></div>' +
-          '<div class="field"><span>lbs</span><input type="number" inputmode="decimal" data-hip="' + ex.n + '" data-set="' + i + '" data-k="weight"' + (ex.tw ? ' value="' + ex.tw + '"' : '') + '></div>' +
-          '<div class="set-lbl"></div>';
-        box.appendChild(row);
-      }
-      host.appendChild(box);
-    });
-
-    // one Save button covers both the lift and the hip work
-    var submit = document.getElementById('submit');
-    submit.textContent = session ? 'Save workout' : 'Save hip routine';
-    submit.style.display = 'block';
-    document.getElementById('hip-section').addEventListener('input', saveDraft);
-    restoreHipDraft();
-  }
-
-  function restoreHipDraft() {
-    var raw; try { raw = localStorage.getItem(draftKey()); } catch (e) { return; }
-    if (!raw) return;
-    var d; try { d = JSON.parse(raw); } catch (e) { return; }
-    if (!d.hip) return;
-    document.querySelectorAll('#hip-section input[data-hip]').forEach(function (el) {
-      var key = el.getAttribute('data-hip') + '|' + el.getAttribute('data-set') + '|' + el.getAttribute('data-k');
-      if (d.hip[key] != null && d.hip[key] !== '') el.value = d.hip[key];
-    });
-  }
-
   async function load() {
     try {
       renderTodayBanner();
       var sess = await sb.from('workout_sessions').select('*')
         .eq('status', 'prescribed').order('created_at', { ascending: false }).limit(1);
       if (sess.error) throw sess.error;
-      if (!sess.data.length) { session = null; renderEmpty(); renderHipToday(null); return; }
+      if (!sess.data.length) { session = null; renderEmpty(); return; }
       session = sess.data[0];
 
       var st = await sb.from('workout_sets').select('*')
@@ -374,7 +274,6 @@
       var names = sets.map(function (s) { return s.exercise; }).filter(function (v, i, a) { return a.indexOf(v) === i; });
       var lastByExercise = await loadLast(names);
       render(lastByExercise);
-      renderHipToday(session.day_type);
     } catch (e) {
       document.getElementById('content').innerHTML = '<div class="msg err">Error loading workout:<br>' + (e.message || e) + '</div>';
     }
@@ -404,7 +303,7 @@
 
   function renderEmpty() {
     document.getElementById('content').innerHTML =
-      '<div class="msg">No workout queued right now.<br><br>Tell your coach you’re ready to lift and what equipment you’ve got — a session will show up here.</div>';
+      '<div class="msg">✅ Nothing to do right now.<br><br>When you’re ready for your next session, tell your coach and it’ll show up here — lifts and hip work together.</div>';
   }
 
   // ---------- draft autosave (survives an accidental refresh mid-workout) ----------
@@ -422,10 +321,6 @@
     });
     var bw = document.getElementById('bw'); if (bw) d.bw = bw.value;
     var sn = document.getElementById('snotes'); if (sn) d.notes = sn.value;
-    d.hip = {};
-    document.querySelectorAll('#hip-section input[data-hip]').forEach(function (el) {
-      d.hip[el.getAttribute('data-hip') + '|' + el.getAttribute('data-set') + '|' + el.getAttribute('data-k')] = el.value;
-    });
     try { localStorage.setItem(draftKey(), JSON.stringify(d)); } catch (e) {}
   }
   function restoreDraft() {
@@ -508,70 +403,39 @@
   // ---------- submit ----------
   window.submitSession = async function () {
     var btn = document.getElementById('submit');
-    var origLabel = session ? 'Save workout' : 'Save hip routine';
-
-    // collect hip routine (per set). A set logs ONLY if its reps/time/steps are filled —
-    // weight is pre-filled with the target, so it alone must not create a phantom row.
-    var byKey = {};
-    document.querySelectorAll('#hip-section input[data-hip][data-k="amount"]').forEach(function (el) {
-      var v = el.value.trim(); if (v === '') return;
-      var name = el.getAttribute('data-hip'), si = parseInt(el.getAttribute('data-set'), 10);
-      byKey[name + '|' + si] = { log_date: todayISO(), exercise: name, set_index: si, amount: num(v), unit: el.getAttribute('data-unit'), weight: null };
-    });
-    document.querySelectorAll('#hip-section input[data-hip][data-k="weight"]').forEach(function (el) {
-      var v = el.value.trim(); if (v === '') return;
-      var key = el.getAttribute('data-hip') + '|' + parseInt(el.getAttribute('data-set'), 10);
-      if (byKey[key]) byKey[key].weight = num(v);
-    });
-    var hipRows = Object.keys(byKey).map(function (k) { return byKey[k]; });
-
-    if (!session && !hipRows.length) { alert('Enter at least one hip exercise first.'); return; }
     btn.disabled = true; btn.textContent = 'Saving…';
     try {
-      var endISO = new Date().toISOString(), durMsg = '';
-      // --- lift (only when a session is loaded) ---
-      if (session) {
-        var startedAt = null;
-        try { startedAt = (JSON.parse(localStorage.getItem(draftKey()) || '{}')).startedAt || null; } catch (e) {}
-        var byId = {};
-        document.querySelectorAll('input[data-id]').forEach(function (el) {
-          var id = el.getAttribute('data-id'), k = el.getAttribute('data-k');
-          byId[id] = byId[id] || {};
-          byId[id][k === 'reps' ? 'actual_reps' : 'actual_weight'] = num(el.value);
-        });
-        for (var id in byId) {
-          var r = await sb.from('workout_sets').update(byId[id]).eq('id', id);
-          if (r.error) throw r.error;
-        }
-        var bwEl = document.getElementById('bw'), snEl = document.getElementById('snotes');
-        var upd = await sb.from('workout_sessions').update({
-          status: 'completed', completed_at: endISO, started_at: startedAt,
-          session_date: todayISO(), bodyweight: bwEl ? num(bwEl.value) : null, notes: snEl ? (snEl.value.trim() || null) : null
-        }).eq('id', session.id);
-        if (upd.error) throw upd.error;
-        if (startedAt) { var mins = Math.round((new Date(endISO) - new Date(startedAt)) / 60000); if (mins > 0 && mins < 600) durMsg = '<br><br>⏱ ' + fmtDur(mins) + ' in the gym'; }
+      var startedAt = null;
+      try { startedAt = (JSON.parse(localStorage.getItem(draftKey()) || '{}')).startedAt || null; } catch (e) {}
+      var endISO = new Date().toISOString();
+      var byId = {};
+      document.querySelectorAll('input[data-id]').forEach(function (el) {
+        var id = el.getAttribute('data-id'), k = el.getAttribute('data-k');
+        byId[id] = byId[id] || {};
+        byId[id][k === 'reps' ? 'actual_reps' : 'actual_weight'] = num(el.value);
+      });
+      for (var id in byId) {
+        var r = await sb.from('workout_sets').update(byId[id]).eq('id', id);
+        if (r.error) throw r.error;
       }
-      // --- hip routine ---
-      var hipCount = 0;
-      if (hipRows.length) {
-        var hr = await sb.from('workout_hip_routine_log').insert(hipRows);
-        if (hr.error) throw hr.error;
-        var exset = {}; hipRows.forEach(function (r) { exset[r.exercise] = 1; }); hipCount = Object.keys(exset).length;
-      }
+      var bwEl = document.getElementById('bw'), snEl = document.getElementById('snotes');
+      var upd = await sb.from('workout_sessions').update({
+        status: 'completed', completed_at: endISO, started_at: startedAt,
+        session_date: todayISO(), bodyweight: bwEl ? num(bwEl.value) : null, notes: snEl ? (snEl.value.trim() || null) : null
+      }).eq('id', session.id);
+      if (upd.error) throw upd.error;
       clearDraft();
 
-      var parts = [];
-      if (session) parts.push('workout');
-      if (hipCount) parts.push(hipCount + ' hip exercise' + (hipCount > 1 ? 's' : ''));
-      document.getElementById('content').innerHTML = '<div class="msg">✅ Logged ' + parts.join(' + ') + '. Nice work.' + durMsg + (session ? '<br><br>Your coach will read these and program the next session.' : '') + '</div>';
+      var durMsg = '';
+      if (startedAt) { var mins = Math.round((new Date(endISO) - new Date(startedAt)) / 60000); if (mins > 0 && mins < 600) durMsg = '<br><br>⏱ ' + fmtDur(mins) + ' in the gym'; }
+      document.getElementById('content').innerHTML = '<div class="msg">✅ Logged. Nice work.' + durMsg + '<br><br>Your coach will read these and program the next session.</div>';
       document.getElementById('extras-slot').innerHTML = '';
       document.getElementById('session-head').innerHTML = '';
-      document.getElementById('hip-section').innerHTML = '';
       btn.style.display = 'none';
       window.scrollTo(0, 0);
     } catch (e) {
       alert('Save failed: ' + (e.message || e));
-      btn.disabled = false; btn.textContent = origLabel;
+      btn.disabled = false; btn.textContent = 'Save workout';
     }
   };
 
