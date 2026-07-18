@@ -12,7 +12,6 @@
   header { display:flex; align-items:baseline; justify-content:space-between; margin-bottom:12px; }
   h1 { font-size:24px; color:var(--green); }
   .back { color:var(--dim); text-decoration:none; font-size:13px; }
-  .back:hover { color:var(--green); }
   nav { display:flex; gap:8px; margin-bottom:18px; }
   nav a { flex:1; text-align:center; padding:9px; border:1px solid var(--border); border-radius:8px; text-decoration:none; color:var(--dim); font-size:13px; }
   nav a.active { background:var(--card); color:var(--green); border-color:var(--green); }
@@ -25,7 +24,7 @@
   .green { color:var(--green); }
   .amber { color:var(--amber); }
   .note-line { font-size:11px; color:var(--dim); font-style:italic; margin-top:8px; }
-  .group-h { font-size:12px; color:var(--dim); text-transform:uppercase; letter-spacing:.6px; margin:18px 0 8px; }
+  .group-h { font-size:12px; color:var(--dim); text-transform:uppercase; letter-spacing:.6px; margin:16px 0 6px; }
 
   label { display:block; font-size:12px; color:var(--dim); margin:12px 0 4px; }
   input[type=number], textarea {
@@ -36,21 +35,13 @@
   textarea { min-height:50px; resize:vertical; }
   .row3 { display:flex; gap:8px; align-items:stretch; }
   .row3 > div { flex:1; display:flex; flex-direction:column; }
-  .row3 > div > label { flex:1; margin:8px 0 4px; }   /* label fills, so inputs pin to a common bottom line */
+  .row3 > div > label { flex:1; margin:8px 0 4px; }
 
-  /* exercise cards (like the Workout page) */
-  .exercise { background:var(--card); border:1px solid var(--border); border-radius:10px; padding:14px; margin-bottom:12px; }
-  .exercise h3 { font-size:15px; color:var(--red); margin-bottom:3px; }
-  .ex-meta { font-size:12px; color:var(--dim); margin-bottom:8px; }
-  .how { background:none; border:1px solid var(--border); color:var(--dim); border-radius:6px; padding:6px 10px; font-family:inherit; font-size:12px; margin-bottom:10px; }
-  .how:active { color:var(--green); border-color:var(--green); }
-  .demo { margin-bottom:12px; }
-  .demo img { width:100%; max-width:300px; border-radius:8px; border:1px solid var(--border); background:#fff; display:block; }
-  .demo-cap, .demo-how { font-size:12px; color:var(--dim); line-height:1.5; margin-top:6px; }
-  .demo-how { color:var(--text); }
-  .ex-inputs { display:flex; gap:10px; align-items:flex-end; }
-  .field { display:flex; flex-direction:column; flex:1; }
-  .field span { font-size:10px; color:var(--dim); margin-bottom:3px; text-transform:uppercase; letter-spacing:.5px; }
+  .ref { border-bottom:1px solid var(--border); padding:9px 0; }
+  .ref:last-child { border-bottom:none; }
+  .ref b { color:var(--text); font-size:14px; }
+  .ref .t { color:var(--green); font-size:12px; }
+  .ref .how { color:var(--dim); font-size:12px; line-height:1.5; margin-top:3px; }
 
   button.save { width:100%; margin-top:6px; background:var(--green); color:#04231b; border:none; border-radius:8px; padding:12px; font-size:15px; font-weight:bold; font-family:inherit; }
   button.save:disabled { opacity:.6; }
@@ -64,9 +55,6 @@
   .legend { font-size:11px; color:var(--dim); margin-top:4px; }
   .legend b.b { color:var(--red); } .legend b.l { color:var(--amber); } .legend b.r { color:var(--green); }
   .adher { font-size:12px; color:var(--dim); margin-bottom:8px; }
-  #sched-head .sched-when { font-size:12px; color:var(--dim); text-transform:uppercase; letter-spacing:.5px; }
-  #sched-head .sched-date { font-size:20px; color:var(--green); margin:2px 0; }
-  #sched-head .sched-label { font-size:13px; color:var(--text); }
 </style>
 </head>
 <body>
@@ -82,6 +70,10 @@
   <a href="./history.html">History</a>
   <a class="active" href="./hip.html">Hip</a>
 </nav>
+
+<div class="card">
+  <p style="font-size:13px">Your daily hip work now lives on the <a href="./" style="color:var(--green);text-decoration:none">Workout page</a> — do &amp; log it there. This page is for tracking symptoms, seeing the trend, and the details of the plan.</p>
+</div>
 
 <div class="card">
   <h2>Symptom Check-In</h2>
@@ -111,17 +103,13 @@
   <div id="trend"><span class="dim">loading…</span></div>
 </div>
 
-<div class="card" id="sched-card">
-  <div id="sched-head"><span class="dim">loading…</span></div>
-  <p class="note-line" style="margin-top:8px">Only what's due today is shown. Save it and it rolls to the next date. Mobility is daily; the strengthening rotates so it lands ~2×/week each. Everything stays OUT of the groin pinch.</p>
+<div class="card">
+  <h2>The Plan <span class="dim" style="font-size:12px">— what & why</span></h2>
+  <p class="dim" style="margin-bottom:6px">The diagnosed cam is the right hip, but symptoms are mixed (pinch left-dominant, back bilateral/right-worse), so we train both sides. Strengthen glute med + max, build anti-side-bend core to offload the QL, restore internal rotation — all OUT of the pinch. Give it 6–8 weeks.</p>
+  <div id="reference"></div>
 </div>
 
-<div id="routine"></div>
-
-<button class="save" id="routebtn" type="button">Save routine</button>
-<div class="saved" id="rsaved" style="display:none"></div>
-
-<div class="card" style="margin-top:18px">
+<div class="card">
   <h2 style="color:var(--amber)">Avoid</h2>
   <ul>
     <li>Deep squats / "sit between the hips" — cap depth <b>above</b> the pinch, upright, toes out</li>
@@ -129,7 +117,7 @@
     <li>Aggressive stretching <b>into</b> deep hip flexion (pigeon, deep squat holds)</li>
     <li>Loaded end-range hip flexion + adduction + internal rotation (the pinch position)</li>
   </ul>
-  <p class="note-line">Not medical advice — training/mobility we're self-managing. Also worth doing: an updated MRI (5+ yr old, symptoms persist). New/worsening/radiating pain → see a doctor, don't push through.</p>
+  <p class="note-line">Not medical advice — training/mobility we're self-managing. Also worth doing: an updated MRI (5+ yr old, symptoms persist, now bilateral). New/worsening/radiating pain → see a doctor.</p>
 </div>
 
 <script>
@@ -141,118 +129,37 @@
   function todayISO() { var d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
   function num(v, lo, hi) { v = parseInt(v, 10); if (isNaN(v)) return null; if (lo != null) v = Math.max(lo, Math.min(hi, v)); return v; }
 
-  // --- the corrective routine (demo = free-exercise-db slug if an image exists) ---
-  var ROUTINE = [
-    { g:'Daily mobility (~5 min)', n:'90/90 hip switches', t:'8–10 / side', u:'reps',
-      how:'Sit with both knees bent 90° — one shin in front, one out to the side. Rotate both knees to the other side under control, keeping your chest tall. Add a gentle lift-off of the back knee for active internal rotation. Slow. Stay out of any groin pinch.' },
-    { g:'Daily mobility (~5 min)', n:'Hip airplanes (supported)', t:'5 / side', u:'reps',
-      how:'Stand on one leg, hold something for balance. Hinge forward and rotate your pelvis open, then back closed, over the planted foot. Slow and controlled — this trains internal-rotation control under load.' },
-    { g:'Daily mobility (~5 min)', n:'Couch stretch', t:'30–60s / side', u:'sec', hold:true,
-      how:'Kneel with your rear foot up a wall/couch, torso tall. Gentle hip-flexor stretch on the down leg. You said this helps — keep it, but ease off if it ever refers into the groin pinch.' },
-
-    { g:'Glute-med warm-up (before the bar on leg days)', n:'Side-lying hip abduction', t:'2–3 × 12–15 / side', u:'reps',
-      how:'Lie on your side. Raise the top leg with it slightly BEHIND your body — not straight up (straight up recruits the TFL, the thing we\'re quieting). Slow up, slow down. Both sides.' },
-    { g:'Glute-med warm-up (before the bar on leg days)', n:'Banded lateral walks', t:'2–3 × 10 steps ea. way', u:'steps',
-      how:'Band above the knees, drop into a low athletic stance. Step sideways staying low, no torso sway, keep tension on the band the whole set.' },
-    { g:'Glute-med warm-up (before the bar on leg days)', n:'Step-downs', t:'3 × 8 / side', u:'reps', demo:'Dumbbell_Step_Ups',
-      how:'Stand on a low box on one leg. Slowly lower the OTHER heel to tap the floor, then drive back up through the standing leg. Don\'t let the standing knee cave inward. (The demo shows a step-up — do it as the slow lowering.)' },
-
-    { g:'Anti-QL core + single-leg (2–3×/week)', n:'Suitcase carry', t:'3 × 30–40 steps', u:'steps',
-      how:'Hold one heavy DB at your side and walk tall — do NOT let it pull you sideways. Load the LEFT hand to force the RIGHT side to stabilize; alternate so both sides get trained.' },
-    { g:'Anti-QL core + single-leg (2–3×/week)', n:'Side plank', t:'2–3 × 20–40s / side', u:'sec', hold:true, demo:'Side_Bridge',
-      how:'From knees or feet, stack your body in one straight line and lift the hips. Hold. Both sides — note if one is clearly weaker.' },
-    { g:'Anti-QL core + single-leg (2–3×/week)', n:'Pallof press', t:'2–3 × 10 / side', u:'reps', demo:'Pallof_Press',
-      how:'Band or cable at chest height coming from your side. Press it straight out and resist the twist — that anti-rotation is the point. Both sides.' },
-    { g:'Anti-QL core + single-leg (2–3×/week)', n:'Single-leg RDL', t:'3 × 8 / side', u:'reps', demo:'Kettlebell_One-Legged_Deadlift',
-      how:'Light. Balance on one leg, hinge at the hip, back leg extends behind you, neutral spine. Builds hip stability + posterior chain. Stop before any pinch.' }
+  // read-only reference of the full routine
+  var REF = [
+    ['Daily mobility (every day, ~5 min)', [
+      ['90/90 hip switches', '8–10 / side', 'Rotate both bent knees side to side, chest tall; add a back-knee lift-off for active internal rotation.'],
+      ['Hip airplanes (supported)', '5 / side', 'One-leg stand, rotate the pelvis open/closed over the planted foot. IR control under load.'],
+      ['Couch stretch', '30–60s / side', 'Rear foot up a wall, tall torso. Ease off if it refers into the groin pinch.']
+    ]],
+    ['Glute-med warm-up (leg days, before the bar)', [
+      ['Side-lying hip abduction', '2–3 × 12–15 / side', 'Top leg slightly BEHIND the body (not straight up — that recruits the TFL).'],
+      ['Banded lateral walks', '2–3 × 10 steps ea. way', 'Band above knees, stay low, no torso sway, keep band tension.'],
+      ['Step-downs', '3 × 8 / side', 'Slowly lower the other heel off a box; standing knee must not cave in. Key single-leg builder.']
+    ]],
+    ['Anti-QL core + single-leg (upper days / 2–3×/week)', [
+      ['Suitcase carry', '3 × 30–40 steps', 'One heavy DB, walk tall, no sideways lean. Load the LEFT hand to make the RIGHT side stabilize.'],
+      ['Side plank', '2–3 × 20–40s / side', 'Straight line, hips up. Both sides — note asymmetry.'],
+      ['Pallof press', '2–3 × 10 / side', 'Band/cable from the side, press out and resist the twist.'],
+      ['Single-leg RDL', '3 × 8 / side', 'Light, hinge on one leg, neutral spine. Stop before any pinch.']
+    ]]
   ];
-
-  var G_MOB = 'Daily mobility (~5 min)';
-  var G_WARM = 'Glute-med warm-up (before the bar on leg days)';
-  var G_CORE = 'Anti-QL core + single-leg (2–3×/week)';
-
-  function addDays(iso, n) { var d = new Date(iso + 'T00:00:00'); d.setDate(d.getDate() + n); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
-  // 3-day rotation: mobility every day; warm-up and core alternate on top of it
-  function groupsFor(pos) { var g = [G_MOB]; if (pos === 0) g.push(G_WARM); else if (pos === 1) g.push(G_CORE); return g; }
-  function labelFor(pos) { return pos === 0 ? 'Mobility + Glute-med warm-up' : pos === 1 ? 'Mobility + Anti-QL core' : 'Mobility only (light day)'; }
-
-  // recompute which date/plan is due, and render just those exercises
-  async function renderSchedule() {
-    var head = document.getElementById('sched-head');
-    var count = 0, doneToday = false;
-    if (sb) {
-      var q = await sb.from('workout_hip_routine_log').select('log_date').order('log_date', { ascending: false }).limit(400);
-      if (q.data) { var ds = {}; q.data.forEach(function (r) { ds[r.log_date] = 1; }); count = Object.keys(ds).length; doneToday = !!ds[todayISO()]; }
-    }
-    var pos = count % 3;                                   // next routine's position in the cycle
-    var activeDate = doneToday ? addDays(todayISO(), 1) : todayISO();
-    var when = doneToday ? '✅ Done today — next up' : (activeDate === todayISO() ? 'Today' : 'Next up');
-    var pretty = new Date(activeDate + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
-    head.innerHTML = '<div class="sched-when">' + when + '</div><div class="sched-date">📅 ' + pretty + '</div><div class="sched-label">' + labelFor(pos) + '</div>';
-    buildRoutine(groupsFor(pos));
-    document.getElementById('routebtn').style.display = doneToday ? 'none' : 'block';
-  }
-
-  // --- build routine cards for the given groups ---
-  function buildRoutine(groups) {
-    var wrap = document.getElementById('routine'); wrap.innerHTML = ''; var lastG = '';
-    ROUTINE.filter(function (ex) { return groups.indexOf(ex.g) !== -1; }).forEach(function (ex) {
-      if (ex.g !== lastG) { var gh = document.createElement('div'); gh.className = 'group-h'; gh.textContent = ex.g; wrap.appendChild(gh); lastG = ex.g; }
-      var box = document.createElement('div'); box.className = 'exercise';
-      var amtLabel = ex.u === 'sec' ? 'seconds' : ex.u === 'steps' ? 'steps' : 'reps';
-      var demoImg = ex.demo ? '<img alt="' + ex.n + ' demo"><div class="demo-cap">Public-domain demo · free-exercise-db</div>' : '';
-      box.innerHTML =
-        '<h3>' + ex.n + '</h3>' +
-        '<div class="ex-meta">target ' + ex.t + '</div>' +
-        '<button class="how" type="button">▶ How to do it</button>' +
-        '<div class="demo" style="display:none">' + demoImg + '<div class="demo-how">' + ex.how + '</div></div>' +
-        '<div class="ex-inputs">' +
-          '<div class="field"><span>sets</span><input type="number" inputmode="numeric" data-ex="' + ex.n + '" data-k="sets"></div>' +
-          '<div class="field"><span>' + amtLabel + ' / side</span><input type="number" inputmode="numeric" data-ex="' + ex.n + '" data-k="amount" data-unit="' + ex.u + '"></div>' +
-        '</div>';
-      // wire the demo toggle (image cycles if present)
-      (function () {
-        var btn = box.querySelector('.how'), demo = box.querySelector('.demo'), img = demo.querySelector('img');
-        var base = ex.demo ? 'exercises/' + ex.demo + '/' : null, frame = 0, timer = null;
-        if (img) img.src = base + '0.jpg';
-        btn.addEventListener('click', function () {
-          var open = demo.style.display === 'none';
-          demo.style.display = open ? 'block' : 'none';
-          btn.textContent = open ? '▼ Hide' : '▶ How to do it';
-          if (img) {
-            if (open && !timer) timer = setInterval(function () { frame ^= 1; img.src = base + frame + '.jpg'; }, 900);
-            else if (!open && timer) { clearInterval(timer); timer = null; }
-          }
-        });
-      })();
-      wrap.appendChild(box);
+  (function () {
+    var host = document.getElementById('reference');
+    REF.forEach(function (grp) {
+      var gh = document.createElement('div'); gh.className = 'group-h'; gh.textContent = grp[0]; host.appendChild(gh);
+      grp[1].forEach(function (ex) {
+        var d = document.createElement('div'); d.className = 'ref';
+        d.innerHTML = '<b>' + ex[0] + '</b> &nbsp;<span class="t">' + ex[1] + '</span><div class="how">' + ex[2] + '</div>';
+        host.appendChild(d);
+      });
     });
-  }
+  })();
 
-  // --- save routine ---
-  document.getElementById('routebtn').addEventListener('click', async function () {
-    var btn = this, msg = document.getElementById('rsaved');
-    var byEx = {};
-    document.querySelectorAll('#routine input[data-ex]').forEach(function (el) {
-      var name = el.getAttribute('data-ex'), k = el.getAttribute('data-k'), v = el.value.trim();
-      if (v === '') return;
-      byEx[name] = byEx[name] || { exercise: name, log_date: todayISO(), sets: null, amount: null, unit: null };
-      if (k === 'sets') byEx[name].sets = num(v);
-      else { byEx[name].amount = num(v); byEx[name].unit = el.getAttribute('data-unit'); }
-    });
-    var rows = Object.keys(byEx).map(function (k) { return byEx[k]; });
-    if (!rows.length) { msg.style.display = 'block'; msg.style.color = 'var(--amber)'; msg.textContent = 'Enter at least one exercise.'; return; }
-    if (!sb) { msg.style.display = 'block'; msg.textContent = 'No connection.'; return; }
-    btn.disabled = true; btn.textContent = 'Saving…';
-    var r = await sb.from('workout_hip_routine_log').insert(rows);
-    if (r.error) { btn.disabled = false; btn.textContent = 'Save routine'; msg.style.display = 'block'; msg.style.color = 'var(--red)'; msg.textContent = 'Save failed: ' + r.error.message; return; }
-    msg.style.display = 'block'; msg.style.color = 'var(--green)'; msg.textContent = '✅ Logged ' + rows.length + ' exercise' + (rows.length > 1 ? 's' : '') + ' for ' + todayISO();
-    btn.disabled = false; btn.textContent = 'Save routine';
-    renderSchedule();
-    loadTrend();
-  });
-
-  // --- save symptom check-in ---
   document.getElementById('savebtn').addEventListener('click', async function () {
     var btn = this, saved = document.getElementById('saved');
     var back = num(document.getElementById('back').value, 0, 10);
@@ -270,7 +177,6 @@
     loadTrend();
   });
 
-  // --- sparkline (0-10 series) ---
   function spark(vals, color) {
     var w = 260, h = 34, pad = 3, n = vals.length;
     if (n < 2) return '';
@@ -286,7 +192,6 @@
     var symQ = await sb.from('workout_hip_log').select('log_date,back_pain,pinch_left,pinch_right,note').order('log_date', { ascending: false }).limit(21);
     var rtQ = await sb.from('workout_hip_routine_log').select('log_date').order('log_date', { ascending: false }).limit(200);
 
-    // routine adherence: distinct days in the last 7
     var adher = '';
     if (rtQ.data && rtQ.data.length) {
       var cutoff = new Date(todayISO() + 'T00:00:00'); cutoff.setDate(cutoff.getDate() - 6);
@@ -320,7 +225,6 @@
     el.innerHTML = h;
   }
 
-  renderSchedule();
   loadTrend();
 })();
 </script>
