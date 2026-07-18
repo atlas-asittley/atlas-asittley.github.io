@@ -308,12 +308,12 @@
       var box = document.createElement('div'); box.className = 'exercise';
       var amt = ex.u === 'sec' ? 'seconds' : ex.u === 'steps' ? 'steps' : 'reps';
       var demoImg = ex.demo ? '<img alt="' + ex.n + ' demo"><div class="demo-cap">Public-domain demo · free-exercise-db</div>' : '';
-      var yt = 'https://www.youtube.com/results?search_query=' + encodeURIComponent(ex.n + ' exercise how to');
+      var imgs = 'https://www.google.com/search?tbm=isch&q=' + encodeURIComponent(ex.n + ' exercise');
       box.innerHTML =
         '<h2 style="font-size:15px">' + ex.n + '</h2>' +
         '<div class="ex-meta">target ' + ex.t + '</div>' +
         '<button class="how" type="button">▶ How to do it</button>' +
-        '<a class="vid" href="' + yt + '" target="_blank" rel="noopener">▶ video ↗</a>' +
+        '<a class="vid" href="' + imgs + '" target="_blank" rel="noopener">🖼 images ↗</a>' +
         '<div class="demo" style="display:none">' + demoImg + '<div class="demo-how">' + ex.how + '</div></div>' +
         '<div class="ex-inputs">' +
           '<div class="field"><span>sets</span><input type="number" inputmode="numeric" data-hip="' + ex.n + '" data-k="sets"></div>' +

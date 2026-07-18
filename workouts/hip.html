@@ -156,8 +156,8 @@
       var gh = document.createElement('div'); gh.className = 'group-h'; gh.textContent = grp[0]; host.appendChild(gh);
       grp[1].forEach(function (ex) {
         var d = document.createElement('div'); d.className = 'ref';
-        var yt = 'https://www.youtube.com/results?search_query=' + encodeURIComponent(ex[0] + ' exercise how to');
-        d.innerHTML = '<b>' + ex[0] + '</b> &nbsp;<span class="t">' + ex[1] + '</span> &nbsp;<a class="vid" href="' + yt + '" target="_blank" rel="noopener">▶ video ↗</a><div class="how">' + ex[2] + '</div>';
+        var imgs = 'https://www.google.com/search?tbm=isch&q=' + encodeURIComponent(ex[0] + ' exercise');
+        d.innerHTML = '<b>' + ex[0] + '</b> &nbsp;<span class="t">' + ex[1] + '</span> &nbsp;<a class="vid" href="' + imgs + '" target="_blank" rel="noopener">🖼 images ↗</a><div class="how">' + ex[2] + '</div>';
         host.appendChild(d);
       });
     });
