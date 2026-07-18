@@ -19,34 +19,50 @@
 
   .card { background:var(--card); border:1px solid var(--border); border-radius:10px; padding:14px; margin-bottom:14px; }
   .card h2 { font-size:16px; color:var(--red); margin-bottom:10px; }
-  .card h3 { font-size:14px; color:var(--green); margin:12px 0 4px; }
   p, li { font-size:13px; line-height:1.55; color:var(--text); }
-  ul, ol { padding-left:20px; }
-  li { margin:3px 0; }
+  ul { padding-left:18px; }
   .dim { color:var(--dim); }
   .green { color:var(--green); }
   .amber { color:var(--amber); }
   .note-line { font-size:11px; color:var(--dim); font-style:italic; margin-top:8px; }
+  .group-h { font-size:12px; color:var(--dim); text-transform:uppercase; letter-spacing:.6px; margin:18px 0 8px; }
 
   label { display:block; font-size:12px; color:var(--dim); margin:12px 0 4px; }
-  input[type=number], textarea { width:100%; background:#0e1730; border:1px solid var(--border); border-radius:8px; color:var(--text); font-family:inherit; font-size:16px; padding:9px; }
-  textarea { min-height:52px; resize:vertical; }
-  .row2 { display:flex; gap:10px; }
-  .row2 > div { flex:1; }
-  .chk { display:flex; align-items:center; gap:8px; margin-top:12px; }
-  .chk input { width:20px; height:20px; }
-  .chk label { margin:0; font-size:13px; color:var(--text); }
-  button.save { width:100%; margin-top:14px; background:var(--green); color:#04231b; border:none; border-radius:8px; padding:12px; font-size:15px; font-weight:bold; font-family:inherit; }
+  input[type=number], textarea {
+    background:var(--bg); border:1px solid var(--border); color:var(--text);
+    border-radius:6px; padding:9px 8px; font-family:inherit; font-size:16px; width:100%;
+  }
+  input:focus, textarea:focus { outline:none; border-color:var(--green); }
+  textarea { min-height:50px; resize:vertical; }
+  .row3 { display:flex; gap:8px; }
+  .row3 > div { flex:1; }
+
+  /* exercise cards (like the Workout page) */
+  .exercise { background:var(--card); border:1px solid var(--border); border-radius:10px; padding:14px; margin-bottom:12px; }
+  .exercise h3 { font-size:15px; color:var(--red); margin-bottom:3px; }
+  .ex-meta { font-size:12px; color:var(--dim); margin-bottom:8px; }
+  .how { background:none; border:1px solid var(--border); color:var(--dim); border-radius:6px; padding:6px 10px; font-family:inherit; font-size:12px; margin-bottom:10px; }
+  .how:active { color:var(--green); border-color:var(--green); }
+  .demo { margin-bottom:12px; }
+  .demo img { width:100%; max-width:300px; border-radius:8px; border:1px solid var(--border); background:#fff; display:block; }
+  .demo-cap, .demo-how { font-size:12px; color:var(--dim); line-height:1.5; margin-top:6px; }
+  .demo-how { color:var(--text); }
+  .ex-inputs { display:flex; gap:10px; align-items:flex-end; }
+  .field { display:flex; flex-direction:column; flex:1; }
+  .field span { font-size:10px; color:var(--dim); margin-bottom:3px; text-transform:uppercase; letter-spacing:.5px; }
+
+  button.save { width:100%; margin-top:6px; background:var(--green); color:#04231b; border:none; border-radius:8px; padding:12px; font-size:15px; font-weight:bold; font-family:inherit; }
   button.save:disabled { opacity:.6; }
-  .saved { text-align:center; color:var(--green); font-size:13px; margin-top:10px; }
+  .saved { text-align:center; font-size:13px; margin-top:10px; }
 
   table { width:100%; border-collapse:collapse; font-size:13px; }
   td, th { text-align:left; padding:6px 5px; border-bottom:1px solid var(--border); }
   th { color:var(--dim); font-weight:normal; font-size:11px; text-transform:uppercase; letter-spacing:.5px; }
   td.n, th.n { text-align:center; }
-  .spark { margin:6px 0 4px; }
-  .legend { font-size:11px; color:var(--dim); }
-  .legend b.b { color:var(--red); } .legend b.p { color:var(--amber); }
+  .spark { margin:4px 0; }
+  .legend { font-size:11px; color:var(--dim); margin-top:4px; }
+  .legend b.b { color:var(--red); } .legend b.l { color:var(--amber); } .legend b.r { color:var(--green); }
+  .adher { font-size:12px; color:var(--dim); margin-bottom:8px; }
 </style>
 </head>
 <body>
@@ -64,21 +80,24 @@
 </nav>
 
 <div class="card">
-  <h2>Today's Check-In</h2>
-  <p class="dim">Log ~2–3×/week (or after leg days). Watch the <span class="green">trend over weeks</span>, not any single day.</p>
-  <div class="row2">
+  <h2>Symptom Check-In</h2>
+  <p class="dim">Log ~2–3×/week. Watch the <span class="green">trend over weeks</span>, not any single day.</p>
+  <div class="row3">
     <div>
-      <label>Back pain (0–10)<br><span class="dim">right QL / low back</span></label>
+      <label>Back pain<br><span class="dim">both sides, R-worse</span></label>
       <input id="back" type="number" inputmode="numeric" min="0" max="10" placeholder="0–10">
     </div>
     <div>
-      <label>Hip pinch (0–10)<br><span class="dim">right groin</span></label>
-      <input id="pinch" type="number" inputmode="numeric" min="0" max="10" placeholder="0–10">
+      <label>Left pinch<br><span class="dim">L groin</span></label>
+      <input id="pinchL" type="number" inputmode="numeric" min="0" max="10" placeholder="0–10">
+    </div>
+    <div>
+      <label>Right pinch<br><span class="dim">R groin</span></label>
+      <input id="pinchR" type="number" inputmode="numeric" min="0" max="10" placeholder="0–10">
     </div>
   </div>
-  <div class="chk"><input id="mob" type="checkbox"><label for="mob">Did the mobility routine today</label></div>
   <label for="hnote">Note — what aggravated or helped</label>
-  <textarea id="hnote" placeholder="e.g. flared after long sitting; better after 90/90"></textarea>
+  <textarea id="hnote" placeholder="e.g. left pinch worse after sitting; back better after 90/90"></textarea>
   <button class="save" id="savebtn" type="button">Save check-in</button>
   <div class="saved" id="saved" style="display:none"></div>
 </div>
@@ -88,48 +107,14 @@
   <div id="trend"><span class="dim">loading…</span></div>
 </div>
 
-<div class="card">
-  <h2>How To Run It <span class="dim" style="font-size:12px">fold in — no separate day</span></h2>
-  <ul>
-    <li><b>Daily ~5 min:</b> mobility (90/90 + airplanes) — responds to frequency, not intensity</li>
-    <li><b>Every leg day, as WARM-UP (before the bar):</b> glute-med activation — pre-fires the right muscles so the QL doesn't compensate</li>
-    <li><b>2–3×/week:</b> anti-QL core carries + single-leg work (post-lift or filler)</li>
-    <li><b>On the bar:</b> depth cap + hip-friendly swaps (see Workout / program)</li>
-  </ul>
-  <p class="note-line">Give it a genuine 6–8 weeks. Feels pointless at first (low load), then ~week 3–4 the back usually quiets during squats — that's the compensation unwinding.</p>
-</div>
+<h2 style="color:var(--green);font-size:16px;margin:4px 2px 2px">The Routine</h2>
+<p class="dim" style="font-size:12px;margin:0 2px 10px">Do the mobility daily-ish, the glute-med work as your leg-day warm-up, the core 2–3×/week. Log what you did and hit save at the bottom. Everything stays OUT of the groin pinch.</p>
+<div id="routine"></div>
 
-<div class="card">
-  <h2>Daily Mobility <span class="dim" style="font-size:12px">~5 min, most days</span></h2>
-  <p class="dim">Aimed out of the pinch.</p>
-  <ol>
-    <li><b>90/90 hip switches</b> — 8–10/side, slow. Add gentle back-knee lift-offs for active internal rotation</li>
-    <li><b>Hip airplanes</b> (supported) — 5/side, slow. IR control under load</li>
-    <li><b>Couch stretch / hip flexor</b> — keep it (it helps you); ease off if it ever refers into the groin pinch</li>
-  </ol>
-</div>
+<button class="save" id="routebtn" type="button">Save routine</button>
+<div class="saved" id="rsaved" style="display:none"></div>
 
-<div class="card">
-  <h2>Glute-Med Activation <span class="dim" style="font-size:12px">leg-day warm-up, before the bar</span></h2>
-  <p class="dim">Progress in order as each gets easy.</p>
-  <ol>
-    <li><b>Side-lying hip abduction</b> — 2–3 × 12–15, slow. Top leg slightly <b>behind</b> the body (straight up recruits the TFL — the thing we're quieting)</li>
-    <li><b>Banded lateral walks</b> — band above knees, low stance, no torso sway. 2–3 × 10 steps each way</li>
-    <li><b>Step-downs</b> — on a box, slowly lower the <i>other</i> heel to tap the floor, drive back up; standing knee must not cave in. <b>Key single-leg builder.</b> 3 × 8/side</li>
-  </ol>
-</div>
-
-<div class="card">
-  <h2>Anti-QL Core + Single-Leg <span class="dim" style="font-size:12px">2–3×/week</span></h2>
-  <ul>
-    <li><b>Suitcase carry</b> — one heavy DB, walk tall, don't let it pull you sideways. Load the <b>left</b> hand to force the <b>right</b> side to stabilize. 3 × 30–40 steps</li>
-    <li><b>Side plank</b> — knees if needed, build to full. 2–3 × 20–40 s/side (right priority)</li>
-    <li><b>Pallof press</b> — band/cable anti-rotation, resist the twist. 2–3 × 10/side</li>
-    <li><b>Single-leg RDL</b> — light, neutral spine, hip stability + posterior chain. 3 × 8/side</li>
-  </ul>
-</div>
-
-<div class="card">
+<div class="card" style="margin-top:18px">
   <h2 style="color:var(--amber)">Avoid</h2>
   <ul>
     <li>Deep squats / "sit between the hips" — cap depth <b>above</b> the pinch, upright, toes out</li>
@@ -137,7 +122,7 @@
     <li>Aggressive stretching <b>into</b> deep hip flexion (pigeon, deep squat holds)</li>
     <li>Loaded end-range hip flexion + adduction + internal rotation (the pinch position)</li>
   </ul>
-  <p class="note-line">Not medical advice — training/mobility we're self-managing. New, worsening, or radiating pain → see a doctor, don't push through.</p>
+  <p class="note-line">Not medical advice — training/mobility we're self-managing. Also worth doing: an updated MRI (5+ yr old, symptoms persist). New/worsening/radiating pain → see a doctor, don't push through.</p>
 </div>
 
 <script>
@@ -147,69 +132,160 @@
   var sb = window.supabase ? window.supabase.createClient(URL, KEY, { auth: { persistSession: false, autoRefreshToken: false } }) : null;
 
   function todayISO() { var d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
-  function num(v) { v = parseInt(v, 10); return isNaN(v) ? null : Math.max(0, Math.min(10, v)); }
+  function num(v, lo, hi) { v = parseInt(v, 10); if (isNaN(v)) return null; if (lo != null) v = Math.max(lo, Math.min(hi, v)); return v; }
 
-  // simple SVG sparkline for a 0-10 series
-  function spark(vals, color) {
-    var w = 260, h = 40, pad = 3, n = vals.length;
-    if (n < 2) return '';
-    var step = (w - pad * 2) / (n - 1);
-    var pts = vals.map(function (v, i) {
-      var y = h - pad - (v / 10) * (h - pad * 2);
-      return (pad + i * step).toFixed(1) + ',' + y.toFixed(1);
-    }).join(' ');
-    var dots = vals.map(function (v, i) {
-      var y = h - pad - (v / 10) * (h - pad * 2);
-      return '<circle cx="' + (pad + i * step).toFixed(1) + '" cy="' + y.toFixed(1) + '" r="2.2" fill="' + color + '"/>';
-    }).join('');
-    return '<svg class="spark" width="100%" viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none">' +
-      '<polyline points="' + pts + '" fill="none" stroke="' + color + '" stroke-width="2"/>' + dots + '</svg>';
-  }
+  // --- the corrective routine (demo = free-exercise-db slug if an image exists) ---
+  var ROUTINE = [
+    { g:'Daily mobility (~5 min)', n:'90/90 hip switches', t:'8–10 / side', u:'reps',
+      how:'Sit with both knees bent 90° — one shin in front, one out to the side. Rotate both knees to the other side under control, keeping your chest tall. Add a gentle lift-off of the back knee for active internal rotation. Slow. Stay out of any groin pinch.' },
+    { g:'Daily mobility (~5 min)', n:'Hip airplanes (supported)', t:'5 / side', u:'reps',
+      how:'Stand on one leg, hold something for balance. Hinge forward and rotate your pelvis open, then back closed, over the planted foot. Slow and controlled — this trains internal-rotation control under load.' },
+    { g:'Daily mobility (~5 min)', n:'Couch stretch', t:'30–60s / side', u:'sec', hold:true,
+      how:'Kneel with your rear foot up a wall/couch, torso tall. Gentle hip-flexor stretch on the down leg. You said this helps — keep it, but ease off if it ever refers into the groin pinch.' },
 
-  function loadTrend() {
-    var el = document.getElementById('trend');
-    if (!sb) { el.innerHTML = '<span class="dim">—</span>'; return; }
-    sb.from('workout_hip_log').select('log_date,back_pain,hip_pinch,mobility_done,note').order('log_date', { ascending: false }).limit(21)
-      .then(function (res) {
-        if (res.error || !res.data || !res.data.length) { el.innerHTML = '<span class="dim">No check-ins yet — log your first above.</span>'; return; }
-        var rows = res.data;                 // newest first
-        var asc = rows.slice().reverse();    // oldest→newest for charts
-        var backs = asc.filter(function (r) { return r.back_pain != null; }).map(function (r) { return r.back_pain; });
-        var pinch = asc.filter(function (r) { return r.hip_pinch != null; }).map(function (r) { return r.hip_pinch; });
-        var h = '';
-        if (backs.length >= 2 || pinch.length >= 2) {
-          h += '<div class="legend"><b class="b">■</b> back pain &nbsp; <b class="p">■</b> hip pinch &nbsp;<span class="dim">(0–10, oldest → newest)</span></div>';
-          if (backs.length >= 2) h += spark(backs, '#e94560');
-          if (pinch.length >= 2) h += spark(pinch, '#f0a500');
-        }
-        h += '<table><tr><th>Date</th><th class="n">Back</th><th class="n">Pinch</th><th class="n">Mob</th></tr>';
-        rows.slice(0, 10).forEach(function (r) {
-          h += '<tr><td>' + r.log_date + '</td><td class="n">' + (r.back_pain == null ? '–' : r.back_pain) +
-            '</td><td class="n">' + (r.hip_pinch == null ? '–' : r.hip_pinch) +
-            '</td><td class="n">' + (r.mobility_done ? '<span class="green">✓</span>' : '<span class="dim">·</span>') + '</td></tr>';
-          if (r.note) h += '<tr><td colspan="4" class="dim" style="font-size:11px;padding-top:0">↳ ' + r.note + '</td></tr>';
+    { g:'Glute-med warm-up (before the bar on leg days)', n:'Side-lying hip abduction', t:'2–3 × 12–15 / side', u:'reps',
+      how:'Lie on your side. Raise the top leg with it slightly BEHIND your body — not straight up (straight up recruits the TFL, the thing we\'re quieting). Slow up, slow down. Both sides.' },
+    { g:'Glute-med warm-up (before the bar on leg days)', n:'Banded lateral walks', t:'2–3 × 10 steps ea. way', u:'steps',
+      how:'Band above the knees, drop into a low athletic stance. Step sideways staying low, no torso sway, keep tension on the band the whole set.' },
+    { g:'Glute-med warm-up (before the bar on leg days)', n:'Step-downs', t:'3 × 8 / side', u:'reps', demo:'Dumbbell_Step_Ups',
+      how:'Stand on a low box on one leg. Slowly lower the OTHER heel to tap the floor, then drive back up through the standing leg. Don\'t let the standing knee cave inward. (The demo shows a step-up — do it as the slow lowering.)' },
+
+    { g:'Anti-QL core + single-leg (2–3×/week)', n:'Suitcase carry', t:'3 × 30–40 steps', u:'steps',
+      how:'Hold one heavy DB at your side and walk tall — do NOT let it pull you sideways. Load the LEFT hand to force the RIGHT side to stabilize; alternate so both sides get trained.' },
+    { g:'Anti-QL core + single-leg (2–3×/week)', n:'Side plank', t:'2–3 × 20–40s / side', u:'sec', hold:true, demo:'Side_Bridge',
+      how:'From knees or feet, stack your body in one straight line and lift the hips. Hold. Both sides — note if one is clearly weaker.' },
+    { g:'Anti-QL core + single-leg (2–3×/week)', n:'Pallof press', t:'2–3 × 10 / side', u:'reps', demo:'Pallof_Press',
+      how:'Band or cable at chest height coming from your side. Press it straight out and resist the twist — that anti-rotation is the point. Both sides.' },
+    { g:'Anti-QL core + single-leg (2–3×/week)', n:'Single-leg RDL', t:'3 × 8 / side', u:'reps', demo:'Kettlebell_One-Legged_Deadlift',
+      how:'Light. Balance on one leg, hinge at the hip, back leg extends behind you, neutral spine. Builds hip stability + posterior chain. Stop before any pinch.' }
+  ];
+
+  // --- build routine cards ---
+  (function buildRoutine() {
+    var wrap = document.getElementById('routine'), lastG = '';
+    ROUTINE.forEach(function (ex, i) {
+      if (ex.g !== lastG) { var gh = document.createElement('div'); gh.className = 'group-h'; gh.textContent = ex.g; wrap.appendChild(gh); lastG = ex.g; }
+      var box = document.createElement('div'); box.className = 'exercise';
+      var amtLabel = ex.u === 'sec' ? 'seconds' : ex.u === 'steps' ? 'steps' : 'reps';
+      var demoImg = ex.demo ? '<img alt="' + ex.n + ' demo"><div class="demo-cap">Public-domain demo · free-exercise-db</div>' : '';
+      box.innerHTML =
+        '<h3>' + ex.n + '</h3>' +
+        '<div class="ex-meta">target ' + ex.t + '</div>' +
+        '<button class="how" type="button">▶ How to do it</button>' +
+        '<div class="demo" style="display:none">' + demoImg + '<div class="demo-how">' + ex.how + '</div></div>' +
+        '<div class="ex-inputs">' +
+          '<div class="field"><span>sets</span><input type="number" inputmode="numeric" data-ex="' + ex.n + '" data-k="sets"></div>' +
+          '<div class="field"><span>' + amtLabel + ' / side</span><input type="number" inputmode="numeric" data-ex="' + ex.n + '" data-k="amount" data-unit="' + ex.u + '"></div>' +
+        '</div>';
+      // wire the demo toggle (image cycles if present)
+      (function () {
+        var btn = box.querySelector('.how'), demo = box.querySelector('.demo'), img = demo.querySelector('img');
+        var base = ex.demo ? 'exercises/' + ex.demo + '/' : null, frame = 0, timer = null;
+        if (img) img.src = base + '0.jpg';
+        btn.addEventListener('click', function () {
+          var open = demo.style.display === 'none';
+          demo.style.display = open ? 'block' : 'none';
+          btn.textContent = open ? '▼ Hide' : '▶ How to do it';
+          if (img) {
+            if (open && !timer) timer = setInterval(function () { frame ^= 1; img.src = base + frame + '.jpg'; }, 900);
+            else if (!open && timer) { clearInterval(timer); timer = null; }
+          }
         });
-        h += '</table>';
-        el.innerHTML = h;
-      });
-  }
+      })();
+      wrap.appendChild(box);
+    });
+  })();
 
+  // --- save routine ---
+  document.getElementById('routebtn').addEventListener('click', async function () {
+    var btn = this, msg = document.getElementById('rsaved');
+    var byEx = {};
+    document.querySelectorAll('#routine input[data-ex]').forEach(function (el) {
+      var name = el.getAttribute('data-ex'), k = el.getAttribute('data-k'), v = el.value.trim();
+      if (v === '') return;
+      byEx[name] = byEx[name] || { exercise: name, log_date: todayISO(), sets: null, amount: null, unit: null };
+      if (k === 'sets') byEx[name].sets = num(v);
+      else { byEx[name].amount = num(v); byEx[name].unit = el.getAttribute('data-unit'); }
+    });
+    var rows = Object.keys(byEx).map(function (k) { return byEx[k]; });
+    if (!rows.length) { msg.style.display = 'block'; msg.style.color = 'var(--amber)'; msg.textContent = 'Enter at least one exercise.'; return; }
+    if (!sb) { msg.style.display = 'block'; msg.textContent = 'No connection.'; return; }
+    btn.disabled = true; btn.textContent = 'Saving…';
+    var r = await sb.from('workout_hip_routine_log').insert(rows);
+    if (r.error) { btn.disabled = false; btn.textContent = 'Save routine'; msg.style.display = 'block'; msg.style.color = 'var(--red)'; msg.textContent = 'Save failed: ' + r.error.message; return; }
+    msg.style.display = 'block'; msg.style.color = 'var(--green)'; msg.textContent = '✅ Logged ' + rows.length + ' exercise' + (rows.length > 1 ? 's' : '') + ' for ' + todayISO();
+    document.querySelectorAll('#routine input[data-ex]').forEach(function (el) { el.value = ''; });
+    btn.disabled = false; btn.textContent = 'Save routine';
+    loadTrend();
+  });
+
+  // --- save symptom check-in ---
   document.getElementById('savebtn').addEventListener('click', async function () {
     var btn = this, saved = document.getElementById('saved');
-    var back = num(document.getElementById('back').value);
-    var pinch = num(document.getElementById('pinch').value);
-    var mob = document.getElementById('mob').checked;
+    var back = num(document.getElementById('back').value, 0, 10);
+    var pl = num(document.getElementById('pinchL').value, 0, 10);
+    var pr = num(document.getElementById('pinchR').value, 0, 10);
     var note = document.getElementById('hnote').value.trim() || null;
-    if (back == null && pinch == null && !mob && !note) { saved.style.display = 'block'; saved.style.color = 'var(--amber)'; saved.textContent = 'Enter at least one field.'; return; }
+    if (back == null && pl == null && pr == null && !note) { saved.style.display = 'block'; saved.style.color = 'var(--amber)'; saved.textContent = 'Enter at least one field.'; return; }
     if (!sb) { saved.style.display = 'block'; saved.textContent = 'No connection.'; return; }
     btn.disabled = true; btn.textContent = 'Saving…';
-    var r = await sb.from('workout_hip_log').insert({ log_date: todayISO(), back_pain: back, hip_pinch: pinch, mobility_done: mob, note: note });
+    var r = await sb.from('workout_hip_log').insert({ log_date: todayISO(), back_pain: back, pinch_left: pl, pinch_right: pr, note: note });
     if (r.error) { btn.disabled = false; btn.textContent = 'Save check-in'; saved.style.display = 'block'; saved.style.color = 'var(--red)'; saved.textContent = 'Save failed: ' + r.error.message; return; }
     saved.style.display = 'block'; saved.style.color = 'var(--green)'; saved.textContent = '✅ Logged for ' + todayISO();
-    document.getElementById('back').value = ''; document.getElementById('pinch').value = ''; document.getElementById('mob').checked = false; document.getElementById('hnote').value = '';
+    document.getElementById('back').value = ''; document.getElementById('pinchL').value = ''; document.getElementById('pinchR').value = ''; document.getElementById('hnote').value = '';
     btn.disabled = false; btn.textContent = 'Save check-in';
     loadTrend();
   });
+
+  // --- sparkline (0-10 series) ---
+  function spark(vals, color) {
+    var w = 260, h = 34, pad = 3, n = vals.length;
+    if (n < 2) return '';
+    var step = (w - pad * 2) / (n - 1);
+    var pts = vals.map(function (v, i) { return (pad + i * step).toFixed(1) + ',' + (h - pad - (v / 10) * (h - pad * 2)).toFixed(1); }).join(' ');
+    var dots = vals.map(function (v, i) { return '<circle cx="' + (pad + i * step).toFixed(1) + '" cy="' + (h - pad - (v / 10) * (h - pad * 2)).toFixed(1) + '" r="2" fill="' + color + '"/>'; }).join('');
+    return '<svg class="spark" width="100%" viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none"><polyline points="' + pts + '" fill="none" stroke="' + color + '" stroke-width="2"/>' + dots + '</svg>';
+  }
+
+  async function loadTrend() {
+    var el = document.getElementById('trend');
+    if (!sb) { el.innerHTML = '<span class="dim">—</span>'; return; }
+    var symQ = await sb.from('workout_hip_log').select('log_date,back_pain,pinch_left,pinch_right,note').order('log_date', { ascending: false }).limit(21);
+    var rtQ = await sb.from('workout_hip_routine_log').select('log_date').order('log_date', { ascending: false }).limit(200);
+
+    // routine adherence: distinct days in the last 7
+    var adher = '';
+    if (rtQ.data && rtQ.data.length) {
+      var cutoff = new Date(todayISO() + 'T00:00:00'); cutoff.setDate(cutoff.getDate() - 6);
+      var days = {}; var lastDone = rtQ.data[0].log_date;
+      rtQ.data.forEach(function (r) { if (new Date(r.log_date + 'T00:00:00') >= cutoff) days[r.log_date] = 1; });
+      adher = '<div class="adher">🗒️ Routine: done <b class="green">' + Object.keys(days).length + '</b> day(s) in the last 7 · last ' + lastDone + '</div>';
+    }
+
+    var rows = (symQ.data || []);
+    if (!rows.length && !adher) { el.innerHTML = '<span class="dim">No check-ins yet — log your first above.</span>'; return; }
+    var asc = rows.slice().reverse();
+    function series(key) { return asc.filter(function (r) { return r[key] != null; }).map(function (r) { return r[key]; }); }
+    var b = series('back_pain'), l = series('pinch_left'), rr = series('pinch_right');
+    var h = adher;
+    if (b.length >= 2 || l.length >= 2 || rr.length >= 2) {
+      h += '<div class="legend"><b class="b">■</b> back &nbsp; <b class="l">■</b> L pinch &nbsp; <b class="r">■</b> R pinch &nbsp;<span class="dim">(0–10, old→new)</span></div>';
+      if (b.length >= 2) h += spark(b, '#e94560');
+      if (l.length >= 2) h += spark(l, '#f0a500');
+      if (rr.length >= 2) h += spark(rr, '#16c79a');
+    }
+    if (rows.length) {
+      h += '<table><tr><th>Date</th><th class="n">Back</th><th class="n">L</th><th class="n">R</th></tr>';
+      rows.slice(0, 10).forEach(function (r) {
+        h += '<tr><td>' + r.log_date + '</td><td class="n">' + (r.back_pain == null ? '–' : r.back_pain) +
+          '</td><td class="n">' + (r.pinch_left == null ? '–' : r.pinch_left) +
+          '</td><td class="n">' + (r.pinch_right == null ? '–' : r.pinch_right) + '</td></tr>';
+        if (r.note) h += '<tr><td colspan="4" class="dim" style="font-size:11px;padding-top:0">↳ ' + r.note + '</td></tr>';
+      });
+      h += '</table>';
+    }
+    el.innerHTML = h;
+  }
 
   loadTrend();
 })();
