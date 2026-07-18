@@ -25,6 +25,15 @@
   nav a { flex: 1; text-align: center; padding: 9px; border: 1px solid var(--border); border-radius: 8px; text-decoration: none; color: var(--dim); font-size: 13px; }
   nav a.active { background: var(--card); color: var(--green); border-color: var(--green); }
   #session-head { color: var(--dim); font-size: 13px; margin-bottom: 18px; line-height: 1.5; }
+
+  #today-banner:not(:empty) { margin-bottom: 16px; }
+  .today { border-radius: 10px; padding: 12px 14px; border: 1px solid var(--border); background: var(--card); }
+  .today.tb-train { border-color: var(--green); background: rgba(22,199,154,.09); }
+  .today.tb-done  { border-color: var(--dim); }
+  .tb-main { font-size: 15px; color: var(--text); line-height: 1.4; }
+  .tb-sub  { font-size: 12px; color: var(--dim); margin-top: 4px; line-height: 1.4; }
+  .tb-hip  { font-size: 11px; color: var(--dim); margin-top: 9px; border-top: 1px solid var(--border); padding-top: 8px; }
+  .tb-link { color: var(--green); text-decoration: none; }
   #session-head b { color: var(--text); }
 
   .msg { padding: 40px 12px; text-align: center; color: var(--dim); line-height: 1.6; }
@@ -93,6 +102,8 @@
   <a href="./history.html">History</a>
   <a href="./hip.html">Hip</a>
 </nav>
+<div id="today-banner"></div>
+
 <div id="session-head"></div>
 
 <div id="content"><div class="msg">Loading today's workout…</div></div>
@@ -125,6 +136,51 @@
   }
   function num(v) { if (v === '' || v === null || v === undefined) return null; var n = Number(v); return isNaN(n) ? null : n; }
   function todayISO() { var d = new Date(); return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
+  function daysBetween(a, b) { return Math.round((new Date(b + 'T00:00:00') - new Date(a + 'T00:00:00')) / 86400000); }
+
+  // ---------- "what's on today" banner ----------
+  // Uses a queued session if one exists; otherwise infers rest/train + upper/lower
+  // from the last completed workout and the usual every-other-day alternation.
+  async function renderTodayBanner() {
+    var el = document.getElementById('today-banner');
+    if (!el) return;
+    try {
+      var presQ = await sb.from('workout_sessions').select('day_type')
+        .eq('status', 'prescribed').order('created_at', { ascending: false }).limit(1);
+      var lastQ = await sb.from('workout_sessions').select('session_date,day_type')
+        .eq('status', 'completed').order('completed_at', { ascending: false }).limit(1);
+      var pres = presQ.data && presQ.data[0];
+      var last = lastQ.data && lastQ.data[0];
+      function opp(t) { return t === 'lower' ? 'Upper' : 'Lower / legs'; }
+      function isLegs(label) { return label.indexOf('Lower') === 0; }
+
+      var main, sub = '', cls = 'today';
+      if (pres) {
+        var pl = (pres.day_type === 'lower' ? 'Lower / legs' : 'Upper') + ' lift';
+        main = '🏋️ Today: <b>' + pl + '</b> — it’s queued below 👇';
+        if (pres.day_type === 'lower') sub = 'Glute-med warm-up first (see Hip), depth-capped squats.';
+        cls += ' tb-train';
+      } else if (!last) {
+        main = '🏋️ Start with an <b>Upper</b> lift.'; sub = 'Tell your coach which gym to get it queued.'; cls += ' tb-train';
+      } else {
+        var next = opp(last.day_type), days = daysBetween(last.session_date, todayISO());
+        if (days <= 0) {
+          main = '✅ <b>Trained today</b> (' + (last.day_type === 'lower' ? 'lower' : 'upper') + ').';
+          sub = 'Tomorrow: rest + hip mobility. Then: ' + next + ' lift.'; cls += ' tb-done';
+        } else if (days === 1) {
+          main = '🧘 <b>Rest day.</b>';
+          sub = 'Do your ~5-min hip mobility. Next up: <b>' + next + '</b> lift — tell your coach the gym.';
+        } else {
+          main = '🏋️ <b>' + next + ' lift</b> is due today.';
+          sub = 'Tell your coach which gym to queue it' + (isLegs(next) ? ' — Park West (barbell) is best for legs; glute-med warm-up first.' : '.');
+          cls += ' tb-train';
+        }
+      }
+      var hip = '<div class="tb-hip">🦵 Daily: ~5-min hip mobility (90/90 + airplanes). <a class="tb-link" href="./hip.html">Hip ›</a></div>';
+      el.className = cls;
+      el.innerHTML = '<div class="tb-main">' + main + '</div>' + (sub ? '<div class="tb-sub">' + sub + '</div>' : '') + hip;
+    } catch (e) { el.innerHTML = ''; }
+  }
 
   // exercise name -> local demo folder (public-domain free-exercise-db image pairs)
   var DEMOS = {
@@ -196,6 +252,7 @@
   // ---------- load ----------
   async function load() {
     try {
+      renderTodayBanner();
       var sess = await sb.from('workout_sessions').select('*')
         .eq('status', 'prescribed').order('created_at', { ascending: false }).limit(1);
       if (sess.error) throw sess.error;
