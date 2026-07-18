@@ -64,6 +64,9 @@
   .legend { font-size:11px; color:var(--dim); margin-top:4px; }
   .legend b.b { color:var(--red); } .legend b.l { color:var(--amber); } .legend b.r { color:var(--green); }
   .adher { font-size:12px; color:var(--dim); margin-bottom:8px; }
+  #sched-head .sched-when { font-size:12px; color:var(--dim); text-transform:uppercase; letter-spacing:.5px; }
+  #sched-head .sched-date { font-size:20px; color:var(--green); margin:2px 0; }
+  #sched-head .sched-label { font-size:13px; color:var(--text); }
 </style>
 </head>
 <body>
@@ -108,17 +111,11 @@
   <div id="trend"><span class="dim">loading…</span></div>
 </div>
 
-<div class="card">
-  <h2>When To Do These</h2>
-  <ul>
-    <li><b class="green">Every day</b> (~5 min) — <b>Daily mobility</b> (90/90, airplanes, couch stretch)</li>
-    <li><b class="green">Leg days, before you lift</b> (~2×/week) — <b>Glute-med warm-up</b> (abduction, lateral walks, step-downs)</li>
-    <li><b class="green">2–3×/week</b> (after a lift, or any day) — <b>Anti-QL core + single-leg</b></li>
-  </ul>
-  <p class="note-line">So — <b>not</b> everything every day: only the short mobility set is daily; the strengthening is a few times a week. Log whatever you did; today's date is recorded automatically. Everything stays OUT of the groin pinch.</p>
+<div class="card" id="sched-card">
+  <div id="sched-head"><span class="dim">loading…</span></div>
+  <p class="note-line" style="margin-top:8px">Only what's due today is shown. Save it and it rolls to the next date. Mobility is daily; the strengthening rotates so it lands ~2×/week each. Everything stays OUT of the groin pinch.</p>
 </div>
 
-<h2 style="color:var(--green);font-size:16px;margin:4px 2px 2px">The Routine</h2>
 <div id="routine"></div>
 
 <button class="save" id="routebtn" type="button">Save routine</button>
@@ -170,10 +167,36 @@
       how:'Light. Balance on one leg, hinge at the hip, back leg extends behind you, neutral spine. Builds hip stability + posterior chain. Stop before any pinch.' }
   ];
 
-  // --- build routine cards ---
-  (function buildRoutine() {
-    var wrap = document.getElementById('routine'), lastG = '';
-    ROUTINE.forEach(function (ex, i) {
+  var G_MOB = 'Daily mobility (~5 min)';
+  var G_WARM = 'Glute-med warm-up (before the bar on leg days)';
+  var G_CORE = 'Anti-QL core + single-leg (2–3×/week)';
+
+  function addDays(iso, n) { var d = new Date(iso + 'T00:00:00'); d.setDate(d.getDate() + n); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+  // 3-day rotation: mobility every day; warm-up and core alternate on top of it
+  function groupsFor(pos) { var g = [G_MOB]; if (pos === 0) g.push(G_WARM); else if (pos === 1) g.push(G_CORE); return g; }
+  function labelFor(pos) { return pos === 0 ? 'Mobility + Glute-med warm-up' : pos === 1 ? 'Mobility + Anti-QL core' : 'Mobility only (light day)'; }
+
+  // recompute which date/plan is due, and render just those exercises
+  async function renderSchedule() {
+    var head = document.getElementById('sched-head');
+    var count = 0, doneToday = false;
+    if (sb) {
+      var q = await sb.from('workout_hip_routine_log').select('log_date').order('log_date', { ascending: false }).limit(400);
+      if (q.data) { var ds = {}; q.data.forEach(function (r) { ds[r.log_date] = 1; }); count = Object.keys(ds).length; doneToday = !!ds[todayISO()]; }
+    }
+    var pos = count % 3;                                   // next routine's position in the cycle
+    var activeDate = doneToday ? addDays(todayISO(), 1) : todayISO();
+    var when = doneToday ? '✅ Done today — next up' : (activeDate === todayISO() ? 'Today' : 'Next up');
+    var pretty = new Date(activeDate + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+    head.innerHTML = '<div class="sched-when">' + when + '</div><div class="sched-date">📅 ' + pretty + '</div><div class="sched-label">' + labelFor(pos) + '</div>';
+    buildRoutine(groupsFor(pos));
+    document.getElementById('routebtn').style.display = doneToday ? 'none' : 'block';
+  }
+
+  // --- build routine cards for the given groups ---
+  function buildRoutine(groups) {
+    var wrap = document.getElementById('routine'); wrap.innerHTML = ''; var lastG = '';
+    ROUTINE.filter(function (ex) { return groups.indexOf(ex.g) !== -1; }).forEach(function (ex) {
       if (ex.g !== lastG) { var gh = document.createElement('div'); gh.className = 'group-h'; gh.textContent = ex.g; wrap.appendChild(gh); lastG = ex.g; }
       var box = document.createElement('div'); box.className = 'exercise';
       var amtLabel = ex.u === 'sec' ? 'seconds' : ex.u === 'steps' ? 'steps' : 'reps';
@@ -204,7 +227,7 @@
       })();
       wrap.appendChild(box);
     });
-  })();
+  }
 
   // --- save routine ---
   document.getElementById('routebtn').addEventListener('click', async function () {
@@ -224,8 +247,8 @@
     var r = await sb.from('workout_hip_routine_log').insert(rows);
     if (r.error) { btn.disabled = false; btn.textContent = 'Save routine'; msg.style.display = 'block'; msg.style.color = 'var(--red)'; msg.textContent = 'Save failed: ' + r.error.message; return; }
     msg.style.display = 'block'; msg.style.color = 'var(--green)'; msg.textContent = '✅ Logged ' + rows.length + ' exercise' + (rows.length > 1 ? 's' : '') + ' for ' + todayISO();
-    document.querySelectorAll('#routine input[data-ex]').forEach(function (el) { el.value = ''; });
     btn.disabled = false; btn.textContent = 'Save routine';
+    renderSchedule();
     loadTrend();
   });
 
@@ -297,6 +320,7 @@
     el.innerHTML = h;
   }
 
+  renderSchedule();
   loadTrend();
 })();
 </script>
