@@ -77,6 +77,8 @@
   .save-hip { width: 100%; margin-top: 8px; background: var(--green); color: #04231b; border: none; border-radius: 8px; padding: 12px; font-size: 15px; font-weight: bold; font-family: inherit; }
   .save-hip:disabled { opacity: .6; }
   .saved-hip { text-align: center; font-size: 13px; margin: 10px 0 20px; }
+  .vid { color: var(--dim); font-size: 12px; text-decoration: none; margin-left: 8px; white-space: nowrap; }
+  .vid:active { color: var(--green); }
 
   .session-extras { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px; margin-bottom: 14px; }
   .session-extras label { display: block; font-size: 12px; color: var(--dim); margin-bottom: 6px; }
@@ -306,10 +308,12 @@
       var box = document.createElement('div'); box.className = 'exercise';
       var amt = ex.u === 'sec' ? 'seconds' : ex.u === 'steps' ? 'steps' : 'reps';
       var demoImg = ex.demo ? '<img alt="' + ex.n + ' demo"><div class="demo-cap">Public-domain demo · free-exercise-db</div>' : '';
+      var yt = 'https://www.youtube.com/results?search_query=' + encodeURIComponent(ex.n + ' exercise how to');
       box.innerHTML =
         '<h2 style="font-size:15px">' + ex.n + '</h2>' +
         '<div class="ex-meta">target ' + ex.t + '</div>' +
         '<button class="how" type="button">▶ How to do it</button>' +
+        '<a class="vid" href="' + yt + '" target="_blank" rel="noopener">▶ video ↗</a>' +
         '<div class="demo" style="display:none">' + demoImg + '<div class="demo-how">' + ex.how + '</div></div>' +
         '<div class="ex-inputs">' +
           '<div class="field"><span>sets</span><input type="number" inputmode="numeric" data-hip="' + ex.n + '" data-k="sets"></div>' +

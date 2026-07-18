@@ -42,6 +42,8 @@
   .ref b { color:var(--text); font-size:14px; }
   .ref .t { color:var(--green); font-size:12px; }
   .ref .how { color:var(--dim); font-size:12px; line-height:1.5; margin-top:3px; }
+  .vid { color:var(--dim); font-size:12px; text-decoration:none; white-space:nowrap; }
+  .vid:active { color:var(--green); }
 
   button.save { width:100%; margin-top:6px; background:var(--green); color:#04231b; border:none; border-radius:8px; padding:12px; font-size:15px; font-weight:bold; font-family:inherit; }
   button.save:disabled { opacity:.6; }
@@ -154,7 +156,8 @@
       var gh = document.createElement('div'); gh.className = 'group-h'; gh.textContent = grp[0]; host.appendChild(gh);
       grp[1].forEach(function (ex) {
         var d = document.createElement('div'); d.className = 'ref';
-        d.innerHTML = '<b>' + ex[0] + '</b> &nbsp;<span class="t">' + ex[1] + '</span><div class="how">' + ex[2] + '</div>';
+        var yt = 'https://www.youtube.com/results?search_query=' + encodeURIComponent(ex[0] + ' exercise how to');
+        d.innerHTML = '<b>' + ex[0] + '</b> &nbsp;<span class="t">' + ex[1] + '</span> &nbsp;<a class="vid" href="' + yt + '" target="_blank" rel="noopener">▶ video ↗</a><div class="how">' + ex[2] + '</div>';
         host.appendChild(d);
       });
     });
