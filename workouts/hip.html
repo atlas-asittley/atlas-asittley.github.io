@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hip</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root { --bg:#1a1a2e; --card:#16213e; --border:#0f3460; --green:#16c79a; --red:#e94560; --amber:#f0a500; --text:#eee; --dim:#8a97b1; }
+  body { background:var(--bg); color:var(--text); font-family:'Courier New',monospace; padding:16px 14px 60px; max-width:640px; margin:0 auto; -webkit-text-size-adjust:100%; }
+  header { display:flex; align-items:baseline; justify-content:space-between; margin-bottom:12px; }
+  h1 { font-size:24px; color:var(--green); }
+  .back { color:var(--dim); text-decoration:none; font-size:13px; }
+  .back:hover { color:var(--green); }
+  nav { display:flex; gap:8px; margin-bottom:18px; }
+  nav a { flex:1; text-align:center; padding:9px; border:1px solid var(--border); border-radius:8px; text-decoration:none; color:var(--dim); font-size:13px; }
+  nav a.active { background:var(--card); color:var(--green); border-color:var(--green); }
+
+  .card { background:var(--card); border:1px solid var(--border); border-radius:10px; padding:14px; margin-bottom:14px; }
+  .card h2 { font-size:16px; color:var(--red); margin-bottom:10px; }
+  .card h3 { font-size:14px; color:var(--green); margin:12px 0 4px; }
+  p, li { font-size:13px; line-height:1.55; color:var(--text); }
+  ul, ol { padding-left:20px; }
+  li { margin:3px 0; }
+  .dim { color:var(--dim); }
+  .green { color:var(--green); }
+  .amber { color:var(--amber); }
+  .note-line { font-size:11px; color:var(--dim); font-style:italic; margin-top:8px; }
+
+  label { display:block; font-size:12px; color:var(--dim); margin:12px 0 4px; }
+  input[type=number], textarea { width:100%; background:#0e1730; border:1px solid var(--border); border-radius:8px; color:var(--text); font-family:inherit; font-size:16px; padding:9px; }
+  textarea { min-height:52px; resize:vertical; }
+  .row2 { display:flex; gap:10px; }
+  .row2 > div { flex:1; }
+  .chk { display:flex; align-items:center; gap:8px; margin-top:12px; }
+  .chk input { width:20px; height:20px; }
+  .chk label { margin:0; font-size:13px; color:var(--text); }
+  button.save { width:100%; margin-top:14px; background:var(--green); color:#04231b; border:none; border-radius:8px; padding:12px; font-size:15px; font-weight:bold; font-family:inherit; }
+  button.save:disabled { opacity:.6; }
+  .saved { text-align:center; color:var(--green); font-size:13px; margin-top:10px; }
+
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  td, th { text-align:left; padding:6px 5px; border-bottom:1px solid var(--border); }
+  th { color:var(--dim); font-weight:normal; font-size:11px; text-transform:uppercase; letter-spacing:.5px; }
+  td.n, th.n { text-align:center; }
+  .spark { margin:6px 0 4px; }
+  .legend { font-size:11px; color:var(--dim); }
+  .legend b.b { color:var(--red); } .legend b.p { color:var(--amber); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🦵 Hip</h1>
+  <a class="back" href="https://atlas-asittley.github.io/">← Atlas</a>
+</header>
+
+<nav>
+  <a href="./">Workout</a>
+  <a href="./diet.html">Diet</a>
+  <a href="./history.html">History</a>
+  <a class="active" href="./hip.html">Hip</a>
+</nav>
+
+<div class="card">
+  <h2>Today's Check-In</h2>
+  <p class="dim">Log ~2–3×/week (or after leg days). Watch the <span class="green">trend over weeks</span>, not any single day.</p>
+  <div class="row2">
+    <div>
+      <label>Back pain (0–10)<br><span class="dim">right QL / low back</span></label>
+      <input id="back" type="number" inputmode="numeric" min="0" max="10" placeholder="0–10">
+    </div>
+    <div>
+      <label>Hip pinch (0–10)<br><span class="dim">right groin</span></label>
+      <input id="pinch" type="number" inputmode="numeric" min="0" max="10" placeholder="0–10">
+    </div>
+  </div>
+  <div class="chk"><input id="mob" type="checkbox"><label for="mob">Did the mobility routine today</label></div>
+  <label for="hnote">Note — what aggravated or helped</label>
+  <textarea id="hnote" placeholder="e.g. flared after long sitting; better after 90/90"></textarea>
+  <button class="save" id="savebtn" type="button">Save check-in</button>
+  <div class="saved" id="saved" style="display:none"></div>
+</div>
+
+<div class="card">
+  <h2>Trend</h2>
+  <div id="trend"><span class="dim">loading…</span></div>
+</div>
+
+<div class="card">
+  <h2>The Plan — Daily Mini Routine <span class="dim" style="font-size:12px">~10 min, most days</span></h2>
+  <p class="dim">High-frequency mobility + glute activation. All kept OUT of the groin pinch.</p>
+  <ol>
+    <li><b>90/90 hip switches</b> — 8–10/side, slow (restores internal rotation)</li>
+    <li><b>Seated hip internal rotation</b> — 8–10/side, gentle end-range, no pinch</li>
+    <li><b>Clamshells</b> (banded) — 15–20/side</li>
+    <li><b>Side-lying hip abduction</b> — 12–15/side</li>
+    <li><b>Side plank</b> — 2 × 20–40 s/side (right side priority)</li>
+    <li><b>Bird-dog</b> — 8–10/side, slow, no lumbar sag</li>
+  </ol>
+</div>
+
+<div class="card">
+  <h2>Built Into Leg Days <span class="dim" style="font-size:12px">the strengthening, 2×/week</span></h2>
+  <ul>
+    <li><b>Hip abduction</b> (cable/machine) 3×12–15 — main glute-med driver</li>
+    <li><b>Step-ups / step-downs / reverse lunges</b> 3×10–12/leg — single-leg glute strength</li>
+    <li><b>Hip thrust</b> — glute max, no hinge or deep flexion</li>
+    <li><b>Suitcase carry or Pallof press</b> 3 sets — offloads the right QL</li>
+    <li><b>Depth-capped squat</b> (leg press / hack / box) + <b>trap-bar / leg curl</b> — legs without the pinch</li>
+  </ul>
+</div>
+
+<div class="card">
+  <h2 style="color:var(--amber)">Avoid</h2>
+  <ul>
+    <li>Deep squats / "sit between the hips" — cap depth <b>above</b> the pinch, upright, toes out</li>
+    <li>Loaded forward bends / conventional or deep RDL — use trap-bar / hip thrust</li>
+    <li>Aggressive stretching <b>into</b> deep hip flexion (pigeon, deep squat holds)</li>
+    <li>Loaded end-range hip flexion + adduction + internal rotation (the pinch position)</li>
+  </ul>
+  <p class="note-line">Not medical advice — training/mobility we're self-managing. New, worsening, or radiating pain → see a doctor, don't push through.</p>
+</div>
+
+<script>
+(function () {
+  var URL = 'https://igaulapupbtdcqqjobhs.supabase.co';
+  var KEY = 'sb_publishable_7yi3BNg-J-K5nralw5JSww_c71Pge6e';
+  var sb = window.supabase ? window.supabase.createClient(URL, KEY, { auth: { persistSession: false, autoRefreshToken: false } }) : null;
+
+  function todayISO() { var d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+  function num(v) { v = parseInt(v, 10); return isNaN(v) ? null : Math.max(0, Math.min(10, v)); }
+
+  // simple SVG sparkline for a 0-10 series
+  function spark(vals, color) {
+    var w = 260, h = 40, pad = 3, n = vals.length;
+    if (n < 2) return '';
+    var step = (w - pad * 2) / (n - 1);
+    var pts = vals.map(function (v, i) {
+      var y = h - pad - (v / 10) * (h - pad * 2);
+      return (pad + i * step).toFixed(1) + ',' + y.toFixed(1);
+    }).join(' ');
+    var dots = vals.map(function (v, i) {
+      var y = h - pad - (v / 10) * (h - pad * 2);
+      return '<circle cx="' + (pad + i * step).toFixed(1) + '" cy="' + y.toFixed(1) + '" r="2.2" fill="' + color + '"/>';
+    }).join('');
+    return '<svg class="spark" width="100%" viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none">' +
+      '<polyline points="' + pts + '" fill="none" stroke="' + color + '" stroke-width="2"/>' + dots + '</svg>';
+  }
+
+  function loadTrend() {
+    var el = document.getElementById('trend');
+    if (!sb) { el.innerHTML = '<span class="dim">—</span>'; return; }
+    sb.from('workout_hip_log').select('log_date,back_pain,hip_pinch,mobility_done,note').order('log_date', { ascending: false }).limit(21)
+      .then(function (res) {
+        if (res.error || !res.data || !res.data.length) { el.innerHTML = '<span class="dim">No check-ins yet — log your first above.</span>'; return; }
+        var rows = res.data;                 // newest first
+        var asc = rows.slice().reverse();    // oldest→newest for charts
+        var backs = asc.filter(function (r) { return r.back_pain != null; }).map(function (r) { return r.back_pain; });
+        var pinch = asc.filter(function (r) { return r.hip_pinch != null; }).map(function (r) { return r.hip_pinch; });
+        var h = '';
+        if (backs.length >= 2 || pinch.length >= 2) {
+          h += '<div class="legend"><b class="b">■</b> back pain &nbsp; <b class="p">■</b> hip pinch &nbsp;<span class="dim">(0–10, oldest → newest)</span></div>';
+          if (backs.length >= 2) h += spark(backs, '#e94560');
+          if (pinch.length >= 2) h += spark(pinch, '#f0a500');
+        }
+        h += '<table><tr><th>Date</th><th class="n">Back</th><th class="n">Pinch</th><th class="n">Mob</th></tr>';
+        rows.slice(0, 10).forEach(function (r) {
+          h += '<tr><td>' + r.log_date + '</td><td class="n">' + (r.back_pain == null ? '–' : r.back_pain) +
+            '</td><td class="n">' + (r.hip_pinch == null ? '–' : r.hip_pinch) +
+            '</td><td class="n">' + (r.mobility_done ? '<span class="green">✓</span>' : '<span class="dim">·</span>') + '</td></tr>';
+          if (r.note) h += '<tr><td colspan="4" class="dim" style="font-size:11px;padding-top:0">↳ ' + r.note + '</td></tr>';
+        });
+        h += '</table>';
+        el.innerHTML = h;
+      });
+  }
+
+  document.getElementById('savebtn').addEventListener('click', async function () {
+    var btn = this, saved = document.getElementById('saved');
+    var back = num(document.getElementById('back').value);
+    var pinch = num(document.getElementById('pinch').value);
+    var mob = document.getElementById('mob').checked;
+    var note = document.getElementById('hnote').value.trim() || null;
+    if (back == null && pinch == null && !mob && !note) { saved.style.display = 'block'; saved.style.color = 'var(--amber)'; saved.textContent = 'Enter at least one field.'; return; }
+    if (!sb) { saved.style.display = 'block'; saved.textContent = 'No connection.'; return; }
+    btn.disabled = true; btn.textContent = 'Saving…';
+    var r = await sb.from('workout_hip_log').insert({ log_date: todayISO(), back_pain: back, hip_pinch: pinch, mobility_done: mob, note: note });
+    if (r.error) { btn.disabled = false; btn.textContent = 'Save check-in'; saved.style.display = 'block'; saved.style.color = 'var(--red)'; saved.textContent = 'Save failed: ' + r.error.message; return; }
+    saved.style.display = 'block'; saved.style.color = 'var(--green)'; saved.textContent = '✅ Logged for ' + todayISO();
+    document.getElementById('back').value = ''; document.getElementById('pinch').value = ''; document.getElementById('mob').checked = false; document.getElementById('hnote').value = '';
+    btn.disabled = false; btn.textContent = 'Save check-in';
+    loadTrend();
+  });
+
+  loadTrend();
+})();
+</script>
+</body>
+</html>
