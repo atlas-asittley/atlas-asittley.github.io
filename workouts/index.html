@@ -74,6 +74,8 @@
 
   .how { background: none; border: 1px solid var(--border); color: var(--dim); border-radius: 6px; padding: 6px 10px; font-family: inherit; font-size: 12px; cursor: pointer; margin-bottom: 10px; }
   .how:active { color: var(--green); border-color: var(--green); }
+  .gif-link { display: inline-block; border: 1px solid var(--border); color: var(--dim); border-radius: 6px; padding: 6px 10px; font-size: 12px; text-decoration: none; margin-bottom: 10px; }
+  .gif-link:active { color: var(--green); border-color: var(--green); }
   .demo { margin-bottom: 12px; }
   .demo img { width: 100%; max-width: 300px; border-radius: 8px; border: 1px solid var(--border); background: #fff; display: block; }
   .demo-cap { font-size: 10px; color: var(--dim); margin-top: 4px; }
@@ -395,7 +397,7 @@
 
     var groups = {}; var order = [];
     sets.forEach(function (s) {
-      if (!groups[s.exercise_order]) { groups[s.exercise_order] = { name: s.exercise, note: s.exercise_note, rest: s.rest_seconds, sets: [] }; order.push(s.exercise_order); }
+      if (!groups[s.exercise_order]) { groups[s.exercise_order] = { name: s.exercise, note: s.exercise_note, rest: s.rest_seconds, bodyweight: s.bodyweight, sets: [] }; order.push(s.exercise_order); }
       groups[s.exercise_order].sets.push(s);
     });
     order.sort(function (a, b) { return a - b; });
@@ -405,7 +407,7 @@
       var g = groups[ord];
       var box = document.createElement('div'); box.className = 'exercise';
       var h = '<h2>' + g.name + '</h2>';
-      var repRange = g.sets[0].target_reps ? (g.sets.length + ' × ' + g.sets[0].target_reps + ' reps') : (g.sets.length + ' sets');
+      var repRange = g.sets[0].target_reps ? (g.sets.length + ' × ' + g.sets[0].target_reps) : (g.sets.length + ' sets');
       var rest = g.rest ? (' · rest ' + (g.rest >= 60 ? (g.rest/60) + ' min' : g.rest + 's')) : '';
       h += '<div class="ex-meta">' + repRange + rest + '</div>';
       if (g.note) h += '<div class="ex-note">→ ' + g.note + '</div>';
@@ -413,6 +415,7 @@
       var slug = DEMOS[g.name.toLowerCase().trim()];
       if (slug) h += '<button class="how" type="button">▶ How to do it</button>' +
         '<div class="demo" style="display:none"><img alt="' + g.name + ' demo"><div class="demo-cap">Public-domain demo · free-exercise-db</div></div>';
+      else h += '<a class="gif-link" href="https://www.google.com/search?tbm=isch&tbs=itp:animated&q=' + encodeURIComponent(g.name + ' exercise') + '" target="_blank" rel="noopener">🖼 See a gif ↗</a>';
       box.innerHTML = h;
       if (slug) wireDemo(box, slug);
 
@@ -420,10 +423,15 @@
         var row = document.createElement('div'); row.className = 'set-row';
         var tgt = (s.target_weight === 0 || s.target_weight) ? s.target_weight : '';
         var tnote = s.target_note ? (' – ' + s.target_note) : '';
+        var tr = s.target_reps || '';
+        var unit = /step/i.test(tr) ? 'steps' : (/\d\s*s(ec)?\b/i.test(tr) || /sec/i.test(tr)) ? 'sec' : 'reps';
+        var weightCell = g.bodyweight
+          ? '<div class="field" style="opacity:.4"><span>bodyweight</span></div>'
+          : '<div class="field"><span>lbs</span><input type="number" inputmode="decimal" data-id="' + s.id + '" data-k="weight" value="' + tgt + '"></div>';
         row.innerHTML =
           '<div class="set-lbl">Set ' + s.set_index + '</div>' +
-          '<div class="field"><span>reps' + tnote + '</span><input type="number" inputmode="numeric" data-id="' + s.id + '" data-k="reps" placeholder="' + (s.target_reps || '') + '"></div>' +
-          '<div class="field"><span>lbs</span><input type="number" inputmode="decimal" data-id="' + s.id + '" data-k="weight" value="' + tgt + '"></div>' +
+          '<div class="field"><span>' + unit + tnote + '</span><input type="number" inputmode="numeric" data-id="' + s.id + '" data-k="reps" placeholder="' + tr + '"></div>' +
+          weightCell +
           '<button class="rest-btn" data-rest="' + (g.rest || 90) + '">Rest</button>';
         row.querySelector('.rest-btn').addEventListener('click', function () { startRest(parseInt(this.getAttribute('data-rest'), 10)); });
         box.appendChild(row);
