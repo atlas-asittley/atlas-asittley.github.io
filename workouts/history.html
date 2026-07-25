@@ -27,6 +27,15 @@
   .ex-name { color:var(--text); }
   .ex-sets { color:var(--dim); }
   .toggle { color:var(--dim); font-size:12px; }
+
+  .card { background:var(--card); border:1px solid var(--border); border-radius:10px; padding:14px; margin-bottom:14px; }
+  .bw-title { font-size:16px; color:var(--red); margin-bottom:10px; }
+  .bw-now { font-size:34px; color:var(--green); font-weight:bold; }
+  .bw-sub { font-size:12px; color:var(--dim); }
+  .bw-avg { font-size:12px; color:var(--dim); margin-top:6px; }
+  .bw-list { margin-top:10px; font-size:12px; color:var(--dim); }
+  .bw-list div { display:flex; justify-content:space-between; padding:3px 0; border-top:1px solid var(--border); }
+  .bw-tag { color:var(--red); font-size:10px; text-transform:uppercase; letter-spacing:.5px; margin-left:6px; }
 </style>
 </head>
 <body>
@@ -43,7 +52,41 @@
   <a href="./hip.html">Hip</a>
 </nav>
 
+<div class="card">
+  <div class="bw-title">⚖️ Bodyweight</div>
+  <div id="bw"><span class="bw-sub">loading…</span></div>
+</div>
+
 <div id="content"><div class="msg">Loading your history…</div></div>
+
+<script>
+(function () {
+  var URL = 'https://igaulapupbtdcqqjobhs.supabase.co';
+  var KEY = 'sb_publishable_7yi3BNg-J-K5nralw5JSww_c71Pge6e';
+  var el = document.getElementById('bw');
+  if (!window.supabase) { if (el) el.innerHTML = '<span class="bw-sub">—</span>'; return; }
+  var sb = window.supabase.createClient(URL, KEY, { auth: { persistSession: false, autoRefreshToken: false } });
+  sb.from('workout_bodyweight').select('log_date,weight,note').order('log_date', { ascending: false }).limit(21)
+    .then(function (res) {
+      if (res.error || !res.data || !res.data.length) { el.innerHTML = '<span class="bw-sub">No weigh-ins logged yet.</span>'; return; }
+      var rows = res.data, latest = rows[0];
+      function isEve(r) { return r.note && /evening|before bed/i.test(r.note); }
+      var h = '<span class="bw-now">' + latest.weight + ' lb</span> <span class="bw-sub">as of ' + latest.log_date + '</span>';
+      // 7-day average of morning-fasted readings only (ignores the old evening/daytime reads)
+      var mornings = rows.filter(function (r) { return !isEve(r); }).slice(0, 7);
+      if (mornings.length) {
+        var avg = mornings.reduce(function (a, r) { return a + Number(r.weight); }, 0) / mornings.length;
+        h += '<div class="bw-avg">7-day morning avg: <span style="color:var(--green)">' + avg.toFixed(1) + ' lb</span> <span class="bw-sub">(' + mornings.length + ' reads)</span></div>';
+      }
+      h += '<div class="bw-list">';
+      rows.forEach(function (r) {
+        h += '<div><span>' + r.log_date + (isEve(r) ? '<span class="bw-tag">eve</span>' : '') + '</span><span>' + r.weight + ' lb</span></div>';
+      });
+      h += '</div>';
+      el.innerHTML = h;
+    });
+})();
+</script>
 
 <script>
 (function () {

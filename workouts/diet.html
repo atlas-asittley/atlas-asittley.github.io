@@ -25,11 +25,6 @@
   .dim { color:var(--dim); }
   .green { color:var(--green); }
 
-  .bw-now { font-size:34px; color:var(--green); font-weight:bold; }
-  .bw-sub { font-size:12px; color:var(--dim); }
-  .bw-list { margin-top:10px; font-size:12px; color:var(--dim); }
-  .bw-list div { display:flex; justify-content:space-between; padding:3px 0; border-top:1px solid var(--border); }
-
   table { width:100%; border-collapse:collapse; font-size:13px; }
   td, th { text-align:left; padding:7px 6px; border-bottom:1px solid var(--border); }
   th { color:var(--dim); font-weight:normal; font-size:11px; text-transform:uppercase; letter-spacing:.5px; }
@@ -56,11 +51,6 @@
   <a href="./history.html">History</a>
   <a href="./hip.html">Hip</a>
 </nav>
-
-<div class="card">
-  <h2>Bodyweight</h2>
-  <div id="bw"><span class="bw-sub">loading…</span></div>
-</div>
 
 <div class="card">
   <h2>Daily Targets</h2>
@@ -163,26 +153,5 @@
   </div>
 </div>
 
-<script>
-(function () {
-  var URL = 'https://igaulapupbtdcqqjobhs.supabase.co';
-  var KEY = 'sb_publishable_7yi3BNg-J-K5nralw5JSww_c71Pge6e';
-  var el = document.getElementById('bw');
-  if (!window.supabase) { el.innerHTML = '<span class="bw-sub">—</span>'; return; }
-  var sb = window.supabase.createClient(URL, KEY, { auth: { persistSession: false, autoRefreshToken: false } });
-  sb.from('workout_bodyweight').select('log_date,weight,note').order('log_date', { ascending: false }).limit(8)
-    .then(function (res) {
-      if (res.error || !res.data || !res.data.length) { el.innerHTML = '<span class="bw-sub">No weigh-ins logged yet.</span>'; return; }
-      var rows = res.data, latest = rows[0];
-      var h = '<span class="bw-now">' + latest.weight + ' lb</span> <span class="bw-sub">as of ' + latest.log_date + '</span>';
-      if (rows.length > 1) {
-        h += '<div class="bw-list">';
-        rows.forEach(function (r) { h += '<div><span>' + r.log_date + '</span><span>' + r.weight + ' lb</span></div>'; });
-        h += '</div>';
-      }
-      el.innerHTML = h;
-    });
-})();
-</script>
 </body>
 </html>
