@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Body Measurements — How-To</title>
+<style>
+  :root{
+    --bg:#0e1124; --panel:#161b33; --panel2:#1d2444; --line:#2b3358;
+    --ink:#e7ecfa; --dim:#8f9bbd; --faint:#6b78a3;
+    --accent:#19cfa4; --accent-soft:rgba(25,207,164,.13);
+    --warn:#f4b350; --bad:#e8536b;
+    --fig:#6b78a3; --figfill:rgba(107,120,163,.10);
+    --mono:ui-monospace,"SF Mono","Cascadia Mono","Courier New",monospace;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:
+      radial-gradient(1200px 500px at 50% -10%, #1a2044 0%, transparent 60%),
+      var(--bg);
+    color:var(--ink); font-family:var(--sans); line-height:1.55;
+    padding:26px 16px 64px; max-width:780px; margin-inline:auto;
+    -webkit-text-size-adjust:100%;
+  }
+  .eyebrow{ font-family:var(--mono); font-size:11px; letter-spacing:.22em; text-transform:uppercase; color:var(--accent); }
+  h1{ font-family:var(--mono); font-weight:700; font-size:clamp(24px,6vw,34px); letter-spacing:-.01em; margin:.28em 0 .1em; text-wrap:balance; }
+  .lede{ color:var(--dim); font-size:15px; max-width:60ch; margin:0; }
+
+  .rules{ margin:26px 0 30px; background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:16px 18px; }
+  .rules h2, .card h2{ font-family:var(--mono); font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:var(--dim); margin:0 0 12px; font-weight:600; }
+  .rules ul{ list-style:none; margin:0; padding:0; display:grid; gap:10px; }
+  .rules li{ display:flex; gap:11px; align-items:flex-start; font-size:14px; }
+  .rules li b{ color:var(--ink); font-weight:600; }
+  .num{ font-family:var(--mono); color:var(--accent); font-size:12px; border:1px solid var(--accent); border-radius:6px; min-width:22px; height:22px; display:grid; place-items:center; flex:none; margin-top:1px; }
+
+  .stack{ display:grid; gap:16px; }
+  .card{ background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:16px; display:grid; grid-template-columns:132px 1fr; gap:16px; align-items:start; }
+  .figwrap{ background:
+      linear-gradient(var(--line) 1px,transparent 1px) 0 0/100% 22px,
+      linear-gradient(90deg,var(--line) 1px,transparent 1px) 0 0/22px 100%,
+      var(--panel2);
+    background-blend-mode:soft-light,soft-light,normal;
+    border:1px solid var(--line); border-radius:10px; padding:8px; }
+  svg{ display:block; width:100%; height:auto; }
+  .fighead{ fill:var(--figfill); stroke:var(--fig); stroke-width:2; }
+  .tube{ fill:none; stroke:var(--fig); stroke-width:12; stroke-linecap:round; }
+  .poly{ fill:var(--figfill); stroke:var(--fig); stroke-width:2; stroke-linejoin:round; }
+  .band-back{ fill:none; stroke:var(--accent); stroke-width:1.4; stroke-dasharray:3 3; opacity:.6; }
+  .band-front{ fill:none; stroke:var(--accent); stroke-width:3.2; stroke-linecap:round; }
+  .tick{ stroke:var(--accent); stroke-width:2.6; stroke-linecap:round; }
+  .buckle{ fill:var(--accent); }
+
+  .card .head{ display:flex; align-items:center; gap:9px; flex-wrap:wrap; margin-bottom:8px; }
+  .card h3{ font-family:var(--mono); font-size:17px; margin:0; letter-spacing:-.01em; }
+  .tag{ font-family:var(--mono); font-size:9.5px; letter-spacing:.12em; text-transform:uppercase; padding:2px 7px; border-radius:20px; border:1px solid; }
+  .tag.pri{ color:var(--accent); border-color:var(--accent); background:var(--accent-soft); }
+  .tag.opt{ color:var(--dim); border-color:var(--line); }
+  .chip{ font-family:var(--mono); font-size:10px; letter-spacing:.1em; text-transform:uppercase; padding:2px 8px; border-radius:6px; margin-left:auto; }
+  .chip.relaxed{ color:var(--accent); background:var(--accent-soft); }
+  .chip.flexed{ color:var(--warn); background:rgba(244,179,80,.13); }
+  .where{ font-size:14px; color:var(--ink); margin:0 0 9px; }
+  .how{ list-style:none; margin:0; padding:0; display:grid; gap:6px; }
+  .how li{ position:relative; padding-left:18px; font-size:13.5px; color:var(--dim); }
+  .how li::before{ content:""; position:absolute; left:2px; top:8px; width:6px; height:6px; border-radius:50%; background:var(--accent); opacity:.7; }
+  .logs{ margin-top:10px; font-family:var(--mono); font-size:11px; color:var(--faint); }
+  .logs b{ color:var(--dim); }
+
+  .foot{ margin-top:28px; background:linear-gradient(180deg,var(--accent-soft),transparent); border:1px solid var(--line); border-radius:14px; padding:16px 18px; font-size:14px; }
+  .foot b{ color:var(--ink); }
+  .foot .win{ color:var(--accent); font-family:var(--mono); font-size:12.5px; margin-top:8px; }
+  .src{ margin-top:22px; font-size:11px; color:var(--faint); line-height:1.7; }
+  .src a{ color:var(--faint); }
+
+  @media (max-width:460px){
+    .card{ grid-template-columns:104px 1fr; gap:12px; }
+    .chip{ margin-left:0; }
+  }
+</style>
+</head>
+<body>
+<a href="./" style="display:inline-block;margin-bottom:14px;font-family:var(--mono);font-size:13px;color:var(--dim);text-decoration:none">&larr; Back to tracker</a>
+<header>
+  <div class="eyebrow">Tracker companion · inches</div>
+  <h1>How to take your measurements</h1>
+  <p class="lede">Consistency beats precision — the same spot, same way, every time is what makes the trend real. Wrap the tape where the green band sits.</p>
+</header>
+
+<section class="rules">
+  <h2>Ground rules — do these every time</h2>
+  <ul>
+    <li><span class="num">1</span><span><b>Morning, fasted, minimal clothing</b> — same conditions as your weigh-in, so nothing drifts between reads.</span></li>
+    <li><span class="num">2</span><span><b>Tape snug and level</b> — flat against skin, parallel to the floor, not digging in or compressing.</span></li>
+    <li><span class="num">3</span><span><b>Measure each spot 2–3× and average</b> — if two reads disagree, take a third.</span></li>
+    <li><span class="num">4</span><span><b>Every ~2 weeks, not daily</b> — muscle and fat move slowly; daily reads are just noise.</span></li>
+  </ul>
+</section>
+
+<div class="stack" id="cards"></div>
+
+<div class="foot">
+  <b>Then just tell me the numbers</b> and I'll log them. The History page shows your change over time, color-coded:
+  <div class="win">waist ↓ = green · shoulders / arms ↑ = green — that's the V-taper winning.</div>
+</div>
+
+<div class="src" id="src"></div>
+
+<script>
+  function band(cx,cy,rx,ry){
+    return '<ellipse class="band-back" cx="'+cx+'" cy="'+cy+'" rx="'+rx+'" ry="'+ry+'"/>'
+      + '<path class="band-front" d="M'+(cx-rx)+' '+cy+' A '+rx+' '+ry+' 0 0 0 '+(cx+rx)+' '+cy+'"/>'
+      + '<line class="tick" x1="'+(cx-rx)+'" y1="'+(cy-4)+'" x2="'+(cx-rx)+'" y2="'+(cy+4)+'"/>'
+      + '<line class="tick" x1="'+(cx+rx)+'" y1="'+(cy-4)+'" x2="'+(cx+rx)+'" y2="'+(cy+4)+'"/>'
+      + '<rect class="buckle" x="'+(cx-3)+'" y="'+(cy+ry-2)+'" width="6" height="4" rx="1"/>';
+  }
+  var BODY =
+    '<circle class="fighead" cx="60" cy="22" r="13"/>'+
+    '<line class="tube" x1="34" y1="52" x2="86" y2="52"/>'+
+    '<polygon class="poly" points="34,54 86,54 70,132 50,132"/>'+
+    '<line class="tube" x1="33" y1="56" x2="26" y2="122"/>'+
+    '<line class="tube" x1="87" y1="56" x2="94" y2="122"/>'+
+    '<polygon class="poly" points="50,132 70,132 73,152 47,152"/>'+
+    '<line class="tube" x1="53" y1="154" x2="51" y2="242"/>'+
+    '<line class="tube" x1="67" y1="154" x2="69" y2="242"/>';
+  var ARM =
+    '<line class="tube" x1="40" y1="30" x2="60" y2="22" style="stroke-width:13"/>'+
+    '<line class="tube" x1="36" y1="30" x2="33" y2="92" style="stroke-width:23"/>'+
+    '<line class="tube" x1="34" y1="90" x2="92" y2="46" style="stroke-width:16"/>'+
+    '<circle class="fighead" cx="96" cy="42" r="9"/>';
+  function svg(vb,inner){ return '<svg viewBox="'+vb+'" role="img">'+inner+'</svg>'; }
+  var DIAG = {
+    waist:     svg('0 0 120 250', BODY + band(60,116,15,6)),
+    shoulders: svg('0 0 120 250', BODY + band(60,52,33,7)),
+    chest:     svg('0 0 120 250', BODY + band(60,74,24,7)),
+    thigh:     svg('0 0 120 250', BODY + band(51,184,12,5)),
+    arm:       svg('0 0 120 140', ARM  + band(35,54,17,7))
+  };
+
+  var DATA = [
+    { key:'waist', name:'Waist', pri:true, stance:'relaxed', diag:'waist', field:'Waist',
+      where:'Around the narrowest part of your torso — usually just above the belly button. Your fat gauge.',
+      how:['Stand tall, let your stomach relax (don’t suck in or push out).','Wrap level all the way around, snug on the skin.','Breathe out normally and read it at the end of the exhale.'] },
+    { key:'shoulders', name:'Shoulders', pri:true, stance:'relaxed', diag:'shoulders', field:'Shoulders',
+      where:'Around the widest point of your delts, arms hanging down. Your width gauge.',
+      how:['Arms relaxed at your sides.','Wrap around the fullest part of the shoulders — the widest circle.','Hardest one to do solo — use a mirror or have someone help.'] },
+    { key:'arm', name:'Arm (biceps)', pri:true, stance:'flexed', diag:'arm', field:'Arm',
+      where:'Around the peak of your upper arm — flexed.',
+      how:['Raise your arm, curl and tense the biceps hard.','Wrap around the biggest part of the bulge.','Always flexed, always the same arm — consistency is what counts.'] },
+    { key:'chest', name:'Chest', pri:false, stance:'relaxed', diag:'chest', field:'Chest',
+      where:'Around the fullest part, just above the nipples.',
+      how:['Lift your arms, run the tape around, then lower them.','Keep it level across your back, normal breath — don’t puff up.'] },
+    { key:'thigh', name:'Thigh', pri:false, stance:'relaxed', diag:'thigh', field:'Thigh',
+      where:'Around the largest part of the upper thigh, just below the glute.',
+      how:['Stand with your weight even on both feet.','Wrap the thickest part, same leg every time.'] }
+  ];
+
+  document.getElementById('cards').innerHTML = DATA.map(function(d){
+    var tag = d.pri ? '<span class="tag pri">Priority</span>' : '<span class="tag opt">Optional</span>';
+    var chip = d.stance==='flexed'
+      ? '<span class="chip flexed">Flexed / tense</span>'
+      : '<span class="chip relaxed">Relaxed</span>';
+    return '<article class="card">'
+      + '<div class="figwrap">'+DIAG[d.diag]+'</div>'
+      + '<div><div class="head"><h3>'+d.name+'</h3>'+tag+chip+'</div>'
+      + '<p class="where">'+d.where+'</p>'
+      + '<ul class="how">'+d.how.map(function(s){return '<li>'+s+'</li>';}).join('')+'</ul>'
+      + '<div class="logs">Logs to: <b>'+d.field+'</b></div></div></article>';
+  }).join('');
+
+  document.getElementById('src').innerHTML =
+    'Technique cross-checked against: '
+    + '<a href="https://www.nerdfitness.com/blog/how-to-track-progress/">Nerd Fitness</a>, '
+    + '<a href="https://rippedbody.com/diet-progress-tracking/">RippedBody</a>, '
+    + '<a href="https://join9am.com/blog/how-take-body-circumference-measurements">9AM</a>.';
+</script>
+
+</body>
+</html>
