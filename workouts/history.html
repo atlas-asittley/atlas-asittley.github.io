@@ -53,8 +53,13 @@
 </nav>
 
 <div class="card">
-  <div class="bw-title">⚖️ Bodyweight</div>
+  <div class="bw-title">⚖️ Bodyweight <span class="bw-sub" style="font-weight:normal">— trend only, not the whole story</span></div>
   <div id="bw"><span class="bw-sub">loading…</span></div>
+</div>
+
+<div class="card">
+  <div class="bw-title">📏 Measurements <span class="bw-sub" style="font-weight:normal">— the real recomp gauge</span></div>
+  <div id="meas"><span class="bw-sub">loading…</span></div>
 </div>
 
 <div id="content"><div class="msg">Loading your history…</div></div>
@@ -83,6 +88,46 @@
         h += '<div><span>' + r.log_date + (isEve(r) ? '<span class="bw-tag">eve</span>' : '') + '</span><span>' + r.weight + ' lb</span></div>';
       });
       h += '</div>';
+      el.innerHTML = h;
+    });
+})();
+</script>
+
+<script>
+(function () {
+  var URL = 'https://igaulapupbtdcqqjobhs.supabase.co';
+  var KEY = 'sb_publishable_7yi3BNg-J-K5nralw5JSww_c71Pge6e';
+  var el = document.getElementById('meas');
+  if (!el) return;
+  if (!window.supabase) { el.innerHTML = '<span class="bw-sub">—</span>'; return; }
+  var sb = window.supabase.createClient(URL, KEY, { auth: { persistSession: false, autoRefreshToken: false } });
+  // shoulders/chest/arm/thigh up = good (green); waist up = bad (red)
+  var FIELDS = [['shoulders', 'Shoulders'], ['chest', 'Chest'], ['arm', 'Arm'], ['thigh', 'Thigh'], ['waist', 'Waist']];
+  sb.from('workout_measurements').select('log_date,waist,shoulders,chest,arm,thigh,note').order('log_date', { ascending: false }).limit(24)
+    .then(function (res) {
+      if (res.error) { el.innerHTML = '<span class="bw-sub">—</span>'; return; }
+      var rows = res.data || [];
+      if (!rows.length) {
+        el.innerHTML = '<span class="bw-sub">No measurements yet. Tell your coach your <b>waist</b>, <b>shoulders</b>, and <b>arm</b> (inches) and they\'ll log the first set — then we track the recomp here instead of guessing from the scale.</span>';
+        return;
+      }
+      var latest = rows[0], oldest = rows[rows.length - 1];
+      var h = '<div class="bw-sub">Latest: ' + latest.log_date + (rows.length > 1 ? ' · change vs first (' + oldest.log_date + ')' : '') + '</div><div class="bw-list">';
+      FIELDS.forEach(function (f) {
+        var k = f[0], v = latest[k];
+        if (v == null) return;
+        var d = '';
+        if (rows.length > 1 && oldest[k] != null) {
+          var diff = Number(v) - Number(oldest[k]);
+          if (Math.abs(diff) >= 0.05) {
+            var good = (k === 'waist') ? (diff < 0) : (diff > 0);
+            d = ' <span style="color:' + (good ? 'var(--green)' : 'var(--red)') + '">(' + (diff > 0 ? '+' : '') + diff.toFixed(1) + '")</span>';
+          } else { d = ' <span class="bw-sub">(no change)</span>'; }
+        }
+        h += '<div><span>' + f[1] + '</span><span>' + v + '"' + d + '</span></div>';
+      });
+      h += '</div>';
+      if (latest.note) h += '<div class="bw-sub" style="margin-top:8px">' + latest.note + '</div>';
       el.innerHTML = h;
     });
 })();
