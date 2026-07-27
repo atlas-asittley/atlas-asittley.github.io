@@ -53,6 +53,11 @@
 </nav>
 
 <div class="card">
+  <h2>Today <span class="dim" style="font-size:12px">— rough running total · sanity-check, not a grade</span></h2>
+  <div id="today"><span class="dim">loading…</span></div>
+</div>
+
+<div class="card">
   <h2>Daily Targets — modest lean bulk</h2>
   <p><b>~170–180g protein</b> · <b>~3,400 calories</b> (a slight surplus over ~3,150–3,300 maintenance).</p>
   <p class="dim" style="margin-top:6px">The lever is <span class="green">calorie-dense food</span>, not volume. Let the scale creep up slowly — a little fat is fine. <b>Don't judge by the daily scale</b> (it can't tell muscle-gain-with-fat-loss from a stall): judge by <span class="green">strength + monthly photos + tape</span> (waist / shoulders / arms) on the History page. Weigh as a weekly average for the trend only.</p>
@@ -149,5 +154,42 @@
   </div>
 </div>
 
+<script>
+(function () {
+  var URL = 'https://igaulapupbtdcqqjobhs.supabase.co';
+  var KEY = 'sb_publishable_7yi3BNg-J-K5nralw5JSww_c71Pge6e';
+  var el = document.getElementById('today');
+  if (!el) return;
+  if (!window.supabase) { el.innerHTML = '<span class="dim">—</span>'; return; }
+  var sb = window.supabase.createClient(URL, KEY, { auth: { persistSession: false, autoRefreshToken: false } });
+  var CAL_T = 3400, PRO_T = 180;
+  var d = new Date();
+  var today = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  function bar(pct, color) {
+    pct = Math.max(0, Math.min(100, Math.round(pct)));
+    return '<div style="background:var(--border);border-radius:6px;height:8px;margin-top:4px;overflow:hidden"><div style="width:' + pct + '%;height:100%;background:' + color + '"></div></div>';
+  }
+  sb.from('workout_food_log').select('item,calories,protein').eq('log_date', today).order('created_at', { ascending: true })
+    .then(function (res) {
+      if (res.error) { el.innerHTML = '<span class="dim">—</span>'; return; }
+      var rows = res.data || [];
+      if (!rows.length) { el.innerHTML = '<span class="dim">Nothing logged yet today. Tell your coach what you ate and it\'ll show up here.</span>'; return; }
+      var tc = 0, tp = 0;
+      var h = '<table><tr><th>Item</th><th class="n">Cal</th><th class="n">Protein</th></tr>';
+      rows.forEach(function (r) {
+        tc += Number(r.calories || 0); tp += Number(r.protein || 0);
+        h += '<tr><td>' + r.item + '</td><td class="n">' + (r.calories != null ? Math.round(r.calories) : '–') + '</td><td class="n">' + (r.protein != null ? Math.round(r.protein) + 'g' : '–') + '</td></tr>';
+      });
+      h += '<tr class="total"><td>Total</td><td class="n">' + Math.round(tc) + '</td><td class="n">' + Math.round(tp) + 'g</td></tr>';
+      h += '<tr class="target"><td>Target</td><td class="n">~' + CAL_T + '</td><td class="n">~' + PRO_T + 'g</td></tr>';
+      h += '<tr class="left"><td>Left</td><td class="n">~' + Math.round(Math.max(0, CAL_T - tc)) + '</td><td class="n">~' + Math.round(Math.max(0, PRO_T - tp)) + 'g</td></tr>';
+      h += '</table>';
+      h += '<div style="margin-top:10px;font-size:12px;color:var(--dim)">Calories ' + Math.round(tc / CAL_T * 100) + '%' + bar(tc / CAL_T * 100, 'var(--green)') + '</div>';
+      h += '<div style="margin-top:8px;font-size:12px;color:var(--dim)">Protein ' + Math.round(tp / PRO_T * 100) + '%' + bar(tp / PRO_T * 100, 'var(--red)') + '</div>';
+      h += '<div style="margin-top:10px;font-size:11px;color:var(--dim)">Rough estimates (±15–20%). It resets each day.</div>';
+      el.innerHTML = h;
+    });
+})();
+</script>
 </body>
 </html>
