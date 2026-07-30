@@ -36,6 +36,19 @@
   .bw-list { margin-top:10px; font-size:12px; color:var(--dim); }
   .bw-list div { display:flex; justify-content:space-between; padding:3px 0; border-top:1px solid var(--border); }
   .bw-tag { color:var(--red); font-size:10px; text-transform:uppercase; letter-spacing:.5px; margin-left:6px; }
+
+  .chart-title { font-size:16px; color:var(--green); margin-bottom:2px; }
+  .chart-sub { font-size:11px; color:var(--dim); margin-bottom:10px; line-height:1.45; }
+  .chart-legend { display:flex; gap:14px; font-size:11px; color:var(--dim); margin:0 0 6px; flex-wrap:wrap; }
+  .chart-legend .lg { display:inline-flex; align-items:center; gap:5px; }
+  .chart-legend .sw { width:12px; height:3px; border-radius:2px; }
+  .chart-wrap { position:relative; }
+  svg.chart { width:100%; height:auto; display:block; }
+  .chart-tip { position:absolute; pointer-events:none; background:#0c1330; border:1px solid var(--border); border-radius:6px; padding:5px 8px; font-size:11px; color:var(--text); white-space:nowrap; transform:translate(-50%,-115%); opacity:0; transition:opacity .08s; z-index:5; line-height:1.5; }
+  .lift-btns { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px; }
+  .lift-btns button { background:transparent; border:1px solid var(--border); color:var(--dim); border-radius:6px; padding:5px 9px; font-family:inherit; font-size:11px; cursor:pointer; }
+  .lift-btns button.active { border-color:var(--green); color:var(--green); background:rgba(22,199,154,.08); }
+  .chart-empty { color:var(--dim); font-size:12px; padding:24px 8px; text-align:center; line-height:1.5; }
 </style>
 </head>
 <body>
@@ -53,7 +66,26 @@
 </nav>
 
 <div class="card">
-  <div class="bw-title">⚖️ Bodyweight <span class="bw-sub" style="font-weight:normal">— trend only, not the whole story</span></div>
+  <div class="chart-title">📈 Bodyweight trend</div>
+  <div class="chart-sub">Daily reads (dots) with the 7-day average (line) — the average is the real trend; ignore the dots' bounce.</div>
+  <div id="chart-bw" class="chart-wrap"><span class="bw-sub">loading…</span></div>
+</div>
+
+<div class="card">
+  <div class="chart-title">📐 V-taper — shoulders vs. waist</div>
+  <div class="chart-sub">The gap widening is the whole goal: shoulders up, waist flat/down. Needs a few measurements to draw.</div>
+  <div id="chart-meas" class="chart-wrap"><span class="bw-sub">loading…</span></div>
+</div>
+
+<div class="card">
+  <div class="chart-title">💪 Strength — estimated 1-rep max</div>
+  <div class="chart-sub">Any set becomes one comparable strength number (Epley formula), so reps/weight changes don't matter. Pick a lift:</div>
+  <div id="lift-btns" class="lift-btns"></div>
+  <div id="chart-str" class="chart-wrap"><span class="bw-sub">loading…</span></div>
+</div>
+
+<div class="card">
+  <div class="bw-title">⚖️ Bodyweight <span class="bw-sub" style="font-weight:normal">— the exact recent numbers</span></div>
   <div id="bw"><span class="bw-sub">loading…</span></div>
 </div>
 
@@ -222,6 +254,187 @@
     }
   }
   load();
+})();
+</script>
+
+<script>
+(function () {
+  var URL = 'https://igaulapupbtdcqqjobhs.supabase.co';
+  var KEY = 'sb_publishable_7yi3BNg-J-K5nralw5JSww_c71Pge6e';
+  if (!window.supabase) return;
+  var sb = window.supabase.createClient(URL, KEY, { auth: { persistSession: false, autoRefreshToken: false } });
+
+  var GRID = 'rgba(255,255,255,.06)', AXIS = '#6b78a3';
+  function dstr2ms(s) { return new Date(s + 'T00:00:00').getTime(); }
+  function fmtDate(t) { var d = new Date(t); return (d.getMonth() + 1) + '/' + d.getDate(); }
+  function e1rm(w, r) { return w * (1 + r / 30); }
+  function movingAvg(pts, N) {
+    return pts.map(function (p, i) {
+      var a = Math.max(0, i - N + 1), sl = pts.slice(a, i + 1);
+      return { t: p.t, y: sl.reduce(function (s, q) { return s + q.y; }, 0) / sl.length };
+    });
+  }
+  function niceTicks(min, max, n) {
+    var span = (max - min) || 1;
+    var step = Math.pow(10, Math.floor(Math.log10(span / n)));
+    var err = span / n / step;
+    if (err >= 7.5) step *= 10; else if (err >= 3.5) step *= 5; else if (err >= 1.5) step *= 2;
+    var out = [], v0 = Math.ceil(min / step) * step;
+    for (var v = v0; v <= max + step * 1e-6; v += step) out.push(Math.round(v * 1e6) / 1e6);
+    return out;
+  }
+
+  // generic responsive line chart into `wrap`
+  function renderChart(wrap, cfg) {
+    var W = 360, H = 200, mL = 42, mR = 16, mT = 12, mB = 26;
+    var xL = mL, xR = W - mR, yB = H - mB, yT = mT;
+    var all = []; cfg.series.forEach(function (s) { s.pts.forEach(function (p) { all.push(p); }); });
+    if (all.length < 2) { wrap.innerHTML = '<div class="chart-empty">' + (cfg.empty || 'Not enough data yet.') + '</div>'; return; }
+    var xs = all.map(function (p) { return p.t; }), ys = all.map(function (p) { return p.y; });
+    var xmin = Math.min.apply(null, xs), xmax = Math.max.apply(null, xs);
+    var ymin = Math.min.apply(null, ys), ymax = Math.max.apply(null, ys);
+    var pad = (ymax - ymin) * 0.14 || Math.abs(ymax) * 0.05 || 1; ymin -= pad; ymax += pad;
+    if (xmin === xmax) { xmin -= 864e5; xmax += 864e5; }
+    function sx(t) { return xL + (t - xmin) / (xmax - xmin) * (xR - xL); }
+    function sy(v) { return yB - (v - ymin) / (ymax - ymin) * (yB - yT); }
+
+    var svg = '<svg class="chart" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMidYMid meet">';
+    niceTicks(ymin, ymax, 4).forEach(function (t) {
+      var y = sy(t); if (y < yT - 0.5 || y > yB + 0.5) return;
+      svg += '<line x1="' + xL + '" y1="' + y.toFixed(1) + '" x2="' + xR + '" y2="' + y.toFixed(1) + '" stroke="' + GRID + '" stroke-width="1"/>';
+      svg += '<text x="' + (xL - 6) + '" y="' + (y + 3).toFixed(1) + '" fill="' + AXIS + '" font-size="9" text-anchor="end" font-family="monospace">' + cfg.yFmt(t) + '</text>';
+    });
+    [xmin, (xmin + xmax) / 2, xmax].forEach(function (t, i) {
+      var x = sx(t), anc = i === 0 ? 'start' : i === 2 ? 'end' : 'middle';
+      svg += '<text x="' + x.toFixed(1) + '" y="' + (H - 8) + '" fill="' + AXIS + '" font-size="9" text-anchor="' + anc + '" font-family="monospace">' + fmtDate(t) + '</text>';
+    });
+    cfg.series.forEach(function (s) {
+      var pts = s.pts.slice().sort(function (a, b) { return a.t - b.t; });
+      if (!s.dotsOnly && pts.length > 1) {
+        var d = 'M' + pts.map(function (p) { return sx(p.t).toFixed(1) + ' ' + sy(p.y).toFixed(1); }).join(' L');
+        svg += '<path d="' + d + '" fill="none" stroke="' + s.color + '" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>';
+      }
+      pts.forEach(function (p, i) {
+        var last = i === pts.length - 1, r = s.dotsOnly ? 2.2 : (last ? 3.2 : 0);
+        if (r > 0) svg += '<circle cx="' + sx(p.t).toFixed(1) + '" cy="' + sy(p.y).toFixed(1) + '" r="' + r + '" fill="' + s.color + '"' + (s.dotsOnly ? ' opacity="0.5"' : '') + '/>';
+      });
+    });
+    svg += '<line class="cross" x1="0" y1="' + yT + '" x2="0" y2="' + yB + '" stroke="rgba(255,255,255,.22)" stroke-width="1" style="opacity:0"/>';
+    svg += '</svg>';
+
+    var legend = '';
+    if (cfg.series.length >= 2) {
+      legend = '<div class="chart-legend">' + cfg.series.map(function (s) {
+        return '<span class="lg"><span class="sw" style="background:' + s.color + '"></span>' + s.name + '</span>';
+      }).join('') + '</div>';
+    }
+    wrap.innerHTML = legend + svg + '<div class="chart-tip"></div>';
+
+    // hover: crosshair + tooltip on nearest x
+    var svgEl = wrap.querySelector('svg'), tip = wrap.querySelector('.chart-tip'), cross = wrap.querySelector('.cross');
+    var prim = cfg.series.filter(function (s) { return s.pts.length; }).sort(function (a, b) { return b.pts.length - a.pts.length; })[0];
+    var ppts = prim.pts.slice().sort(function (a, b) { return a.t - b.t; });
+    function move(ev) {
+      var rect = svgEl.getBoundingClientRect();
+      var clientX = ev.touches ? ev.touches[0].clientX : ev.clientX;
+      var vbx = (clientX - rect.left) * W / rect.width;
+      var best = ppts[0], bd = 1e12;
+      ppts.forEach(function (p) { var dd = Math.abs(sx(p.t) - vbx); if (dd < bd) { bd = dd; best = p; } });
+      var X = sx(best.t);
+      cross.setAttribute('x1', X); cross.setAttribute('x2', X); cross.style.opacity = '1';
+      var lines = '<div style="color:#8a97b1">' + fmtDate(best.t) + '</div>';
+      cfg.series.forEach(function (s) {
+        var p = s.pts.find(function (q) { return q.t === best.t; });
+        if (!p) return;
+        lines += '<div><span style="color:' + s.color + '">■</span> ' + s.name + ': ' + cfg.yFmt(p.y) + '</div>';
+      });
+      tip.innerHTML = lines;
+      tip.style.left = (X * rect.width / W) + 'px';
+      tip.style.top = (sy(best.y) * rect.height / H) + 'px';
+      tip.style.opacity = '1';
+      if (ev.touches) ev.preventDefault();
+    }
+    function leave() { tip.style.opacity = '0'; cross.style.opacity = '0'; }
+    svgEl.addEventListener('mousemove', move); svgEl.addEventListener('mouseleave', leave);
+    svgEl.addEventListener('touchstart', move, { passive: false });
+    svgEl.addEventListener('touchmove', move, { passive: false });
+    svgEl.addEventListener('touchend', leave);
+  }
+
+  // 1. Bodyweight
+  sb.from('workout_bodyweight').select('log_date,weight,note').order('log_date', { ascending: true }).limit(120)
+    .then(function (res) {
+      var wrap = document.getElementById('chart-bw');
+      if (res.error || !res.data) { wrap.innerHTML = '<div class="chart-empty">Couldn\'t load.</div>'; return; }
+      var morn = res.data.filter(function (r) { return !/evening|before bed/i.test(r.note || ''); })
+        .map(function (r) { return { t: dstr2ms(r.log_date), y: Number(r.weight) }; });
+      if (morn.length < 2) { wrap.innerHTML = '<div class="chart-empty">Need a couple more morning weigh-ins to draw the trend.</div>'; return; }
+      renderChart(wrap, {
+        series: [
+          { name: 'Daily', color: '#6b78a3', pts: morn, dotsOnly: true },
+          { name: '7-day avg', color: '#16c79a', pts: movingAvg(morn, 7) }
+        ],
+        yFmt: function (v) { return v.toFixed(0); }
+      });
+    });
+
+  // 2. Measurements: shoulders vs waist
+  sb.from('workout_measurements').select('log_date,shoulders,waist').order('log_date', { ascending: true }).limit(80)
+    .then(function (res) {
+      var wrap = document.getElementById('chart-meas');
+      var rows = res.data || [];
+      var sh = rows.filter(function (r) { return r.shoulders != null; }).map(function (r) { return { t: dstr2ms(r.log_date), y: Number(r.shoulders) }; });
+      var wa = rows.filter(function (r) { return r.waist != null; }).map(function (r) { return { t: dstr2ms(r.log_date), y: Number(r.waist) }; });
+      if (sh.length < 2 && wa.length < 2) { wrap.innerHTML = '<div class="chart-empty">Just your baseline so far — add another set of measurements in ~2 weeks and this line comes to life.</div>'; return; }
+      renderChart(wrap, {
+        series: [
+          { name: 'Shoulders', color: '#0f9d7a', pts: sh },
+          { name: 'Waist', color: '#cc7d22', pts: wa }
+        ],
+        yFmt: function (v) { return v.toFixed(1) + '"'; }
+      });
+    });
+
+  // 3. Strength: estimated 1RM per lift, with a selector
+  (async function () {
+    var wrap = document.getElementById('chart-str'), btns = document.getElementById('lift-btns');
+    try {
+      var ses = await sb.from('workout_sessions').select('id,session_date').eq('status', 'completed');
+      if (ses.error || !ses.data.length) { wrap.innerHTML = '<div class="chart-empty">No completed workouts yet.</div>'; return; }
+      var dateOf = {}; ses.data.forEach(function (s) { dateOf[s.id] = s.session_date; });
+      var st = await sb.from('workout_sets').select('session_id,exercise,actual_reps,actual_weight').in('session_id', ses.data.map(function (s) { return s.id; }));
+      if (st.error) { wrap.innerHTML = '<div class="chart-empty">Couldn\'t load sets.</div>'; return; }
+      // exercise -> { date -> best e1RM }
+      var byEx = {};
+      st.data.forEach(function (r) {
+        if (r.actual_reps == null || r.actual_weight == null || r.actual_weight <= 0 || r.actual_reps <= 0) return;
+        var date = dateOf[r.session_id]; if (!date) return;
+        var e = e1rm(Number(r.actual_weight), Number(r.actual_reps));
+        (byEx[r.exercise] = byEx[r.exercise] || {});
+        if (byEx[r.exercise][date] == null || e > byEx[r.exercise][date]) byEx[r.exercise][date] = e;
+      });
+      // exercises with >= 2 dates, sorted by data count desc
+      var lifts = Object.keys(byEx).map(function (ex) {
+        var dates = Object.keys(byEx[ex]).sort();
+        return { ex: ex, n: dates.length, pts: dates.map(function (d) { return { t: dstr2ms(d), y: Math.round(byEx[ex][d]) }; }) };
+      }).filter(function (l) { return l.n >= 2; }).sort(function (a, b) { return b.n - a.n || a.ex.localeCompare(b.ex); });
+      if (!lifts.length) { wrap.innerHTML = '<div class="chart-empty">Log a lift across 2+ sessions and its strength trend shows up here.</div>'; return; }
+      function draw(l) {
+        renderChart(wrap, { series: [{ name: l.ex, color: '#16c79a', pts: l.pts }], yFmt: function (v) { return v.toFixed(0); } });
+      }
+      btns.innerHTML = '';
+      lifts.forEach(function (l, i) {
+        var b = document.createElement('button');
+        b.textContent = l.ex; if (i === 0) b.className = 'active';
+        b.addEventListener('click', function () {
+          Array.prototype.forEach.call(btns.children, function (c) { c.className = ''; });
+          b.className = 'active'; draw(l);
+        });
+        btns.appendChild(b);
+      });
+      draw(lifts[0]);
+    } catch (e) { wrap.innerHTML = '<div class="chart-empty">Error: ' + (e.message || e) + '</div>'; }
+  })();
 })();
 </script>
 </body>
