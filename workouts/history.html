@@ -269,6 +269,7 @@
   function dstr2ms(s) { return new Date(s + 'T00:00:00').getTime(); }
   function fmtDate(t) { var d = new Date(t); return (d.getMonth() + 1) + '/' + d.getDate(); }
   function e1rm(w, r) { return w * (1 + r / 30); }
+  function median(a) { var s = a.slice().sort(function (x, y) { return x - y; }); var m = Math.floor(s.length / 2); return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; }
   function movingAvg(pts, N) {
     return pts.map(function (p, i) {
       var a = Math.max(0, i - N + 1), sl = pts.slice(a, i + 1);
@@ -434,13 +435,13 @@
           for (var i = 0; i < l.pts.length; i++) { if (l.pts[i].t <= t) latest = l.pts[i].y; else break; }
           if (latest != null && base > 0) vals.push(latest / base * 100);
         });
-        if (vals.length >= 2) overallPts.push({ t: t, y: vals.reduce(function (s, v) { return s + v; }, 0) / vals.length });
+        if (vals.length >= 2) overallPts.push({ t: t, y: median(vals) });
       });
 
       function drawOverall() {
         renderChart(wrap, { series: [{ name: 'Overall', color: '#16c79a', pts: overallPts }], yFmt: function (v) { return v.toFixed(0); } });
         var last = overallPts[overallPts.length - 1].y, d = last - 100;
-        if (note) note.innerHTML = '100 = your start · now <b style="color:var(--green)">' + last.toFixed(0) + '</b> (' + (d >= 0 ? '+' : '') + d.toFixed(0) + '% avg across ' + core.length + ' lifts). Cable moves excluded (gym change).';
+        if (note) note.innerHTML = '100 = your start · now <b style="color:var(--green)">' + last.toFixed(0) + '</b> (' + (d >= 0 ? '+' : '') + d.toFixed(0) + '% — median across ' + core.length + ' lifts). Cable moves excluded (gym change).';
       }
       function drawLift(l) {
         renderChart(wrap, { series: [{ name: l.ex, color: '#16c79a', pts: l.pts }], yFmt: function (v) { return v.toFixed(0); } });
