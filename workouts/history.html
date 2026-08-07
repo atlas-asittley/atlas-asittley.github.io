@@ -79,8 +79,9 @@
 
 <div class="card">
   <div class="chart-title">💪 Strength — estimated 1-rep max</div>
-  <div class="chart-sub">Any set becomes one comparable strength number (Epley formula), so reps/weight changes don't matter. Pick a lift:</div>
+  <div class="chart-sub">One comparable strength number per set (Epley). <b>Overall</b> = your % gains averaged across lifts; or pick one:</div>
   <div id="lift-btns" class="lift-btns"></div>
+  <div id="str-note" class="chart-sub" style="margin-top:-2px"></div>
   <div id="chart-str" class="chart-wrap"><span class="bw-sub">loading…</span></div>
 </div>
 
@@ -419,20 +420,46 @@
         return { ex: ex, n: dates.length, pts: dates.map(function (d) { return { t: dstr2ms(d), y: Math.round(byEx[ex][d]) }; }) };
       }).filter(function (l) { return l.n >= 2; }).sort(function (a, b) { return b.n - a.n || a.ex.localeCompare(b.ex); });
       if (!lifts.length) { wrap.innerHTML = '<div class="chart-empty">Log a lift across 2+ sessions and its strength trend shows up here.</div>'; return; }
-      function draw(l) {
-        renderChart(wrap, { series: [{ name: l.ex, color: '#16c79a', pts: l.pts }], yFmt: function (v) { return v.toFixed(0); } });
+      var note = document.getElementById('str-note');
+
+      // OVERALL index: each lift's first e1RM = 100, carry-forward, averaged. Cables excluded (gym change makes them non-comparable).
+      var EXCLUDE = { 'Straight-arm cable pulldown': 1, 'Rope triceps pushdown': 1 };
+      var core = lifts.filter(function (l) { return !EXCLUDE[l.ex]; });
+      var overallPts = [];
+      var dateSet = {}; core.forEach(function (l) { l.pts.forEach(function (p) { dateSet[p.t] = 1; }); });
+      Object.keys(dateSet).map(Number).sort(function (a, b) { return a - b; }).forEach(function (t) {
+        var vals = [];
+        core.forEach(function (l) {
+          var base = l.pts[0].y, latest = null;
+          for (var i = 0; i < l.pts.length; i++) { if (l.pts[i].t <= t) latest = l.pts[i].y; else break; }
+          if (latest != null && base > 0) vals.push(latest / base * 100);
+        });
+        if (vals.length >= 2) overallPts.push({ t: t, y: vals.reduce(function (s, v) { return s + v; }, 0) / vals.length });
+      });
+
+      function drawOverall() {
+        renderChart(wrap, { series: [{ name: 'Overall', color: '#16c79a', pts: overallPts }], yFmt: function (v) { return v.toFixed(0); } });
+        var last = overallPts[overallPts.length - 1].y, d = last - 100;
+        if (note) note.innerHTML = '100 = your start · now <b style="color:var(--green)">' + last.toFixed(0) + '</b> (' + (d >= 0 ? '+' : '') + d.toFixed(0) + '% avg across ' + core.length + ' lifts). Cable moves excluded (gym change).';
       }
-      btns.innerHTML = '';
-      lifts.forEach(function (l, i) {
+      function drawLift(l) {
+        renderChart(wrap, { series: [{ name: l.ex, color: '#16c79a', pts: l.pts }], yFmt: function (v) { return v.toFixed(0); } });
+        if (note) note.innerHTML = 'Estimated 1-rep max (lbs) for <b>' + l.ex + '</b>.';
+      }
+      function mkBtn(label, active, fn) {
         var b = document.createElement('button');
-        b.textContent = l.ex; if (i === 0) b.className = 'active';
+        b.textContent = label; if (active) b.className = 'active';
         b.addEventListener('click', function () {
           Array.prototype.forEach.call(btns.children, function (c) { c.className = ''; });
-          b.className = 'active'; draw(l);
+          b.className = 'active'; fn();
         });
         btns.appendChild(b);
-      });
-      draw(lifts[0]);
+      }
+      btns.innerHTML = '';
+      var hasOverall = overallPts.length >= 2;
+      if (hasOverall) mkBtn('Overall (avg)', true, drawOverall);
+      lifts.forEach(function (l, i) { mkBtn(l.ex, !hasOverall && i === 0, function () { drawLift(l); }); });
+      if (hasOverall) drawOverall(); else drawLift(lifts[0]);
     } catch (e) { wrap.innerHTML = '<div class="chart-empty">Error: ' + (e.message || e) + '</div>'; }
   })();
 })();
