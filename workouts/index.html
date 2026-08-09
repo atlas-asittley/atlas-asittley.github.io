@@ -116,7 +116,7 @@
 </head>
 <body>
 
-<div id="rest-bar"><span id="rest-txt"></span><small>rest timer</small><span class="stop" onclick="stopRest()">stop</span></div>
+<div id="rest-bar"><span id="rest-txt"></span><small id="rest-lbl">rest timer</small><span class="stop" onclick="stopRest()">stop</span></div>
 
 <header>
   <h1>💪 Workout</h1>
@@ -262,8 +262,9 @@
   function startRest(seconds) {
     if (!seconds || seconds < 1) seconds = 90;
     if (restInt) clearInterval(restInt);
-    var bar = document.getElementById('rest-bar'), txt = document.getElementById('rest-txt');
+    var bar = document.getElementById('rest-bar'), txt = document.getElementById('rest-txt'), lbl = document.getElementById('rest-lbl');
     bar.className = ''; bar.style.display = 'block';
+    if (lbl) lbl.textContent = 'rest timer';
     var left = seconds;
     function paint() {
       var m = Math.floor(left / 60), s = left % 60;
@@ -274,6 +275,21 @@
       left--;
       if (left <= 0) { clearInterval(restInt); restInt = null; txt.textContent = 'Go! 💪'; bar.className = 'done'; beep(); return; }
       paint();
+    }, 1000);
+  }
+  // hold timer for stretches — counts UP, goes green + beeps at the target, keep holding as long as you like
+  function startHold(targetSec) {
+    if (!targetSec || targetSec < 1) targetSec = 30;
+    if (restInt) clearInterval(restInt);
+    var bar = document.getElementById('rest-bar'), txt = document.getElementById('rest-txt'), lbl = document.getElementById('rest-lbl');
+    bar.className = ''; bar.style.display = 'block';
+    if (lbl) lbl.textContent = 'hold — aim ' + targetSec + 's+';
+    var el = 0, beeped = false;
+    txt.textContent = '0s';
+    restInt = setInterval(function () {
+      el++;
+      txt.textContent = el + 's';
+      if (el >= targetSec && !beeped) { beeped = true; bar.className = 'done'; beep(); }
     }, 1000);
   }
 
@@ -431,6 +447,8 @@
         var tnote = s.target_note ? (' – ' + s.target_note) : '';
         var tr = s.target_reps || '';
         var unit = /step/i.test(tr) ? 'steps' : (/\d\s*s(ec)?\b/i.test(tr) || /sec/i.test(tr)) ? 'sec' : 'reps';
+        var isHold = unit === 'sec';
+        var holdSec = isHold ? (parseInt((tr.match(/\d+/) || ['30'])[0], 10) || 30) : 0;
         var weightCell = g.bodyweight
           ? '<div class="field" style="opacity:.4"><span>bodyweight</span></div>'
           : '<div class="field"><span>lbs</span><input type="number" inputmode="decimal" data-id="' + s.id + '" data-k="weight" value="' + tgt + '"></div>';
@@ -438,8 +456,12 @@
           '<div class="set-lbl">Set ' + s.set_index + '</div>' +
           '<div class="field"><span>' + unit + tnote + '</span><input type="number" inputmode="numeric" data-id="' + s.id + '" data-k="reps" placeholder="' + tr + '"></div>' +
           weightCell +
-          '<button class="rest-btn" data-rest="' + (g.rest || 90) + '">Rest</button>';
-        row.querySelector('.rest-btn').addEventListener('click', function () { startRest(parseInt(this.getAttribute('data-rest'), 10)); });
+          (isHold
+            ? '<button class="rest-btn" data-hold="' + holdSec + '">Hold</button>'
+            : '<button class="rest-btn" data-rest="' + (g.rest || 90) + '">Rest</button>');
+        var tbtn = row.querySelector('.rest-btn');
+        if (isHold) tbtn.addEventListener('click', function () { startHold(parseInt(this.getAttribute('data-hold'), 10)); });
+        else tbtn.addEventListener('click', function () { startRest(parseInt(this.getAttribute('data-rest'), 10)); });
         box.appendChild(row);
       });
       c.appendChild(box);
