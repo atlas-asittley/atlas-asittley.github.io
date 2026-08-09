@@ -297,8 +297,12 @@
   async function load() {
     try {
       renderTodayBanner();
+      // show the most-recent prescribed session dated today-or-earlier (date-based, not newest-created).
+      // future-dated sessions stay hidden until their day → lets the coach plan a week ahead; a missed
+      // (past-dated) session still surfaces until it's done.
       var sess = await sb.from('workout_sessions').select('*')
-        .eq('status', 'prescribed').order('created_at', { ascending: false }).limit(1);
+        .eq('status', 'prescribed').lte('session_date', todayISO())
+        .order('session_date', { ascending: false }).order('created_at', { ascending: false }).limit(1);
       if (sess.error) throw sess.error;
       if (!sess.data.length) { session = null; renderEmpty(); document.getElementById('symptom-slot').innerHTML = ''; return; }
       session = sess.data[0];
