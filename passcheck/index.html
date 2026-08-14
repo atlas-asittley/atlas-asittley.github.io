@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Passphrase Check</title>
+<style>
+  :root{
+    --bg:#f4f5f7; --card:#ffffff; --ink:#1a1c20; --muted:#5b616e;
+    --line:#e2e5ea; --field:#ffffff;
+    --ok:#127a3e; --ok-bg:#e6f6ec; --bad:#b3261e; --bad-bg:#fdecea; --accent:#2f5fe0;
+  }
+  @media (prefers-color-scheme: dark){:root{
+    --bg:#14161a; --card:#1d2026; --ink:#eef0f3; --muted:#a2a9b5;
+    --line:#2c313a; --field:#12141a;
+    --ok:#4ccf7f; --ok-bg:#12321f; --bad:#ff7a70; --bad-bg:#3a1512; --accent:#7aa0ff;
+  }}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    display:flex;justify-content:center;padding:24px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;
+    padding:22px;max-width:560px;width:100%;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+  h1{font-size:1.3rem;margin:0 0 4px}
+  .sub{color:var(--muted);margin:0 0 18px;font-size:.92rem}
+  label{font-weight:600;font-size:.92rem;display:block;margin-bottom:6px}
+  textarea{width:100%;min-height:64px;resize:vertical;padding:12px;border-radius:10px;
+    border:1px solid var(--line);background:var(--field);color:var(--ink);
+    font:15px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace}
+  textarea:focus{outline:2px solid var(--accent);border-color:var(--accent)}
+  .row{display:flex;gap:10px;align-items:center;margin-top:8px}
+  .toggle{font-size:.85rem;color:var(--muted);user-select:none;cursor:pointer}
+  .verdict{margin-top:18px;padding:14px 16px;border-radius:10px;font-weight:600;
+    display:none}
+  .verdict.show{display:block}
+  .verdict.ok{background:var(--ok-bg);color:var(--ok)}
+  .verdict.bad{background:var(--bad-bg);color:var(--bad)}
+  .detail{margin-top:12px;font-size:.88rem;color:var(--muted)}
+  .detail div{margin-top:4px}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+  .note{margin-top:20px;font-size:.82rem;color:var(--muted);border-top:1px solid var(--line);padding-top:14px}
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1>🔑 Passphrase Check</h1>
+    <p class="sub">Paste what you think your Claude-backup passphrase is. This checks it against
+      the real one <b>without knowing the real one</b> — the check runs entirely in your browser
+      and nothing you type is ever sent anywhere.</p>
+
+    <label for="pw">Your saved passphrase</label>
+    <textarea id="pw" autocomplete="off" autocapitalize="off" autocorrect="off"
+      spellcheck="false" placeholder="paste here"></textarea>
+    <div class="row"><span class="toggle" id="toggle">👁 show / hide</span></div>
+
+    <div class="verdict" id="verdict"></div>
+
+    <div class="detail" id="detail"></div>
+
+    <p class="note">How it works: the app computes a SHA-256 fingerprint of what you type and
+      compares the first 8 hex characters to the known fingerprint <span class="mono">32c14097</span>
+      of the real passphrase. SHA-256 is one-way, so this page reveals nothing about the actual
+      passphrase. You can even save this page and run it offline (airplane mode) — it needs no network.</p>
+  </div>
+
+<script>
+  const EXPECTED_PREFIX = "32c14097";  // first 8 hex of SHA-256 of the real passphrase
+  const EXPECTED_LEN = 32;             // real passphrase is exactly 32 chars, no trailing space/newline
+
+  const pw = document.getElementById('pw');
+  const verdict = document.getElementById('verdict');
+  const detail = document.getElementById('detail');
+  const toggle = document.getElementById('toggle');
+  let masked = false;
+
+  async function sha256hex(str){
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+    return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2,'0')).join('');
+  }
+
+  async function check(){
+    const raw = pw.value;
+    if(raw.length === 0){ verdict.className='verdict'; detail.textContent=''; return; }
+    const trimmed = raw.trim();
+    const hRaw = (await sha256hex(raw)).slice(0,8);
+    const hTrim = (await sha256hex(trimmed)).slice(0,8);
+
+    let cls, msg;
+    if(hRaw === EXPECTED_PREFIX){
+      cls='ok'; msg='✓ Match — your saved passphrase is correct.';
+    } else if(hTrim === EXPECTED_PREFIX){
+      cls='ok'; msg='✓ Match — but your copy has extra spaces or a line break around it. '
+        + 'The real passphrase is the trimmed ' + EXPECTED_LEN + ' characters; clean up the stray whitespace in your document.';
+    } else {
+      cls='bad'; msg='✗ No match — this is not the same passphrase. Check for a misread character '
+        + '(0 vs O, 1 vs l, etc.) or missing/extra characters.';
+    }
+    verdict.className = 'verdict show ' + cls;
+    verdict.textContent = msg;
+
+    detail.innerHTML =
+      '<div>Length typed: <span class="mono">' + raw.length + '</span> '
+        + (raw.trim().length === EXPECTED_LEN ? '(expected ' + EXPECTED_LEN + ' ✓)'
+                                              : '(expected ' + EXPECTED_LEN + ' — mismatch)') + '</div>' +
+      '<div>Fingerprint of what you typed: <span class="mono">' + hRaw + '</span></div>' +
+      '<div>Target fingerprint: <span class="mono">' + EXPECTED_PREFIX + '</span></div>';
+  }
+
+  pw.addEventListener('input', check);
+  toggle.addEventListener('click', () => {
+    masked = !masked;
+    pw.style.webkitTextSecurity = masked ? 'disc' : 'none';
+    pw.style.textSecurity = masked ? 'disc' : 'none';
+  });
+</script>
+</body>
+</html>
