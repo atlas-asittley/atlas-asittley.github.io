@@ -423,25 +423,40 @@
       if (!lifts.length) { wrap.innerHTML = '<div class="chart-empty">Log a lift across 2+ sessions and its strength trend shows up here.</div>'; return; }
       var note = document.getElementById('str-note');
 
-      // OVERALL index: each lift's first e1RM = 100, carry-forward, averaged. Cables excluded (gym change makes them non-comparable).
+      // OVERALL: splice-linked index. Each lift indexes to 100 at its OWN start, but a
+      // NEW lift joins at the CURRENT line level (not a raw 100) — so adding or retiring
+      // exercises never creates a fake dip. Level reads as "median % gain across lifts."
+      // Real broad dips (deloads) still show. Cables excluded (gym change = non-comparable).
       var EXCLUDE = { 'Straight-arm cable pulldown': 1, 'Rope triceps pushdown': 1 };
       var core = lifts.filter(function (l) { return !EXCLUDE[l.ex]; });
-      var overallPts = [];
+      function carryY(l, t) { // lift's latest e1RM at or before t (carry-forward)
+        var v = null;
+        for (var i = 0; i < l.pts.length; i++) { if (l.pts[i].t <= t) v = l.pts[i].y; else break; }
+        return v;
+      }
+      var sbase = {}; // ex -> spliced base e1RM (set when the lift first appears)
+      var overallPts = [], prevOverall = 100;
       var dateSet = {}; core.forEach(function (l) { l.pts.forEach(function (p) { dateSet[p.t] = 1; }); });
-      Object.keys(dateSet).map(Number).sort(function (a, b) { return a - b; }).forEach(function (t) {
+      var times = Object.keys(dateSet).map(Number).sort(function (a, b) { return a - b; });
+      times.forEach(function (t) {
+        // 1) level from lifts already established (spliced) before now
         var vals = [];
-        core.forEach(function (l) {
-          var base = l.pts[0].y, latest = null;
-          for (var i = 0; i < l.pts.length; i++) { if (l.pts[i].t <= t) latest = l.pts[i].y; else break; }
-          if (latest != null && base > 0) vals.push(latest / base * 100);
-        });
-        if (vals.length >= 2) overallPts.push({ t: t, y: median(vals) });
+        core.forEach(function (l) { if (sbase[l.ex] != null) { var v = carryY(l, t); if (v != null) vals.push(v / sbase[l.ex] * 100); } });
+        var cur = vals.length ? median(vals) : prevOverall;
+        // 2) splice any lift whose FIRST data point is today, at the current level
+        core.forEach(function (l) { if (sbase[l.ex] == null && l.pts[0].t === t && cur > 0) sbase[l.ex] = l.pts[0].y * 100 / cur; });
+        // 3) recompute including the freshly spliced (they sit exactly at cur)
+        var vals2 = [];
+        core.forEach(function (l) { if (sbase[l.ex] != null) { var v = carryY(l, t); if (v != null) vals2.push(v / sbase[l.ex] * 100); } });
+        var cur2 = vals2.length ? median(vals2) : cur;
+        overallPts.push({ t: t, y: cur2 });
+        prevOverall = cur2;
       });
 
       function drawOverall() {
         renderChart(wrap, { series: [{ name: 'Overall', color: '#16c79a', pts: overallPts }], yFmt: function (v) { return v.toFixed(0); } });
         var last = overallPts[overallPts.length - 1].y, d = last - 100;
-        if (note) note.innerHTML = '100 = your start · now <b style="color:var(--green)">' + last.toFixed(0) + '</b> (' + (d >= 0 ? '+' : '') + d.toFixed(0) + '% — median across ' + core.length + ' lifts). Cable moves excluded (gym change).';
+        if (note) note.innerHTML = '100 = your start · now <b style="color:var(--green)">' + last.toFixed(0) + '</b> (' + (d >= 0 ? '+' : '') + d.toFixed(0) + '% overall). Median % gain across ' + core.length + ' lifts — new exercises splice in at the line, so they never fake-dip it. Cables excluded (gym change).';
       }
       function drawLift(l) {
         renderChart(wrap, { series: [{ name: l.ex, color: '#16c79a', pts: l.pts }], yFmt: function (v) { return v.toFixed(0); } });
