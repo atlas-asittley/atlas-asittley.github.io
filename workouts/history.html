@@ -141,7 +141,7 @@
       if (res.error) { el.innerHTML = '<span class="bw-sub">—</span>'; return; }
       var rows = res.data || [];
       if (!rows.length) {
-        el.innerHTML = '<span class="bw-sub">No measurements yet. Tell your coach your <b>waist</b>, <b>shoulders</b>, and <b>arm</b> (inches) and they\'ll log the first set — then we track the recomp here instead of guessing from the scale.</span>';
+        el.innerHTML = '<span class="bw-sub">No measurements yet. Tell your coach your <b>waist</b>, <b>shoulders</b>, and <b>arm (left)</b> (inches) and they\'ll log the first set — then we track the recomp here instead of guessing from the scale.</span>';
         return;
       }
       var latest = rows[0], oldest = rows[rows.length - 1];

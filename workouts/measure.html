@@ -93,6 +93,7 @@
     <li><span class="num">2</span><span><b>Tape snug and level</b> — flat against skin, parallel to the floor, not digging in or compressing.</span></li>
     <li><span class="num">3</span><span><b>Measure each spot 2–3× and average</b> — if two reads disagree, take a third.</span></li>
     <li><span class="num">4</span><span><b>Every ~2 weeks, not daily</b> — muscle and fat move slowly; daily reads are just noise.</span></li>
+    <li><span class="num">5</span><span><b>Arm &amp; thigh: always your LEFT side</b> — that's the side we baselined. Measuring a different side any time makes the trend meaningless.</span></li>
   </ul>
 </section>
 
@@ -143,15 +144,15 @@
     { key:'shoulders', name:'Shoulders', pri:true, stance:'relaxed', diag:'shoulders', field:'Shoulders',
       where:'Around the widest point of your delts, arms hanging down. Your width gauge.',
       how:['Arms relaxed at your sides.','Wrap around the fullest part of the shoulders — the widest circle.','Hardest one to do solo — use a mirror or have someone help.'] },
-    { key:'arm', name:'Arm (biceps)', pri:true, stance:'flexed', diag:'arm', field:'Arm',
-      where:'Around the peak of your upper arm — flexed.',
-      how:['Raise your arm, curl and tense the biceps hard.','Wrap around the biggest part of the bulge.','Always flexed, always the same arm — consistency is what counts.'] },
+    { key:'arm', name:'Arm — LEFT (biceps)', pri:true, stance:'flexed', diag:'arm', field:'Arm',
+      where:'Around the peak of your upper (LEFT) arm — flexed. Always the LEFT arm.',
+      how:['Raise your <b>LEFT</b> arm, curl and tense the biceps hard.','Wrap around the biggest part of the bulge.','Always flexed, <b>always the LEFT arm</b> — that\'s the side we baselined; same side every time or the trend is meaningless.'] },
     { key:'chest', name:'Chest', pri:false, stance:'relaxed', diag:'chest', field:'Chest',
       where:'Around the fullest part, just above the nipples.',
       how:['Lift your arms, run the tape around, then lower them.','Keep it level across your back, normal breath — don’t puff up.'] },
-    { key:'thigh', name:'Thigh', pri:false, stance:'relaxed', diag:'thigh', field:'Thigh',
-      where:'Around the largest part of the upper thigh, just below the glute.',
-      how:['Stand with your weight even on both feet.','Wrap the thickest part, same leg every time.'] }
+    { key:'thigh', name:'Thigh — LEFT', pri:false, stance:'relaxed', diag:'thigh', field:'Thigh',
+      where:'Around the largest part of the upper (LEFT) thigh, just below the glute. Always the LEFT leg.',
+      how:['Stand with your weight even on both feet.','Wrap the thickest part of your <b>LEFT</b> thigh — <b>same (LEFT) leg every time</b>.'] }
   ];
 
   document.getElementById('cards').innerHTML = DATA.map(function(d){
