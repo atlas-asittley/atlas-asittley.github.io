@@ -126,7 +126,7 @@
   <a class="active" href="./">Workout</a>
   <a href="./diet.html">Diet</a>
   <a href="./history.html">History</a>
-  <a href="./hip.html">Hip</a>
+  <a href="./checkin.html">Check-in</a>
 </nav>
 <div id="today-banner"></div>
 
@@ -473,7 +473,6 @@
 
     document.getElementById('extras-slot').innerHTML =
       '<div class="session-extras">' +
-      '<label>Bodyweight (lbs, optional)</label><input id="bw" type="number" inputmode="decimal" placeholder="track the bulk">' +
       '<label>How did it feel? (optional)</label><textarea id="snotes" placeholder="notes for your coach"></textarea>' +
       '</div>';
 
@@ -502,10 +501,10 @@
         var r = await sb.from('workout_sets').update(byId[id]).eq('id', id);
         if (r.error) throw r.error;
       }
-      var bwEl = document.getElementById('bw'), snEl = document.getElementById('snotes');
+      var snEl = document.getElementById('snotes');
       var upd = await sb.from('workout_sessions').update({
         status: 'completed', completed_at: endISO, started_at: startedAt,
-        session_date: todayISO(), bodyweight: bwEl ? num(bwEl.value) : null, notes: snEl ? (snEl.value.trim() || null) : null
+        session_date: todayISO(), notes: snEl ? (snEl.value.trim() || null) : null
       }).eq('id', session.id);
       if (upd.error) throw upd.error;
       clearDraft();

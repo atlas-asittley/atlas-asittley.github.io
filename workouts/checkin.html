@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Check-in</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root { --bg:#1a1a2e; --card:#16213e; --border:#0f3460; --green:#16c79a; --red:#e94560; --amber:#f0a500; --text:#eee; --dim:#8a97b1; }
+  body { background:var(--bg); color:var(--text); font-family:'Courier New',monospace; padding:16px 14px 60px; max-width:640px; margin:0 auto; -webkit-text-size-adjust:100%; }
+  header { display:flex; align-items:baseline; justify-content:space-between; margin-bottom:12px; }
+  h1 { font-size:24px; color:var(--green); }
+  .back { color:var(--dim); text-decoration:none; font-size:13px; }
+  nav { display:flex; gap:8px; margin-bottom:18px; }
+  nav a { flex:1; text-align:center; padding:9px; border:1px solid var(--border); border-radius:8px; text-decoration:none; color:var(--dim); font-size:13px; }
+  nav a.active { background:var(--card); color:var(--green); border-color:var(--green); }
+
+  .card { background:var(--card); border:1px solid var(--border); border-radius:10px; padding:14px; margin-bottom:14px; }
+  .card h2 { font-size:16px; color:var(--red); margin-bottom:10px; }
+  p, li { font-size:13px; line-height:1.55; color:var(--text); }
+  .dim { color:var(--dim); }
+  .green { color:var(--green); }
+  .lead { font-size:14px; color:var(--green); margin-bottom:12px; }
+  .empty { text-align:center; padding:22px 8px; font-size:20px; color:var(--green); }
+
+  .ck { border-top:1px solid var(--border); padding:12px 0 4px; }
+  .ck:first-of-type { border-top:none; padding-top:0; }
+  .ck .q { font-size:14px; color:var(--text); margin-bottom:8px; }
+  .ck .sub { font-size:11px; color:var(--dim); }
+  label { display:block; font-size:12px; color:var(--dim); margin:10px 0 4px; }
+  input[type=number], textarea {
+    background:var(--bg); border:1px solid var(--border); color:var(--text);
+    border-radius:6px; padding:9px 8px; font-family:inherit; font-size:16px; width:100%;
+  }
+  input:focus, textarea:focus { outline:none; border-color:var(--green); }
+  textarea { min-height:50px; resize:vertical; }
+  .row3 { display:flex; gap:8px; align-items:stretch; }
+  .row3 > div { flex:1; display:flex; flex-direction:column; }
+  .row3 > div > label { flex:1; margin:6px 0 4px; }
+  .choices { display:flex; flex-wrap:wrap; gap:8px; }
+  .choices button { flex:1; min-width:90px; background:var(--bg); border:1px solid var(--border); color:var(--text); border-radius:8px; padding:11px 8px; font-family:inherit; font-size:14px; }
+  .choices button.sel { background:var(--green); color:#04231b; border-color:var(--green); font-weight:bold; }
+
+  button.save { width:100%; margin-top:14px; background:var(--green); color:#04231b; border:none; border-radius:8px; padding:13px; font-size:15px; font-weight:bold; font-family:inherit; }
+  button.save:disabled { opacity:.6; }
+  .saved { text-align:center; font-size:13px; margin-top:10px; }
+
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  td, th { text-align:left; padding:6px 5px; border-bottom:1px solid var(--border); }
+  th { color:var(--dim); font-weight:normal; font-size:11px; text-transform:uppercase; letter-spacing:.5px; }
+  td.n, th.n { text-align:center; }
+  .spark { margin:4px 0; }
+  .legend { font-size:11px; color:var(--dim); margin-top:4px; }
+  .legend b.b { color:var(--red); } .legend b.l { color:var(--amber); } .legend b.r { color:var(--green); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>📋 Check-in</h1>
+  <a class="back" href="https://atlas-asittley.github.io/">← Atlas</a>
+</header>
+
+<nav>
+  <a href="./">Workout</a>
+  <a href="./diet.html">Diet</a>
+  <a href="./history.html">History</a>
+  <a class="active" href="./checkin.html">Check-in</a>
+</nav>
+
+<div class="card" id="checkin-host"><p class="dim">loading…</p></div>
+
+<div class="card">
+  <h2>Symptom trend</h2>
+  <div id="trend"><span class="dim">loading…</span></div>
+</div>
+
+<script>
+(function () {
+  var URL = 'https://igaulapupbtdcqqjobhs.supabase.co';
+  var KEY = 'sb_publishable_7yi3BNg-J-K5nralw5JSww_c71Pge6e';
+  var sb = window.supabase ? window.supabase.createClient(URL, KEY, { auth: { persistSession: false, autoRefreshToken: false } }) : null;
+
+  function todayISO() { var d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+  function num(v, lo, hi) { if (v === '' || v == null) return null; v = parseFloat(v); if (isNaN(v)) return null; if (lo != null) v = Math.max(lo, Math.min(hi, v)); return v; }
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+
+  var host = document.getElementById('checkin-host');
+  var pending = [];
+  var weightDue = false;
+
+  async function load() {
+    if (!sb) { host.innerHTML = '<p class="dim">No connection.</p>'; return; }
+    host.innerHTML = '<p class="dim">loading…</p>';
+    var today = todayISO();
+    var bwQ = await sb.from('workout_bodyweight').select('id').eq('log_date', today).limit(1);
+    weightDue = !(bwQ.data && bwQ.data.length);
+    var cq = await sb.from('workout_checkins').select('*').eq('status', 'pending').order('sort', { ascending: true }).order('created_at', { ascending: true });
+    pending = (cq.data || []).filter(function (r) { return !r.due_date || r.due_date <= today; });
+    render();
+    loadTrend();
+  }
+
+  function renderCheckin(r) {
+    var id = 'c-' + r.id;
+    var body;
+    if (r.input_type === 'symptoms') {
+      body = '<div class="row3">' +
+        '<div><label>Back<br><span class="sub">0–10</span></label><input id="sym-back" type="number" inputmode="numeric" min="0" max="10" placeholder="0–10"></div>' +
+        '<div><label>Left pinch<br><span class="sub">0–10</span></label><input id="sym-l" type="number" inputmode="numeric" min="0" max="10" placeholder="0–10"></div>' +
+        '<div><label>Right pinch<br><span class="sub">0–10</span></label><input id="sym-r" type="number" inputmode="numeric" min="0" max="10" placeholder="0–10"></div>' +
+        '</div><label>Note (optional)</label><textarea id="sym-note" placeholder="what helped / aggravated"></textarea>';
+    } else if (r.input_type === 'choice') {
+      var opts = (r.choices || '').split('|').filter(Boolean).map(function (o) {
+        return '<button type="button" data-v="' + esc(o) + '">' + esc(o) + '</button>';
+      }).join('');
+      body = '<div class="choices" id="' + id + '" data-val="">' + opts + '</div>';
+    } else if (r.input_type === 'text') {
+      body = '<textarea id="' + id + '" placeholder="type your answer"></textarea>';
+    } else { // number / scale
+      var hint = r.input_type === 'scale' ? '0–10' : 'number';
+      body = '<input id="' + id + '" type="number" inputmode="decimal" placeholder="' + hint + '">';
+    }
+    return '<div class="ck" data-key="' + esc(r.field_key) + '" data-type="' + esc(r.input_type) + '" data-cid="' + r.id + '">' +
+      '<div class="q">' + esc(r.prompt) + '</div>' + body + '</div>';
+  }
+
+  function render() {
+    var parts = [];
+    if (weightDue) {
+      parts.push('<div class="ck" data-key="__weight__" data-type="weight">' +
+        '<div class="q">Morning weight</div><label>lbs</label><input id="weight-input" type="number" inputmode="decimal" placeholder="e.g. 216.0"></div>');
+    }
+    pending.forEach(function (r) { parts.push(renderCheckin(r)); });
+
+    if (!parts.length) {
+      host.innerHTML = '<div class="empty">✅ All caught up<div class="dim" style="font-size:13px;margin-top:8px">Nothing to report right now. When your coach queues a check-in, the fields show up here.</div></div>';
+      return;
+    }
+    host.innerHTML = '<p class="lead">📋 Time to check in — fill in what applies, then submit.</p>' +
+      parts.join('') +
+      '<button class="save" id="submitc" type="button">Submit check-in</button>' +
+      '<div class="saved" id="saved" style="display:none"></div>';
+
+    document.getElementById('submitc').addEventListener('click', submit);
+    Array.prototype.forEach.call(document.querySelectorAll('.choices'), function (box) {
+      Array.prototype.forEach.call(box.querySelectorAll('button'), function (b) {
+        b.addEventListener('click', function () {
+          Array.prototype.forEach.call(box.querySelectorAll('button'), function (x) { x.classList.remove('sel'); });
+          b.classList.add('sel'); box.setAttribute('data-val', b.getAttribute('data-v'));
+        });
+      });
+    });
+  }
+
+  async function submit() {
+    var btn = document.getElementById('submitc'), saved = document.getElementById('saved');
+    if (!sb) { saved.style.display = 'block'; saved.textContent = 'No connection.'; return; }
+    btn.disabled = true; btn.textContent = 'Saving…';
+    var nowISO = new Date().toISOString();
+    var ops = [], did = 0, errs = [];
+
+    // weight
+    if (weightDue) {
+      var wEl = document.getElementById('weight-input');
+      var w = wEl ? num(wEl.value) : null;
+      if (w != null) { ops.push(sb.from('workout_bodyweight').insert({ weight: w, log_date: todayISO(), note: 'morning' })); did++; }
+    }
+
+    // each pending check-in
+    Array.prototype.forEach.call(document.querySelectorAll('.ck[data-cid]'), function (el) {
+      var cid = el.getAttribute('data-cid'), type = el.getAttribute('data-type');
+      if (type === 'symptoms') {
+        var back = num((document.getElementById('sym-back') || {}).value, 0, 10);
+        var pl = num((document.getElementById('sym-l') || {}).value, 0, 10);
+        var pr = num((document.getElementById('sym-r') || {}).value, 0, 10);
+        var note = (document.getElementById('sym-note') || {}).value;
+        note = note ? note.trim() : '';
+        if (back != null || pl != null || pr != null || note) {
+          ops.push(sb.from('workout_hip_log').insert({ log_date: todayISO(), back_pain: back, pinch_left: pl, pinch_right: pr, note: note || null }));
+          ops.push(sb.from('workout_checkins').update({ status: 'done', done_at: nowISO, response_text: 'back=' + back + ' L=' + pl + ' R=' + pr + (note ? ' · ' + note : '') }).eq('id', cid));
+          did++;
+        }
+      } else {
+        var val = null, txt = null, n2 = null;
+        if (type === 'choice') { val = el.querySelector('.choices').getAttribute('data-val'); txt = val || null; }
+        else if (type === 'text') { var t = document.getElementById('c-' + cid); txt = t && t.value.trim() ? t.value.trim() : null; }
+        else { var ni = document.getElementById('c-' + cid); n2 = ni ? num(ni.value) : null; }
+        if (txt != null || n2 != null) {
+          ops.push(sb.from('workout_checkins').update({ status: 'done', done_at: nowISO, response_num: n2, response_text: txt }).eq('id', cid));
+          did++;
+        }
+      }
+    });
+
+    if (!did) { btn.disabled = false; btn.textContent = 'Submit check-in'; saved.style.display = 'block'; saved.style.color = 'var(--amber)'; saved.textContent = 'Fill in at least one field first.'; return; }
+
+    var results = await Promise.all(ops);
+    results.forEach(function (r) { if (r && r.error) errs.push(r.error.message); });
+    if (errs.length) { btn.disabled = false; btn.textContent = 'Submit check-in'; saved.style.display = 'block'; saved.style.color = 'var(--red)'; saved.textContent = 'Some saves failed: ' + errs[0]; return; }
+    saved.style.display = 'block'; saved.style.color = 'var(--green)'; saved.textContent = '✅ Checked in. Thanks!';
+    setTimeout(load, 700);
+  }
+
+  // ---- symptom trend (from workout_hip_log) ----
+  function spark(vals, color) {
+    var w = 260, h = 34, pad = 3, n = vals.length;
+    if (n < 2) return '';
+    var step = (w - pad * 2) / (n - 1);
+    var pts = vals.map(function (v, i) { return (pad + i * step).toFixed(1) + ',' + (h - pad - (v / 10) * (h - pad * 2)).toFixed(1); }).join(' ');
+    var dots = vals.map(function (v, i) { return '<circle cx="' + (pad + i * step).toFixed(1) + '" cy="' + (h - pad - (v / 10) * (h - pad * 2)).toFixed(1) + '" r="2" fill="' + color + '"/>'; }).join('');
+    return '<svg class="spark" width="100%" viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none"><polyline points="' + pts + '" fill="none" stroke="' + color + '" stroke-width="2"/>' + dots + '</svg>';
+  }
+
+  async function loadTrend() {
+    var el = document.getElementById('trend');
+    if (!sb) { el.innerHTML = '<span class="dim">—</span>'; return; }
+    var q = await sb.from('workout_hip_log').select('log_date,back_pain,pinch_left,pinch_right,note').order('log_date', { ascending: false }).limit(21);
+    var rows = (q.data || []);
+    if (!rows.length) { el.innerHTML = '<span class="dim">No symptom check-ins yet.</span>'; return; }
+    var asc = rows.slice().reverse();
+    function series(key) { return asc.filter(function (r) { return r[key] != null; }).map(function (r) { return r[key]; }); }
+    var b = series('back_pain'), l = series('pinch_left'), rr = series('pinch_right');
+    var h = '';
+    if (b.length >= 2 || l.length >= 2 || rr.length >= 2) {
+      h += '<div class="legend"><b class="b">■</b> back &nbsp; <b class="l">■</b> L pinch &nbsp; <b class="r">■</b> R pinch &nbsp;<span class="dim">(0–10, old→new)</span></div>';
+      if (b.length >= 2) h += spark(b, '#e94560');
+      if (l.length >= 2) h += spark(l, '#f0a500');
+      if (rr.length >= 2) h += spark(rr, '#16c79a');
+    }
+    h += '<table><tr><th>Date</th><th class="n">Back</th><th class="n">L</th><th class="n">R</th></tr>';
+    rows.slice(0, 10).forEach(function (r) {
+      h += '<tr><td>' + r.log_date + '</td><td class="n">' + (r.back_pain == null ? '–' : r.back_pain) +
+        '</td><td class="n">' + (r.pinch_left == null ? '–' : r.pinch_left) +
+        '</td><td class="n">' + (r.pinch_right == null ? '–' : r.pinch_right) + '</td></tr>';
+      if (r.note) h += '<tr><td colspan="4" class="dim" style="font-size:11px;padding-top:0">↳ ' + esc(r.note) + '</td></tr>';
+    });
+    h += '</table>';
+    el.innerHTML = h;
+  }
+
+  load();
+})();
+</script>
+</body>
+</html>
