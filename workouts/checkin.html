@@ -173,7 +173,15 @@
 
   function renderCheckin(r) {
     var id = 'q-' + r.id, body;
-    if (r.input_type === 'choice') body = groupHtml(id, (r.choices || '').split('|').filter(Boolean), 'chips');
+    if (r.input_type === 'measurements') {
+      body = '<div class="sub">Morning, fasted, minimal clothing — same way every time. Arm &amp; thigh = LEFT side. Also snap your 3 photos (front / side / back) and send them to your coach.</div>' +
+        '<label>Waist (relaxed, narrowest)</label><input id="meas-waist" type="number" inputmode="decimal" placeholder="inches">' +
+        '<label>Shoulders (widest)</label><input id="meas-shoulders" type="number" inputmode="decimal" placeholder="inches">' +
+        '<label>Chest (fullest)</label><input id="meas-chest" type="number" inputmode="decimal" placeholder="inches">' +
+        '<label>Arm — LEFT, flexed</label><input id="meas-arm" type="number" inputmode="decimal" placeholder="inches">' +
+        '<label>Thigh — LEFT, largest</label><input id="meas-thigh" type="number" inputmode="decimal" placeholder="inches">';
+    }
+    else if (r.input_type === 'choice') body = groupHtml(id, (r.choices || '').split('|').filter(Boolean), 'chips');
     else if (r.input_type === 'text') body = '<textarea id="' + id + '" placeholder="your answer"></textarea>';
     else body = '<input id="' + id + '" type="number" inputmode="decimal" placeholder="' + (r.input_type === 'scale' ? '0–10' : 'number') + '">';
     return '<div data-cid="' + r.id + '" data-type="' + esc(r.input_type) + '" data-gid="' + id + '"><h2>❓ ' + esc(r.prompt) + '</h2>' + body + '</div>';
@@ -188,6 +196,16 @@
     if (gval('d-sleep')) { ops.push(sb.from('workout_daily_log').insert({ log_date: t.date, sleep: gval('d-sleep') })); did++; }
     Array.prototype.forEach.call(document.querySelectorAll('[data-cid]'), function (el) {
       var cid = el.getAttribute('data-cid'), type = el.getAttribute('data-type'), gid = el.getAttribute('data-gid');
+      if (type === 'measurements') {
+        var mv = function (mid) { var e = document.getElementById(mid); return e && e.value !== '' ? parseFloat(e.value) : null; };
+        var mw = mv('meas-waist'), msh = mv('meas-shoulders'), mch = mv('meas-chest'), mar = mv('meas-arm'), mth = mv('meas-thigh');
+        if (mw != null || msh != null || mch != null || mar != null || mth != null) {
+          ops.push(sb.from('workout_measurements').insert({ log_date: t.date, waist: mw, shoulders: msh, chest: mch, arm: mar, thigh: mth, note: 'via check-in' }));
+          ops.push(sb.from('workout_checkins').update({ status: 'done', done_at: t.iso, response_text: 'measured' }).eq('id', cid));
+          did++;
+        }
+        return;
+      }
       var txt = null, n2 = null;
       if (type === 'choice') txt = gval(gid);
       else if (type === 'text') { var tx = document.getElementById(gid); txt = tx && tx.value.trim() ? tx.value.trim() : null; }
