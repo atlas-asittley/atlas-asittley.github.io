@@ -53,7 +53,13 @@
   .exercise { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px; margin-bottom: 14px; }
   .exercise h2 { font-size: 17px; color: var(--red); margin-bottom: 4px; }
   .ex-meta { font-size: 12px; color: var(--dim); margin-bottom: 4px; }
-  .ex-note { font-size: 12px; color: var(--green); margin-bottom: 4px; line-height: 1.4; }
+.ex-note { font-size: 12px; color: var(--green); margin-bottom: 4px; line-height: 1.4; }
+  .coach-note { border: 1px solid var(--red); border-radius: 10px; padding: 10px 12px; margin-bottom: 18px; background: rgba(233,69,96,.07); }
+  .coach-note summary { cursor: pointer; color: var(--red); font-weight: 700; font-size: 13px; list-style: none; }
+  .coach-note summary::-webkit-details-marker { display: none; }
+  .coach-note summary::after { content: ' ▾'; }
+  .coach-note[open] summary::after { content: ' ▴'; }
+  .coach-note .cn-body { white-space: pre-line; font-size: 13px; line-height: 1.55; color: var(--text); margin-top: 8px; }
   .ex-last { font-size: 12px; color: var(--dim); margin-bottom: 10px; }
   .ex-last b { color: var(--text); }
 
@@ -133,6 +139,11 @@
 <div id="symptom-slot"></div>
 
 <div id="session-head"></div>
+
+<details id="coach-note" class="coach-note" open style="display:none">
+  <summary>📋 Coach's note — read this first</summary>
+  <div class="cn-body"></div>
+</details>
 
 <div id="content"><div class="msg">Loading today's workout…</div></div>
 
@@ -421,6 +432,14 @@
     if (session.equipment) head += ' · ' + session.equipment;
     document.getElementById('session-head').innerHTML = head;
 
+    var cn = document.getElementById('coach-note');
+    if (cn) {
+      if (session.notes && session.notes.trim()) {
+        cn.querySelector('.cn-body').textContent = session.notes.trim();
+        cn.style.display = '';
+      } else { cn.style.display = 'none'; }
+    }
+
     var groups = {}; var order = [];
     sets.forEach(function (s) {
       if (!groups[s.exercise_order]) { groups[s.exercise_order] = { name: s.exercise, note: s.exercise_note, rest: s.rest_seconds, bodyweight: s.bodyweight, sets: [] }; order.push(s.exercise_order); }
@@ -514,6 +533,7 @@
       document.getElementById('content').innerHTML = '<div class="msg">✅ Logged. Nice work.' + durMsg + '<br><br>Your coach will read these and program the next session.</div>';
       document.getElementById('extras-slot').innerHTML = '';
       document.getElementById('session-head').innerHTML = '';
+      var cnDone = document.getElementById('coach-note'); if (cnDone) cnDone.style.display = 'none';
       document.getElementById('symptom-slot').innerHTML = '';
       btn.style.display = 'none';
       window.scrollTo(0, 0);
