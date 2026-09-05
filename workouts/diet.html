@@ -59,7 +59,8 @@
 
 <div class="card">
   <h2>Daily Targets — modest lean bulk</h2>
-  <p><b>~170–180g protein</b> · <b>~3,400 calories</b> (a slight surplus over ~3,150–3,300 maintenance).</p>
+  <p><b>~180g protein</b> · <b>~3,050 calories</b> <span class="dim">(trimmed from 3,400 on 2026-09-05)</span></p>
+  <p class="dim" style="margin-top:6px"><b>Why it changed:</b> 6-week review — weight climbing 1.6 lb/wk (~2× the lean-bulk rate) and waist +1.5" (37.0 → 38.5"), outpacing arm/chest/thigh. Protein did <b>not</b> change. <b>Training did not change.</b></p>
   <p class="dim" style="margin-top:6px">The lever is <span class="green">calorie-dense food</span>, not volume. Let the scale creep up slowly — a little fat is fine. <b>Don't judge by the daily scale</b> (it can't tell muscle-gain-with-fat-loss from a stall): judge by <span class="green">strength + monthly photos + tape</span> (waist / shoulders / arms) on the History page. Weigh as a weekly average for the trend only.</p>
 </div>
 
@@ -79,21 +80,31 @@
   <h2>Where It Comes From</h2>
   <table>
     <tr><th>Source</th><th class="n">Cal</th><th class="n">Protein</th></tr>
-    <tr><td>Shake <span class="dim">(daily anchor)</span></td><td class="n">~840</td><td class="n">~44g</td></tr>
-    <tr class="target"><td>Daily target</td><td class="n">~3,400</td><td class="n">~180g</td></tr>
-    <tr class="left"><td>Left for meals</td><td class="n">~2,560</td><td class="n">~136g</td></tr>
+    <tr><td>Shake <span class="dim">(daily anchor · fat-free milk)</span></td><td class="n">~700</td><td class="n">~44g</td></tr>
+    <tr class="target"><td>Daily target</td><td class="n">~3,050</td><td class="n">~180g</td></tr>
+    <tr class="left"><td>Left for meals</td><td class="n">~2,350</td><td class="n">~136g</td></tr>
   </table>
   <p class="dim" style="margin-top:10px">The shake covers ~840 cal / ~44g protein; the rest comes from <span class="green">food</span> — ~136g protein across your meals (meat, fish, eggs, dairy). Meals stay calorie-dense: rice, potatoes, pasta, olive oil, nuts, avocado.</p>
 </div>
 
+<div class="card" style="border-color:var(--green)">
+  <h2 style="color:var(--green)">✅ The two rules (2026-09-05)</h2>
+  <p class="dim" style="margin-bottom:8px">Don't count calories. Do these two things and weigh in each morning — the scale decides, not the arithmetic.</p>
+  <ul style="list-style:none; padding-left:0; line-height:1.9">
+    <li>🥛 <b>Fat-free Fairlife in the shake.</b> <span class="dim">−140 cal/day, identical protein. Permanent, no thinking.</span></li>
+    <li>🍽️ <b>One bowl, not two.</b> <span class="dim">The second helping is the biggest lever — ~400 cal on the days it happens, and it isn't buying protein.</span></li>
+  </ul>
+  <p class="dim" style="margin-top:10px"><b>Target rate: 0.5–0.7 lb/week</b> on the <b>weekly average</b>. Never trim protein or shrink a meal — cut the zero-protein add-ons (butter, sugar, seconds) instead. Reserve lever if needed: shake nut butter 3 tbsp → 2.</p>
+</div>
+
 <div class="card">
-  <h2>Shake Slot <span class="dim" style="font-size:12px">— rotate the two · ~840 cal / ~44g P each · NO POWDER (it was the gas trigger)</span></h2>
+  <h2>Shake Slot <span class="dim" style="font-size:12px">— rotate the two · ~700 cal / ~44g P each · FAT-FREE milk · NO POWDER (it was the gas trigger)</span></h2>
 
   <div class="recipe">
-    <h3>1. Mass Gainer Shake <span class="cal">~840 cal / ~44g P</span></h3>
+    <h3>1. Mass Gainer Shake <span class="cal">~700 cal / ~44g P</span></h3>
     <p class="dim">Blend the liquids briefly, let it sit so foam collapses. (Protein comes from the milk + PB — no powder.)</p>
     <ul>
-      <li>2 cups Fairlife lactose-free milk <span class="dim">(300 cal / 26g)</span></li>
+      <li>2 cups Fairlife <b>FAT-FREE</b> lactose-free milk <span class="dim">(160 cal / 26g — same protein as whole, 140 fewer cal)</span></li>
       <li>½ cup dry oats</li>
       <li>3 tbsp peanut butter</li>
       <li>1 banana</li>
@@ -101,10 +112,10 @@
   </div>
 
   <div class="recipe">
-    <h3>2. Mocha Almond Mass Shake <span class="cal">~840 cal / ~45g P</span></h3>
+    <h3>2. Mocha Almond Mass Shake <span class="cal">~720 cal / ~44g P</span></h3>
     <p class="dim">Blend the liquids &amp; cocoa, let it settle. (No powder — protein from the milk + almond butter.)</p>
     <ul>
-      <li>2 cups Fairlife lactose-free milk <span class="dim">(300 cal / 26g)</span></li>
+      <li>2 cups Fairlife <b>FAT-FREE</b> lactose-free milk <span class="dim">(160 cal / 26g — same protein as whole, 140 fewer cal)</span></li>
       <li>3 tbsp almond butter</li>
       <li>2 tbsp cocoa powder</li>
       <li>½ cup <b>decaf</b> cold brew or 1 shot decaf espresso <span class="dim">(you already get caffeine from morning coffee)</span></li>
@@ -138,7 +149,7 @@
   if (!el) return;
   if (!window.supabase) { el.innerHTML = '<span class="dim">—</span>'; return; }
   var sb = window.supabase.createClient(URL, KEY, { auth: { persistSession: false, autoRefreshToken: false } });
-  var CAL_T = 3400, PRO_T = 180;
+  var CAL_T = 3050, PRO_T = 180;
   var d = new Date();
   var today = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
   function bar(pct, color) {
