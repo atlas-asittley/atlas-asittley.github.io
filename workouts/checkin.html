@@ -160,7 +160,7 @@
     var parts = [];
     if (weightDue || sleepDue) {
       var d = '<h2>☀️ Morning check <span class="due-tag">due</span></h2><div class="sub">Once a day.</div>';
-      if (weightDue) d += '<label>Weight (lbs)</label><input id="d-weight" type="number" inputmode="decimal" placeholder="e.g. 216.0">';
+      if (weightDue) d += '<label>Weight (lbs)</label><input id="d-weight" type="number" inputmode="decimal" placeholder="e.g. 222.0">';
       if (sleepDue) d += '<label>Sleep last night</label>' + groupHtml('d-sleep', ['Poor', 'OK', 'Good'], 'chips');
       parts.push(d);
     }
