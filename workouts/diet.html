@@ -59,7 +59,7 @@
 
 <div class="card">
   <h2>Daily Targets — modest lean bulk</h2>
-  <p><b>~180g protein</b> · <b>~3,050 calories</b> <span class="dim">(trimmed from 3,400 on 2026-09-05)</span></p>
+  <p><b>~<span id="pro-target">180g</span> protein</b> · <b>~<span id="cal-target">3,050</span> calories</b> <span class="dim">(live from <code>workout_settings</code>; trimmed from 3,400 on 2026-09-05)</span></p>
   <p class="dim" style="margin-top:6px"><b>Why it changed:</b> 6-week review — weight climbing 1.6 lb/wk (~2× the lean-bulk rate) and waist +1.5" (37.0 → 38.5"), outpacing arm/chest/thigh. Protein did <b>not</b> change. <b>Training did not change.</b></p>
   <p class="dim" style="margin-top:6px">The lever is <span class="green">calorie-dense food</span>, not volume. Let the scale creep up slowly — a little fat is fine. <b>Don't judge by the daily scale</b> (it can't tell muscle-gain-with-fat-loss from a stall): judge by <span class="green">strength + monthly photos + tape</span> (waist / shoulders / arms) on the History page. Weigh as a weekly average for the trend only.</p>
 </div>
@@ -81,8 +81,8 @@
   <table>
     <tr><th>Source</th><th class="n">Cal</th><th class="n">Protein</th></tr>
     <tr><td>Shake <span class="dim">(daily anchor · fat-free milk)</span></td><td class="n">~700</td><td class="n">~44g</td></tr>
-    <tr class="target"><td>Daily target</td><td class="n">~3,050</td><td class="n">~180g</td></tr>
-    <tr class="left"><td>Left for meals</td><td class="n">~2,350</td><td class="n">~136g</td></tr>
+    <tr class="target"><td>Daily target</td><td class="n" id="tbl-cal">~3,050</td><td class="n" id="tbl-pro">~180g</td></tr>
+    <tr class="left"><td>Left for meals</td><td class="n" id="left-cal">~2,350</td><td class="n" id="left-pro">~136g</td></tr>
   </table>
   <p class="dim" style="margin-top:10px">The shake covers ~840 cal / ~44g protein; the rest comes from <span class="green">food</span> — ~136g protein across your meals (meat, fish, eggs, dairy). Meals stay calorie-dense: rice, potatoes, pasta, olive oil, nuts, avocado.</p>
 </div>
@@ -149,14 +149,32 @@
   if (!el) return;
   if (!window.supabase) { el.innerHTML = '<span class="dim">—</span>'; return; }
   var sb = window.supabase.createClient(URL, KEY, { auth: { persistSession: false, autoRefreshToken: false } });
-  var CAL_T = 3050, PRO_T = 180;
+  var CAL_T = 3050, PRO_T = 180;   // fallback only — live values come from workout_settings
+  async function loadSettings() {
+    try {
+      var r = await sb.from('workout_settings').select('key,value');
+      if (r.data) r.data.forEach(function (row) {
+        if (row.key === 'cal_target')     CAL_T = parseInt(row.value, 10) || CAL_T;
+        if (row.key === 'protein_target') PRO_T = parseInt(row.value, 10) || PRO_T;
+      });
+      var ct = document.getElementById('cal-target'), pt = document.getElementById('pro-target');
+      if (ct) ct.textContent = CAL_T.toLocaleString();
+      if (pt) pt.textContent = PRO_T + 'g';
+      var lt = document.getElementById('left-cal'), lp = document.getElementById('left-pro');
+      if (lt) lt.textContent = '~' + (CAL_T - 700).toLocaleString();
+      if (lp) lp.textContent = '~' + (PRO_T - 44) + 'g';
+      var tc = document.getElementById('tbl-cal'), tp = document.getElementById('tbl-pro');
+      if (tc) tc.textContent = '~' + CAL_T.toLocaleString();
+      if (tp) tp.textContent = '~' + PRO_T + 'g';
+    } catch (e) {}
+  }
   var d = new Date();
   var today = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
   function bar(pct, color) {
     pct = Math.max(0, Math.min(100, Math.round(pct)));
     return '<div style="background:var(--border);border-radius:6px;height:8px;margin-top:4px;overflow:hidden"><div style="width:' + pct + '%;height:100%;background:' + color + '"></div></div>';
   }
-  sb.from('workout_food_log').select('item,calories,protein').eq('log_date', today).order('created_at', { ascending: true })
+  loadSettings().then(function () { return sb.from('workout_food_log').select('item,calories,protein').eq('log_date', today).order('created_at', { ascending: true }); })
     .then(function (res) {
       if (res.error) { el.innerHTML = '<span class="dim">—</span>'; return; }
       var rows = res.data || [];
