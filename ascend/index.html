@@ -35,12 +35,14 @@ main{flex:1 1 auto; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:0
 
 /* ---------- avatar ---------- */
 .stage{display:flex; justify-content:center; padding:4px 0 10px}
-.avatar-svg{width:100%; max-width:330px; height:auto; max-height:46dvh; display:block}
-.skin{fill:url(#skin); stroke:#4a2510; stroke-width:2; stroke-linejoin:round}
-.limb{stroke:url(#skin); fill:none; stroke-linecap:round; stroke-linejoin:round}
-.limb-out{stroke:#4a2510; fill:none; stroke-linecap:round; stroke-linejoin:round}
-.detail path{stroke:rgba(86,42,18,.5); stroke-width:2.5; fill:none; stroke-linecap:round}
-.detail .shade{fill:rgba(120,62,26,.3); stroke:rgba(86,42,18,.4); stroke-width:2}
+.avatar-svg{width:100%; max-width:390px; height:auto; max-height:54dvh; display:block}
+.skin{fill:url(#skin); stroke:#160a04; stroke-width:2.8; stroke-linejoin:round}
+.hair{fill:#241009; stroke:#2a1409; stroke-width:2; stroke-linejoin:round}
+.rim-warm .skin,.rim-warm .hair{fill:#ffce93; stroke:#ffce93; stroke-width:3}
+.rim-cool .skin,.rim-cool .hair{fill:#6f9fc4; stroke:#6f9fc4; stroke-width:3}
+.rim-cool{opacity:.55}
+.detail .ink{stroke:#f0b27a; stroke-width:2.4; fill:none; stroke-linecap:round; opacity:.5}
+.detail .shade{fill:#1c0e05; opacity:.45; stroke:none}
 .aura-grace{fill:url(#graceGrad)}
 .aura-ember{fill:url(#emberGrad)}
 .aura-radiance{fill:url(#radGrad)}
@@ -49,13 +51,14 @@ main{flex:1 1 auto; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:0
 .g-gold{fill:#e8c15b; stroke:#a8842c; stroke-width:2}
 .g-gem{fill:#5aa9d6; stroke:#2c6b8f; stroke-width:1.5}
 .g-cloth{fill:#d8d2c6}
+.g-wrap{stroke:#d8d2c6; fill:none; stroke-linecap:round}
 .g-fur{fill:#6f5c46; stroke:#4d3f30; stroke-width:2}
-.g-cape{fill:#7b2d3a; stroke:#521e27; stroke-width:2}
+.g-cape{fill:#6d2130; stroke:#3f1119; stroke-width:2}
 .g-chalk{fill:rgba(255,255,255,.3)}
-.g-plate{stroke:#9aa2a8; fill:none; stroke-linecap:round}
+.g-plate{stroke:#79838b; fill:none; stroke-linecap:round}
 .g-tank{fill:#2f4f6b; opacity:.92}
 .g-brace{fill:#3b3630; stroke:#57503f; stroke-width:2}
-.g-mantle{fill:#4a3f6b; stroke:#2f2745; stroke-width:2}
+.g-mantle{fill:#453a63; stroke:#251e39; stroke-width:2}
 
 /* ---------- bars ---------- */
 .bars{display:grid; gap:9px; padding:4px 2px 14px}
