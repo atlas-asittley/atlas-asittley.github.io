@@ -15,6 +15,12 @@ h1 { font-size: 48px; color: #16c79a; margin-bottom: 8px; }
 .card h2 { font-size: 18px; color: #e94560; margin-bottom: 8px; }
 .card p { font-size: 13px; color: #aaa; line-height: 1.4; }
 .tag { display: inline-block; background: #0f3460; color: #16c79a; font-size: 11px; padding: 2px 8px; border-radius: 3px; margin-top: 12px; }
+details.archive { max-width: 900px; width: 100%; margin-top: 44px; }
+details.archive > summary { cursor: pointer; color: #16c79a; font-size: 18px; padding: 14px 0; border-top: 1px solid #0f3460; list-style: none; user-select: none; }
+details.archive > summary::-webkit-details-marker { display: none; }
+details.archive > summary::before { content: "\25B8  "; color: #888; }
+details.archive[open] > summary::before { content: "\25BE  "; }
+details.archive .grid { margin-top: 24px; }
 footer { margin-top: 60px; color: #555; font-size: 12px; }
 </style>
 </head>
@@ -32,94 +38,19 @@ footer { margin-top: 60px; color: #555; font-size: 12px; }
     <p>A private shopping list two people share from their phones. Sign-in required &mdash; it's locked to its owners, so this one isn't for visitors.</p>
     <span class="tag" style="background:#7c9cff;color:#10131a;">Private</span>
   </a>
-  <a href="https://atlas-asittley.github.io/chip-challenge/" class="card" style="border-color:#d2691e;">
-    <h2>🥔 Chip Challenge</h2>
-    <p>Blind taste test scorecard for a party. Guess each unlabeled chip's flavor, rate it 1&ndash;10, then reveal the leaderboards when everyone's done.</p>
-    <span class="tag" style="background:#d2691e;color:#2c1608;">Party Game</span>
-  </a>
-  <a href="https://ko-fi.com/s/b1855ace37" class="card" target="_blank" rel="noopener" style="border-color:#16c79a;">
-    <h2>🧩 Daily Puzzle Game Starter Kit</h2>
-    <p>Build your own Wordle-style daily game in an afternoon — two complete, rebrandable games (vanilla JS, no backend). The games below are the live demo. <b>$9</b></p>
-    <span class="tag" style="background:#16c79a;color:#06231b;">For Sale</span>
-  </a>
-  <a href="https://atlas-asittley.github.io/torch-and-tallow/" class="card" style="border-color:#c9a24b;">
-    <h2>Torch &amp; Tallow</h2>
-    <p>Artisan small-batch soaps, candles &amp; skincare made with beef tallow, donkey milk &amp; hemp seed oil. Modern site redesign.</p>
-    <span class="tag" style="background:#c9a24b;color:#1a1509;">Storefront</span>
-  </a>
-  <a href="https://atlas-asittley.github.io/sip-timer/" class="card" style="border-color:#29b6f6;">
-    <h2>💧 Sip Timer</h2>
-    <p>Android app: a repeating vibration nudge to drink water. Reset, pause &amp; stop straight from the lock screen. Sideload the APK.</p>
-    <span class="tag" style="background:#29b6f6;color:#05222e;">Android App</span>
-  </a>
-  <a href="https://atlas-asittley.github.io/the-knowledge/" class="card" style="border-color:#d9902a;">
-    <h2>🚕 The Knowledge</h2>
-    <p>Drive a cab through a city with no map, no route line and no GPS — you learn the streets by driving them. Built on the research into why taxi drivers rarely die of Alzheimer's.</p>
-    <span class="tag" style="background:#d9902a;color:#2a1c05;">Brain Game</span>
-  </a>
-  <a href="https://atlas-asittley.github.io/spectra/" class="card">
-    <h2>Spectra</h2>
-    <p>Crack the hidden color in 6 guesses. A new color-deduction puzzle every day — share your result.</p>
-    <span class="tag">Daily Puzzle</span>
-  </a>
-  <a href="https://atlas-asittley.github.io/vaultle/" class="card">
-    <h2>Vaultle</h2>
-    <p>Crack the hidden 4-digit safe code in 9 guesses using bulls &amp; cows clues. A new code every day — share your result.</p>
-    <span class="tag">Daily Puzzle</span>
-  </a>
-  <a href="https://atlas-asittley.github.io/realm-of-atlas-rpg/" class="card">
-    <h2>Realm of Atlas RPG</h2>
-    <p>Browser-based RPG with combat, skills, crafting, and exploration</p>
-    <span class="tag">Game</span>
+  <a href="https://atlas-asittley.github.io/workouts/" class="card">
+    <h2>Workout Tracker</h2>
+    <p>Log lifts against a coach-programmed session — targets, last-time numbers, per-set rest timer. Data syncs to Supabase.</p>
+    <span class="tag">Tool</span>
   </a>
   <a href="https://atlas-asittley.github.io/citybuilder/" class="card">
     <h2>City Builder</h2>
     <p>Mobile-first multiplayer city builder — specialize, trade, and grow a persistent shared world. Phaser/WebGL, smooth on mobile.</p>
     <span class="tag">Game</span>
   </a>
-  <a href="https://atlas-asittley.github.io/mucklo/" class="card">
-    <h2>Mucklo</h2>
-    <p>Psych-rock band from Frankfort, Indiana</p>
-    <span class="tag">Band</span>
-  </a>
-  <a href="https://atlas-asittley.github.io/mucklo-rpg/" class="card">
-    <h2>Mucklo RPG</h2>
-    <p>Turn-based RPG starring the band — Michael, Drew, Bill, and TJ</p>
-    <span class="tag">Game</span>
-  </a>
-  <a href="https://atlas-asittley.github.io/mucklo-boys-day/" class="card">
-    <h2>Mucklo Boy's Day</h2>
-    <p>8-bit side-scroller — Mucklo boy fights to get to work and home again</p>
-    <span class="tag">Game</span>
-  </a>
-  <a href="https://atlas-asittley.github.io/professional-awesome/" class="card">
-    <h2>Professional Awesome</h2>
-    <p>Race car parts and time attack specialists. RACE. WIN. REPEAT.</p>
-    <span class="tag">External</span>
-  </a>
-  <a href="https://atlas-asittley.github.io/mill-creek-dental/" class="card">
-    <h2>Mill Creek Family Dental</h2>
-    <p>Dental practice in Lafayette, Indiana</p>
-    <span class="tag">Business</span>
-  </a>
-  <a href="https://atlas-asittley.github.io/dodge-game/" class="card">
-    <h2>Dodge Game</h2>
-    <p>Avoid the falling blocks. How long can you survive?</p>
-    <span class="tag">Game</span>
-  </a>
-  <a href="https://atlas-asittley.github.io/world-clock/" class="card">
-    <h2>World Clock</h2>
-    <p>Current time in timezones around the world</p>
-    <span class="tag">Tool</span>
-  </a>
-  <a href="https://atlas-asittley.github.io/clue-tracker/" class="card">
-    <h2>Clue Tracker</h2>
-    <p>Deduction notebook for tracking suspects, weapons, and rooms in a game of Clue</p>
-    <span class="tag">Tool</span>
-  </a>
-  <a href="https://atlas-asittley.github.io/super-atlas-bros/" class="card">
-    <h2>Super Atlas Bros</h2>
-    <p>World 1-1 — classic Mario-style side-scroller with goombas, pipes, question blocks, and a flag</p>
+  <a href="https://atlas-asittley.github.io/realm-of-atlas-rpg/" class="card">
+    <h2>Realm of Atlas RPG</h2>
+    <p>Browser-based RPG with combat, skills, crafting, and exploration</p>
     <span class="tag">Game</span>
   </a>
   <a href="https://atlas-asittley.github.io/word-extractor/" class="card">
@@ -127,22 +58,104 @@ footer { margin-top: 60px; color: #555; font-size: 12px; }
     <p>Paste text and extract every Nth word — useful for puzzles, ciphers, and pattern play</p>
     <span class="tag">Tool</span>
   </a>
-  <a href="https://atlas-asittley.github.io/game-auth-demo/" class="card">
-    <h2>Game Auth</h2>
-    <p>Supabase Auth demo — email/password login and registration with session persistence</p>
-    <span class="tag">Demo</span>
-  </a>
-  <a href="https://atlas-asittley.github.io/pharaoh-tycoon/" class="card">
-    <h2>Pharaoh Tycoon Prototype</h2>
-    <p>Legacy city-builder prototype and mechanics sandbox — the design reference behind the newer multiplayer city builder</p>
-    <span class="tag">Prototype</span>
-  </a>
-  <a href="https://atlas-asittley.github.io/workouts/" class="card">
-    <h2>Workout Tracker</h2>
-    <p>Log lifts against a coach-programmed session — targets, last-time numbers, per-set rest timer. Data syncs to Supabase.</p>
-    <span class="tag">Tool</span>
-  </a>
 </div>
+
+<details class="archive">
+  <summary>Archived projects</summary>
+  <div class="grid">
+    <a href="https://atlas-asittley.github.io/chip-challenge/" class="card" style="border-color:#d2691e;">
+      <h2>🥔 Chip Challenge</h2>
+      <p>Blind taste test scorecard for a party. Guess each unlabeled chip's flavor, rate it 1&ndash;10, then reveal the leaderboards when everyone's done.</p>
+      <span class="tag" style="background:#d2691e;color:#2c1608;">Party Game</span>
+    </a>
+    <a href="https://ko-fi.com/s/b1855ace37" class="card" target="_blank" rel="noopener" style="border-color:#16c79a;">
+      <h2>🧩 Daily Puzzle Game Starter Kit</h2>
+      <p>Build your own Wordle-style daily game in an afternoon — two complete, rebrandable games (vanilla JS, no backend). The games below are the live demo. <b>$9</b></p>
+      <span class="tag" style="background:#16c79a;color:#06231b;">For Sale</span>
+    </a>
+    <a href="https://atlas-asittley.github.io/torch-and-tallow/" class="card" style="border-color:#c9a24b;">
+      <h2>Torch &amp; Tallow</h2>
+      <p>Artisan small-batch soaps, candles &amp; skincare made with beef tallow, donkey milk &amp; hemp seed oil. Modern site redesign.</p>
+      <span class="tag" style="background:#c9a24b;color:#1a1509;">Storefront</span>
+    </a>
+    <a href="https://atlas-asittley.github.io/sip-timer/" class="card" style="border-color:#29b6f6;">
+      <h2>💧 Sip Timer</h2>
+      <p>Android app: a repeating vibration nudge to drink water. Reset, pause &amp; stop straight from the lock screen. Sideload the APK.</p>
+      <span class="tag" style="background:#29b6f6;color:#05222e;">Android App</span>
+    </a>
+    <a href="https://atlas-asittley.github.io/the-knowledge/" class="card" style="border-color:#d9902a;">
+      <h2>🚕 The Knowledge</h2>
+      <p>Drive a cab through a city with no map, no route line and no GPS — you learn the streets by driving them. Built on the research into why taxi drivers rarely die of Alzheimer's.</p>
+      <span class="tag" style="background:#d9902a;color:#2a1c05;">Brain Game</span>
+    </a>
+    <a href="https://atlas-asittley.github.io/spectra/" class="card">
+      <h2>Spectra</h2>
+      <p>Crack the hidden color in 6 guesses. A new color-deduction puzzle every day — share your result.</p>
+      <span class="tag">Daily Puzzle</span>
+    </a>
+    <a href="https://atlas-asittley.github.io/vaultle/" class="card">
+      <h2>Vaultle</h2>
+      <p>Crack the hidden 4-digit safe code in 9 guesses using bulls &amp; cows clues. A new code every day — share your result.</p>
+      <span class="tag">Daily Puzzle</span>
+    </a>
+    <a href="https://atlas-asittley.github.io/mucklo/" class="card">
+      <h2>Mucklo</h2>
+      <p>Psych-rock band from Frankfort, Indiana</p>
+      <span class="tag">Band</span>
+    </a>
+    <a href="https://atlas-asittley.github.io/mucklo-rpg/" class="card">
+      <h2>Mucklo RPG</h2>
+      <p>Turn-based RPG starring the band — Michael, Drew, Bill, and TJ</p>
+      <span class="tag">Game</span>
+    </a>
+    <a href="https://atlas-asittley.github.io/mucklo-boys-day/" class="card">
+      <h2>Mucklo Boy's Day</h2>
+      <p>8-bit side-scroller — Mucklo boy fights to get to work and home again</p>
+      <span class="tag">Game</span>
+    </a>
+    <a href="https://atlas-asittley.github.io/professional-awesome/" class="card">
+      <h2>Professional Awesome</h2>
+      <p>Race car parts and time attack specialists. RACE. WIN. REPEAT.</p>
+      <span class="tag">External</span>
+    </a>
+    <a href="https://atlas-asittley.github.io/mill-creek-dental/" class="card">
+      <h2>Mill Creek Family Dental</h2>
+      <p>Dental practice in Lafayette, Indiana</p>
+      <span class="tag">Business</span>
+    </a>
+    <a href="https://atlas-asittley.github.io/dodge-game/" class="card">
+      <h2>Dodge Game</h2>
+      <p>Avoid the falling blocks. How long can you survive?</p>
+      <span class="tag">Game</span>
+    </a>
+    <a href="https://atlas-asittley.github.io/world-clock/" class="card">
+      <h2>World Clock</h2>
+      <p>Current time in timezones around the world</p>
+      <span class="tag">Tool</span>
+    </a>
+    <a href="https://atlas-asittley.github.io/clue-tracker/" class="card">
+      <h2>Clue Tracker</h2>
+      <p>Deduction notebook for tracking suspects, weapons, and rooms in a game of Clue</p>
+      <span class="tag">Tool</span>
+    </a>
+    <a href="https://atlas-asittley.github.io/super-atlas-bros/" class="card">
+      <h2>Super Atlas Bros</h2>
+      <p>World 1-1 — classic Mario-style side-scroller with goombas, pipes, question blocks, and a flag</p>
+      <span class="tag">Game</span>
+    </a>
+    <a href="https://atlas-asittley.github.io/game-auth-demo/" class="card">
+      <h2>Game Auth</h2>
+      <p>Supabase Auth demo — email/password login and registration with session persistence</p>
+      <span class="tag">Demo</span>
+    </a>
+    <a href="https://atlas-asittley.github.io/pharaoh-tycoon/" class="card">
+      <h2>Pharaoh Tycoon Prototype</h2>
+      <p>Legacy city-builder prototype and mechanics sandbox — the design reference behind the newer multiplayer city builder</p>
+      <span class="tag">Prototype</span>
+    </a>
+  </div>
+</details>
+
 <footer>More projects coming soon. · <a href="https://ko-fi.com/atlasentre" target="_blank" rel="noopener" style="color:#16c79a;text-decoration:none;">☕ Support these projects</a></footer>
 <script>
 (function(){try{if(navigator.webdriver)return;}catch(e){}var U='https://igaulapupbtdcqqjobhs.supabase.co/rest/v1/site_events',K='sb_publishable_7yi3BNg-J-K5nralw5JSww_c71Pge6e';
