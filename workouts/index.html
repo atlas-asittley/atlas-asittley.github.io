@@ -516,10 +516,13 @@
         byId[id] = byId[id] || {};
         byId[id][k === 'reps' ? 'actual_reps' : 'actual_weight'] = num(el.value);
       });
-      for (var id in byId) {
-        var r = await sb.from('workout_sets').update(byId[id]).eq('id', id);
-        if (r.error) throw r.error;
-      }
+      // All set updates in PARALLEL (was one awaited round-trip per set — ~40 sequential
+      // trips on a full session). Skip rows with nothing entered; they'd be no-op writes.
+      var updates = Object.keys(byId)
+        .filter(function (id) { var u = byId[id]; return u.actual_reps != null || u.actual_weight != null; })
+        .map(function (id) { return sb.from('workout_sets').update(byId[id]).eq('id', id); });
+      var results = await Promise.all(updates);
+      for (var i = 0; i < results.length; i++) { if (results[i].error) throw results[i].error; }
       var snEl = document.getElementById('snotes');
       var upd = await sb.from('workout_sessions').update({
         status: 'completed', completed_at: endISO, started_at: startedAt,
