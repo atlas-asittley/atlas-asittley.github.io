@@ -127,3 +127,52 @@ LEFT JOIN workout_sessions ss ON ss.id = s.session_id AND ss.status = 'completed
 WHERE p.active
 GROUP BY p.exercise, p.block, p.sort
 ORDER BY p.sort;
+
+-- ---------------------------------------------------------------------------
+-- 2026-09-09: HOME fallback blocks (pull-up bar + bodyweight only).
+-- queue_session now also accepts 'home-upper' | 'home-lower'.
+-- ---------------------------------------------------------------------------
+ALTER TABLE workout_program DROP CONSTRAINT IF EXISTS workout_program_block_check;
+ALTER TABLE workout_program ADD CONSTRAINT workout_program_block_check
+  CHECK (block IN ('daily','daily-essential','upper','lower','home-upper','home-lower'));
+
+CREATE OR REPLACE FUNCTION queue_session(p_date date, p_type text, p_force boolean DEFAULT false)
+RETURNS TABLE(session_id uuid, ord int, exercise text, sets int, reps text, weight numeric, bw boolean)
+LANGUAGE plpgsql AS $$
+DECLARE
+  v_id uuid; v_last record; v_equipment text; v_blocks text[]; r record; v_ord int := 0; v_i int;
+  v_kind text;  -- 'upper' | 'lower' | 'mobility' (home-* collapse to their lift kind for rotation checks)
+BEGIN
+  IF p_type NOT IN ('upper','lower','mobility','home-upper','home-lower') THEN
+    RAISE EXCEPTION 'p_type must be upper | lower | mobility | home-upper | home-lower (got %)', p_type;
+  END IF;
+  v_kind := CASE WHEN p_type LIKE 'home-%' THEN substr(p_type, 6) ELSE p_type END;
+
+  IF NOT p_force AND EXISTS (SELECT 1 FROM workout_sessions WHERE status = 'prescribed') THEN
+    RAISE EXCEPTION 'A prescribed session already exists (one-at-a-time rule). Complete/skip it first, or pass p_force => true.';
+  END IF;
+
+  SELECT day_type, session_date INTO v_last FROM workout_sessions WHERE status = 'completed' ORDER BY session_date DESC LIMIT 1;
+  IF v_last.day_type IN ('upper','lower') AND v_kind IN ('upper','lower') AND v_last.session_date >= p_date - 1 THEN
+    RAISE WARNING 'ROTATION: last completed session was % on %. Drew has never trained lifts back-to-back — expected mobility on %.', v_last.day_type, v_last.session_date, p_date;
+  END IF;
+  IF v_last.day_type = v_kind AND v_kind IN ('upper','lower') THEN
+    RAISE WARNING 'ROTATION: the last lift day was also % (%). Expected the other lift day.', v_kind, v_last.session_date;
+  END IF;
+
+  v_equipment := CASE WHEN p_type = 'mobility' THEN 'home' WHEN p_type LIKE 'home-%' THEN 'home (pull-up bar)' ELSE 'Park West' END;
+  v_blocks    := CASE WHEN p_type = 'mobility' THEN ARRAY['daily-essential','daily'] ELSE ARRAY['daily-essential', p_type] END;
+
+  INSERT INTO workout_sessions (session_date, day_type, equipment, status) VALUES (p_date, v_kind, v_equipment, 'prescribed') RETURNING id INTO v_id;
+
+  FOR r IN SELECT * FROM workout_program p WHERE p.active AND p.block = ANY (v_blocks) ORDER BY p.sort, p.exercise LOOP
+    v_ord := v_ord + 1;
+    FOR v_i IN 1 .. r.sets LOOP
+      INSERT INTO workout_sets (session_id, exercise, exercise_order, exercise_note, rest_seconds, set_index, target_reps, target_weight, bodyweight)
+      VALUES (v_id, r.exercise, v_ord, r.cue, r.rest_seconds, v_i, r.target_reps, r.working_weight, r.bodyweight);
+    END LOOP;
+  END LOOP;
+
+  RETURN QUERY SELECT v_id, s.exercise_order, s.exercise, count(*)::int, min(s.target_reps), max(s.target_weight), bool_or(s.bodyweight)
+    FROM workout_sets s WHERE s.session_id = v_id GROUP BY s.exercise_order, s.exercise ORDER BY s.exercise_order;
+END $$;
