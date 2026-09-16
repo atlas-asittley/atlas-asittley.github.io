@@ -7,7 +7,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  :root { --bg:#1a1a2e; --card:#16213e; --border:#0f3460; --green:#16c79a; --red:#e94560; --text:#eee; --dim:#8a97b1; }
+  :root { --bg:#1a1a2e; --card:#16213e; --border:#0f3460; --green:#16c79a; --red:#e94560; --text:#eee; --dim:#8a97b1; --amber:#e8a838; }
   body { background:var(--bg); color:var(--text); font-family:'Courier New',monospace; padding:16px 14px 60px; max-width:640px; margin:0 auto; -webkit-text-size-adjust:100%; }
   header { display:flex; align-items:baseline; justify-content:space-between; margin-bottom:12px; }
   h1 { font-size:24px; color:var(--green); }
@@ -150,30 +150,54 @@
   if (!el) return;
   if (!window.supabase) { el.innerHTML = '<span class="dim">—</span>'; return; }
   var sb = window.supabase.createClient(URL, KEY, { auth: { persistSession: false, autoRefreshToken: false } });
-  var CAL_T = 3050, PRO_T = 180;   // fallback only — live values come from workout_settings
+  var CAL_T = 2500, PRO_T = 200;   // fallbacks only — live values come from workout_settings
+  var CAL_MIN = 2300, CAL_MAX = 2700, PRO_MIN = 180, PRO_MAX = 220;
   async function loadSettings() {
     try {
       var r = await sb.from('workout_settings').select('key,value');
       if (r.data) r.data.forEach(function (row) {
         if (row.key === 'cal_target')     CAL_T = parseInt(row.value, 10) || CAL_T;
         if (row.key === 'protein_target') PRO_T = parseInt(row.value, 10) || PRO_T;
+        if (row.key === 'cal_min')        CAL_MIN = parseInt(row.value, 10) || CAL_MIN;
+        if (row.key === 'cal_max')        CAL_MAX = parseInt(row.value, 10) || CAL_MAX;
+        if (row.key === 'protein_min')    PRO_MIN = parseInt(row.value, 10) || PRO_MIN;
+        if (row.key === 'protein_max')    PRO_MAX = parseInt(row.value, 10) || PRO_MAX;
       });
       var ct = document.getElementById('cal-target'), pt = document.getElementById('pro-target');
-      if (ct) ct.textContent = CAL_T.toLocaleString();
-      if (pt) pt.textContent = PRO_T + 'g';
+      if (ct) ct.textContent = CAL_MIN.toLocaleString() + '–' + CAL_MAX.toLocaleString();
+      if (pt) pt.textContent = PRO_MIN + '–' + PRO_MAX + 'g';
       var lt = document.getElementById('left-cal'), lp = document.getElementById('left-pro');
       if (lt) lt.textContent = '~' + (CAL_T - 700).toLocaleString();
       if (lp) lp.textContent = '~' + (PRO_T - 44) + 'g';
       var tc = document.getElementById('tbl-cal'), tp = document.getElementById('tbl-pro');
-      if (tc) tc.textContent = '~' + CAL_T.toLocaleString();
-      if (tp) tp.textContent = '~' + PRO_T + 'g';
+      if (tc) tc.textContent = CAL_MIN.toLocaleString() + '–' + CAL_MAX.toLocaleString();
+      if (tp) tp.textContent = PRO_MIN + '–' + PRO_MAX + 'g';
     } catch (e) {}
   }
   var d = new Date();
   var today = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-  function bar(pct, color) {
-    pct = Math.max(0, Math.min(100, Math.round(pct)));
-    return '<div style="background:var(--border);border-radius:6px;height:8px;margin-top:4px;overflow:hidden"><div style="width:' + pct + '%;height:100%;background:' + color + '"></div></div>';
+  // Zone bar: scale runs 0 → 1.25x the range ceiling, with the target band shaded.
+  // Colour = how close you are to the band, not how close to a single number.
+  // overOK: protein has no penalty above the band (stays green); calories go amber then red.
+  function zoneBar(val, lo, hi, overOK) {
+    var span = hi * 1.25;
+    var pct  = function (v) { return Math.max(0, Math.min(100, v / span * 100)); };
+    var fill = pct(val), bandL = pct(lo), bandR = pct(hi);
+    var col;
+    if (val >= lo && val <= hi)      col = 'var(--green)';
+    else if (val > hi)               col = overOK ? 'var(--green)' : (val > hi * 1.12 ? 'var(--red)' : 'var(--amber)');
+    else if (val >= lo * 0.85)       col = 'var(--amber)';
+    else                             col = 'var(--red)';
+    return '<div style="position:relative;background:var(--border);border-radius:6px;height:12px;margin-top:5px;overflow:hidden">' +
+             '<div style="position:absolute;left:' + bandL + '%;width:' + (bandR - bandL) + '%;top:0;bottom:0;background:rgba(22,199,154,.20);border-left:1px solid rgba(22,199,154,.55);border-right:1px solid rgba(22,199,154,.55)"></div>' +
+             '<div style="position:absolute;left:0;top:0;bottom:0;width:' + fill + '%;background:' + col + ';opacity:.9"></div>' +
+           '</div>';
+  }
+  function zoneLabel(val, lo, hi, unit, overOK) {
+    if (val >= lo && val <= hi) return '<span style="color:var(--green)">in range ✓</span>';
+    if (val > hi) return overOK ? '<span style="color:var(--green)">over the band — fine ✓</span>'
+                                : '<span style="color:var(--amber)">' + Math.round(val - hi) + unit + ' over</span>';
+    return '<span style="color:var(--dim)">' + Math.round(lo - val) + unit + ' to the band</span>';
   }
   loadSettings().then(function () { return sb.from('workout_food_log').select('item,calories,protein').eq('log_date', today).order('created_at', { ascending: true }); })
     .then(function (res) {
@@ -187,11 +211,12 @@
         h += '<tr><td>' + r.item + '</td><td class="n">' + (r.calories != null ? Math.round(r.calories) : '–') + '</td><td class="n">' + (r.protein != null ? Math.round(r.protein) + 'g' : '–') + '</td></tr>';
       });
       h += '<tr class="total"><td>Total</td><td class="n">' + Math.round(tc) + '</td><td class="n">' + Math.round(tp) + 'g</td></tr>';
-      h += '<tr class="target"><td>Target</td><td class="n">~' + CAL_T + '</td><td class="n">~' + PRO_T + 'g</td></tr>';
-      h += '<tr class="left"><td>Left</td><td class="n">~' + Math.round(Math.max(0, CAL_T - tc)) + '</td><td class="n">~' + Math.round(Math.max(0, PRO_T - tp)) + 'g</td></tr>';
+      h += '<tr class="target"><td>Range</td><td class="n">' + CAL_MIN + '–' + CAL_MAX + '</td><td class="n">' + PRO_MIN + '–' + PRO_MAX + 'g</td></tr>';
+      h += '<tr class="left"><td>To the band</td><td class="n">' + (tc >= CAL_MIN ? '—' : Math.round(CAL_MIN - tc)) + '</td><td class="n">' + (tp >= PRO_MIN ? '—' : Math.round(PRO_MIN - tp) + 'g') + '</td></tr>';
       h += '</table>';
-      h += '<div style="margin-top:10px;font-size:12px;color:var(--dim)">Calories ' + Math.round(tc / CAL_T * 100) + '%' + bar(tc / CAL_T * 100, 'var(--green)') + '</div>';
-      h += '<div style="margin-top:8px;font-size:12px;color:var(--dim)">Protein ' + Math.round(tp / PRO_T * 100) + '%' + bar(tp / PRO_T * 100, 'var(--red)') + '</div>';
+      h += '<div style="margin-top:12px;font-size:12px;color:var(--dim)">Calories <b style="color:var(--text)">' + Math.round(tc) + '</b> · ' + zoneLabel(tc, CAL_MIN, CAL_MAX, '', false) + zoneBar(tc, CAL_MIN, CAL_MAX, false) + '</div>';
+      h += '<div style="margin-top:10px;font-size:12px;color:var(--dim)">Protein <b style="color:var(--text)">' + Math.round(tp) + 'g</b> · ' + zoneLabel(tp, PRO_MIN, PRO_MAX, 'g', true) + zoneBar(tp, PRO_MIN, PRO_MAX, true) + '</div>';
+      h += '<div style="margin-top:8px;font-size:11px;color:var(--dim)">Shaded band = the target range. Landing anywhere in it is a good day.</div>';
       h += '<div style="margin-top:10px;font-size:11px;color:var(--dim)">Rough estimates (±15–20%). It resets each day.</div>';
       el.innerHTML = h;
     });
