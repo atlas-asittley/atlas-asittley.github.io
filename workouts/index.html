@@ -54,6 +54,11 @@
   .exercise h2 { font-size: 17px; color: var(--red); margin-bottom: 4px; }
   .ex-meta { font-size: 12px; color: var(--dim); margin-bottom: 4px; }
 .ex-note { font-size: 12px; color: var(--green); margin-bottom: 4px; line-height: 1.4; }
+.warmup { border: 1px dashed var(--border); border-radius: 8px; padding: 8px 10px; margin: 6px 0 10px; }
+  .warmup-h { font-size: 11px; color: var(--dim); letter-spacing: .5px; margin-bottom: 5px; }
+  .warmup-row { display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: var(--dim); padding: 3px 0; }
+  .warmup-row b { color: var(--text); }
+  .warmup-row .wu-rest { font-size: 11px; }
   .coach-note { border: 1px solid var(--red); border-radius: 10px; padding: 10px 12px; margin-bottom: 18px; background: rgba(233,69,96,.07); }
   .coach-note summary { cursor: pointer; color: var(--red); font-weight: 700; font-size: 13px; list-style: none; }
   .coach-note summary::-webkit-details-marker { display: none; }
@@ -426,6 +431,19 @@
   }
   function clearDraft() { try { localStorage.removeItem(draftKey()); } catch (e) {} }
 
+  // Warm-up ramp for the first press of the day: ~40% x10, ~65% x5, ~85% x3,
+  // rounded to the nearest 5 lb. Displayed only — never logged (Drew, 2026-09-16).
+  var RAMP_FOR = { 'db bench press': 1 };
+  function rampFor(weight) {
+    var w = Number(weight); if (!w || w < 40) return null;
+    var r5 = function (x) { return Math.max(10, Math.round(x / 5) * 5); };
+    return [
+      { w: r5(w * 0.40), reps: 10, rest: '45s' },
+      { w: r5(w * 0.65), reps: 5,  rest: '60s' },
+      { w: r5(w * 0.85), reps: 3,  rest: '2-3 min' }
+    ];
+  }
+
   // ---------- render ----------
   function render(lastByExercise) {
     var head = 'Session for <b>' + session.session_date + '</b> · <b>' + session.day_type + '</b>';
@@ -456,6 +474,17 @@
       var rest = g.rest ? (' · rest ' + (g.rest >= 60 ? (g.rest/60) + ' min' : g.rest + 's')) : '';
       h += '<div class="ex-meta">' + repRange + rest + '</div>';
       if (g.note) h += '<div class="ex-note">→ ' + g.note + '</div>';
+      var ramp = RAMP_FOR[g.name.toLowerCase().trim()] ? rampFor(g.sets[0].target_weight) : null;
+      if (ramp) {
+        h += '<div class="warmup"><div class="warmup-h">WARM-UP RAMP — not logged, just do it</div>';
+        ramp.forEach(function (r, i) {
+          h += '<div class="warmup-row"><span>' + (i + 1) + '. <b>' + r.w + ' lb</b> × ' + r.reps + '</span>' +
+               '<span class="wu-rest">rest ' + r.rest + '</span></div>';
+        });
+        h += '<div class="warmup-row" style="border-top:1px solid var(--border);margin-top:5px;padding-top:6px">' +
+             '<span>then work sets at <b>' + g.sets[0].target_weight + ' lb</b></span>' +
+             '<span class="wu-rest">fast &amp; easy — if the 3rd grinds, drop it 5</span></div></div>';
+      }
       if (lastByExercise[g.name]) h += '<div class="ex-last">Last time: <b>' + lastByExercise[g.name] + '</b></div>';
       var slug = DEMOS[g.name.toLowerCase().trim()];
       if (slug) h += '<button class="how" type="button">▶ How to do it</button>' +
