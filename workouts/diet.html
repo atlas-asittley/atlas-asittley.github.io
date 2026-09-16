@@ -195,9 +195,9 @@
   }
   function zoneLabel(val, lo, hi, unit, overOK) {
     if (val >= lo && val <= hi) return '<span style="color:var(--green)">in range ✓</span>';
-    if (val > hi) return overOK ? '<span style="color:var(--green)">over the band — fine ✓</span>'
+    if (val > hi) return overOK ? '<span style="color:var(--green)">over target — fine ✓</span>'
                                 : '<span style="color:var(--amber)">' + Math.round(val - hi) + unit + ' over</span>';
-    return '<span style="color:var(--dim)">' + Math.round(lo - val) + unit + ' to the band</span>';
+    return '<span style="color:var(--dim)">' + Math.round(lo - val) + unit + ' to target</span>';
   }
   loadSettings().then(function () { return sb.from('workout_food_log').select('item,calories,protein').eq('log_date', today).order('created_at', { ascending: true }); })
     .then(function (res) {
@@ -211,12 +211,12 @@
         h += '<tr><td>' + r.item + '</td><td class="n">' + (r.calories != null ? Math.round(r.calories) : '–') + '</td><td class="n">' + (r.protein != null ? Math.round(r.protein) + 'g' : '–') + '</td></tr>';
       });
       h += '<tr class="total"><td>Total</td><td class="n">' + Math.round(tc) + '</td><td class="n">' + Math.round(tp) + 'g</td></tr>';
-      h += '<tr class="target"><td>Range</td><td class="n">' + CAL_MIN + '–' + CAL_MAX + '</td><td class="n">' + PRO_MIN + '–' + PRO_MAX + 'g</td></tr>';
-      h += '<tr class="left"><td>To the band</td><td class="n">' + (tc >= CAL_MIN ? '—' : Math.round(CAL_MIN - tc)) + '</td><td class="n">' + (tp >= PRO_MIN ? '—' : Math.round(PRO_MIN - tp) + 'g') + '</td></tr>';
+      h += '<tr class="target"><td>Target</td><td class="n">' + CAL_MIN + '–' + CAL_MAX + '</td><td class="n">' + PRO_MIN + '–' + PRO_MAX + 'g</td></tr>';
+      h += '<tr class="left"><td>To target</td><td class="n">' + (tc >= CAL_MIN ? '—' : Math.round(CAL_MIN - tc)) + '</td><td class="n">' + (tp >= PRO_MIN ? '—' : Math.round(PRO_MIN - tp) + 'g') + '</td></tr>';
       h += '</table>';
       h += '<div style="margin-top:12px;font-size:12px;color:var(--dim)">Calories <b style="color:var(--text)">' + Math.round(tc) + '</b> · ' + zoneLabel(tc, CAL_MIN, CAL_MAX, '', false) + zoneBar(tc, CAL_MIN, CAL_MAX, false) + '</div>';
       h += '<div style="margin-top:10px;font-size:12px;color:var(--dim)">Protein <b style="color:var(--text)">' + Math.round(tp) + 'g</b> · ' + zoneLabel(tp, PRO_MIN, PRO_MAX, 'g', true) + zoneBar(tp, PRO_MIN, PRO_MAX, true) + '</div>';
-      h += '<div style="margin-top:8px;font-size:11px;color:var(--dim)">Shaded band = the target range. Landing anywhere in it is a good day.</div>';
+      h += '<div style="margin-top:8px;font-size:11px;color:var(--dim)">Shaded area = your target range. Landing anywhere in it is a good day.</div>';
       h += '<div style="margin-top:10px;font-size:11px;color:var(--dim)">Rough estimates (±15–20%). It resets each day.</div>';
       el.innerHTML = h;
     });
