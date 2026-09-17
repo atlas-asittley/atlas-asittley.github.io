@@ -176,27 +176,42 @@
   }
   var d = new Date();
   var today = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-  // Continuous colour: hue 0 (red) → ~45 (amber) → 150 (green), computed from the value.
-  // Under target it warms up as you approach; over target it cools back down the same way.
-  // overOK (protein): no penalty above target, stays green. Pure function — nothing to maintain.
-  function zoneHue(val, lo, hi, overOK) {
-    if (val >= lo && val <= hi) return 150;
-    if (val > hi) {
-      if (overOK) return 150;
-      return 150 * (1 - Math.min(1, (val - hi) / (hi * 0.25)));   // 25% over the top = full red
-    }
-    return 150 * Math.max(0, Math.min(1, (val - lo * 0.5) / (lo * 0.5))); // half of target = full red
+  // Fixed-position gradient: the TRACK is permanently red -> yellow -> green (target)
+  // -> yellow -> red. The fill only reveals more of it as the day goes on, so colour
+  // means "where on the scale", not "how you're doing right now". Mid-day yellow just
+  // means partway. Unfilled part stays visible but dim, so the green zone is always in
+  // sight ahead of you. (Drew's design, 2026-09-17.)
+  function gradientCSS(lo, hi, max, overOK, dim) {
+    var at = function (v) { return (v / max * 100).toFixed(1) + '%'; };
+    var c  = function (h) { return dim ? 'hsl(' + h + ' 30% 26%)' : 'hsl(' + h + ' 66% 48%)'; };
+    var stops = [
+      c(0)   + ' 0%',
+      c(45)  + ' ' + at(lo * 0.55),
+      c(150) + ' ' + at(lo),
+      c(150) + ' ' + at(hi)
+    ];
+    if (overOK) stops.push(c(150) + ' 100%');
+    else stops.push(c(45) + ' ' + at(hi + (max - hi) * 0.45), c(0) + ' 100%');
+    return 'linear-gradient(90deg,' + stops.join(',') + ')';
   }
   function zoneBar(val, lo, hi, overOK) {
-    var span = hi * 1.3;
-    var pct  = function (v) { return Math.max(0, Math.min(100, v / span * 100)); };
-    var fill = pct(val), bandL = pct(lo), bandR = pct(hi);
-    var hue  = zoneHue(val, lo, hi, overOK);
-    var c1   = 'hsl(' + hue + ' 60% 38%)', c2 = 'hsl(' + hue + ' 68% 52%)';
-    return '<div style="position:relative;background:var(--border);border-radius:6px;height:12px;margin-top:5px;overflow:hidden">' +
-             '<div style="position:absolute;left:' + bandL + '%;width:' + (bandR - bandL) + '%;top:0;bottom:0;background:rgba(255,255,255,.10);border-left:1px solid rgba(255,255,255,.35);border-right:1px solid rgba(255,255,255,.35)"></div>' +
-             '<div style="position:absolute;left:0;top:0;bottom:0;width:' + fill + '%;background:linear-gradient(90deg,' + c1 + ',' + c2 + ');transition:width .25s,background .25s"></div>' +
+    var max  = overOK ? hi * 1.25 : hi * 1.25;
+    var fill = Math.max(0, Math.min(100, val / max * 100));
+    var zL   = lo / max * 100, zR = hi / max * 100;
+    var inner = fill > 0.4
+      ? '<div style="position:absolute;left:0;top:0;bottom:0;width:' + fill + '%;overflow:hidden">' +
+          '<div style="position:absolute;left:0;top:0;bottom:0;width:' + (10000 / fill).toFixed(1) + '%;background:' + gradientCSS(lo, hi, max, overOK, false) + '"></div>' +
+        '</div>'
+      : '';
+    return '<div style="position:relative;height:14px;border-radius:7px;margin-top:6px;overflow:hidden;background:' + gradientCSS(lo, hi, max, overOK, true) + '">' +
+             inner +
+             '<div style="position:absolute;left:' + zL + '%;width:' + (zR - zL) + '%;top:0;bottom:0;border-left:1px solid rgba(255,255,255,.7);border-right:1px solid rgba(255,255,255,.7)"></div>' +
            '</div>';
+  }
+  function zoneHue(val, lo, hi, overOK) {   // for the text label only
+    if (val >= lo && val <= hi) return 150;
+    if (val > hi) return overOK ? 150 : 150 * (1 - Math.min(1, (val - hi) / (hi * 0.25)));
+    return 150 * Math.max(0, Math.min(1, (val - lo * 0.55) / (lo * 0.45)));
   }
   function zoneLabel(val, lo, hi, unit, overOK) {
     var col = 'hsl(' + zoneHue(val, lo, hi, overOK) + ' 68% 58%)';
@@ -222,7 +237,7 @@
       h += '</table>';
       h += '<div style="margin-top:12px;font-size:12px;color:var(--dim)">Calories <b style="color:var(--text)">' + Math.round(tc) + '</b> · ' + zoneLabel(tc, CAL_MIN, CAL_MAX, '', false) + zoneBar(tc, CAL_MIN, CAL_MAX, false) + '</div>';
       h += '<div style="margin-top:10px;font-size:12px;color:var(--dim)">Protein <b style="color:var(--text)">' + Math.round(tp) + 'g</b> · ' + zoneLabel(tp, PRO_MIN, PRO_MAX, 'g', true) + zoneBar(tp, PRO_MIN, PRO_MAX, true) + '</div>';
-      h += '<div style="margin-top:8px;font-size:11px;color:var(--dim)">Shaded area = your target range. Landing anywhere in it is a good day.</div>';
+      h += '<div style="margin-top:8px;font-size:11px;color:var(--dim)">The two white lines mark your target. The bar fills as you eat — land the edge between them.</div>';
       h += '<div style="margin-top:10px;font-size:11px;color:var(--dim)">Rough estimates (±15–20%). It resets each day.</div>';
       el.innerHTML = h;
     });
