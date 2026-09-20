@@ -53,7 +53,7 @@
 </nav>
 
 <div class="card">
-  <h2>Today <span class="dim" style="font-size:12px">— rough running total · sanity-check, not a grade</span></h2>
+  <h2>Today <span class="dim" style="font-size:12px">— <span id="day-label"></span> · rough running total, not a grade</span></h2>
   <div id="today"><span class="dim">loading…</span></div>
 </div>
 
@@ -174,8 +174,25 @@
       if (tp) tp.textContent = PRO_MIN + '–' + PRO_MAX + 'g';
     } catch (e) {}
   }
-  var d = new Date();
-  var today = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  // Drew's day ends when he SLEEPS, not at calendar midnight — late-night food counts
+  // to the day that's ending. Before 4am the page therefore shows the previous date,
+  // which is also how the coach logs it. (Fixed 2026-09-20; it had been rolling over
+  // at midnight and hiding the day he was still in.)
+  var DAY_ROLLOVER_HOUR = 4;
+  function isoOf(dt) {
+    return dt.getFullYear() + '-' + String(dt.getMonth() + 1).padStart(2, '0') + '-' + String(dt.getDate()).padStart(2, '0');
+  }
+  var now = new Date();
+  var lateNight = now.getHours() < DAY_ROLLOVER_HOUR;
+  var dayRef = new Date(now);
+  if (lateNight) dayRef.setDate(dayRef.getDate() - 1);
+  var today = isoOf(dayRef);
+  (function labelDay() {
+    var h = document.getElementById('day-label');
+    if (!h) return;
+    var wd = dayRef.toLocaleDateString(undefined, { weekday: 'long' });
+    h.textContent = lateNight ? (wd + ' (still — your day ends when you sleep)') : wd;
+  })();
   // Fixed-position gradient: the TRACK is permanently red -> yellow -> green (target)
   // -> yellow -> red. The fill only reveals more of it as the day goes on, so colour
   // means "where on the scale", not "how you're doing right now". Mid-day yellow just
@@ -224,7 +241,7 @@
     .then(function (res) {
       if (res.error) { el.innerHTML = '<span class="dim">—</span>'; return; }
       var rows = res.data || [];
-      if (!rows.length) { el.innerHTML = '<span class="dim">Nothing logged yet today. Tell your coach what you ate and it\'ll show up here.</span>'; return; }
+      if (!rows.length) { el.innerHTML = '<span class="dim">Nothing logged yet for ' + today + '. Tell your coach what you ate and it\'ll show up here.</span>'; return; }
       var tc = 0, tp = 0;
       var h = '<table><tr><th>Item</th><th class="n">Cal</th><th class="n">Protein</th></tr>';
       rows.forEach(function (r) {
