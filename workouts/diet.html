@@ -6,6 +6,9 @@
 <title>Diet</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
+  details.card summary::-webkit-details-marker { display:none }
+  details.card summary::after { content:" ▾"; color:var(--dim) }
+  details.card[open] summary::after { content:" ▴" }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   :root { --bg:#1a1a2e; --card:#16213e; --border:#0f3460; --green:#16c79a; --red:#e94560; --text:#eee; --dim:#8a97b1; --amber:#e8a838; }
   body { background:var(--bg); color:var(--text); font-family:'Courier New',monospace; padding:16px 14px 60px; max-width:640px; margin:0 auto; -webkit-text-size-adjust:100%; }
@@ -77,32 +80,36 @@
   <p class="dim" style="margin-top:8px"><b>Protein at 12.5 cal/g means anchors:</b> fat-free Fairlife (13g / 80 cal), Core Power Elite (42g / 230), chicken breast, white fish, egg whites, jerky, plain nonfat Greek yogurt. Build every day on 2–3 of those, then eat normally around them.</p>
 </div>
 
-<div class="card">
-  <h2>Where It Comes From</h2>
-  <table>
-    <tr><th>Source</th><th class="n">Cal</th><th class="n">Protein</th></tr>
-    <tr><td>Shake <span class="dim">(daily anchor · fat-free milk)</span></td><td class="n">~700</td><td class="n">~44g</td></tr>
-    <tr class="target"><td>Daily target</td><td class="n" id="tbl-cal">~3,050</td><td class="n" id="tbl-pro">~180g</td></tr>
-    <tr class="left"><td>Left for meals</td><td class="n" id="left-cal">~2,350</td><td class="n" id="left-pro">~136g</td></tr>
-  </table>
-  <p class="dim" style="margin-top:10px">The shake covers ~840 cal / ~44g protein; the rest comes from <span class="green">food</span> — ~136g protein across your meals (meat, fish, eggs, dairy). Meals stay calorie-dense: rice, potatoes, pasta, olive oil, nuts, avocado.</p>
-</div>
-
-<div class="card" style="border-color:var(--green)">
-  <h2 style="color:var(--green)">✅ The two rules (2026-09-05)</h2>
-  <p class="dim" style="margin-bottom:8px">Don't count calories. Do these two things and weigh in each morning — the scale decides, not the arithmetic.</p>
-  <ul style="list-style:none; padding-left:0; line-height:1.9">
-    <li>🥛 <b>Fat-free Fairlife in the shake.</b> <span class="dim">−140 cal/day, identical protein. Permanent, no thinking.</span></li>
-    <li>🍽️ <b>One bowl, not two.</b> <span class="dim">The second helping is the biggest lever — ~400 cal on the days it happens, and it isn't buying protein.</span></li>
-  </ul>
-  <p class="dim" style="margin-top:10px"><b>Target rate: 0.5–0.7 lb/week</b> on the <b>weekly average</b>. Never trim protein or shrink a meal — cut the zero-protein add-ons (butter, sugar, seconds) instead. Reserve lever if needed: shake nut butter 3 tbsp → 2.</p>
-</div>
-
-<div class="card">
-  <h2>Shake Slot <span class="dim" style="font-size:12px">— rotate the two · ~700 cal / ~44g P each · FAT-FREE milk · NO POWDER (it was the gas trigger)</span></h2>
-
+<details class="card">
+  <summary style="cursor:pointer;color:var(--green);font-weight:700;font-size:15px;list-style:none">🍳 Recipes <span class="dim" style="font-weight:normal;font-size:12px">— shakes · snacks · pancakes (tap to open)</span></summary>
+  <div style="margin-top:14px">
   <div class="recipe">
-    <h3>1. Mass Gainer Shake <span class="cal">~700 cal / ~44g P</span></h3>
+    <h3>Daily Shake <span class="cal">~280 cal / ~51g P</span> <span class="dim" style="font-size:11px">— the workhorse</span></h3>
+    <p class="dim">What you actually drink. Sip it DURING a lift — that is what cut the exertional light-headedness (found 9/20).</p>
+    <ul>
+      <li>1 scoop whey <b>ISOLATE</b> <span class="dim">(ISO100 or Isopure — 25g / ~120 cal)</span></li>
+      <li>2 cups Fairlife <b>fat-free</b> <span class="dim">(26g / 160 cal)</span></li>
+      <li class="dim"><b>Leaner:</b> scoop in water = 120 cal / 25g. <b>Middle:</b> scoop + 1 cup milk = 200 / 38g.</li>
+      <li class="dim"><b>Isolate only — never concentrate.</b> The 2026-07 gas was concentrate + sweeteners; isolate re-tested clean over 3 days (9/15–9/17).</li>
+    </ul>
+  </div>
+  <div class="recipe">
+    <h3>Protein Pancakes <span class="cal">~480 cal / ~58g P (whole batch, 3–4 cakes)</span></h3>
+    <p class="dim">Blend everything, cook on medium-LOW like normal pancakes. The cottage cheese is the trick — powder alone makes them rubbery; the cheese keeps them soft.</p>
+    <ul>
+      <li>1 scoop protein isolate <span class="dim">(chocolate works; add 1 tbsp cocoa powder to make it taste like chocolate rather than like protein)</span></li>
+      <li>2 whole eggs + 2 whites <span class="dim">(or ½ cup liquid whites)</span></li>
+      <li>½ cup oats, blended to flour</li>
+      <li>½ cup cottage cheese <span class="dim">(4% — don't skip it)</span></li>
+      <li>½ tsp baking powder · splash vanilla · pinch of salt</li>
+      <li><b>Toppings:</b> 1 cup berries (60) + 1 tbsp real maple syrup (50) → <b>~590 cal / ~59g P</b></li>
+      <li class="dim"><b>No-powder version:</b> 3 whole eggs + ¾ cup cottage cheese + ½ cup blended oats + baking powder + vanilla → ~450 cal / ~42g P. Tastes more like a normal pancake.</li>
+      <li class="dim"><b>Same batter</b> works in a waffle iron. For French toast instead: 2 eggs + ¼ cup Fairlife + vanilla + cinnamon, 2 thick slices ≈ 400 cal / 25g P.</li>
+      <li class="dim">Measure the syrup once so you know what 1 tbsp looks like — the free pour is where 200 calories go.</li>
+    </ul>
+  </div>
+  <div class="recipe">
+    <h3>1. Mass Gainer Shake <span class="cal">~700 cal / ~44g P</span> <span class="dim" style="font-size:11px">— BULK-ERA, too big for the cut</span></h3>
     <p class="dim">Blend the liquids briefly, let it sit so foam collapses. (Protein comes from the milk + PB — no powder.)</p>
     <ul>
       <li>2 cups Fairlife <b>FAT-FREE</b> lactose-free milk <span class="dim">(160 cal / 26g — same protein as whole, 140 fewer cal)</span></li>
@@ -111,9 +118,8 @@
       <li>1 banana</li>
     </ul>
   </div>
-
   <div class="recipe">
-    <h3>2. Mocha Almond Mass Shake <span class="cal">~720 cal / ~44g P</span></h3>
+    <h3>2. Mocha Almond Mass Shake <span class="cal">~720 cal / ~44g P</span> <span class="dim" style="font-size:11px">— BULK-ERA</span></h3>
     <p class="dim">Blend the liquids &amp; cocoa, let it settle. (No powder — protein from the milk + almond butter.)</p>
     <ul>
       <li>2 cups Fairlife <b>FAT-FREE</b> lactose-free milk <span class="dim">(160 cal / 26g — same protein as whole, 140 fewer cal)</span></li>
@@ -123,12 +129,8 @@
       <li>½ cup dry oats + 2 dates (or 1 tbsp honey)</li>
     </ul>
   </div>
-</div>
-
-<div class="card">
-  <h2>Snacks <span class="dim" style="font-size:12px">— optional, for closing a protein/calorie gap</span></h2>
   <div class="recipe">
-    <h3>Greek Yogurt Power Bowl <span class="cal">~575 cal / ~37g P</span></h3>
+    <h3>Greek Yogurt Power Bowl <span class="cal">~575 cal / ~37g P</span> <span class="dim" style="font-size:11px">— cut version: ½ the granola + nuts, plain nonfat yogurt ≈ 300 / 30g</span></h3>
     <p class="dim">A big Greek-yogurt base carries the protein (no powder). Great for closing a protein gap late in the day.</p>
     <ul>
       <li>1½ cups plain Greek yogurt</li>
@@ -140,7 +142,8 @@
       <li><b>bigger version (~750 cal):</b> double the granola + nuts to close calories too</li>
     </ul>
   </div>
-</div>
+  </div>
+</details>
 
 <script>
 (function () {
