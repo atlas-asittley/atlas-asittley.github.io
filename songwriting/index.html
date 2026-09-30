@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Songwriting Playbook</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #1a1a2e; color: #eee; font-family: 'Courier New', monospace; min-height: 100vh; padding: 24px 16px 60px; }
+.wrap { max-width: 760px; margin: 0 auto; }
+h1.site { font-size: 30px; color: #16c79a; margin-bottom: 6px; }
+.subtitle { color: #888; font-size: 13px; margin-bottom: 22px; }
+nav { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 26px; }
+nav button { background: #16213e; border: 1px solid #0f3460; color: #eee; font-family: inherit; font-size: 14px; padding: 10px 16px; border-radius: 6px; cursor: pointer; }
+nav button:hover { border-color: #16c79a; }
+nav button.on { border-color: #16c79a; color: #16c79a; }
+#doc { line-height: 1.6; font-size: 15px; }
+#doc h1 { font-size: 24px; color: #16c79a; margin: 28px 0 12px; }
+#doc h2 { font-size: 19px; color: #e94560; margin: 30px 0 10px; border-top: 1px solid #0f3460; padding-top: 18px; }
+#doc h3 { font-size: 16px; color: #16c79a; margin: 20px 0 8px; }
+#doc p { margin-bottom: 14px; color: #ccc; }
+#doc ul, #doc ol { margin: 0 0 16px 22px; color: #ccc; }
+#doc li { margin-bottom: 8px; }
+#doc strong { color: #eee; }
+#doc code { background: #0f3460; padding: 2px 6px; border-radius: 3px; font-size: 13px; }
+#doc em { color: #aaa; }
+#doc a { color: #16c79a; }
+#doc blockquote { border-left: 3px solid #0f3460; padding-left: 14px; margin: 0 0 16px; color: #999; }
+.tablewrap { overflow-x: auto; margin-bottom: 18px; }
+#doc table { border-collapse: collapse; width: 100%; font-size: 13px; }
+#doc th, #doc td { border: 1px solid #0f3460; padding: 9px 11px; text-align: left; vertical-align: top; }
+#doc th { background: #16213e; color: #16c79a; }
+#doc td { color: #ccc; }
+footer { margin-top: 50px; color: #555; font-size: 12px; }
+footer a { color: #16c79a; }
+.loading { color: #888; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1 class="site">Songwriting Playbook</h1>
+  <p class="subtitle">Working reference. Edited as markdown, rendered here.</p>
+  <nav id="nav"></nav>
+  <div id="doc" class="loading">Loading…</div>
+  <footer>Source files live in <code>/songwriting/</code>. <a href="https://atlas-asittley.github.io/">Back to Atlas</a></footer>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/4.3.0/marked.min.js"></script>
+<script>
+const DOCS = [
+  { file: 'process.md', label: 'Process' },
+  { file: 'melody.md',  label: 'Melody' },
+];
+const nav = document.getElementById('nav');
+const doc = document.getElementById('doc');
+
+function wrapTables() {
+  doc.querySelectorAll('table').forEach(t => {
+    if (t.parentElement.classList.contains('tablewrap')) return;
+    const d = document.createElement('div');
+    d.className = 'tablewrap';
+    t.parentNode.insertBefore(d, t);
+    d.appendChild(t);
+  });
+}
+
+async function load(file, btn) {
+  [...nav.children].forEach(b => b.classList.remove('on'));
+  if (btn) btn.classList.add('on');
+  doc.className = 'loading';
+  doc.textContent = 'Loading…';
+  try {
+    const res = await fetch(file + '?v=' + Date.now(), { cache: 'no-store' });
+    if (!res.ok) throw new Error(res.status);
+    doc.className = '';
+    doc.innerHTML = marked.parse(await res.text());
+    wrapTables();
+    window.scrollTo(0, 0);
+    location.hash = file.replace('.md', '');
+  } catch (e) {
+    doc.className = 'loading';
+    doc.textContent = 'Could not load ' + file + ' (' + e.message + ')';
+  }
+}
+
+DOCS.forEach((d, i) => {
+  const b = document.createElement('button');
+  b.textContent = d.label;
+  b.onclick = () => load(d.file, b);
+  nav.appendChild(b);
+});
+
+const want = location.hash.replace('#', '');
+const start = DOCS.findIndex(d => d.file.replace('.md', '') === want);
+const idx = start >= 0 ? start : 0;
+load(DOCS[idx].file, nav.children[idx]);
+</script>
+</body>
+</html>
