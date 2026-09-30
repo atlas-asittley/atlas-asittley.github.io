@@ -8,22 +8,29 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { background: #1a1a2e; color: #eee; font-family: 'Courier New', monospace; min-height: 100vh; padding: 24px 16px 60px; }
 .wrap { max-width: 760px; margin: 0 auto; }
-h1.site { font-size: 30px; color: #16c79a; margin-bottom: 6px; }
+h1.site { font-size: 28px; color: #16c79a; margin-bottom: 6px; }
 .subtitle { color: #888; font-size: 13px; margin-bottom: 22px; }
-nav { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 26px; }
+nav { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 24px; }
 nav button { background: #16213e; border: 1px solid #0f3460; color: #eee; font-family: inherit; font-size: 14px; padding: 10px 16px; border-radius: 6px; cursor: pointer; }
 nav button:hover { border-color: #16c79a; }
 nav button.on { border-color: #16c79a; color: #16c79a; }
+#gate { max-width: 340px; margin: 40px auto 0; }
+#gate label { display: block; font-size: 12px; color: #888; margin: 14px 0 5px; }
+#gate input { width: 100%; background: #16213e; border: 1px solid #0f3460; color: #eee; font-family: inherit; font-size: 16px; padding: 11px 12px; border-radius: 6px; }
+#gate input:focus { outline: none; border-color: #16c79a; }
+#gate button { width: 100%; margin-top: 20px; background: #16c79a; border: 0; color: #10131a; font-family: inherit; font-size: 16px; font-weight: bold; padding: 13px; border-radius: 6px; cursor: pointer; }
+#gate button:disabled { opacity: .55; }
+.msg { margin-top: 14px; font-size: 13px; color: #e94560; min-height: 18px; }
 #doc { line-height: 1.6; font-size: 15px; }
-#doc h1 { font-size: 24px; color: #16c79a; margin: 28px 0 12px; }
-#doc h2 { font-size: 19px; color: #e94560; margin: 30px 0 10px; border-top: 1px solid #0f3460; padding-top: 18px; }
-#doc h3 { font-size: 16px; color: #16c79a; margin: 20px 0 8px; }
+#doc h1 { font-size: 23px; color: #16c79a; margin: 8px 0 14px; }
+#doc h2 { font-size: 18px; color: #e94560; margin: 30px 0 10px; border-top: 1px solid #0f3460; padding-top: 18px; }
+#doc h3 { font-size: 15px; color: #16c79a; margin: 20px 0 8px; }
 #doc p { margin-bottom: 14px; color: #ccc; }
 #doc ul, #doc ol { margin: 0 0 16px 22px; color: #ccc; }
 #doc li { margin-bottom: 8px; }
-#doc strong { color: #eee; }
-#doc code { background: #0f3460; padding: 2px 6px; border-radius: 3px; font-size: 13px; }
+#doc strong { color: #fff; }
 #doc em { color: #aaa; }
+#doc code { background: #0f3460; padding: 2px 6px; border-radius: 3px; font-size: 13px; }
 #doc a { color: #16c79a; }
 #doc blockquote { border-left: 3px solid #0f3460; padding-left: 14px; margin: 0 0 16px; color: #999; }
 .tablewrap { overflow-x: auto; margin-bottom: 18px; }
@@ -31,27 +38,46 @@ nav button.on { border-color: #16c79a; color: #16c79a; }
 #doc th, #doc td { border: 1px solid #0f3460; padding: 9px 11px; text-align: left; vertical-align: top; }
 #doc th { background: #16213e; color: #16c79a; }
 #doc td { color: #ccc; }
-footer { margin-top: 50px; color: #555; font-size: 12px; }
-footer a { color: #16c79a; }
+footer { margin-top: 46px; padding-top: 16px; border-top: 1px solid #0f3460; color: #555; font-size: 12px; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+footer a, footer button.link { color: #16c79a; background: none; border: 0; font-family: inherit; font-size: 12px; cursor: pointer; padding: 0; }
+.hidden { display: none !important; }
 .loading { color: #888; }
 </style>
 </head>
 <body>
 <div class="wrap">
   <h1 class="site">Songwriting Playbook</h1>
-  <p class="subtitle">Working reference. Edited as markdown, rendered here.</p>
-  <nav id="nav"></nav>
-  <div id="doc" class="loading">Loading…</div>
-  <footer>Source files live in <code>/songwriting/</code>. <a href="https://atlas-asittley.github.io/">Back to Atlas</a></footer>
+  <p class="subtitle" id="sub">Private. Sign in to read.</p>
+
+  <div id="gate">
+    <label for="em">Email</label>
+    <input id="em" type="email" autocomplete="username" inputmode="email">
+    <label for="pw">Password</label>
+    <input id="pw" type="password" autocomplete="current-password">
+    <button id="go" data-label="Sign in">Sign in</button>
+    <div class="msg" id="msg"></div>
+  </div>
+
+  <div id="app" class="hidden">
+    <nav id="nav"></nav>
+    <div id="doc" class="loading">Loading…</div>
+    <footer>
+      <span id="stamp"></span>
+      <span><a href="https://atlas-asittley.github.io/">Atlas</a> &nbsp;·&nbsp; <button class="link" id="out">Sign out</button></span>
+    </footer>
+  </div>
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/4.3.0/marked.min.js"></script>
 <script>
-const DOCS = [
-  { file: 'process.md', label: 'Process' },
-  { file: 'melody.md',  label: 'Melody' },
-];
-const nav = document.getElementById('nav');
-const doc = document.getElementById('doc');
+const SUPABASE_URL = 'https://igaulapupbtdcqqjobhs.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_7yi3BNg-J-K5nralw5JSww_c71Pge6e';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const $ = id => document.getElementById(id);
+const gate = $('gate'), app = $('app'), nav = $('nav'), doc = $('doc');
+let docs = [];
 
 function wrapTables() {
   doc.querySelectorAll('table').forEach(t => {
@@ -63,36 +89,65 @@ function wrapTables() {
   });
 }
 
-async function load(file, btn) {
-  [...nav.children].forEach(b => b.classList.remove('on'));
-  if (btn) btn.classList.add('on');
-  doc.className = 'loading';
-  doc.textContent = 'Loading…';
-  try {
-    const res = await fetch(file + '?v=' + Date.now(), { cache: 'no-store' });
-    if (!res.ok) throw new Error(res.status);
-    doc.className = '';
-    doc.innerHTML = marked.parse(await res.text());
-    wrapTables();
-    window.scrollTo(0, 0);
-    location.hash = file.replace('.md', '');
-  } catch (e) {
-    doc.className = 'loading';
-    doc.textContent = 'Could not load ' + file + ' (' + e.message + ')';
-  }
+function show(i) {
+  [...nav.children].forEach((b, n) => b.classList.toggle('on', n === i));
+  doc.className = '';
+  doc.innerHTML = marked.parse(docs[i].body || '');
+  wrapTables();
+  const d = new Date(docs[i].updated_at);
+  $('stamp').textContent = 'Updated ' + d.toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+  location.hash = docs[i].slug;
+  window.scrollTo(0, 0);
 }
 
-DOCS.forEach((d, i) => {
-  const b = document.createElement('button');
-  b.textContent = d.label;
-  b.onclick = () => load(d.file, b);
-  nav.appendChild(b);
-});
+async function loadDocs() {
+  gate.classList.add('hidden');
+  app.classList.remove('hidden');
+  $('sub').textContent = 'Working reference. Edited as markdown, synced automatically.';
+  doc.className = 'loading';
+  doc.textContent = 'Loading…';
+  const { data, error } = await sb
+    .from('songwriting_docs')
+    .select('slug,title,sort_order,body,updated_at')
+    .order('sort_order', { ascending: true });
+  if (error) { doc.textContent = 'Could not load: ' + error.message; return; }
+  if (!data || !data.length) { doc.textContent = 'No documents found for this account.'; return; }
+  docs = data;
+  nav.innerHTML = '';
+  docs.forEach((d, i) => {
+    const b = document.createElement('button');
+    b.textContent = d.title;
+    b.onclick = () => show(i);
+    nav.appendChild(b);
+  });
+  const want = location.hash.replace('#', '');
+  const found = docs.findIndex(d => d.slug === want);
+  show(found >= 0 ? found : 0);
+}
 
-const want = location.hash.replace('#', '');
-const start = DOCS.findIndex(d => d.file.replace('.md', '') === want);
-const idx = start >= 0 ? start : 0;
-load(DOCS[idx].file, nav.children[idx]);
+$('go').onclick = async () => {
+  const btn = $('go'), m = $('msg');
+  m.textContent = '';
+  const email = $('em').value.trim().toLowerCase();
+  const password = $('pw').value;
+  if (!email || !password) { m.textContent = 'Email and password, please.'; return; }
+  btn.disabled = true; btn.textContent = 'Signing in…';
+  const { error } = await sb.auth.signInWithPassword({ email, password });
+  btn.disabled = false; btn.textContent = btn.dataset.label;
+  if (error) { m.textContent = error.message; return; }
+  try { localStorage.setItem('songbook:email', email); } catch (_) {}
+  loadDocs();
+};
+
+$('pw').addEventListener('keydown', e => { if (e.key === 'Enter') $('go').click(); });
+
+$('out').onclick = async () => { await sb.auth.signOut(); location.reload(); };
+
+(async () => {
+  try { $('em').value = localStorage.getItem('songbook:email') || ''; } catch (_) {}
+  const { data } = await sb.auth.getSession();
+  if (data && data.session) loadDocs();
+})();
 </script>
 </body>
 </html>
