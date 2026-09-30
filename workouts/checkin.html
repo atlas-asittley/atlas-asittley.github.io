@@ -111,7 +111,8 @@
   // ---- momentary logger ----
   function renderMomentary() {
     var h = '';
-    h += '<div class="metric"><div class="lbl">Back (above belt line) — 0 none, 10 worst</div>' + scale('m-back') + '</div>';
+    h += '<div class="metric"><div class="lbl">Belt line — low back, under the pelvic rim, all the way around — 0 none, 10 worst</div>' + scale('m-back') + '</div>';
+    h += '<div class="metric"><div class="lbl">Right side band — hip up to mid-back, between spine and side — 0–10</div>' + scale('m-rband') + '</div>';
     h += '<div class="metric"><div class="lbl">Left hip (pinch) — 0–10</div>' + scale('m-lhip') + '</div>';
     h += '<div class="metric"><div class="lbl">Right hip — 0–10</div>' + scale('m-rhip') + '</div>';
     h += '<label>What were you just doing?</label>' + groupHtml('m-act', ACTIVITIES, 'chips');
@@ -129,12 +130,12 @@
 
   async function logNow() {
     var btn = document.getElementById('log-now'), saved = document.getElementById('m-saved');
-    var back = numOr('m-back'), l = numOr('m-lhip'), r = numOr('m-rhip');
-    if (back == null && l == null && r == null) { saved.style.color = 'var(--amber)'; saved.textContent = 'Tap at least one pain number.'; return; }
+    var back = numOr('m-back'), l = numOr('m-lhip'), r = numOr('m-rhip'), rb = numOr('m-rband');
+    if (back == null && l == null && r == null && rb == null) { saved.style.color = 'var(--amber)'; saved.textContent = 'Tap at least one pain number.'; return; }
     if (!sb) { saved.textContent = 'No connection.'; return; }
     btn.disabled = true; btn.textContent = 'Logging…';
     var t = nowLocal();
-    var row = { logged_at: t.iso, log_date: t.date, local_time: t.time, hour: t.hour, back: back, l_hip: l, r_hip: r, activity: gval('m-act'), stress: gval('m-stress'), note: (document.getElementById('m-note').value.trim() || null) };
+    var row = { logged_at: t.iso, log_date: t.date, local_time: t.time, hour: t.hour, back: back, r_band: rb, l_hip: l, r_hip: r, activity: gval('m-act'), stress: gval('m-stress'), note: (document.getElementById('m-note').value.trim() || null) };
     var res = await sb.from('workout_symptom_log').insert(row);
     btn.disabled = false; btn.textContent = 'Log it';
     if (res.error) { saved.style.color = 'var(--red)'; saved.textContent = 'Failed: ' + res.error.message; return; }
@@ -224,7 +225,7 @@
   async function loadRecent() {
     var el = document.getElementById('recent');
     if (!sb) { el.innerHTML = '<span class="dim">—</span>'; return; }
-    var q = await sb.from('workout_symptom_log').select('log_date,local_time,back,l_hip,r_hip,activity').order('logged_at', { ascending: false }).limit(12);
+    var q = await sb.from('workout_symptom_log').select('log_date,local_time,back,r_band,l_hip,r_hip,activity').order('logged_at', { ascending: false }).limit(12);
     var rows = q.data || [];
     if (!rows.length) { el.innerHTML = '<span class="dim">No logs yet — tap out your first one above.</span>'; return; }
     var today = todayISO(), todayCount = rows.filter(function (r) { return r.log_date === today; }).length;
@@ -232,10 +233,10 @@
     rows.forEach(function (r) {
       var v = (r.back == null ? '–' : r.back) + '/' + (r.l_hip == null ? '–' : r.l_hip) + '/' + (r.r_hip == null ? '–' : r.r_hip);
       h += '<div class="r"><span class="t">' + (r.log_date === today ? 'today ' : r.log_date.slice(5) + ' ') + (r.local_time || '') + '</span>' +
-        '<span class="v"><b>' + (r.back == null ? '–' : r.back) + '</b>/<i>' + (r.l_hip == null ? '–' : r.l_hip) + '</i>/<s>' + (r.r_hip == null ? '–' : r.r_hip) + '</s></span>' +
+        '<span class="v"><b>' + (r.back == null ? '–' : r.back) + '</b>/<u>' + (r.r_band == null ? '–' : r.r_band) + '</u>/<i>' + (r.l_hip == null ? '–' : r.l_hip) + '</i>/<s>' + (r.r_hip == null ? '–' : r.r_hip) + '</s></span>' +
         '<span class="a">' + (r.activity ? esc(r.activity) : '') + '</span></div>';
     });
-    h += '</div><div class="sub" style="margin-top:6px">back / <span style="color:var(--amber)">Lhip</span> / <span style="color:var(--green)">Rhip</span></div>';
+    h += '</div><div class="sub" style="margin-top:6px">belt line / R-band / <span style="color:var(--amber)">Lhip</span> / <span style="color:var(--green)">Rhip</span></div>';
     el.innerHTML = h;
   }
 
