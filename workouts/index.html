@@ -37,8 +37,9 @@
 
   .sympt { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; margin-bottom: 14px; }
   .sympt-h { font-size: 13px; color: var(--green); margin-bottom: 8px; line-height: 1.4; }
-  .sympt-row { display: flex; gap: 8px; align-items: stretch; }
-  .sympt-row > div { flex: 1; display: flex; flex-direction: column; }
+  /* 4 fields since 2026-10-03 — wrap to 2x2 on a phone rather than squeezing into one row */
+  .sympt-row { display: flex; gap: 8px; align-items: stretch; flex-wrap: wrap; }
+  .sympt-row > div { flex: 1 1 calc(50% - 4px); min-width: 120px; display: flex; flex-direction: column; }
   .sympt-row label { font-size: 11px; color: var(--dim); margin-bottom: 4px; flex: 1; line-height: 1.3; }
   .sympt-row input { background: var(--bg); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 8px; font-family: inherit; font-size: 16px; width: 100%; }
   .sympt-row input:focus { outline: none; border-color: var(--green); }
@@ -364,7 +365,11 @@
       '<div class="msg">✅ Nothing to do right now.<br><br>When you’re ready for your next session, tell your coach and it’ll show up here — lifts and hip work together.</div>';
   }
 
-  // ---------- pre-session symptom check-in (logs to the same table as the Hip page) ----------
+  // ---------- pre-session symptom check-in ----------
+  // 2026-10-03: now FOUR fields (belt line / right-side band / L hip / R hip) and writes to
+  // workout_symptom_log — the same table as the check-in page. It used to have three fields and
+  // write to workout_hip_log, which meant pre-workout readings and daily readings lived in two
+  // different tables and could not be compared.
   function clampScore(v) { v = parseInt(v, 10); return isNaN(v) ? null : Math.max(0, Math.min(10, v)); }
   function renderSymptomCheckin() {
     var host = document.getElementById('symptom-slot');
@@ -372,9 +377,10 @@
       '<div class="sympt">' +
       '<div class="sympt-h">🩹 Quick check-in — how do the hips/back feel <b>right now</b>, before you start?</div>' +
       '<div class="sympt-row">' +
-        '<div><label>Back (0–10)<br>both, R-worse</label><input id="s-back" type="number" inputmode="numeric" min="0" max="10" placeholder="0–10"></div>' +
-        '<div><label>Left pinch<br>L groin</label><input id="s-pl" type="number" inputmode="numeric" min="0" max="10" placeholder="0–10"></div>' +
-        '<div><label>Right pinch<br>R groin</label><input id="s-pr" type="number" inputmode="numeric" min="0" max="10" placeholder="0–10"></div>' +
+        '<div><label>Belt line<br>under the pelvic rim</label><input id="s-back" type="number" inputmode="numeric" min="0" max="10" placeholder="0–10"></div>' +
+        '<div><label>R-side band<br>hip up to mid-back</label><input id="s-rband" type="number" inputmode="numeric" min="0" max="10" placeholder="0–10"></div>' +
+        '<div><label>Left hip<br>L groin pinch</label><input id="s-pl" type="number" inputmode="numeric" min="0" max="10" placeholder="0–10"></div>' +
+        '<div><label>Right hip<br>R groin pinch</label><input id="s-pr" type="number" inputmode="numeric" min="0" max="10" placeholder="0–10"></div>' +
       '</div>' +
       '<button class="sympt-save" id="s-save" type="button">Log symptoms</button>' +
       '<div class="sympt-msg" id="s-msg" style="display:none"></div>' +
@@ -384,11 +390,19 @@
   async function saveSymptoms() {
     var btn = document.getElementById('s-save'), msg = document.getElementById('s-msg');
     var back = clampScore(document.getElementById('s-back').value);
+    var rb = clampScore(document.getElementById('s-rband').value);
     var pl = clampScore(document.getElementById('s-pl').value);
     var pr = clampScore(document.getElementById('s-pr').value);
-    if (back == null && pl == null && pr == null) { msg.style.display = 'block'; msg.style.color = 'var(--dim)'; msg.textContent = 'Enter at least one score.'; return; }
+    if (back == null && rb == null && pl == null && pr == null) { msg.style.display = 'block'; msg.style.color = 'var(--dim)'; msg.textContent = 'Enter at least one score.'; return; }
     btn.disabled = true; btn.textContent = 'Saving…';
-    var r = await sb.from('workout_hip_log').insert({ log_date: todayISO(), back_pain: back, pinch_left: pl, pinch_right: pr, note: null });
+    var d = new Date();
+    var pad = function (n) { return (n < 10 ? '0' : '') + n; };
+    var r = await sb.from('workout_symptom_log').insert({
+      logged_at: d.toISOString(), log_date: todayISO(),
+      local_time: pad(d.getHours()) + ':' + pad(d.getMinutes()), hour: d.getHours(),
+      back: back, r_band: rb, l_hip: pl, r_hip: pr,
+      activity: 'Pre-workout', note: null
+    });
     if (r.error) { btn.disabled = false; btn.textContent = 'Log symptoms'; msg.style.display = 'block'; msg.style.color = 'var(--red)'; msg.textContent = 'Save failed: ' + r.error.message; return; }
     msg.style.display = 'block'; msg.style.color = 'var(--green)'; msg.textContent = '✅ Logged for ' + todayISO();
     btn.textContent = 'Logged ✓';
