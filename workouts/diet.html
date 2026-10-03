@@ -28,8 +28,11 @@
   .dim { color:var(--dim); }
   .green { color:var(--green); }
 
-  table { width:100%; border-collapse:collapse; font-size:13px; }
-  td, th { text-align:left; padding:7px 6px; border-bottom:1px solid var(--border); }
+  /* table-layout:fixed so a long food description can never push the table wider than
+     its card — the item column wraps instead. Fixed 2026-10-03 after exactly that. */
+  table { width:100%; border-collapse:collapse; font-size:13px; table-layout:fixed; }
+  td, th { text-align:left; padding:7px 6px; border-bottom:1px solid var(--border); overflow-wrap:anywhere; word-break:break-word; }
+  td.n, th.n { width:62px; }
   th { color:var(--dim); font-weight:normal; font-size:11px; text-transform:uppercase; letter-spacing:.5px; }
   td.n { text-align:right; }
   tr.total td { font-weight:bold; color:var(--green); border-top:1px solid var(--border); }
