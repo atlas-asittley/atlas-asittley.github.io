@@ -301,6 +301,20 @@
     function sy(v) { return yB - (v - ymin) / (ymax - ymin) * (yB - yT); }
 
     var svg = '<svg class="chart" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMidYMid meet">';
+
+    // Phase bands (optional) — context, not data. Drawn FIRST so everything sits on top.
+    // Deliberately NOT two competing hues: at background opacity two tints fail the
+    // normal-vision distinguishability floor, so one region gets a neutral wash and the
+    // meaning is carried by a divider + direct labels instead of by colour alone.
+    (cfg.bands || []).forEach(function (b) {
+      var x0 = Math.max(xL, sx(Math.max(b.from, xmin)));
+      var x1 = Math.min(xR, sx(Math.min(b.to, xmax)));
+      if (x1 - x0 < 1) return;
+      if (b.fill) svg += '<rect x="' + x0.toFixed(1) + '" y="' + yT + '" width="' + (x1 - x0).toFixed(1) + '" height="' + (yB - yT) + '" fill="' + b.fill + '"/>';
+      if (b.edge && x0 > xL + 0.5) svg += '<line x1="' + x0.toFixed(1) + '" y1="' + yT + '" x2="' + x0.toFixed(1) + '" y2="' + yB + '" stroke="' + AXIS + '" stroke-width="1" stroke-dasharray="3 3" opacity="0.7"/>';
+      if (b.label && x1 - x0 > 26) svg += '<text x="' + ((x0 + x1) / 2).toFixed(1) + '" y="' + (yT + 10) + '" fill="' + AXIS + '" font-size="8.5" text-anchor="middle" font-family="monospace" letter-spacing="1">' + b.label + '</text>';
+    });
+
     niceTicks(ymin, ymax, 4).forEach(function (t) {
       var y = sy(t); if (y < yT - 0.5 || y > yB + 0.5) return;
       svg += '<line x1="' + xL + '" y1="' + y.toFixed(1) + '" x2="' + xR + '" y2="' + y.toFixed(1) + '" stroke="' + GRID + '" stroke-width="1"/>';
@@ -363,15 +377,29 @@
     svgEl.addEventListener('touchend', leave);
   }
 
-  // 1. Bodyweight
-  sb.from('workout_bodyweight').select('log_date,weight,note').order('log_date', { ascending: true }).limit(120)
-    .then(function (res) {
+  // 1. Bodyweight — with bulk/cut phase bands behind the trend
+  Promise.all([
+    sb.from('workout_bodyweight').select('log_date,weight,note').order('log_date', { ascending: true }).limit(120),
+    sb.from('workout_settings').select('key,value').in('key', ['cut_start_date'])
+  ])
+    .then(function (both) {
+      var res = both[0];
+      var cutRow = (both[1].data || []).find(function (r) { return r.key === 'cut_start_date'; });
+      var cutStart = cutRow ? dstr2ms(cutRow.value) : null;
       var wrap = document.getElementById('chart-bw');
       if (res.error || !res.data) { wrap.innerHTML = '<div class="chart-empty">Couldn\'t load.</div>'; return; }
       var morn = res.data.filter(function (r) { return !/evening|before bed/i.test(r.note || ''); })
         .map(function (r) { return { t: dstr2ms(r.log_date), y: Number(r.weight) }; });
       if (morn.length < 2) { wrap.innerHTML = '<div class="chart-empty">Need a couple more morning weigh-ins to draw the trend.</div>'; return; }
+      var bands = null;
+      if (cutStart) {
+        var t0 = morn[0].t, t1 = morn[morn.length - 1].t;
+        bands = [];
+        if (cutStart > t0) bands.push({ from: t0, to: cutStart, label: 'BULK' });
+        if (cutStart < t1) bands.push({ from: cutStart, to: t1, label: 'CUT', fill: 'rgba(255,255,255,0.05)', edge: true });
+      }
       renderChart(wrap, {
+        bands: bands,
         series: [
           { name: 'Daily', color: '#6b78a3', pts: morn, dotsOnly: true },
           { name: '7-day avg', color: '#16c79a', pts: movingAvg(morn, 7) }
