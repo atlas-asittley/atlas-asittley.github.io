@@ -77,6 +77,12 @@
   <div id="chart-meas" class="chart-wrap"><span class="bw-sub">loading…</span></div>
 </div>
 
+<div class="card" id="bp-card" style="display:none">
+  <div class="chart-title">🩺 Blood pressure</div>
+  <div class="chart-sub">Daily average of your home readings. Dashed lines are the ACC/AHA <b>stage 1 hypertension thresholds</b> (130 systolic / 80 diastolic) — a published reference point, not a target your doctor has set for you.</div>
+  <div id="chart-bp" class="chart-wrap"><span class="bw-sub">loading…</span></div>
+</div>
+
 <div class="card">
   <div class="chart-title">💪 Strength — estimated 1-rep max</div>
   <div class="chart-sub">One comparable strength number per set (Epley). <b>Overall</b> = your % gains averaged across lifts; or pick one:</div>
@@ -315,6 +321,15 @@
       if (b.label && x1 - x0 > 26) svg += '<text x="' + ((x0 + x1) / 2).toFixed(1) + '" y="' + (yT + 10) + '" fill="' + AXIS + '" font-size="8.5" text-anchor="middle" font-family="monospace" letter-spacing="1">' + b.label + '</text>';
     });
 
+    // Horizontal reference lines (optional) — e.g. clinical thresholds. Dashed + labelled,
+    // drawn under the data so they never compete with it.
+    (cfg.hlines || []).forEach(function (hl) {
+      if (hl.y < ymin || hl.y > ymax) return;
+      var y = sy(hl.y);
+      svg += '<line x1="' + xL + '" y1="' + y.toFixed(1) + '" x2="' + xR + '" y2="' + y.toFixed(1) + '" stroke="' + AXIS + '" stroke-width="1" stroke-dasharray="4 4" opacity="0.65"/>';
+      if (hl.label) svg += '<text x="' + (xR - 2) + '" y="' + (y - 4).toFixed(1) + '" fill="' + AXIS + '" font-size="8" text-anchor="end" font-family="monospace">' + hl.label + '</text>';
+    });
+
     niceTicks(ymin, ymax, 4).forEach(function (t) {
       var y = sy(t); if (y < yT - 0.5 || y > yB + 0.5) return;
       svg += '<line x1="' + xL + '" y1="' + y.toFixed(1) + '" x2="' + xR + '" y2="' + y.toFixed(1) + '" stroke="' + GRID + '" stroke-width="1"/>';
@@ -403,6 +418,34 @@
         series: [
           { name: 'Daily', color: '#6b78a3', pts: morn, dotsOnly: true },
           { name: '7-day avg', color: '#16c79a', pts: movingAvg(morn, 7) }
+        ],
+        yFmt: function (v) { return v.toFixed(0); }
+      });
+    });
+
+  // 1b. Blood pressure — daily averages of the home readings (722 protocol)
+  sb.from('workout_bp_log').select('log_date,systolic,diastolic').order('log_date', { ascending: true }).limit(200)
+    .then(function (res) {
+      var rows = (res && res.data) || [];
+      if (rows.length < 2) return;                       // card stays hidden
+      var byDay = {};
+      rows.forEach(function (r) {
+        var d = byDay[r.log_date] || (byDay[r.log_date] = { s: 0, d: 0, n: 0 });
+        d.s += Number(r.systolic); d.d += Number(r.diastolic); d.n++;
+      });
+      var sys = [], dia = [];
+      Object.keys(byDay).sort().forEach(function (k) {
+        var d = byDay[k];
+        sys.push({ t: dstr2ms(k), y: d.s / d.n });
+        dia.push({ t: dstr2ms(k), y: d.d / d.n });
+      });
+      if (sys.length < 2) return;
+      document.getElementById('bp-card').style.display = '';
+      renderChart(document.getElementById('chart-bp'), {
+        hlines: [{ y: 130, label: '130 systolic' }, { y: 80, label: '80 diastolic' }],
+        series: [
+          { name: 'Systolic', color: '#cc7d22', pts: sys },
+          { name: 'Diastolic', color: '#0f9d7a', pts: dia }
         ],
         yFmt: function (v) { return v.toFixed(0); }
       });

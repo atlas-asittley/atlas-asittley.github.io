@@ -70,6 +70,9 @@
   <div id="momentary"></div>
 </div>
 
+<!-- blood pressure, 722 protocol — self-hides when the slot is done or the 7 days are complete -->
+<div id="bp-host"></div>
+
 <!-- daily + coach-queued items (only when due) -->
 <div class="card" id="due-card">
   <div id="due-host"><p class="dim">loading…</p></div>
@@ -240,7 +243,58 @@
     el.innerHTML = h;
   }
 
+  // ---- blood pressure (722 protocol: 7 days, 2 morning + 2 evening) ----
+  // Hides itself when this slot is already logged, or once 7 distinct days exist.
+  async function loadBP() {
+    var host = document.getElementById('bp-host');
+    if (!sb) { host.innerHTML = ''; return; }
+    var q = await sb.from('workout_bp_log').select('log_date,slot');
+    if (q.error) { host.innerHTML = ''; return; }
+    var rows = q.data || [];
+    var days = {}; rows.forEach(function (r) { days[r.log_date] = 1; });
+    var nDays = Object.keys(days).length;
+    if (nDays >= 7) { host.innerHTML = ''; return; }           // protocol complete
+    var t = nowLocal();
+    var slot = t.hour < 12 ? 'morning' : 'evening';
+    var doneThisSlot = rows.filter(function (r) { return r.log_date === t.date && r.slot === slot; }).length;
+    if (doneThisSlot >= 2) { host.innerHTML = ''; return; }    // already done
+
+    var dayNum = (days[t.date] ? nDays : nDays + 1);
+    var pre = slot === 'evening'
+      ? 'Take this <b>BEFORE the benazepril</b> — it is the trough reading and the one the GP needs.'
+      : 'Morning reading. No coffee in the 30 min before.';
+    host.innerHTML =
+      '<div class="card">' +
+      '<h2>🩺 Blood pressure — day ' + dayNum + ' of 7 · ' + slot + '</h2>' +
+      '<div class="sub">' + pre + '<br>Sit 5 min first · back supported · feet flat · bladder empty · <b>arm on a table at heart level</b> · do not talk during. Two readings a minute apart.</div>' +
+      '<div class="metric"><div class="lbl">Reading 1</div>' +
+        '<div style="display:flex;gap:8px"><input id="bp1s" type="number" inputmode="numeric" placeholder="systolic"><input id="bp1d" type="number" inputmode="numeric" placeholder="diastolic"></div></div>' +
+      '<div class="metric"><div class="lbl">Reading 2 — one minute later</div>' +
+        '<div style="display:flex;gap:8px"><input id="bp2s" type="number" inputmode="numeric" placeholder="systolic"><input id="bp2d" type="number" inputmode="numeric" placeholder="diastolic"></div></div>' +
+      '<label>Pulse (optional, either reading)</label><input id="bppulse" type="number" inputmode="numeric" placeholder="bpm">' +
+      '<button class="save" id="bp-save" type="button">Log blood pressure</button><div class="saved" id="bp-saved"></div>' +
+      '</div>';
+    document.getElementById('bp-save').addEventListener('click', function () { saveBP(slot); });
+  }
+
+  async function saveBP(slot) {
+    var btn = document.getElementById('bp-save'), msg = document.getElementById('bp-saved');
+    var n = function (id) { var v = document.getElementById(id).value; return v === '' ? null : parseInt(v, 10); };
+    var a = [n('bp1s'), n('bp1d')], b = [n('bp2s'), n('bp2d')], pulse = n('bppulse');
+    var rows = [], t = nowLocal();
+    if (a[0] && a[1]) rows.push({ log_date: t.date, slot: slot, reading_index: 1, systolic: a[0], diastolic: a[1], pulse: pulse, before_meds: slot === 'evening' });
+    if (b[0] && b[1]) rows.push({ log_date: t.date, slot: slot, reading_index: 2, systolic: b[0], diastolic: b[1], pulse: null, before_meds: slot === 'evening' });
+    if (!rows.length) { msg.style.display = 'block'; msg.style.color = 'var(--amber)'; msg.textContent = 'Enter at least one full reading (both numbers).'; return; }
+    btn.disabled = true; btn.textContent = 'Saving…';
+    var res = await sb.from('workout_bp_log').insert(rows);
+    btn.disabled = false; btn.textContent = 'Log blood pressure';
+    if (res.error) { msg.style.display = 'block'; msg.style.color = 'var(--red)'; msg.textContent = 'Failed: ' + res.error.message; return; }
+    msg.style.display = 'block'; msg.style.color = 'var(--green)'; msg.textContent = '✅ Logged ' + rows.length + ' reading' + (rows.length > 1 ? 's' : '');
+    setTimeout(function () { loadBP(); loadRecent(); }, 700);
+  }
+
   renderMomentary();
+  loadBP();
   loadDue();
   loadRecent();
 })();
