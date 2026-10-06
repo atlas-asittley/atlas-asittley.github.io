@@ -392,6 +392,24 @@
     svgEl.addEventListener('touchend', leave);
   }
 
+  // Phase boundary, fetched once and shared by every chart that wants bands.
+  var CUT_START = null;
+  var cutReady = sb.from('workout_settings').select('key,value').in('key', ['cut_start_date'])
+    .then(function (r) {
+      var row = ((r && r.data) || []).find(function (x) { return x.key === 'cut_start_date'; });
+      CUT_START = row ? dstr2ms(row.value) : null;
+      return CUT_START;
+    });
+
+  // Build BULK / CUT bands spanning whatever range a given series covers.
+  function phaseBands(t0, t1) {
+    if (!CUT_START || t1 <= t0) return null;
+    var b = [];
+    if (CUT_START > t0) b.push({ from: t0, to: Math.min(CUT_START, t1), label: 'BULK' });
+    if (CUT_START < t1) b.push({ from: Math.max(CUT_START, t0), to: t1, label: 'CUT', fill: 'rgba(255,255,255,0.05)', edge: true });
+    return b.length ? b : null;
+  }
+
   // 1. Bodyweight — with bulk/cut phase bands behind the trend
   Promise.all([
     sb.from('workout_bodyweight').select('log_date,weight,note').order('log_date', { ascending: true }).limit(120),
@@ -472,6 +490,7 @@
   (async function () {
     var wrap = document.getElementById('chart-str'), btns = document.getElementById('lift-btns');
     try {
+      await cutReady;   // phase boundary must be known before any band is drawn
       var ses = await sb.from('workout_sessions').select('id,session_date').eq('status', 'completed');
       if (ses.error || !ses.data.length) { wrap.innerHTML = '<div class="chart-empty">No completed workouts yet.</div>'; return; }
       var dateOf = {}; ses.data.forEach(function (s) { dateOf[s.id] = s.session_date; });
@@ -525,12 +544,12 @@
       });
 
       function drawOverall() {
-        renderChart(wrap, { series: [{ name: 'Overall', color: '#16c79a', pts: overallPts }], yFmt: function (v) { return v.toFixed(0); } });
+        renderChart(wrap, { bands: phaseBands(overallPts[0].t, overallPts[overallPts.length - 1].t), series: [{ name: 'Overall', color: '#16c79a', pts: overallPts }], yFmt: function (v) { return v.toFixed(0); } });
         var last = overallPts[overallPts.length - 1].y, d = last - 100;
         if (note) note.innerHTML = '100 = your start · now <b style="color:var(--green)">' + last.toFixed(0) + '</b> (' + (d >= 0 ? '+' : '') + d.toFixed(0) + '% overall). Median % gain across ' + core.length + ' lifts — new exercises splice in at the line, so they never fake-dip it. Cables excluded (gym change).';
       }
       function drawLift(l) {
-        renderChart(wrap, { series: [{ name: l.ex, color: '#16c79a', pts: l.pts }], yFmt: function (v) { return v.toFixed(0); } });
+        renderChart(wrap, { bands: phaseBands(l.pts[0].t, l.pts[l.pts.length - 1].t), series: [{ name: l.ex, color: '#16c79a', pts: l.pts }], yFmt: function (v) { return v.toFixed(0); } });
         if (note) note.innerHTML = 'Estimated 1-rep max (lbs) for <b>' + l.ex + '</b>.';
       }
       function mkBtn(label, active, fn) {
