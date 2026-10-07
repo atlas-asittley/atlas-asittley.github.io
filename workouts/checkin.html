@@ -78,6 +78,12 @@
   <div id="due-host"><p class="dim">loading…</p></div>
 </div>
 
+<!-- blood pressure history -->
+<div class="card" id="bp-hist-card" style="display:none">
+  <h2>🩺 Blood pressure log</h2>
+  <div id="bp-hist"></div>
+</div>
+
 <!-- recent logs -->
 <div class="card">
   <h2>Recent logs</h2>
@@ -290,11 +296,57 @@
     btn.disabled = false; btn.textContent = 'Log blood pressure';
     if (res.error) { msg.style.display = 'block'; msg.style.color = 'var(--red)'; msg.textContent = 'Failed: ' + res.error.message; return; }
     msg.style.display = 'block'; msg.style.color = 'var(--green)'; msg.textContent = '✅ Logged ' + rows.length + ' reading' + (rows.length > 1 ? 's' : '');
-    setTimeout(function () { loadBP(); loadRecent(); }, 700);
+    setTimeout(function () { loadBP(); loadBPHistory(); loadRecent(); }, 700);
+  }
+
+  // ---- blood pressure history: every reading, plus the running days 2-7 average ----
+  async function loadBPHistory() {
+    var card = document.getElementById('bp-hist-card'), el = document.getElementById('bp-hist');
+    if (!sb) return;
+    var q = await sb.from('workout_bp_log').select('log_date,slot,reading_index,systolic,diastolic,pulse')
+      .order('log_date', { ascending: true }).order('slot', { ascending: true }).order('reading_index', { ascending: true });
+    if (q.error) return;
+    var rows = q.data || [];
+    if (!rows.length) return;
+    card.style.display = '';
+
+    var dayList = []; rows.forEach(function (r) { if (dayList.indexOf(r.log_date) < 0) dayList.push(r.log_date); });
+    var day1 = dayList[0];
+
+    // group by day+slot so each line is one sitting
+    var groups = {}, order = [];
+    rows.forEach(function (r) {
+      var k = r.log_date + '|' + r.slot;
+      if (!groups[k]) { groups[k] = []; order.push(k); }
+      groups[k].push(r);
+    });
+
+    var h = '<div class="sub">Day ' + dayList.length + ' of 7. <b>Day 1 is excluded from the average</b> — first-day readings run high, so every guideline drops them.</div><div class="recent">';
+    order.forEach(function (k) {
+      var parts = k.split('|'), d = parts[0], slot = parts[1], g = groups[k];
+      var excl = (d === day1);
+      h += '<div class="r" style="' + (excl ? 'opacity:.55' : '') + '">' +
+        '<span class="t">' + d.slice(5) + ' ' + slot.slice(0, 3) + (excl ? ' (day 1)' : '') + '</span>' +
+        '<span class="v">' + g.map(function (r) { return '<b>' + r.systolic + '</b>/' + r.diastolic; }).join(' · ') + '</span>' +
+        '<span class="a">' + (g[0].pulse ? g[0].pulse + ' bpm' : '') + '</span></div>';
+    });
+    h += '</div>';
+
+    var counted = rows.filter(function (r) { return r.log_date !== day1; });
+    if (counted.length) {
+      var ms = counted.reduce(function (a, r) { return a + r.systolic; }, 0) / counted.length;
+      var md = counted.reduce(function (a, r) { return a + r.diastolic; }, 0) / counted.length;
+      h += '<div class="sub" style="margin-top:8px"><b>Average so far (day 1 excluded):</b> ' +
+           ms.toFixed(0) + '/' + md.toFixed(0) + ' — from ' + counted.length + ' reading' + (counted.length > 1 ? 's' : '') + '.</div>';
+    } else {
+      h += '<div class="sub" style="margin-top:8px">No counting readings yet — everything so far is day 1.</div>';
+    }
+    el.innerHTML = h;
   }
 
   renderMomentary();
   loadBP();
+  loadBPHistory();
   loadDue();
   loadRecent();
 })();
