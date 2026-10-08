@@ -54,6 +54,22 @@
   .more-btn:active { border-color:var(--green); color:var(--green); }
   .mon-sep { color:var(--dim); font-size:11px; letter-spacing:.08em; text-transform:uppercase; margin:16px 0 8px; padding-left:2px; }
   .chart-empty { color:var(--dim); font-size:12px; padding:24px 8px; text-align:center; line-height:1.5; }
+
+  /* Accordion. Collapsed sections still show their current number in the header, so the
+     closed page reads as a dashboard rather than a row of mystery buttons. */
+  .sec { background:var(--card); border:1px solid var(--border); border-radius:10px; margin-bottom:12px; overflow:hidden; }
+  .sec-head { display:flex; align-items:center; gap:10px; padding:13px 14px; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+  .sec-head:active { background:rgba(255,255,255,.03); }
+  .sec-chev { color:var(--dim); font-size:11px; width:11px; flex:none; transition:transform .15s; }
+  .sec.open .sec-chev { transform:rotate(90deg); }
+  .sec-name { font-size:15px; color:var(--green); flex:none; }
+  .sec-val { font-size:12px; color:var(--dim); margin-left:auto; text-align:right; line-height:1.35; }
+  .sec-val b { color:var(--text); font-weight:bold; }
+  .sec-body { padding:0 14px 14px; }
+  .sec.open > .sec-body { display:block; }
+  .sec:not(.open) > .sec-body { display:none; }
+  .numlink { display:inline-block; margin-top:12px; color:var(--dim); font-size:11px; border:1px solid var(--border); border-radius:6px; padding:5px 9px; cursor:pointer; font-family:inherit; background:transparent; }
+  .numlink:active { border-color:var(--green); color:var(--green); }
 </style>
 </head>
 <body>
@@ -70,49 +86,95 @@
   <a href="./checkin.html">Check-in</a>
 </nav>
 
-<div class="card">
-  <div class="chart-title">📈 Bodyweight trend</div>
-  <div class="chart-sub">Daily reads (dots) with the 7-day average (line) — the average is the real trend; ignore the dots' bounce.</div>
-  <div id="chart-bw" class="chart-wrap"><span class="bw-sub">loading…</span></div>
+<!-- Order = how much Drew actually uses each one (his own report, 2026-10-07):
+     bodyweight daily, strength sometimes, BP occasionally, the rest on demand. -->
+
+<div class="sec open" id="sec-bw" data-key="bw">
+  <div class="sec-head"><span class="sec-chev">&#9654;</span><span class="sec-name">⚖️ Bodyweight</span><span class="sec-val" id="val-bw">…</span></div>
+  <div class="sec-body">
+    <div class="chart-sub">Daily reads (dots) with the 7-day average (line) — the average is the real trend; ignore the dots' bounce.</div>
+    <div id="chart-bw" class="chart-wrap"><span class="bw-sub">loading…</span></div>
+    <button class="numlink" data-reveal="bw">▸ the exact recent numbers</button>
+    <div id="bw" style="display:none"><span class="bw-sub">loading…</span></div>
+  </div>
 </div>
 
-<div class="card">
-  <div class="chart-title">📐 V-taper — shoulders vs. waist</div>
-  <div class="chart-sub">The gap widening is the whole goal: shoulders up, waist flat/down. Needs a few measurements to draw.</div>
-  <div id="chart-meas" class="chart-wrap"><span class="bw-sub">loading…</span></div>
+<div class="sec" id="sec-str" data-key="str">
+  <div class="sec-head"><span class="sec-chev">&#9654;</span><span class="sec-name">💪 Strength</span><span class="sec-val" id="val-str">…</span></div>
+  <div class="sec-body">
+    <div class="chart-sub">Estimated 1-rep max (Epley) — one comparable strength number per set. <b>Overall</b> = your % gains averaged across lifts; or pick one:</div>
+    <div id="lift-btns" class="lift-btns"></div>
+    <div id="str-note" class="chart-sub" style="margin-top:-2px"></div>
+    <div id="chart-str" class="chart-wrap"><span class="bw-sub">loading…</span></div>
+  </div>
 </div>
 
-<div class="card" id="meas2-card" style="display:none">
-  <div class="chart-title">📏 Chest · arm · thigh</div>
-  <div class="chart-sub">The other three tape measures. All inches on one scale, so the lines sit at different heights — what matters is each one's slope, not the gaps between them.</div>
-  <div id="chart-meas2" class="chart-wrap"><span class="bw-sub">loading…</span></div>
+<div class="sec" id="sec-meas" data-key="meas">
+  <div class="sec-head"><span class="sec-chev">&#9654;</span><span class="sec-name">📏 Measurements</span><span class="sec-val" id="val-meas">…</span></div>
+  <div class="sec-body">
+    <div class="chart-sub" id="meas-sub">All five tape measures, inches on one scale. <b>Shoulders and waist are the V-taper</b> — that gap widening is the goal; chest, thigh and arm sit behind them as context. <a href="./measure.html" style="color:var(--green)">how to measure ↗</a></div>
+    <div id="chart-meas" class="chart-wrap"><span class="bw-sub">loading…</span></div>
+    <button class="numlink" data-reveal="meas">▸ the exact numbers</button>
+    <div id="meas" style="display:none"><span class="bw-sub">loading…</span></div>
+  </div>
 </div>
 
-<div class="card" id="bp-card" style="display:none">
-  <div class="chart-title">🩺 Blood pressure</div>
-  <div class="chart-sub">Daily average of your home readings. Dashed lines are the ACC/AHA <b>stage 1 hypertension thresholds</b> (130 systolic / 80 diastolic) — a published reference point, not a target your doctor has set for you.</div>
-  <div id="chart-bp" class="chart-wrap"><span class="bw-sub">loading…</span></div>
+<div class="sec" id="sec-bp" data-key="bp" style="display:none">
+  <div class="sec-head"><span class="sec-chev">&#9654;</span><span class="sec-name">🩺 Blood pressure</span><span class="sec-val" id="val-bp">…</span></div>
+  <div class="sec-body">
+    <div class="chart-sub">Daily average of your home readings. Dashed lines are the ACC/AHA <b>stage 1 hypertension thresholds</b> (130 systolic / 80 diastolic) — a published reference point, not a target your doctor has set for you.</div>
+    <div id="chart-bp" class="chart-wrap"><span class="bw-sub">loading…</span></div>
+  </div>
 </div>
 
-<div class="card">
-  <div class="chart-title">💪 Strength — estimated 1-rep max</div>
-  <div class="chart-sub">One comparable strength number per set (Epley). <b>Overall</b> = your % gains averaged across lifts; or pick one:</div>
-  <div id="lift-btns" class="lift-btns"></div>
-  <div id="str-note" class="chart-sub" style="margin-top:-2px"></div>
-  <div id="chart-str" class="chart-wrap"><span class="bw-sub">loading…</span></div>
+<div class="sec" id="sec-log" data-key="log">
+  <div class="sec-head"><span class="sec-chev">&#9654;</span><span class="sec-name">🏋️ Workout log</span><span class="sec-val" id="val-log">…</span></div>
+  <div class="sec-body">
+    <div id="content"><div class="msg">Loading your history…</div></div>
+  </div>
 </div>
 
-<div class="card">
-  <div class="bw-title">⚖️ Bodyweight <span class="bw-sub" style="font-weight:normal">— the exact recent numbers</span></div>
-  <div id="bw"><span class="bw-sub">loading…</span></div>
-</div>
+<script>
+// Accordion: remembers what you open, so if BP becomes a thing you check it stays open.
+(function () {
+  var LS = 'hist-open-v1';
+  function read() { try { return JSON.parse(localStorage.getItem(LS)) || null; } catch (e) { return null; } }
+  function write(o) { try { localStorage.setItem(LS, JSON.stringify(o)); } catch (e) {} }
 
-<div class="card">
-  <div class="bw-title">📏 Measurements <span class="bw-sub" style="font-weight:normal">— the real recomp gauge · <a href="./measure.html" style="color:var(--green)">how to measure ↗</a></span></div>
-  <div id="meas"><span class="bw-sub">loading…</span></div>
-</div>
+  var saved = read();
+  var secs = Array.prototype.slice.call(document.querySelectorAll('.sec'));
+  if (saved) secs.forEach(function (sec) {
+    if (saved[sec.dataset.key] != null) sec.classList.toggle('open', !!saved[sec.dataset.key]);
+  });
 
-<div id="content"><div class="msg">Loading your history…</div></div>
+  secs.forEach(function (sec) {
+    sec.querySelector('.sec-head').addEventListener('click', function () {
+      sec.classList.toggle('open');
+      var o = read() || {};
+      secs.forEach(function (x) { o[x.dataset.key] = x.classList.contains('open'); });
+      write(o);
+    });
+  });
+
+  // "the exact numbers" reveals inside a section
+  Array.prototype.forEach.call(document.querySelectorAll('.numlink'), function (b) {
+    b.addEventListener('click', function (e) {
+      e.stopPropagation();
+      var t = document.getElementById(b.dataset.reveal);
+      var show = t.style.display === 'none';
+      t.style.display = show ? 'block' : 'none';
+      if (!b.dataset.label) b.dataset.label = b.textContent.replace(/^▸ /, '');
+      b.textContent = (show ? '▾ hide ' : '▸ ') + b.dataset.label;
+    });
+  });
+
+  // Loaders call this so a closed header still carries its current number.
+  window.__hist = {
+    setVal: function (key, html) { var el = document.getElementById('val-' + key); if (el) el.innerHTML = html; },
+    show: function (key) { var el = document.getElementById('sec-' + key); if (el) el.style.display = ''; }
+  };
+})();
+</script>
 
 <script>
 (function () {
@@ -132,6 +194,17 @@
       if (mornings.length) {
         var avg = mornings.reduce(function (a, r) { return a + Number(r.weight); }, 0) / mornings.length;
         h += '<div class="bw-avg">7-day morning avg: <span style="color:var(--green)">' + avg.toFixed(1) + ' lb</span> <span class="bw-sub">(' + mornings.length + ' reads)</span></div>';
+        // header value: current avg, plus the week-over-week move if there's a prior week
+        var prev = rows.filter(function (r) { return !isEve(r); }).slice(7, 14);
+        var tail = '';
+        if (prev.length >= 3) {
+          var pavg = prev.reduce(function (a, r) { return a + Number(r.weight); }, 0) / prev.length;
+          var dd = avg - pavg;
+          tail = ' · ' + (dd >= 0 ? '↑' : '↓') + Math.abs(dd).toFixed(1) + '/wk';
+        }
+        if (window.__hist) window.__hist.setVal('bw', '<b>' + avg.toFixed(1) + ' lb</b>' + tail);
+      } else if (window.__hist) {
+        window.__hist.setVal('bw', '<b>' + latest.weight + ' lb</b>');
       }
       h += '<div class="bw-list">';
       rows.forEach(function (r) {
@@ -300,6 +373,11 @@
       }
       moreBtn.addEventListener('click', renderPage);
       renderPage();
+      if (window.__hist) {
+        var newest = new Date(groups[order[0]].date + 'T00:00:00');
+        window.__hist.setVal('log', '<b>' + order.length + '</b> workouts · last ' +
+          newest.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }));
+      }
     } catch (e) {
       c.innerHTML = '<div class="msg">Error loading history:<br>' + (e.message || e) + '</div>';
     }
@@ -391,7 +469,7 @@
       }
       if (!s.dotsOnly && pts.length > 1) {
         var d = 'M' + pts.map(function (p) { return sx(p.t).toFixed(1) + ' ' + sy(p.y).toFixed(1); }).join(' L');
-        svg += '<path d="' + d + '" fill="none" stroke="' + s.color + '" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>';
+        svg += '<path d="' + d + '" fill="none" stroke="' + s.color + '" stroke-width="' + (s.w || 2) + '" stroke-linejoin="round" stroke-linecap="round"/>';
       }
       pts.forEach(function (p, i) {
         var last = i === pts.length - 1, r = s.dotsOnly ? 2.2 : (last ? 3.2 : 0);
@@ -402,7 +480,7 @@
     svg += '</svg>';
 
     var legend = '';
-    if (cfg.series.length >= 2) {
+    if (cfg.series.length >= 2 && !cfg.labelEnds) {
       legend = '<div class="chart-legend">' + cfg.series.map(function (s) {
         return '<span class="lg"><span class="sw" style="background:' + s.color + '"></span>' + s.name + '</span>';
       }).join('') + '</div>';
@@ -506,7 +584,9 @@
         dia.push({ t: dstr2ms(k), y: d.d / d.n });
       });
       if (sys.length < 2) return;
-      document.getElementById('bp-card').style.display = '';
+      window.__hist.show('bp');
+      var ls = sys[sys.length - 1].y, ld = dia[dia.length - 1].y;
+      window.__hist.setVal('bp', '<b>' + ls.toFixed(0) + '/' + ld.toFixed(0) + '</b> latest');
       renderChart(document.getElementById('chart-bp'), {
         hlines: [{ y: 130, label: '130 systolic' }, { y: 80, label: '80 diastolic' }],
         series: [
@@ -518,44 +598,46 @@
     });
 
   // 2. Measurements: shoulders vs waist
-  sb.from('workout_measurements').select('log_date,shoulders,waist').order('log_date', { ascending: true }).limit(80)
-    .then(function (res) {
-      var wrap = document.getElementById('chart-meas');
-      var rows = res.data || [];
-      var sh = rows.filter(function (r) { return r.shoulders != null; }).map(function (r) { return { t: dstr2ms(r.log_date), y: Number(r.shoulders) }; });
-      var wa = rows.filter(function (r) { return r.waist != null; }).map(function (r) { return { t: dstr2ms(r.log_date), y: Number(r.waist) }; });
-      if (sh.length < 2 && wa.length < 2) { wrap.innerHTML = '<div class="chart-empty">Just your baseline so far — add another set of measurements in ~2 weeks and this line comes to life.</div>'; return; }
-      renderChart(wrap, {
-        series: [
-          { name: 'Shoulders', color: '#0f9d7a', pts: sh },
-          { name: 'Waist', color: '#cc7d22', pts: wa }
-        ],
-        yFmt: function (v) { return v.toFixed(1) + '"'; }
-      });
-    });
-
-  // 2b. Chest / arm / thigh — the other three tape measures
-  sb.from('workout_measurements').select('log_date,chest,arm,thigh').order('log_date', { ascending: true }).limit(80)
+  // 2. Measurements — all five tapes on ONE inches axis. They sit 6-12" apart and never
+  // cross, so identity comes from vertical position + a direct end-label, not from colour.
+  // That frees colour to carry PRIORITY instead: shoulders/waist (the V-taper, the pair he
+  // actually tracks) keep their saturated hues and a heavier stroke; chest/thigh/arm share
+  // one muted slate and a thin stroke, reading as a secondary group.
+  sb.from('workout_measurements').select('log_date,shoulders,waist,chest,arm,thigh')
+    .order('log_date', { ascending: true }).limit(80)
     .then(function (res) {
       var rows = (res && res.data) || [];
       var pick = function (k) {
         return rows.filter(function (r) { return r[k] != null; })
                    .map(function (r) { return { t: dstr2ms(r.log_date), y: Number(r[k]) }; });
       };
-      var ch = pick('chest'), ar = pick('arm'), th = pick('thigh');
-      var all = ch.concat(ar, th);
-      if (all.length < 2) return;                      // card stays hidden
-      document.getElementById('meas2-card').style.display = '';
+      var sh = pick('shoulders'), wa = pick('waist'), ch = pick('chest'), th = pick('thigh'), ar = pick('arm');
+      var all = sh.concat(wa, ch, th, ar);
+      var wrap = document.getElementById('chart-meas');
+
+      // headline: the V-taper ratio, which is what the two primary lines are FOR
+      if (sh.length && wa.length) {
+        var s1 = sh[sh.length - 1].y, w1 = wa[wa.length - 1].y;
+        window.__hist.setVal('meas', 'waist <b>' + w1 + '"</b> · ratio <b>' + (s1 / w1).toFixed(2) + '</b>');
+      }
+
+      if (all.length < 2) {
+        wrap.innerHTML = '<div class="chart-empty">Needs a few tape sessions to draw.</div>';
+        return;
+      }
       var ts = all.map(function (p) { return p.t; });
-      renderChart(document.getElementById('chart-meas2'), {
+      var SLATE = '#6b78a3';
+      renderChart(wrap, {
         bands: phaseBands(Math.min.apply(null, ts), Math.max.apply(null, ts)),
         labelEnds: true,
         series: [
-          { name: 'Chest', color: '#cc7d22', pts: ch },
-          { name: 'Thigh', color: '#6b78a3', pts: th },
-          { name: 'Arm', color: '#0f9d7a', pts: ar }
-        ],
-        yFmt: function (v) { return v.toFixed(1) + '\"'; }
+          { name: 'Shoulders', color: '#0f9d7a', pts: sh, w: 2.2 },
+          { name: 'Chest', color: SLATE, pts: ch, w: 1.2 },
+          { name: 'Waist', color: '#cc7d22', pts: wa, w: 2.2 },
+          { name: 'Thigh', color: SLATE, pts: th, w: 1.2 },
+          { name: 'Arm', color: SLATE, pts: ar, w: 1.2 }
+        ].filter(function (x) { return x.pts.length; }),
+        yFmt: function (v) { return v.toFixed(1) + '"'; }
       });
     });
 
@@ -619,6 +701,7 @@
       function drawOverall() {
         renderChart(wrap, { bands: phaseBands(overallPts[0].t, overallPts[overallPts.length - 1].t), series: [{ name: 'Overall', color: '#16c79a', pts: overallPts }], yFmt: function (v) { return v.toFixed(0); } });
         var last = overallPts[overallPts.length - 1].y, d = last - 100;
+        if (window.__hist) window.__hist.setVal('str', '<b>' + (d >= 0 ? '+' : '') + d.toFixed(0) + '%</b> overall');
         if (note) note.innerHTML = '100 = your start · now <b style="color:var(--green)">' + last.toFixed(0) + '</b> (' + (d >= 0 ? '+' : '') + d.toFixed(0) + '% overall). Median % gain across ' + core.length + ' lifts — new exercises splice in at the line, so they never fake-dip it. Cables excluded (gym change).';
       }
       function drawLift(l) {
