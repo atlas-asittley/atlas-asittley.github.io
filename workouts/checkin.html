@@ -266,9 +266,10 @@
     if (doneThisSlot >= 2) { host.innerHTML = ''; return; }    // already done
 
     var dayNum = (days[t.date] ? nDays : nDays + 1);
-    var pre = slot === 'evening'
-      ? 'Take this <b>BEFORE the benazepril</b> — it is the trough reading and the one the GP needs.'
-      : 'Morning reading. No coffee in the 30 min before.';
+    // Drew moved to MORNING dosing on 2026-10-08, so the morning reading is now the pre-dose trough.
+    var pre = slot === 'morning'
+      ? 'Take this <b>BEFORE the benazepril</b> — it is the trough reading and the one the GP needs. No coffee in the 30 min before.'
+      : 'Evening reading — about 12h after your morning dose, so this one shows the drug working.';
     host.innerHTML =
       '<div class="card">' +
       '<h2>🩺 Blood pressure — day ' + dayNum + ' of 7 · ' + slot + '</h2>' +
@@ -288,8 +289,8 @@
     var n = function (id) { var v = document.getElementById(id).value; return v === '' ? null : parseInt(v, 10); };
     var a = [n('bp1s'), n('bp1d')], b = [n('bp2s'), n('bp2d')], pulse = n('bppulse');
     var rows = [], t = nowLocal();
-    if (a[0] && a[1]) rows.push({ log_date: t.date, slot: slot, reading_index: 1, systolic: a[0], diastolic: a[1], pulse: pulse, before_meds: slot === 'evening' });
-    if (b[0] && b[1]) rows.push({ log_date: t.date, slot: slot, reading_index: 2, systolic: b[0], diastolic: b[1], pulse: null, before_meds: slot === 'evening' });
+    if (a[0] && a[1]) rows.push({ log_date: t.date, slot: slot, reading_index: 1, systolic: a[0], diastolic: a[1], pulse: pulse, before_meds: slot === 'morning' });
+    if (b[0] && b[1]) rows.push({ log_date: t.date, slot: slot, reading_index: 2, systolic: b[0], diastolic: b[1], pulse: null, before_meds: slot === 'morning' });
     if (!rows.length) { msg.style.display = 'block'; msg.style.color = 'var(--amber)'; msg.textContent = 'Enter at least one full reading (both numbers).'; return; }
     btn.disabled = true; btn.textContent = 'Saving…';
     var res = await sb.from('workout_bp_log').insert(rows);
