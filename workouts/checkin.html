@@ -47,9 +47,26 @@
   .recent .t { color:var(--dim); white-space:nowrap; }
   .recent .v b { color:var(--red); } .recent .v i { color:var(--amber); font-style:normal; } .recent .v s { color:var(--green); text-decoration:none; }
   .recent .a { color:var(--dim); font-size:11px; }
+
+  /* Same rest-timer bar as the workout page (index.html), for the 1-min gap between
+     the two consecutive BP readings. */
+  #rest-bar {
+    position: fixed; left:0; right:0; top:0; background:var(--red); color:#fff;
+    text-align:center; padding:12px; font-size:20px; font-weight:bold; display:none; z-index:10;
+  }
+  #rest-bar.done { background:var(--green); color:var(--bg); }
+  #rest-bar small { display:block; font-size:11px; font-weight:normal; opacity:.85; }
+  #rest-bar .stop { position:absolute; right:14px; top:50%; transform:translateY(-50%); font-size:13px; text-decoration:underline; cursor:pointer; }
+  .rest-btn {
+    background:var(--border); color:var(--text); border:none; border-radius:6px;
+    padding:9px 12px; font-family:inherit; font-size:12px; cursor:pointer; white-space:nowrap; margin-top:4px;
+  }
+  .rest-btn:active { background:var(--green); color:var(--bg); }
 </style>
 </head>
 <body>
+
+<div id="rest-bar"><span id="rest-txt"></span><small id="rest-lbl">rest timer</small><span class="stop" onclick="stopRest()">stop</span></div>
 
 <header>
   <h1>📋 Check-in</h1>
@@ -277,11 +294,57 @@
       '<div class="metric"><div class="lbl">Reading 1</div>' +
         '<div style="display:flex;gap:8px"><input id="bp1s" type="number" inputmode="numeric" placeholder="systolic"><input id="bp1d" type="number" inputmode="numeric" placeholder="diastolic"></div></div>' +
       '<div class="metric"><div class="lbl">Reading 2 — one minute later</div>' +
+        '<button class="rest-btn" id="bp-timer" type="button">⏱ Start 1:00 — then reading 2</button>' +
         '<div style="display:flex;gap:8px"><input id="bp2s" type="number" inputmode="numeric" placeholder="systolic"><input id="bp2d" type="number" inputmode="numeric" placeholder="diastolic"></div></div>' +
       '<label>Pulse (optional, either reading)</label><input id="bppulse" type="number" inputmode="numeric" placeholder="bpm">' +
       '<button class="save" id="bp-save" type="button">Log blood pressure</button><div class="saved" id="bp-saved"></div>' +
       '</div>';
     document.getElementById('bp-save').addEventListener('click', function () { saveBP(slot); });
+    document.getElementById('bp-timer').addEventListener('click', function () {
+      startRest(60, 'stay seated — then reading 2');
+    });
+  }
+
+  // ---------- 1-minute timer for the second consecutive reading ----------
+  var restInt = null;
+  window.stopRest = function () {
+    if (restInt) clearInterval(restInt);
+    restInt = null;
+    document.getElementById('rest-bar').style.display = 'none';
+  };
+  function beep() {
+    try {
+      var ctx = new (window.AudioContext || window.webkitAudioContext)();
+      var o = ctx.createOscillator(), g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination); o.frequency.value = 880; o.type = 'sine';
+      g.gain.setValueAtTime(0.4, ctx.currentTime); o.start();
+      o.stop(ctx.currentTime + 0.35); g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
+    } catch (e) {}
+    if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+  }
+  function startRest(seconds, label) {
+    if (!seconds || seconds < 1) seconds = 60;
+    if (restInt) clearInterval(restInt);
+    var bar = document.getElementById('rest-bar'),
+        txt = document.getElementById('rest-txt'),
+        lbl = document.getElementById('rest-lbl');
+    bar.className = ''; bar.style.display = 'block';
+    if (lbl) lbl.textContent = label || 'rest timer';
+    // wall-clock deadline, so a locked screen can't stall the count
+    var until = Date.now() + seconds * 1000;
+    function paint() {
+      var left = Math.max(0, Math.round((until - Date.now()) / 1000));
+      if (left <= 0) {
+        clearInterval(restInt); restInt = null;
+        txt.textContent = 'Take reading 2';
+        bar.className = 'done'; beep();
+        return;
+      }
+      var m = Math.floor(left / 60), sec = left % 60;
+      txt.textContent = m + ':' + String(sec).padStart(2, '0');
+    }
+    paint();
+    restInt = setInterval(paint, 250);
   }
 
   async function saveBP(slot) {
