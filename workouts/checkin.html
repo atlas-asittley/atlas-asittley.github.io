@@ -171,24 +171,21 @@
     loadRecent();
   }
 
-  // ---- daily (weight + sleep) + coach-queued ----
+  // ---- daily (weight) + coach-queued ----
   var pending = [];
   async function loadDue() {
     var host = document.getElementById('due-host');
     if (!sb) { host.innerHTML = '<p class="dim">No connection.</p>'; return; }
     var today = todayISO();
     var bw = await sb.from('workout_bodyweight').select('id').eq('log_date', today).limit(1);
-    var dl = await sb.from('workout_daily_log').select('id').eq('log_date', today).limit(1);
     var cq = await sb.from('workout_checkins').select('*').eq('status', 'pending').order('sort', { ascending: true }).order('created_at', { ascending: true });
     var weightDue = !(bw.data && bw.data.length);
-    var sleepDue = !(dl.data && dl.data.length);
     pending = (cq.data || []).filter(function (r) { return !r.due_date || r.due_date <= today; });
 
     var parts = [];
-    if (weightDue || sleepDue) {
+    if (weightDue) {
       var d = '<h2>☀️ Morning check <span class="due-tag">due</span></h2><div class="sub">Once a day.</div>';
       if (weightDue) d += '<label>Weight (lbs)</label><input id="d-weight" type="number" inputmode="decimal" placeholder="e.g. 222.0">';
-      if (sleepDue) d += '<label>Sleep last night</label>' + groupHtml('d-sleep', ['Poor', 'OK', 'Good'], 'chips');
       parts.push(d);
     }
     pending.forEach(function (r) { parts.push(renderCheckin(r)); });
@@ -220,7 +217,6 @@
     var ops = [], did = 0, t = nowLocal();
     var wEl = document.getElementById('d-weight');
     if (wEl && wEl.value !== '') { ops.push(sb.from('workout_bodyweight').insert({ weight: parseFloat(wEl.value), log_date: t.date, note: 'morning' })); did++; }
-    if (gval('d-sleep')) { ops.push(sb.from('workout_daily_log').insert({ log_date: t.date, sleep: gval('d-sleep') })); did++; }
     Array.prototype.forEach.call(document.querySelectorAll('[data-cid]'), function (el) {
       var cid = el.getAttribute('data-cid'), type = el.getAttribute('data-type'), gid = el.getAttribute('data-gid');
       if (type === 'measurements') {
