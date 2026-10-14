@@ -137,8 +137,8 @@
   // ---- momentary logger ----
   function renderMomentary() {
     var h = '';
-    h += '<div class="metric"><div class="lbl">Belt line — low back, under the pelvic rim, all the way around — 0 none, 10 worst</div>' + scale('m-back') + '</div>';
-    h += '<div class="metric"><div class="lbl">Right side band — hip up to mid-back, between spine and side — 0–10</div>' + scale('m-rband') + '</div>';
+    h += '<div class="metric"><div class="lbl">Belt line — deep tightness/pain under the pelvic bone, toward your core (not lower down) — 0 none, 10 worst</div>' + scale('m-back') + '</div>';
+    h += '<div class="metric"><div class="lbl">Band — hip up to mid-back, between spine and side, EITHER side — 0–10</div>' + scale('m-rband') + '</div>';
     h += '<div class="metric"><div class="lbl">Left hip (pinch) — 0–10</div>' + scale('m-lhip') + '</div>';
     h += '<div class="metric"><div class="lbl">Right hip — 0–10</div>' + scale('m-rhip') + '</div>';
     h += '<label>What were you just doing?</label>' + groupHtml('m-act', ACTIVITIES, 'chips');
