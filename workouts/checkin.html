@@ -262,17 +262,23 @@
     el.innerHTML = h;
   }
 
-  // ---- blood pressure (722 protocol: 7 days, 2 morning + 2 evening) ----
-  // Hides itself when this slot is already logged, or once 7 distinct days exist.
+  // ---- blood pressure (2 morning + 2 evening readings) ----
+  // Hides itself when this slot is already logged, or when the bp_protocol_active setting is off.
+  // FIXED 2026-10-13: it used to hide once 7 DISTINCT DATES existed. That counted the
+  // pre-registered 10/07 exclusion and every half-logged day, so the card vanished on 10/13
+  // with only ONE complete day in the counting window. Drew noticed it was gone. The stop is
+  // now a single explicit switch that this card and bin/bp-nudge.sh both read.
   async function loadBP() {
     var host = document.getElementById('bp-host');
     if (!sb) { host.innerHTML = ''; return; }
+    var act = await sb.from('workout_settings').select('value').eq('key', 'bp_protocol_active').limit(1);
+    var on = !act.error && act.data && act.data.length ? act.data[0].value === 'yes' : true;
+    if (!on) { host.innerHTML = ''; return; }                  // stopped by hand once the GP visit is done
     var q = await sb.from('workout_bp_log').select('log_date,slot');
     if (q.error) { host.innerHTML = ''; return; }
     var rows = q.data || [];
     var days = {}; rows.forEach(function (r) { days[r.log_date] = 1; });
     var nDays = Object.keys(days).length;
-    if (nDays >= 7) { host.innerHTML = ''; return; }           // protocol complete
     var t = nowLocal();
     var slot = t.hour < 12 ? 'morning' : 'evening';
     var doneThisSlot = rows.filter(function (r) { return r.log_date === t.date && r.slot === slot; }).length;
@@ -285,7 +291,7 @@
       : 'Evening reading — about 12h after your morning dose, so this one shows the drug working.';
     host.innerHTML =
       '<div class="card">' +
-      '<h2>🩺 Blood pressure — day ' + dayNum + ' of 7 · ' + slot + '</h2>' +
+      '<h2>🩺 Blood pressure — day ' + dayNum + ' · ' + slot + '</h2>' +
       '<div class="sub">' + pre + '<br>Sit 5 min first · back supported · feet flat · bladder empty · <b>arm on a table at heart level</b> · do not talk during. Two readings a minute apart.</div>' +
       '<div class="metric"><div class="lbl">Reading 1</div>' +
         '<div style="display:flex;gap:8px"><input id="bp1s" type="number" inputmode="numeric" placeholder="systolic"><input id="bp1d" type="number" inputmode="numeric" placeholder="diastolic"></div></div>' +
