@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Workout Tracker</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="symptom-fields.js"></script>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   :root {
@@ -370,41 +371,28 @@
   // workout_symptom_log — the same table as the check-in page. It used to have three fields and
   // write to workout_hip_log, which meant pre-workout readings and daily readings lived in two
   // different tables and could not be compared.
-  function clampScore(v) { v = parseInt(v, 10); return isNaN(v) ? null : Math.max(0, Math.min(10, v)); }
   function renderSymptomCheckin() {
     var host = document.getElementById('symptom-slot');
-    host.innerHTML =
-      '<div class="sympt">' +
-      '<div class="sympt-h">🩹 Quick check-in — how do the hips/back feel <b>right now</b>, before you start?</div>' +
-      '<div class="sympt-row">' +
-        '<div><label>Belt line<br>deep, toward your core</label><input id="s-back" type="number" inputmode="numeric" min="0" max="10" placeholder="0–10"></div>' +
-        '<div><label>Band<br>hip to mid-back, either side</label><input id="s-rband" type="number" inputmode="numeric" min="0" max="10" placeholder="0–10"></div>' +
-        '<div><label>Left hip<br>L groin pinch</label><input id="s-pl" type="number" inputmode="numeric" min="0" max="10" placeholder="0–10"></div>' +
-        '<div><label>Right hip<br>R groin pinch</label><input id="s-pr" type="number" inputmode="numeric" min="0" max="10" placeholder="0–10"></div>' +
-      '</div>' +
-      '<button class="sympt-save" id="s-save" type="button">Log symptoms</button>' +
-      '<div class="sympt-msg" id="s-msg" style="display:none"></div>' +
-      '</div>';
+    host.innerHTML = '<div class="sympt">'
+      + '<div class="sympt-h">🩹 Quick check-in — how do the hips/back feel <b>right now</b>, before you start?</div>'
+      + '<div id="sympt-fields"></div>'
+      + '<button class="sympt-save" id="s-save" type="button">Log symptoms</button>'
+      + '<div class="sympt-msg" id="s-msg" style="display:none"></div>'
+      + '</div>';
+    // Fields come from symptom-fields.js — ONE definition shared with checkin.html. Do not inline them here.
+    window.SymptomFields.render(document.getElementById('sympt-fields'), { activity: 'Pre-workout' });
     document.getElementById('s-save').addEventListener('click', saveSymptoms);
   }
   async function saveSymptoms() {
     var btn = document.getElementById('s-save'), msg = document.getElementById('s-msg');
-    var back = clampScore(document.getElementById('s-back').value);
-    var rb = clampScore(document.getElementById('s-rband').value);
-    var pl = clampScore(document.getElementById('s-pl').value);
-    var pr = clampScore(document.getElementById('s-pr').value);
-    if (back == null && rb == null && pl == null && pr == null) { msg.style.display = 'block'; msg.style.color = 'var(--dim)'; msg.textContent = 'Enter at least one score.'; return; }
+    var row = window.SymptomFields.read('Pre-workout');
+    if (!row) { msg.style.display = 'block'; msg.style.color = 'var(--dim)'; msg.textContent = 'Tap at least one number.'; return; }
+    // NOT stamping a new source: the 5 pre-workout rows before 2026-10-15 are source='checkin'
+    // with activity='Pre-workout' doing the distinguishing. Keep the series comparable.
     btn.disabled = true; btn.textContent = 'Saving…';
-    var d = new Date();
-    var pad = function (n) { return (n < 10 ? '0' : '') + n; };
-    var r = await sb.from('workout_symptom_log').insert({
-      logged_at: d.toISOString(), log_date: todayISO(),
-      local_time: pad(d.getHours()) + ':' + pad(d.getMinutes()), hour: d.getHours(),
-      back: back, r_band: rb, l_hip: pl, r_hip: pr,
-      activity: 'Pre-workout', note: null
-    });
+    var r = await sb.from('workout_symptom_log').insert(row);
     if (r.error) { btn.disabled = false; btn.textContent = 'Log symptoms'; msg.style.display = 'block'; msg.style.color = 'var(--red)'; msg.textContent = 'Save failed: ' + r.error.message; return; }
-    msg.style.display = 'block'; msg.style.color = 'var(--green)'; msg.textContent = '✅ Logged for ' + todayISO();
+    msg.style.display = 'block'; msg.style.color = 'var(--green)'; msg.textContent = '✅ Logged for ' + row.log_date;
     btn.textContent = 'Logged ✓';
   }
 

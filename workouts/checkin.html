@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Check-in</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="symptom-fields.js"></script>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   :root { --bg:#1a1a2e; --card:#16213e; --border:#0f3460; --green:#16c79a; --red:#e94560; --amber:#f0a500; --text:#eee; --dim:#8a97b1; }
@@ -46,6 +47,7 @@
   .recent .r:last-child { border-bottom:none; }
   .recent .t { color:var(--dim); white-space:nowrap; }
   .recent .v b { color:var(--red); } .recent .v i { color:var(--amber); font-style:normal; } .recent .v s { color:var(--green); text-decoration:none; }
+  .recent .v em { color:#d98cff; font-style:normal; } .recent .v u { text-decoration:none; }
   .recent .a { color:var(--dim); font-size:11px; }
 
   /* Same rest-timer bar as the workout page (index.html), for the 1-min gap between
@@ -136,38 +138,32 @@
 
   // ---- momentary logger ----
   function renderMomentary() {
-    var h = '';
-    h += '<div class="metric"><div class="lbl">Belt line — deep tightness/pain under the pelvic bone, toward your core (not lower down) — 0 none, 10 worst</div>' + scale('m-back') + '</div>';
-    h += '<div class="metric"><div class="lbl">Band — hip up to mid-back, between spine and side, EITHER side — 0–10</div>' + scale('m-rband') + '</div>';
-    h += '<div class="metric"><div class="lbl">Left hip (pinch) — 0–10</div>' + scale('m-lhip') + '</div>';
-    h += '<div class="metric"><div class="lbl">Right hip — 0–10</div>' + scale('m-rhip') + '</div>';
-    h += '<label>What were you just doing?</label>' + groupHtml('m-act', ACTIVITIES, 'chips');
-    h += '<label>Stress right now (optional)</label>' + groupHtml('m-stress', ['Low', 'Med', 'High'], 'chips');
-    h += '<label>Note (optional)</label><textarea id="m-note" placeholder="e.g. worse after driving; eased when I stood up"></textarea>';
-    h += '<button class="save" id="log-now" type="button">Log it</button><div class="saved" id="m-saved"></div>';
-    document.getElementById('momentary').innerHTML = h;
-    document.getElementById('log-now').addEventListener('click', logNow);
+    // Fields come from symptom-fields.js — ONE definition shared with index.html. Do not inline them here.
+    window.SymptomFields.render(document.getElementById('momentary'), {});
+    var b = document.createElement('button');
+    b.className = 'save'; b.id = 'log-now'; b.type = 'button'; b.textContent = 'Log it';
+    var sv = document.createElement('div'); sv.className = 'saved'; sv.id = 'm-saved';
+    document.getElementById('momentary').appendChild(b);
+    document.getElementById('momentary').appendChild(sv);
+    b.addEventListener('click', logNow);
   }
-  function scale(gid) {
-    var opts = []; for (var i = 0; i <= 10; i++) opts.push(i);
-    return groupHtml(gid, opts, 'scale');
-  }
+
   function numOr(gid) { var v = gval(gid); return v == null || v === '' ? null : parseInt(v, 10); }
 
   async function logNow() {
     var btn = document.getElementById('log-now'), saved = document.getElementById('m-saved');
-    var back = numOr('m-back'), l = numOr('m-lhip'), r = numOr('m-rhip'), rb = numOr('m-rband');
-    if (back == null && l == null && r == null && rb == null) { saved.style.color = 'var(--amber)'; saved.textContent = 'Tap at least one pain number.'; return; }
+    var row = window.SymptomFields.read();
+    if (!row) { saved.style.color = 'var(--amber)'; saved.textContent = 'Tap at least one pain number.'; return; }
     if (!sb) { saved.textContent = 'No connection.'; return; }
+    row.source = 'checkin';
     btn.disabled = true; btn.textContent = 'Logging…';
-    var t = nowLocal();
-    var row = { logged_at: t.iso, log_date: t.date, local_time: t.time, hour: t.hour, back: back, r_band: rb, l_hip: l, r_hip: r, activity: gval('m-act'), stress: gval('m-stress'), note: (document.getElementById('m-note').value.trim() || null) };
     var res = await sb.from('workout_symptom_log').insert(row);
     btn.disabled = false; btn.textContent = 'Log it';
     if (res.error) { saved.style.color = 'var(--red)'; saved.textContent = 'Failed: ' + res.error.message; return; }
-    saved.style.color = 'var(--green)'; saved.textContent = '✅ Logged at ' + t.time;
-    renderMomentary(); // clear for next time
-    setTimeout(function () { var s = document.getElementById('m-saved'); if (s) { s.style.color = 'var(--green)'; s.textContent = '✅ Logged at ' + t.time; } }, 0);
+    var t = row.local_time;
+    renderMomentary();
+    var s2 = document.getElementById('m-saved');
+    if (s2) { s2.style.color = 'var(--green)'; s2.textContent = '✅ Logged at ' + t; }
     loadRecent();
   }
 
@@ -246,21 +242,23 @@
   // ---- recent momentary logs ----
   async function loadRecent() {
     var el = document.getElementById('recent');
-    if (!sb) { el.innerHTML = '<span class="dim">—</span>'; return; }
-    var q = await sb.from('workout_symptom_log').select('log_date,local_time,back,r_band,l_hip,r_hip,activity').order('logged_at', { ascending: false }).limit(12);
+    if (!sb) { el.innerHTML = '<span class="dim">\u2014</span>'; return; }
+    var q = await sb.from('workout_symptom_log').select('log_date,local_time,back,paraspinal,paraspinal_side,r_band,l_hip,r_hip,activity').order('logged_at', { ascending: false }).limit(12);
     var rows = q.data || [];
-    if (!rows.length) { el.innerHTML = '<span class="dim">No logs yet — tap out your first one above.</span>'; return; }
+    if (!rows.length) { el.innerHTML = '<span class="dim">No logs yet \u2014 tap out your first one above.</span>'; return; }
     var today = todayISO(), todayCount = rows.filter(function (r) { return r.log_date === today; }).length;
-    var h = '<div class="sub">' + todayCount + ' log(s) today · showing last ' + rows.length + '</div><div class="recent">';
+    var n = function (x) { return x == null ? '\u2013' : x; };
+    var h = '<div class="sub">' + todayCount + ' log(s) today \u00b7 showing last ' + rows.length + '</div><div class="recent">';
     rows.forEach(function (r) {
-      var v = (r.back == null ? '–' : r.back) + '/' + (r.l_hip == null ? '–' : r.l_hip) + '/' + (r.r_hip == null ? '–' : r.r_hip);
+      var para = n(r.paraspinal) + (r.paraspinal != null && r.paraspinal_side ? r.paraspinal_side.charAt(0).toLowerCase() : '');
       h += '<div class="r"><span class="t">' + (r.log_date === today ? 'today ' : r.log_date.slice(5) + ' ') + (r.local_time || '') + '</span>' +
-        '<span class="v"><b>' + (r.back == null ? '–' : r.back) + '</b>/<u>' + (r.r_band == null ? '–' : r.r_band) + '</u>/<i>' + (r.l_hip == null ? '–' : r.l_hip) + '</i>/<s>' + (r.r_hip == null ? '–' : r.r_hip) + '</s></span>' +
+        '<span class="v"><b>' + n(r.back) + '</b>/<em>' + para + '</em>/<u>' + n(r.r_band) + '</u>/<i>' + n(r.l_hip) + '</i>/<s>' + n(r.r_hip) + '</s></span>' +
         '<span class="a">' + (r.activity ? esc(r.activity) : '') + '</span></div>';
     });
-    h += '</div><div class="sub" style="margin-top:6px">belt line / R-band / <span style="color:var(--amber)">Lhip</span> / <span style="color:var(--green)">Rhip</span></div>';
+    h += '</div><div class="sub" style="margin-top:6px">belt line / beside spine / band / <span style="color:var(--amber)">Lhip</span> / <span style="color:var(--green)">Rhip</span></div>';
     el.innerHTML = h;
   }
+
 
   // ---- blood pressure (2 morning + 2 evening readings) ----
   // Hides itself when this slot is already logged, or when the bp_protocol_active setting is off.
