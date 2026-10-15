@@ -333,7 +333,7 @@
       var names = sets.map(function (s) { return s.exercise; }).filter(function (v, i, a) { return a.indexOf(v) === i; });
       var lastByExercise = await loadLast(names);
       render(lastByExercise);
-      renderSymptomCheckin();
+      renderSymptomCheckin('pre');
     } catch (e) {
       document.getElementById('content').innerHTML = '<div class="msg err">Error loading workout:<br>' + (e.message || e) + '</div>';
     }
@@ -371,29 +371,42 @@
   // workout_symptom_log — the same table as the check-in page. It used to have three fields and
   // write to workout_hip_log, which meant pre-workout readings and daily readings lived in two
   // different tables and could not be compared.
-  function renderSymptomCheckin() {
+  // Two moments, one component. PRE establishes the baseline; POST measures what the session did
+  // to him. Added 2026-10-15: there were 6 pre-workout readings and 1 post, so every pre-reading was
+  // half an experiment. Fields themselves live in symptom-fields.js — do not inline them here.
+  var SYMPT_MODES = {
+    pre: {
+      head: '\u{1FA79} Quick check-in \u2014 how do the hips/back feel <b>right now</b>, before you start?',
+      activity: 'Pre-workout', btn: 'Log symptoms'
+    },
+    post: {
+      head: '\u{1FA79} One more \u2014 how does it feel <b>now that you\u2019re done</b>? Without an \u201cafter\u201d, the \u201cbefore\u201d can\u2019t tell us what the session did to you.',
+      activity: 'After workout', btn: 'Log how it feels now'
+    }
+  };
+  function renderSymptomCheckin(mode) {
+    var m = SYMPT_MODES[mode || 'pre'];
     var host = document.getElementById('symptom-slot');
     host.innerHTML = '<div class="sympt">'
-      + '<div class="sympt-h">🩹 Quick check-in — how do the hips/back feel <b>right now</b>, before you start?</div>'
+      + '<div class="sympt-h">' + m.head + '</div>'
       + '<div id="sympt-fields"></div>'
-      + '<button class="sympt-save" id="s-save" type="button">Log symptoms</button>'
+      + '<button class="sympt-save" id="s-save" type="button">' + m.btn + '</button>'
       + '<div class="sympt-msg" id="s-msg" style="display:none"></div>'
       + '</div>';
-    // Fields come from symptom-fields.js — ONE definition shared with checkin.html. Do not inline them here.
-    window.SymptomFields.render(document.getElementById('sympt-fields'), { activity: 'Pre-workout' });
-    document.getElementById('s-save').addEventListener('click', saveSymptoms);
+    window.SymptomFields.render(document.getElementById('sympt-fields'), { activity: m.activity });
+    document.getElementById('s-save').addEventListener('click', function () { saveSymptoms(m); });
   }
-  async function saveSymptoms() {
+  async function saveSymptoms(m) {
     var btn = document.getElementById('s-save'), msg = document.getElementById('s-msg');
-    var row = window.SymptomFields.read('Pre-workout');
+    var row = window.SymptomFields.read(m.activity);
     if (!row) { msg.style.display = 'block'; msg.style.color = 'var(--dim)'; msg.textContent = 'Tap at least one number.'; return; }
-    // NOT stamping a new source: the 5 pre-workout rows before 2026-10-15 are source='checkin'
-    // with activity='Pre-workout' doing the distinguishing. Keep the series comparable.
-    btn.disabled = true; btn.textContent = 'Saving…';
+    // NOT stamping a new source: the pre-workout rows before 2026-10-15 are source='checkin' with
+    // activity doing the distinguishing. Keep the series comparable.
+    btn.disabled = true; btn.textContent = 'Saving\u2026';
     var r = await sb.from('workout_symptom_log').insert(row);
-    if (r.error) { btn.disabled = false; btn.textContent = 'Log symptoms'; msg.style.display = 'block'; msg.style.color = 'var(--red)'; msg.textContent = 'Save failed: ' + r.error.message; return; }
-    msg.style.display = 'block'; msg.style.color = 'var(--green)'; msg.textContent = '✅ Logged for ' + row.log_date;
-    btn.textContent = 'Logged ✓';
+    if (r.error) { btn.disabled = false; btn.textContent = m.btn; msg.style.display = 'block'; msg.style.color = 'var(--red)'; msg.textContent = 'Save failed: ' + r.error.message; return; }
+    msg.style.display = 'block'; msg.style.color = 'var(--green)'; msg.textContent = '\u2705 Logged for ' + row.log_date;
+    btn.textContent = 'Logged \u2713';
   }
 
   // ---------- draft autosave (survives an accidental refresh mid-workout) ----------
@@ -577,7 +590,7 @@
       document.getElementById('extras-slot').innerHTML = '';
       document.getElementById('session-head').innerHTML = '';
       var cnDone = document.getElementById('coach-note'); if (cnDone) cnDone.style.display = 'none';
-      document.getElementById('symptom-slot').innerHTML = '';
+      renderSymptomCheckin('post');   // the missing half: measure what the session did
       btn.style.display = 'none';
       window.scrollTo(0, 0);
     } catch (e) {
