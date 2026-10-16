@@ -473,12 +473,21 @@
       } else { cn.style.display = 'none'; }
     }
 
+    // Group by order AND name: two exercises can share an exercise_order (a hand-inserted
+    // one-off can collide with a queued one). Keying on the order alone silently merged them,
+    // so the second exercise vanished and showed up as a bogus extra "Set 1" under the first
+    // (Drew hit this 2026-10-15: supine knee to chest swallowed by dead bug).
     var groups = {}; var order = [];
     sets.forEach(function (s) {
-      if (!groups[s.exercise_order]) { groups[s.exercise_order] = { name: s.exercise, note: s.exercise_note, rest: s.rest_seconds, bodyweight: s.bodyweight, sets: [] }; order.push(s.exercise_order); }
-      groups[s.exercise_order].sets.push(s);
+      var key = s.exercise_order + '|' + s.exercise;
+      if (!groups[key]) {
+        groups[key] = { name: s.exercise, ord: s.exercise_order, seq: order.length,
+                        note: s.exercise_note, rest: s.rest_seconds, bodyweight: s.bodyweight, sets: [] };
+        order.push(key);
+      }
+      groups[key].sets.push(s);
     });
-    order.sort(function (a, b) { return a - b; });
+    order.sort(function (a, b) { return (groups[a].ord - groups[b].ord) || (groups[a].seq - groups[b].seq); });
 
     var c = document.getElementById('content'); c.innerHTML = '';
     order.forEach(function (ord) {
