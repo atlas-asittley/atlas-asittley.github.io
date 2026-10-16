@@ -586,9 +586,13 @@
       var results = await Promise.all(updates);
       for (var i = 0; i < results.length; i++) { if (results[i].error) throw results[i].error; }
       var snEl = document.getElementById('snotes');
+      // Drew's feedback goes to athlete_notes, NEVER to notes. Until 2026-10-15 this wrote to
+      // `notes` — the coach-note column — so finishing a session silently destroyed the day's
+      // coaching rationale, and an empty box nulled it. 32 of 69 completed sessions lost their
+      // note that way. The two are separate columns now; the app must never write `notes`.
       var upd = await sb.from('workout_sessions').update({
         status: 'completed', completed_at: endISO, started_at: startedAt,
-        session_date: todayISO(), notes: snEl ? (snEl.value.trim() || null) : null
+        session_date: todayISO(), athlete_notes: snEl ? (snEl.value.trim() || null) : null
       }).eq('id', session.id);
       if (upd.error) throw upd.error;
       clearDraft();

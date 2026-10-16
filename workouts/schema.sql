@@ -12,7 +12,11 @@ create table if not exists workout_sessions (
   equipment    text,                          -- what was available, e.g. 'dumbbells only'
   status       text not null default 'prescribed', -- 'prescribed' | 'completed'
   bodyweight   numeric,                        -- optional, for tracking the bulk
-  notes        text,                           -- coach notes / how it felt
+  notes         text,                          -- COACH note only. Written by the coach, read-only to the app.
+  athlete_notes text,                          -- Drew's own 'how did it feel?' feedback (added 2026-10-15).
+  -- ^ These were ONE column until 2026-10-15 ('coach notes / how it felt'), and that comment was the bug:
+  --   completing a session wrote Drew's feedback over the coach note, and an empty box nulled it.
+  --   32 of 69 completed sessions lost their note before it was caught. Never merge them again.
   created_at   timestamptz not null default now(),
   completed_at timestamptz
 );
