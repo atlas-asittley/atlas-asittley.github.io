@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Music Tracker</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  :root {
+    --bg:#1a1a2e; --card:#16213e; --border:#0f3460;
+    --green:#16c79a; --red:#e94560; --amber:#f0b429; --text:#eee; --dim:#8a97b1;
+  }
+  body {
+    background:var(--bg); color:var(--text);
+    font-family:'Courier New', monospace;
+    padding:16px 14px 120px; max-width:640px; margin:0 auto;
+    -webkit-text-size-adjust:100%;
+  }
+  header { display:flex; align-items:baseline; justify-content:space-between; margin-bottom:4px; }
+  h1 { font-size:24px; color:var(--green); }
+  .back { color:var(--dim); text-decoration:none; font-size:13px; }
+
+  .streak { color:var(--dim); font-size:13px; margin-bottom:16px; line-height:1.5; }
+  .streak b { color:var(--text); }
+
+  h2.sec { font-size:12px; letter-spacing:1px; color:var(--dim); margin:20px 0 8px; }
+  h2.sec.now { color:var(--green); }
+
+  .ticket { background:var(--card); border:1px solid var(--border); border-radius:10px;
+            padding:12px 13px; margin-bottom:9px; }
+  .ticket.doing { border-color:var(--green); background:rgba(22,199,154,.09); }
+  .ticket.any   { border-style:dashed; }
+  .t-title { font-size:15px; line-height:1.4; }
+  .t-song  { font-size:11px; color:var(--amber); margin-top:5px; letter-spacing:.5px; }
+  .t-fin   { font-size:12px; color:var(--dim); margin-top:7px; line-height:1.45;
+             border-left:2px solid var(--border); padding-left:8px; }
+  .t-fin b { color:var(--green); font-weight:normal; }
+  .t-fin.none { color:var(--red); }
+  .t-btns  { display:flex; gap:7px; margin-top:10px; flex-wrap:wrap; }
+  .t-btns button {
+    background:none; border:1px solid var(--border); color:var(--dim);
+    border-radius:7px; padding:7px 11px; font-family:inherit; font-size:12px;
+  }
+  .t-btns button.go { border-color:var(--green); color:var(--green); }
+  .t-btns button.kill { border-color:var(--red); color:var(--red); margin-left:auto; }
+  .t-btns button:active { background:var(--border); }
+
+  .box { background:var(--card); border:1px solid var(--border); border-radius:10px;
+         padding:13px; margin-bottom:14px; }
+  .box h3 { font-size:13px; color:var(--green); margin-bottom:4px; }
+  .box p.hint { font-size:11px; color:var(--dim); line-height:1.5; margin-bottom:9px; }
+  input[type=text], textarea, select {
+    width:100%; background:var(--bg); border:1px solid var(--border); color:var(--text);
+    border-radius:7px; padding:10px; font-family:inherit; font-size:16px; margin-bottom:8px;
+  }
+  textarea { min-height:62px; resize:vertical; }
+  input:focus, textarea:focus, select:focus { outline:none; border-color:var(--green); }
+  .row { display:flex; gap:8px; }
+  .row > * { flex:1; }
+  label.chk { display:flex; align-items:center; gap:8px; font-size:12px; color:var(--dim);
+              margin-bottom:9px; }
+  label.chk input { width:auto; margin:0; }
+  button.wide {
+    width:100%; background:none; border:1px solid var(--green); color:var(--green);
+    border-radius:8px; padding:11px; font-family:inherit; font-size:13px;
+  }
+  button.wide:active { background:var(--green); color:var(--bg); }
+  button.wide.quiet { border-color:var(--border); color:var(--dim); }
+
+  .nextobj { border-color:var(--amber); }
+  .nextobj h3 { color:var(--amber); }
+  .nextobj .obj { font-size:15px; line-height:1.4; }
+
+  details { margin-top:18px; }
+  summary { color:var(--dim); font-size:13px; padding:8px 0; cursor:pointer; }
+  .done-row { font-size:12px; color:var(--dim); padding:7px 0; border-top:1px solid var(--border);
+              line-height:1.45; }
+  .done-row b { color:var(--text); font-weight:normal; }
+  .msg { text-align:center; color:var(--dim); font-size:12px; padding:10px; line-height:1.5; }
+  .msg.err { color:#f0a0a0; }
+  .empty { color:var(--dim); font-size:12px; padding:2px 0 6px; line-height:1.5; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Music</h1>
+  <a class="back" href="https://atlas-asittley.github.io/">&larr; hub</a>
+</header>
+<div class="streak" id="streak">&nbsp;</div>
+
+<div id="nextobj"></div>
+
+<div id="board"><div class="msg">Loading…</div></div>
+
+<h2 class="sec">LOG WHAT YOU DID</h2>
+<div class="box">
+  <p class="hint">Any music work counts — noodling, singing, fixing a line. This records what
+    happened. It is not a quota.</p>
+  <input type="text" id="log-what" placeholder="what you worked on (optional)">
+  <button class="wide" id="log-btn">Log today</button>
+  <div class="msg" id="log-msg"></div>
+</div>
+
+<h2 class="sec">SET THE NEXT ONE</h2>
+<div class="box">
+  <p class="hint">Do this at the end of a session, while you still know where you are. Then next
+    time there's nothing to decide.</p>
+  <input type="text" id="next-what" placeholder="what to do next session">
+  <button class="wide quiet" id="next-btn">Save</button>
+  <div class="msg" id="next-msg"></div>
+</div>
+
+<h2 class="sec">ADD A TICKET</h2>
+<div class="box">
+  <p class="hint">Every ticket needs a finish line you can answer yes or no to &mdash; and one that
+    quality can't fail. "One version exists", not "a good one".</p>
+  <input type="text" id="add-title" placeholder="what needs doing">
+  <input type="text" id="add-finish" placeholder="done when… (a yes/no condition)">
+  <div class="row">
+    <input type="text" id="add-song" placeholder="song (optional)">
+    <select id="add-status">
+      <option value="later">Later</option>
+      <option value="next">Up next</option>
+    </select>
+  </div>
+  <label class="chk"><input type="checkbox" id="add-anytime">
+    Anytime — open-ended, always on the board</label>
+  <button class="wide" id="add-btn">Add</button>
+  <div class="msg" id="add-msg"></div>
+</div>
+
+<details id="done-wrap"></details>
+
+<script>
+const SUPABASE_URL = 'https://igaulapupbtdcqqjobhs.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_7yi3BNg-J-K5nralw5JSww_c71Pge6e';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const $ = id => document.getElementById(id);
+const esc = s => (s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const todayLocal = () => new Date(Date.now() - new Date().getTimezoneOffset()*60000)
+  .toISOString().slice(0,10);
+
+let tickets = [], sessions = [];
+
+async function load() {
+  const [t, s] = await Promise.all([
+    sb.from('music_tickets').select('*').order('created_at', { ascending: true }),
+    sb.from('music_sessions').select('*').order('session_date', { ascending: false }).limit(200)
+  ]);
+  if (t.error || s.error) {
+    $('board').innerHTML = '<div class="msg err">' +
+      esc((t.error || s.error).message) +
+      '<br><br>If this says the table is missing, the schema SQL has not been run yet.</div>';
+    return;
+  }
+  tickets = t.data; sessions = s.data;
+  renderStreak(); renderNextObj(); renderBoard(); renderDone();
+}
+
+function renderStreak() {
+  const days = [...new Set(sessions.map(r => r.session_date))].sort().reverse();
+  if (!days.length) { $('streak').textContent = 'No sessions logged yet.'; return; }
+  // consecutive days back from today or yesterday
+  let streak = 0, cur = new Date(todayLocal() + 'T00:00:00');
+  if (days[0] !== todayLocal()) cur.setDate(cur.getDate() - 1);
+  while (days.includes(cur.toISOString().slice(0,10))) { streak++; cur.setDate(cur.getDate() - 1); }
+  const month = todayLocal().slice(0,7);
+  const thisMonth = days.filter(d => d.startsWith(month)).length;
+  $('streak').innerHTML = '<b>' + days.length + '</b> days of music work · <b>' +
+    thisMonth + '</b> this month' + (streak > 1 ? ' · <b>' + streak + '</b> in a row' : '') +
+    '<br>last: ' + esc(days[0]);
+}
+
+function renderNextObj() {
+  const withObj = sessions.filter(r => r.next_objective && r.next_objective.trim());
+  if (!withObj.length) { $('nextobj').innerHTML = ''; return; }
+  const o = withObj[0];
+  $('nextobj').innerHTML =
+    '<div class="box nextobj"><h3>YOU LEFT THIS FOR YOURSELF</h3>' +
+    '<div class="obj">' + esc(o.next_objective) + '</div>' +
+    '<p class="hint" style="margin:8px 0 0">set ' + esc(o.session_date) + '</p></div>';
+}
+
+function ticketHTML(t) {
+  const cls = 'ticket' + (t.status === 'doing' ? ' doing' : '') + (t.anytime ? ' any' : '');
+  let btns = '';
+  if (t.anytime) {
+    btns = '<button class="go" data-act="logit" data-id="' + t.id + '">Did this</button>';
+  } else if (t.status === 'doing') {
+    btns = '<button class="go" data-act="done" data-id="' + t.id + '">Done</button>' +
+           '<button data-act="next" data-id="' + t.id + '">Park</button>';
+  } else if (t.status === 'next') {
+    btns = '<button class="go" data-act="doing" data-id="' + t.id + '">Start</button>' +
+           '<button data-act="later" data-id="' + t.id + '">Later</button>';
+  } else {
+    btns = '<button data-act="next" data-id="' + t.id + '">Up next</button>';
+  }
+  btns += '<button class="kill" data-act="del" data-id="' + t.id + '">&times;</button>';
+  const fin = t.finish_line && t.finish_line.trim()
+    ? '<div class="t-fin"><b>done when</b> ' + esc(t.finish_line) + '</div>'
+    : '<div class="t-fin none">no finish line &mdash; what would make this done?</div>';
+  return '<div class="' + cls + '"><div class="t-title">' + esc(t.title) + '</div>' +
+    (t.song ? '<div class="t-song">' + esc(t.song) + '</div>' : '') +
+    fin + '<div class="t-btns">' + btns + '</div></div>';
+}
+
+function renderBoard() {
+  const live = tickets.filter(t => t.status !== 'done');
+  const sec = (label, list, cls, emptyMsg) =>
+    '<h2 class="sec ' + (cls || '') + '">' + label + '</h2>' +
+    (list.length ? list.map(ticketHTML).join('')
+                 : '<div class="empty">' + emptyMsg + '</div>');
+  $('board').innerHTML =
+    sec('NOW',       live.filter(t => !t.anytime && t.status === 'doing'), 'now',
+        'Nothing started. Pick one from Up next.') +
+    sec('UP NEXT',   live.filter(t => !t.anytime && t.status === 'next'), '',
+        'Nothing queued.') +
+    sec('ANYTIME',   live.filter(t => t.anytime), '',
+        'No open-ended tickets.') +
+    sec('LATER',     live.filter(t => !t.anytime && t.status === 'later'), '',
+        'Empty.');
+}
+
+function renderDone() {
+  const done = tickets.filter(t => t.status === 'done')
+    .sort((a,b) => (b.done_at || '').localeCompare(a.done_at || ''));
+  const rows = done.slice(0, 25).map(t =>
+    '<div class="done-row"><b>' + esc(t.title) + '</b>' +
+    (t.song ? ' — ' + esc(t.song) : '') +
+    (t.done_at ? '<br>' + esc(t.done_at.slice(0,10)) : '') + '</div>').join('');
+  $('done-wrap').innerHTML =
+    '<summary>Finished (' + done.length + ') and session history</summary>' +
+    (rows || '<div class="done-row">Nothing finished yet.</div>') +
+    sessions.slice(0, 25).map(s =>
+      '<div class="done-row">' + esc(s.session_date) + ' — ' +
+      esc(s.what || 'worked on music') + '</div>').join('');
+}
+
+async function logSession(what, nextObj) {
+  const row = { session_date: todayLocal() };
+  if (what) row.what = what;
+  if (nextObj) row.next_objective = nextObj;
+  const { error } = await sb.from('music_sessions').insert(row);
+  return error;
+}
+
+document.addEventListener('click', async e => {
+  const b = e.target.closest('button[data-act]');
+  if (!b) return;
+  const id = b.dataset.id, act = b.dataset.act;
+  b.disabled = true;
+  if (act === 'del') {
+    if (!confirm('Delete this ticket?')) { b.disabled = false; return; }
+    await sb.from('music_tickets').delete().eq('id', id);
+  } else if (act === 'done') {
+    const t = tickets.find(x => x.id === id);
+    await sb.from('music_tickets').update({ status:'done', done_at:new Date().toISOString() }).eq('id', id);
+    await logSession(t ? t.title : 'finished a ticket', null);
+  } else if (act === 'logit') {
+    const t = tickets.find(x => x.id === id);
+    await logSession(t ? t.title : 'music work', null);
+  } else {
+    await sb.from('music_tickets').update({ status: act }).eq('id', id);
+  }
+  await load();
+});
+
+$('log-btn').onclick = async () => {
+  const err = await logSession($('log-what').value.trim() || 'worked on music', null);
+  $('log-msg').textContent = err ? err.message : 'Logged.';
+  $('log-msg').className = 'msg' + (err ? ' err' : '');
+  if (!err) $('log-what').value = '';
+  await load();
+};
+
+$('next-btn').onclick = async () => {
+  const v = $('next-what').value.trim();
+  if (!v) return;
+  const err = await logSession(null, v);
+  $('next-msg').textContent = err ? err.message : 'Saved for next time.';
+  $('next-msg').className = 'msg' + (err ? ' err' : '');
+  if (!err) $('next-what').value = '';
+  await load();
+};
+
+$('add-btn').onclick = async () => {
+  const title = $('add-title').value.trim();
+  if (!title) return;
+  const { error } = await sb.from('music_tickets').insert({
+    title,
+    song: $('add-song').value.trim() || null,
+    finish_line: $('add-finish').value.trim() || null,
+    status: $('add-status').value,
+    anytime: $('add-anytime').checked
+  });
+  $('add-msg').textContent = error ? error.message : 'Added.';
+  $('add-msg').className = 'msg' + (error ? ' err' : '');
+  if (!error) { $('add-title').value = ''; $('add-song').value = '';
+                $('add-finish').value = ''; $('add-anytime').checked = false; }
+  await load();
+};
+
+load();
+</script>
+</body>
+</html>
