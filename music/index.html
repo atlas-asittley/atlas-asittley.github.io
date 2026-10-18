@@ -14,94 +14,86 @@
   body {
     background:var(--bg); color:var(--text);
     font-family:'Courier New', monospace;
-    padding:16px 14px 120px; max-width:640px; margin:0 auto;
+    padding:16px 14px 90px; max-width:640px; margin:0 auto;
     -webkit-text-size-adjust:100%;
   }
   header { display:flex; align-items:baseline; justify-content:space-between; margin-bottom:4px; }
   h1 { font-size:24px; color:var(--green); }
   .back { color:var(--dim); text-decoration:none; font-size:13px; }
-
-  .streak { color:var(--dim); font-size:13px; margin-bottom:16px; line-height:1.5; }
+  .streak { color:var(--dim); font-size:13px; margin-bottom:18px; line-height:1.5; }
   .streak b { color:var(--text); }
 
-  h2.sec { font-size:11px; letter-spacing:2px; color:var(--dim); margin:26px 0 9px;
-           border-top:1px solid var(--border); padding-top:14px; }
-
-  .song { border:1px solid var(--border); border-radius:12px; margin-bottom:20px;
+  /* ---------- song blocks ---------- */
+  .song { border:1px solid var(--border); border-radius:12px; margin-bottom:18px;
           background:rgba(0,0,0,.18); overflow:hidden; }
   .song-h { background:var(--border); padding:12px 13px; display:flex;
             align-items:baseline; justify-content:space-between; gap:10px;
             cursor:pointer; user-select:none; -webkit-tap-highlight-color:transparent; }
   .song-h:active { filter:brightness(1.25); }
   .song-h .pos { color:var(--green); font-size:13px; margin-right:7px; }
-  .song-h .nm { font-size:16px; letter-spacing:1px; color:var(--text); }
-  .song-h .car { color:var(--dim); font-size:11px; transition:transform .12s; }
-  .song.open .song-h .car { transform:rotate(90deg); display:inline-block; }
+  .song-h .nm  { font-size:16px; letter-spacing:1px; color:var(--text); }
+  .song-h .ct  { font-size:11px; color:var(--dim); white-space:nowrap; }
+  .song-h .car { display:inline-block; color:var(--dim); font-size:11px; transition:transform .12s; }
+  .song.open .song-h .car { transform:rotate(90deg); }
   .song:not(.open) .song-body { display:none; }
-  .song-note { font-size:11px; color:var(--dim); line-height:1.5; padding:10px 13px 0; }
-  .song-h .ct { font-size:11px; color:var(--dim); white-space:nowrap; }
   .song.nosong .song-h { background:transparent; border-bottom:1px dashed var(--border); }
   .song.nosong .song-h .nm { color:var(--dim); font-size:13px; }
-  .song-body { padding:11px 11px 2px; }
+  .song-note { font-size:11px; color:var(--dim); line-height:1.5; padding:11px 13px 0; }
+  .song-body { padding:11px 11px 11px; }
 
-  .chip { display:inline-block; font-size:10px; letter-spacing:1px; padding:2px 7px;
-          border-radius:20px; border:1px solid var(--dim); color:var(--dim); margin-bottom:7px; }
-  .chip.next { border-color:var(--amber); color:var(--amber); }
-  .chip.doing { border-color:var(--green); color:var(--green); }
-
+  /* ---------- tickets ---------- */
   .ticket { background:var(--card); border:1px solid var(--border); border-radius:10px;
-            padding:12px 13px; margin-bottom:9px; }
+            padding:11px 12px; margin-bottom:9px; display:flex; gap:11px; align-items:flex-start; }
   .ticket.doing { border-color:var(--green); background:rgba(22,199,154,.09); }
   .ticket.any   { border-style:dashed; }
+  .ticket.is-done { opacity:.5; }
+  .ticket.is-done .t-title { text-decoration:line-through; }
+
+  .box-chk { flex:0 0 auto; width:26px; height:26px; border:1px solid var(--dim);
+             border-radius:7px; background:none; color:var(--green); font-size:15px;
+             line-height:1; display:flex; align-items:center; justify-content:center;
+             font-family:inherit; margin-top:1px; }
+  .box-chk.on { border-color:var(--green); background:rgba(22,199,154,.18); }
+  .box-chk.any { border-radius:50%; font-size:13px; color:var(--amber); border-color:var(--amber); }
+  .t-main { flex:1 1 auto; min-width:0; }
+  .chip { display:inline-block; font-size:10px; letter-spacing:1px; padding:2px 7px;
+          border-radius:20px; border:1px solid var(--dim); color:var(--dim); margin-bottom:6px; }
+  .chip.next  { border-color:var(--amber); color:var(--amber); }
+  .chip.doing { border-color:var(--green); color:var(--green); }
   .t-title { font-size:15px; line-height:1.4; }
-  .t-song  { font-size:11px; color:var(--amber); margin-top:5px; letter-spacing:.5px; }
   .t-fin   { font-size:12px; color:var(--dim); margin-top:7px; line-height:1.45;
              border-left:2px solid var(--border); padding-left:8px; }
   .t-fin b { color:var(--green); font-weight:normal; }
-  .t-fin.none { color:var(--red); }
-  .t-btns  { display:flex; gap:7px; margin-top:10px; flex-wrap:wrap; }
-  .t-btns button {
-    background:none; border:1px solid var(--border); color:var(--dim);
-    border-radius:7px; padding:7px 11px; font-family:inherit; font-size:12px;
-  }
+  .t-fin.none { color:var(--red); border-left-color:var(--red); }
+  .t-btns  { display:flex; gap:7px; margin-top:9px; flex-wrap:wrap; }
+  .t-btns button { background:none; border:1px solid var(--border); color:var(--dim);
+                   border-radius:7px; padding:6px 10px; font-family:inherit; font-size:12px; }
   .t-btns button.go { border-color:var(--green); color:var(--green); }
-  .t-btns button.kill { border-color:var(--red); color:var(--red); margin-left:auto; }
+  .t-btns button.kill { border-color:transparent; color:var(--dim); margin-left:auto; }
   .t-btns button:active { background:var(--border); }
+  .t-done-at { font-size:11px; color:var(--dim); margin-top:6px; }
 
-  .box { background:var(--card); border:1px solid var(--border); border-radius:10px;
-         padding:13px; margin-bottom:14px; }
-  .box h3 { font-size:13px; color:var(--green); margin-bottom:4px; }
-  .box p.hint { font-size:11px; color:var(--dim); line-height:1.5; margin-bottom:9px; }
-  input[type=text], textarea, select {
-    width:100%; background:var(--bg); border:1px solid var(--border); color:var(--text);
-    border-radius:7px; padding:10px; font-family:inherit; font-size:16px; margin-bottom:8px;
-  }
-  textarea { min-height:62px; resize:vertical; }
-  input:focus, textarea:focus, select:focus { outline:none; border-color:var(--green); }
-  .row { display:flex; gap:8px; }
-  .row > * { flex:1; }
-  label.chk { display:flex; align-items:center; gap:8px; font-size:12px; color:var(--dim);
-              margin-bottom:9px; }
-  label.chk input { width:auto; margin:0; }
-  button.wide {
-    width:100%; background:none; border:1px solid var(--green); color:var(--green);
-    border-radius:8px; padding:11px; font-family:inherit; font-size:13px;
-  }
-  button.wide:active { background:var(--green); color:var(--bg); }
-  button.wide.quiet { border-color:var(--border); color:var(--dim); }
+  /* ---------- inline add ---------- */
+  .addline { width:100%; background:none; border:1px dashed var(--border); color:var(--dim);
+             border-radius:9px; padding:10px; font-family:inherit; font-size:13px; }
+  .addline:active { background:var(--border); }
+  .addform { border:1px dashed var(--border); border-radius:9px; padding:11px; }
+  .addform input { width:100%; background:var(--bg); border:1px solid var(--border);
+                   color:var(--text); border-radius:7px; padding:10px; font-family:inherit;
+                   font-size:16px; margin-bottom:8px; }
+  .addform input:focus { outline:none; border-color:var(--green); }
+  .addform .hint { font-size:11px; color:var(--dim); line-height:1.5; margin-bottom:9px; }
+  .addform .row { display:flex; gap:8px; }
+  .addform .row button { flex:1; background:none; border:1px solid var(--green); color:var(--green);
+                         border-radius:8px; padding:10px; font-family:inherit; font-size:13px; }
+  .addform .row button.quiet { border-color:var(--border); color:var(--dim); }
+  .hidden { display:none; }
 
-  .nextobj { border-color:var(--amber); }
-  .nextobj h3 { color:var(--amber); }
-  .nextobj .obj { font-size:15px; line-height:1.4; }
-
-  details { margin-top:18px; }
-  summary { color:var(--dim); font-size:13px; padding:8px 0; cursor:pointer; }
-  .done-row { font-size:12px; color:var(--dim); padding:7px 0; border-top:1px solid var(--border);
-              line-height:1.45; }
-  .done-row b { color:var(--text); font-weight:normal; }
+  .donehead { font-size:11px; letter-spacing:1px; color:var(--dim); margin:14px 0 8px; }
+  .empty { color:var(--dim); font-size:12px; padding:2px 0 8px; line-height:1.5; }
   .msg { text-align:center; color:var(--dim); font-size:12px; padding:10px; line-height:1.5; }
   .msg.err { color:#f0a0a0; }
-  .empty { color:var(--dim); font-size:12px; padding:2px 0 6px; line-height:1.5; }
+  #addsong { margin-top:4px; }
 </style>
 </head>
 <body>
@@ -112,49 +104,20 @@
 </header>
 <div class="streak" id="streak">&nbsp;</div>
 
-<div id="nextobj"></div>
-
 <div id="board"><div class="msg">Loading…</div></div>
 
-<h2 class="sec">LOG WHAT YOU DID</h2>
-<div class="box">
-  <p class="hint">Any music work counts — noodling, singing, fixing a line. This records what
-    happened. It is not a quota.</p>
-  <input type="text" id="log-what" placeholder="what you worked on (optional)">
-  <button class="wide" id="log-btn">Log today</button>
-  <div class="msg" id="log-msg"></div>
-</div>
-
-<h2 class="sec">SET THE NEXT ONE</h2>
-<div class="box">
-  <p class="hint">Do this at the end of a session, while you still know where you are. Then next
-    time there's nothing to decide.</p>
-  <input type="text" id="next-what" placeholder="what to do next session">
-  <button class="wide quiet" id="next-btn">Save</button>
-  <div class="msg" id="next-msg"></div>
-</div>
-
-<h2 class="sec">ADD A TICKET</h2>
-<div class="box">
-  <p class="hint">Every ticket needs a finish line you can answer yes or no to &mdash; and one that
-    quality can't fail. "One version exists", not "a good one".</p>
-  <input type="text" id="add-title" placeholder="what needs doing">
-  <input type="text" id="add-finish" placeholder="done when… (a yes/no condition)">
-  <div class="row">
-    <input type="text" id="add-song" list="song-list" placeholder="song">
-    <datalist id="song-list"></datalist>
-    <select id="add-status">
-      <option value="later">Later</option>
-      <option value="next">Up next</option>
-    </select>
+<div id="addsong">
+  <button class="addline" data-act="songform">+ add a song</button>
+  <div class="addform hidden" id="songform">
+    <input type="text" id="song-name" placeholder="song name (a working title is fine)">
+    <input type="text" id="song-pos" inputmode="numeric" placeholder="position in the set (blank = not in the set)">
+    <div class="row">
+      <button data-act="songsave">Add song</button>
+      <button class="quiet" data-act="songcancel">Cancel</button>
+    </div>
+    <div class="msg" id="song-msg"></div>
   </div>
-  <label class="chk"><input type="checkbox" id="add-anytime">
-    Anytime — open-ended, always on the board</label>
-  <button class="wide" id="add-btn">Add</button>
-  <div class="msg" id="add-msg"></div>
 </div>
-
-<details id="done-wrap"></details>
 
 <script>
 const SUPABASE_URL = 'https://igaulapupbtdcqqjobhs.supabase.co';
@@ -171,72 +134,31 @@ let tickets = [], sessions = [], songs = [];
 async function load() {
   const [t, s, g] = await Promise.all([
     sb.from('music_tickets').select('*').order('created_at', { ascending: true }),
-    sb.from('music_sessions').select('*').order('session_date', { ascending: false }).limit(200),
+    sb.from('music_sessions').select('*').order('session_date', { ascending: false }).limit(300),
     sb.from('music_songs').select('*')
   ]);
   const err = t.error || s.error || g.error;
   if (err) {
-    $('board').innerHTML = '<div class="msg err">' + esc(err.message) +
-      '<br><br>If this says a table is missing, the schema SQL has not been run yet.</div>';
+    $('board').innerHTML = '<div class="msg err">' + esc(err.message) + '</div>';
     return;
   }
   tickets = t.data; sessions = s.data; songs = g.data;
-  renderStreak(); renderNextObj(); renderBoard(); renderDone();
+  renderStreak(); renderBoard();
 }
 
 function renderStreak() {
   const days = [...new Set(sessions.map(r => r.session_date))].sort().reverse();
-  if (!days.length) { $('streak').textContent = 'No sessions logged yet.'; return; }
-  // consecutive days back from today or yesterday
+  if (!days.length) { $('streak').textContent = 'Nothing logged yet. Check something off.'; return; }
   let streak = 0, cur = new Date(todayLocal() + 'T00:00:00');
   if (days[0] !== todayLocal()) cur.setDate(cur.getDate() - 1);
   while (days.includes(cur.toISOString().slice(0,10))) { streak++; cur.setDate(cur.getDate() - 1); }
   const month = todayLocal().slice(0,7);
-  const thisMonth = days.filter(d => d.startsWith(month)).length;
   $('streak').innerHTML = '<b>' + days.length + '</b> days of music work · <b>' +
-    thisMonth + '</b> this month' + (streak > 1 ? ' · <b>' + streak + '</b> in a row' : '') +
-    '<br>last: ' + esc(days[0]);
+    days.filter(d => d.startsWith(month)).length + '</b> this month' +
+    (streak > 1 ? ' · <b>' + streak + '</b> in a row' : '') + '<br>last: ' + esc(days[0]);
 }
 
-function renderNextObj() {
-  const withObj = sessions.filter(r => r.next_objective && r.next_objective.trim());
-  if (!withObj.length) { $('nextobj').innerHTML = ''; return; }
-  const o = withObj[0];
-  $('nextobj').innerHTML =
-    '<div class="box nextobj"><h3>YOU LEFT THIS FOR YOURSELF</h3>' +
-    '<div class="obj">' + esc(o.next_objective) + '</div>' +
-    '<p class="hint" style="margin:8px 0 0">set ' + esc(o.session_date) + '</p></div>';
-}
-
-function ticketHTML(t) {
-  const cls = 'ticket' + (t.status === 'doing' ? ' doing' : '') + (t.anytime ? ' any' : '');
-  let btns = '';
-  if (t.anytime) {
-    btns = '<button class="go" data-act="logit" data-id="' + t.id + '">Did this</button>';
-  } else if (t.status === 'doing') {
-    btns = '<button class="go" data-act="done" data-id="' + t.id + '">Done</button>' +
-           '<button data-act="next" data-id="' + t.id + '">Park</button>';
-  } else if (t.status === 'next') {
-    btns = '<button class="go" data-act="doing" data-id="' + t.id + '">Start</button>' +
-           '<button data-act="later" data-id="' + t.id + '">Later</button>';
-  } else {
-    btns = '<button data-act="next" data-id="' + t.id + '">Up next</button>';
-  }
-  btns += '<button class="kill" data-act="del" data-id="' + t.id + '">&times;</button>';
-  const chip = t.status === 'doing' ? '<div class="chip doing">IN PROGRESS</div>'
-             : t.status === 'next'  ? '<div class="chip next">UP NEXT</div>'
-             : t.anytime            ? '<div class="chip">ANYTIME</div>' : '';
-  const fin = t.finish_line && t.finish_line.trim()
-    ? '<div class="t-fin"><b>done when</b> ' + esc(t.finish_line) + '</div>'
-    : '<div class="t-fin none">no finish line &mdash; what would make this done?</div>';
-  return '<div class="' + cls + '">' + chip +
-    '<div class="t-title">' + esc(t.title) + '</div>' +
-    fin + '<div class="t-btns">' + btns + '</div></div>';
-}
-
-const RANK = { doing:0, next:1, later:2 };
-
-// Which songs are expanded. Remembered per phone, falls back to a sensible default.
+/* ---------------- open/closed state ---------------- */
 function openSet() {
   try { return new Set(JSON.parse(localStorage.getItem('mt-open') || '[]')); }
   catch (e) { return new Set(); }
@@ -245,146 +167,200 @@ function saveOpen(set) {
   try { localStorage.setItem('mt-open', JSON.stringify([...set])); } catch (e) {}
 }
 
-function songBlock(name, pos, note, list, isLoose) {
-  const open = openSet();
-  // default: expanded if something is started or queued, or if he has toggled it before
-  const seen = localStorage.getItem('mt-open') !== null;
-  const auto = list.some(t => t.status === 'doing' || t.status === 'next');
-  const isOpen = seen ? open.has(name) : auto;
+/* ---------------- tickets ---------------- */
+const RANK = { doing:0, next:1, later:2 };
+
+function ticketHTML(t) {
+  const done = t.status === 'done';
+  const cls = 'ticket' + (t.status === 'doing' ? ' doing' : '') +
+              (t.anytime ? ' any' : '') + (done ? ' is-done' : '');
+
+  // anytime tickets never complete -- they log a session and stay on the board
+  const chk = t.anytime
+    ? '<button class="box-chk any" data-act="logit" data-id="' + t.id + '" title="did this">&#8635;</button>'
+    : '<button class="box-chk' + (done ? ' on' : '') + '" data-act="' +
+      (done ? 'undone' : 'done') + '" data-id="' + t.id + '">' + (done ? '&#10003;' : '') + '</button>';
+
+  const chip = done ? ''
+    : t.status === 'doing' ? '<div class="chip doing">IN PROGRESS</div>'
+    : t.status === 'next'  ? '<div class="chip next">UP NEXT</div>'
+    : t.anytime            ? '<div class="chip">ANYTIME</div>' : '';
+
+  const fin = done ? ''
+    : (t.finish_line && t.finish_line.trim()
+        ? '<div class="t-fin"><b>done when</b> ' + esc(t.finish_line) + '</div>'
+        : '<div class="t-fin none">no finish line — what would make this done?</div>');
+
+  let btns = '';
+  if (done) {
+    btns = t.done_at ? '<div class="t-done-at">done ' + esc(t.done_at.slice(0,10)) + '</div>' : '';
+  } else {
+    if (!t.anytime) {
+      btns += t.status === 'doing'
+        ? '<button data-act="next" data-id="' + t.id + '">Park</button>'
+        : '<button class="go" data-act="doing" data-id="' + t.id + '">Start</button>';
+      btns += t.status === 'next'
+        ? '<button data-act="later" data-id="' + t.id + '">Later</button>'
+        : '<button data-act="next" data-id="' + t.id + '">Up next</button>';
+    }
+    btns += '<button class="kill" data-act="del" data-id="' + t.id + '">delete</button>';
+    btns = '<div class="t-btns">' + btns + '</div>';
+  }
+
+  return '<div class="' + cls + '">' + chk + '<div class="t-main">' + chip +
+    '<div class="t-title">' + esc(t.title) + '</div>' + fin + btns + '</div></div>';
+}
+
+function songBlock(name, pos, note, live, done, isLoose) {
+  const stored = localStorage.getItem('mt-open');
+  const isOpen = stored !== null
+    ? openSet().has(name)
+    : live.some(t => t.status === 'doing' || t.status === 'next');
+  const key = esc(name);
   return '<div class="song' + (isLoose ? ' nosong' : '') + (isOpen ? ' open' : '') +
-    '" data-song="' + esc(name) + '">' +
+    '" data-song="' + key + '">' +
     '<div class="song-h">' +
-      '<span class="nm">' + (pos ? '<span class="pos">' + pos + '</span>' : '') +
-        esc(name) + '</span>' +
+      '<span class="nm">' + (pos ? '<span class="pos">' + pos + '</span>' : '') + key + '</span>' +
       '<span class="ct">' + (!pos && !isLoose ? 'not in the set · ' : '') +
-        list.length + (list.length === 1 ? ' thing' : ' things') +
+        live.length + (live.length === 1 ? ' thing' : ' things') +
+        (done.length ? ' · ' + done.length + ' done' : '') +
         ' <span class="car">&rsaquo;</span></span>' +
     '</div>' +
     '<div class="song-body">' +
       (note ? '<div class="song-note">' + esc(note) + '</div>' : '') +
-      (list.length ? list.map(ticketHTML).join('')
+      (live.length ? live.map(ticketHTML).join('')
                    : '<div class="empty">Nothing listed for this one yet.</div>') +
+      '<button class="addline" data-act="ticketform" data-song="' + key + '">+ add a ticket</button>' +
+      '<div class="addform hidden" data-form="' + key + '">' +
+        '<div class="hint">A finish line you can answer yes or no to — and that quality ' +
+          'can&rsquo;t fail. &ldquo;One version exists&rdquo;, not &ldquo;a good one&rdquo;.</div>' +
+        '<input type="text" class="f-title" placeholder="what needs doing">' +
+        '<input type="text" class="f-fin" placeholder="done when…">' +
+        '<div class="row">' +
+          '<button data-act="ticketsave" data-song="' + key + '">Add</button>' +
+          '<button class="quiet" data-act="ticketcancel" data-song="' + key + '">Cancel</button>' +
+        '</div>' +
+      '</div>' +
+      (done.length ? '<div class="donehead">DONE</div>' + done.map(ticketHTML).join('') : '') +
     '</div></div>';
 }
 
 function renderBoard() {
-  const live = tickets.filter(t => t.status !== 'done');
   const byRank = (a,b) => (RANK[a.status] ?? 3) - (RANK[b.status] ?? 3);
+  const byDone = (a,b) => (b.done_at || '').localeCompare(a.done_at || '');
+  const live = tickets.filter(t => t.status !== 'done');
+  const fin  = tickets.filter(t => t.status === 'done');
 
-  // set order first, then any song that only exists on a ticket
   const ordered = songs.slice().sort((a,b) =>
     (a.set_position ?? 999) - (b.set_position ?? 999) || a.name.localeCompare(b.name));
   const known = new Set(ordered.map(s => s.name));
-  const orphans = [...new Set(live.map(t => t.song).filter(n => n && !known.has(n)))].sort();
+  const orphans = [...new Set(tickets.map(t => t.song).filter(n => n && !known.has(n)))].sort();
 
-  const blocks = ordered.map(s =>
-    songBlock(s.name, s.set_position, s.notes,
-              live.filter(t => t.song === s.name).sort(byRank), false));
-  orphans.forEach(n =>
-    blocks.push(songBlock(n, null, null, live.filter(t => t.song === n).sort(byRank), false)));
+  const blocks = ordered.map(s => songBlock(s.name, s.set_position, s.notes,
+    live.filter(t => t.song === s.name).sort(byRank),
+    fin.filter(t => t.song === s.name).sort(byDone), false));
 
-  const loose = live.filter(t => !t.song);
-  if (loose.length) blocks.push(songBlock('NO SONG YET', null,
-    'Where new ones come from.', loose.sort(byRank), true));
+  orphans.forEach(n => blocks.push(songBlock(n, null, null,
+    live.filter(t => t.song === n).sort(byRank),
+    fin.filter(t => t.song === n).sort(byDone), false)));
 
-  $('board').innerHTML = blocks.length ? blocks.join('')
-    : '<div class="empty">No tickets. Add one below.</div>';
-  const dl = $('song-list');
-  if (dl) dl.innerHTML = ordered.map(s => '<option value="' + esc(s.name) + '">').join('');
+  const looseLive = live.filter(t => !t.song), looseDone = fin.filter(t => !t.song);
+  if (looseLive.length || looseDone.length)
+    blocks.push(songBlock('NO SONG YET', null, 'Where new ones come from.',
+      looseLive.sort(byRank), looseDone.sort(byDone), true));
+
+  $('board').innerHTML = blocks.join('') || '<div class="empty">No songs yet.</div>';
 }
 
-document.addEventListener('click', e => {
-  const h = e.target.closest('.song-h');
-  if (!h) return;
-  const block = h.parentElement, name = block.dataset.song;
-  const set = openSet();
-  block.classList.toggle('open');
-  if (block.classList.contains('open')) set.add(name); else set.delete(name);
-  // first toggle freezes the auto-defaults for every other song
-  if (localStorage.getItem('mt-open') === null) {
-    document.querySelectorAll('.song.open').forEach(el => set.add(el.dataset.song));
-  }
-  saveOpen(set);
-});
-
-function renderDone() {
-  const done = tickets.filter(t => t.status === 'done')
-    .sort((a,b) => (b.done_at || '').localeCompare(a.done_at || ''));
-  const rows = done.slice(0, 25).map(t =>
-    '<div class="done-row"><b>' + esc(t.title) + '</b>' +
-    (t.song ? ' — ' + esc(t.song) : '') +
-    (t.done_at ? '<br>' + esc(t.done_at.slice(0,10)) : '') + '</div>').join('');
-  $('done-wrap').innerHTML =
-    '<summary>Finished (' + done.length + ') and session history</summary>' +
-    (rows || '<div class="done-row">Nothing finished yet.</div>') +
-    sessions.slice(0, 25).map(s =>
-      '<div class="done-row">' + esc(s.session_date) + ' — ' +
-      esc(s.what || 'worked on music') + '</div>').join('');
-}
-
-async function logSession(what, nextObj) {
-  const row = { session_date: todayLocal() };
-  if (what) row.what = what;
-  if (nextObj) row.next_objective = nextObj;
-  const { error } = await sb.from('music_sessions').insert(row);
-  return error;
+/* ---------------- actions ---------------- */
+async function logSession(what) {
+  await sb.from('music_sessions').insert({ session_date: todayLocal(), what: what || 'music work' });
 }
 
 document.addEventListener('click', async e => {
   const b = e.target.closest('button[data-act]');
-  if (!b) return;
-  const id = b.dataset.id, act = b.dataset.act;
+
+  // tapping a song header toggles it (but not when a button inside was hit)
+  if (!b) {
+    const h = e.target.closest('.song-h');
+    if (!h) return;
+    const block = h.parentElement, set = openSet();
+    block.classList.toggle('open');
+    if (block.classList.contains('open')) set.add(block.dataset.song);
+    else set.delete(block.dataset.song);
+    if (localStorage.getItem('mt-open') === null)
+      document.querySelectorAll('.song.open').forEach(el => set.add(el.dataset.song));
+    saveOpen(set);
+    return;
+  }
+
+  const act = b.dataset.act, id = b.dataset.id, song = b.dataset.song;
+  const formFor = n => [...document.querySelectorAll('.addform[data-form]')]
+    .find(f => f.dataset.form === n);
+
+  // --- inline forms ---
+  if (act === 'ticketform' || act === 'ticketcancel') {
+    const form = formFor(song);
+    form.classList.toggle('hidden', act === 'ticketcancel');
+    b.closest('.song-body').querySelector('.addline').classList
+      .toggle('hidden', act === 'ticketform');
+    if (act === 'ticketform') form.querySelector('.f-title').focus();
+    return;
+  }
+  if (act === 'ticketsave') {
+    const form = formFor(song);
+    const title = form.querySelector('.f-title').value.trim();
+    if (!title) return;
+    b.disabled = true;
+    await sb.from('music_tickets').insert({
+      title, song, finish_line: form.querySelector('.f-fin').value.trim() || null, status: 'later'
+    });
+    await load();
+    return;
+  }
+  if (act === 'songform' || act === 'songcancel') {
+    $('songform').classList.toggle('hidden', act === 'songcancel');
+    document.querySelector('[data-act="songform"]').classList.toggle('hidden', act === 'songform');
+    return;
+  }
+  if (act === 'songsave') {
+    const name = $('song-name').value.trim();
+    if (!name) return;
+    const posRaw = $('song-pos').value.trim();
+    b.disabled = true;
+    const { error } = await sb.from('music_songs')
+      .insert({ name, set_position: posRaw ? parseInt(posRaw, 10) : null });
+    b.disabled = false;
+    if (error) { $('song-msg').textContent = error.message; $('song-msg').className = 'msg err'; return; }
+    $('song-name').value = ''; $('song-pos').value = ''; $('song-msg').textContent = '';
+    $('songform').classList.add('hidden');
+    document.querySelector('[data-act="songform"]').classList.remove('hidden');
+    await load();
+    return;
+  }
+
+  // --- ticket actions ---
+  if (!id) return;
   b.disabled = true;
+  const t = tickets.find(x => x.id === id);
   if (act === 'del') {
-    if (!confirm('Delete this ticket?')) { b.disabled = false; return; }
+    if (!confirm('Delete this ticket for good? Checking it off instead keeps it as a record.')) {
+      b.disabled = false; return;
+    }
     await sb.from('music_tickets').delete().eq('id', id);
   } else if (act === 'done') {
-    const t = tickets.find(x => x.id === id);
-    await sb.from('music_tickets').update({ status:'done', done_at:new Date().toISOString() }).eq('id', id);
-    await logSession(t ? t.title : 'finished a ticket', null);
+    await sb.from('music_tickets')
+      .update({ status:'done', done_at:new Date().toISOString() }).eq('id', id);
+    await logSession(t ? t.title : 'finished a ticket');
+  } else if (act === 'undone') {
+    await sb.from('music_tickets').update({ status:'later', done_at:null }).eq('id', id);
   } else if (act === 'logit') {
-    const t = tickets.find(x => x.id === id);
-    await logSession(t ? t.title : 'music work', null);
+    await logSession(t ? t.title : 'music work');
   } else {
     await sb.from('music_tickets').update({ status: act }).eq('id', id);
   }
   await load();
 });
-
-$('log-btn').onclick = async () => {
-  const err = await logSession($('log-what').value.trim() || 'worked on music', null);
-  $('log-msg').textContent = err ? err.message : 'Logged.';
-  $('log-msg').className = 'msg' + (err ? ' err' : '');
-  if (!err) $('log-what').value = '';
-  await load();
-};
-
-$('next-btn').onclick = async () => {
-  const v = $('next-what').value.trim();
-  if (!v) return;
-  const err = await logSession(null, v);
-  $('next-msg').textContent = err ? err.message : 'Saved for next time.';
-  $('next-msg').className = 'msg' + (err ? ' err' : '');
-  if (!err) $('next-what').value = '';
-  await load();
-};
-
-$('add-btn').onclick = async () => {
-  const title = $('add-title').value.trim();
-  if (!title) return;
-  const { error } = await sb.from('music_tickets').insert({
-    title,
-    song: $('add-song').value.trim() || null,
-    finish_line: $('add-finish').value.trim() || null,
-    status: $('add-status').value,
-    anytime: $('add-anytime').checked
-  });
-  $('add-msg').textContent = error ? error.message : 'Added.';
-  $('add-msg').className = 'msg' + (error ? ' err' : '');
-  if (!error) { $('add-title').value = ''; $('add-song').value = '';
-                $('add-finish').value = ''; $('add-anytime').checked = false; }
-  await load();
-};
 
 load();
 </script>
