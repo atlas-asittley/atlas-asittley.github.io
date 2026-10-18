@@ -69,3 +69,19 @@ select * from (values
    'One stanza is finished to where you would sing it in front of someone.', 'later', true)
 ) as v(title, song, finish_line, status, anytime)
 where not exists (select 1 from music_tickets);
+
+-- =========================================================================
+-- Added 2026-10-18 (same day): songs are the unit, in SET ORDER, collapsible.
+-- Drew: "I think we should have these in the setlist order as well."
+-- =========================================================================
+create table if not exists music_songs (
+  id           uuid primary key default gen_random_uuid(),
+  name         text not null unique,
+  set_position int,                                  -- order in the hour-long solo set
+  notes        text,
+  created_at   timestamptz not null default now()
+);
+grant select, insert, update, delete on public.music_songs to anon, authenticated, service_role;
+alter table music_songs enable row level security;
+drop policy if exists music_songs_all on music_songs;
+create policy music_songs_all on music_songs for all to public using (true) with check (true);

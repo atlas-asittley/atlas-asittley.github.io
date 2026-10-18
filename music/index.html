@@ -29,9 +29,16 @@
 
   .song { border:1px solid var(--border); border-radius:12px; margin-bottom:20px;
           background:rgba(0,0,0,.18); overflow:hidden; }
-  .song-h { background:var(--border); padding:11px 13px; display:flex;
-            align-items:baseline; justify-content:space-between; gap:10px; }
+  .song-h { background:var(--border); padding:12px 13px; display:flex;
+            align-items:baseline; justify-content:space-between; gap:10px;
+            cursor:pointer; user-select:none; -webkit-tap-highlight-color:transparent; }
+  .song-h:active { filter:brightness(1.25); }
+  .song-h .pos { color:var(--green); font-size:13px; margin-right:7px; }
   .song-h .nm { font-size:16px; letter-spacing:1px; color:var(--text); }
+  .song-h .car { color:var(--dim); font-size:11px; transition:transform .12s; }
+  .song.open .song-h .car { transform:rotate(90deg); display:inline-block; }
+  .song:not(.open) .song-body { display:none; }
+  .song-note { font-size:11px; color:var(--dim); line-height:1.5; padding:10px 13px 0; }
   .song-h .ct { font-size:11px; color:var(--dim); white-space:nowrap; }
   .song.nosong .song-h { background:transparent; border-bottom:1px dashed var(--border); }
   .song.nosong .song-h .nm { color:var(--dim); font-size:13px; }
@@ -159,20 +166,21 @@ const esc = s => (s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':
 const todayLocal = () => new Date(Date.now() - new Date().getTimezoneOffset()*60000)
   .toISOString().slice(0,10);
 
-let tickets = [], sessions = [];
+let tickets = [], sessions = [], songs = [];
 
 async function load() {
-  const [t, s] = await Promise.all([
+  const [t, s, g] = await Promise.all([
     sb.from('music_tickets').select('*').order('created_at', { ascending: true }),
-    sb.from('music_sessions').select('*').order('session_date', { ascending: false }).limit(200)
+    sb.from('music_sessions').select('*').order('session_date', { ascending: false }).limit(200),
+    sb.from('music_songs').select('*')
   ]);
-  if (t.error || s.error) {
-    $('board').innerHTML = '<div class="msg err">' +
-      esc((t.error || s.error).message) +
-      '<br><br>If this says the table is missing, the schema SQL has not been run yet.</div>';
+  const err = t.error || s.error || g.error;
+  if (err) {
+    $('board').innerHTML = '<div class="msg err">' + esc(err.message) +
+      '<br><br>If this says a table is missing, the schema SQL has not been run yet.</div>';
     return;
   }
-  tickets = t.data; sessions = s.data;
+  tickets = t.data; sessions = s.data; songs = g.data;
   renderStreak(); renderNextObj(); renderBoard(); renderDone();
 }
 
@@ -228,30 +236,75 @@ function ticketHTML(t) {
 
 const RANK = { doing:0, next:1, later:2 };
 
+// Which songs are expanded. Remembered per phone, falls back to a sensible default.
+function openSet() {
+  try { return new Set(JSON.parse(localStorage.getItem('mt-open') || '[]')); }
+  catch (e) { return new Set(); }
+}
+function saveOpen(set) {
+  try { localStorage.setItem('mt-open', JSON.stringify([...set])); } catch (e) {}
+}
+
+function songBlock(name, pos, note, list, isLoose) {
+  const open = openSet();
+  // default: expanded if something is started or queued, or if he has toggled it before
+  const seen = localStorage.getItem('mt-open') !== null;
+  const auto = list.some(t => t.status === 'doing' || t.status === 'next');
+  const isOpen = seen ? open.has(name) : auto;
+  return '<div class="song' + (isLoose ? ' nosong' : '') + (isOpen ? ' open' : '') +
+    '" data-song="' + esc(name) + '">' +
+    '<div class="song-h">' +
+      '<span class="nm">' + (pos ? '<span class="pos">' + pos + '</span>' : '') +
+        esc(name) + '</span>' +
+      '<span class="ct">' + list.length + (list.length === 1 ? ' thing' : ' things') +
+        ' <span class="car">&rsaquo;</span></span>' +
+    '</div>' +
+    '<div class="song-body">' +
+      (note ? '<div class="song-note">' + esc(note) + '</div>' : '') +
+      (list.length ? list.map(ticketHTML).join('')
+                   : '<div class="empty">Nothing listed for this one yet.</div>') +
+    '</div></div>';
+}
+
 function renderBoard() {
   const live = tickets.filter(t => t.status !== 'done');
-  const songs = [...new Set(live.map(t => t.song).filter(Boolean))].sort();
-  const blocks = songs.map(name => {
-    const list = live.filter(t => t.song === name)
-      .sort((a,b) => (RANK[a.status] ?? 3) - (RANK[b.status] ?? 3));
-    return '<div class="song"><div class="song-h">' +
-      '<span class="nm">' + esc(name) + '</span>' +
-      '<span class="ct">' + list.length + (list.length === 1 ? ' thing' : ' things') +
-      ' it could use</span></div>' +
-      '<div class="song-body">' + list.map(ticketHTML).join('') + '</div></div>';
-  });
+  const byRank = (a,b) => (RANK[a.status] ?? 3) - (RANK[b.status] ?? 3);
+
+  // set order first, then any song that only exists on a ticket
+  const ordered = songs.slice().sort((a,b) =>
+    (a.set_position ?? 999) - (b.set_position ?? 999) || a.name.localeCompare(b.name));
+  const known = new Set(ordered.map(s => s.name));
+  const orphans = [...new Set(live.map(t => t.song).filter(n => n && !known.has(n)))].sort();
+
+  const blocks = ordered.map(s =>
+    songBlock(s.name, s.set_position, s.notes,
+              live.filter(t => t.song === s.name).sort(byRank), false));
+  orphans.forEach(n =>
+    blocks.push(songBlock(n, null, null, live.filter(t => t.song === n).sort(byRank), false)));
+
   const loose = live.filter(t => !t.song);
-  if (loose.length) {
-    blocks.push('<div class="song nosong"><div class="song-h">' +
-      '<span class="nm">NO SONG YET</span>' +
-      '<span class="ct">where new ones come from</span></div>' +
-      '<div class="song-body">' + loose.map(ticketHTML).join('') + '</div></div>');
-  }
+  if (loose.length) blocks.push(songBlock('NO SONG YET', null,
+    'Where new ones come from.', loose.sort(byRank), true));
+
   $('board').innerHTML = blocks.length ? blocks.join('')
     : '<div class="empty">No tickets. Add one below.</div>';
   const dl = $('song-list');
-  if (dl) dl.innerHTML = songs.map(n => '<option value="' + esc(n) + '">').join('');
+  if (dl) dl.innerHTML = ordered.map(s => '<option value="' + esc(s.name) + '">').join('');
 }
+
+document.addEventListener('click', e => {
+  const h = e.target.closest('.song-h');
+  if (!h) return;
+  const block = h.parentElement, name = block.dataset.song;
+  const set = openSet();
+  block.classList.toggle('open');
+  if (block.classList.contains('open')) set.add(name); else set.delete(name);
+  // first toggle freezes the auto-defaults for every other song
+  if (localStorage.getItem('mt-open') === null) {
+    document.querySelectorAll('.song.open').forEach(el => set.add(el.dataset.song));
+  }
+  saveOpen(set);
+});
 
 function renderDone() {
   const done = tickets.filter(t => t.status === 'done')
