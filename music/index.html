@@ -24,8 +24,23 @@
   .streak { color:var(--dim); font-size:13px; margin-bottom:16px; line-height:1.5; }
   .streak b { color:var(--text); }
 
-  h2.sec { font-size:12px; letter-spacing:1px; color:var(--dim); margin:20px 0 8px; }
-  h2.sec.now { color:var(--green); }
+  h2.sec { font-size:11px; letter-spacing:2px; color:var(--dim); margin:26px 0 9px;
+           border-top:1px solid var(--border); padding-top:14px; }
+
+  .song { border:1px solid var(--border); border-radius:12px; margin-bottom:20px;
+          background:rgba(0,0,0,.18); overflow:hidden; }
+  .song-h { background:var(--border); padding:11px 13px; display:flex;
+            align-items:baseline; justify-content:space-between; gap:10px; }
+  .song-h .nm { font-size:16px; letter-spacing:1px; color:var(--text); }
+  .song-h .ct { font-size:11px; color:var(--dim); white-space:nowrap; }
+  .song.nosong .song-h { background:transparent; border-bottom:1px dashed var(--border); }
+  .song.nosong .song-h .nm { color:var(--dim); font-size:13px; }
+  .song-body { padding:11px 11px 2px; }
+
+  .chip { display:inline-block; font-size:10px; letter-spacing:1px; padding:2px 7px;
+          border-radius:20px; border:1px solid var(--dim); color:var(--dim); margin-bottom:7px; }
+  .chip.next { border-color:var(--amber); color:var(--amber); }
+  .chip.doing { border-color:var(--green); color:var(--green); }
 
   .ticket { background:var(--card); border:1px solid var(--border); border-radius:10px;
             padding:12px 13px; margin-bottom:9px; }
@@ -119,7 +134,8 @@
   <input type="text" id="add-title" placeholder="what needs doing">
   <input type="text" id="add-finish" placeholder="done when… (a yes/no condition)">
   <div class="row">
-    <input type="text" id="add-song" placeholder="song (optional)">
+    <input type="text" id="add-song" list="song-list" placeholder="song">
+    <datalist id="song-list"></datalist>
     <select id="add-status">
       <option value="later">Later</option>
       <option value="next">Up next</option>
@@ -199,29 +215,42 @@ function ticketHTML(t) {
     btns = '<button data-act="next" data-id="' + t.id + '">Up next</button>';
   }
   btns += '<button class="kill" data-act="del" data-id="' + t.id + '">&times;</button>';
+  const chip = t.status === 'doing' ? '<div class="chip doing">IN PROGRESS</div>'
+             : t.status === 'next'  ? '<div class="chip next">UP NEXT</div>'
+             : t.anytime            ? '<div class="chip">ANYTIME</div>' : '';
   const fin = t.finish_line && t.finish_line.trim()
     ? '<div class="t-fin"><b>done when</b> ' + esc(t.finish_line) + '</div>'
     : '<div class="t-fin none">no finish line &mdash; what would make this done?</div>';
-  return '<div class="' + cls + '"><div class="t-title">' + esc(t.title) + '</div>' +
-    (t.song ? '<div class="t-song">' + esc(t.song) + '</div>' : '') +
+  return '<div class="' + cls + '">' + chip +
+    '<div class="t-title">' + esc(t.title) + '</div>' +
     fin + '<div class="t-btns">' + btns + '</div></div>';
 }
 
+const RANK = { doing:0, next:1, later:2 };
+
 function renderBoard() {
   const live = tickets.filter(t => t.status !== 'done');
-  const sec = (label, list, cls, emptyMsg) =>
-    '<h2 class="sec ' + (cls || '') + '">' + label + '</h2>' +
-    (list.length ? list.map(ticketHTML).join('')
-                 : '<div class="empty">' + emptyMsg + '</div>');
-  $('board').innerHTML =
-    sec('NOW',       live.filter(t => !t.anytime && t.status === 'doing'), 'now',
-        'Nothing started. Pick one from Up next.') +
-    sec('UP NEXT',   live.filter(t => !t.anytime && t.status === 'next'), '',
-        'Nothing queued.') +
-    sec('ANYTIME',   live.filter(t => t.anytime), '',
-        'No open-ended tickets.') +
-    sec('LATER',     live.filter(t => !t.anytime && t.status === 'later'), '',
-        'Empty.');
+  const songs = [...new Set(live.map(t => t.song).filter(Boolean))].sort();
+  const blocks = songs.map(name => {
+    const list = live.filter(t => t.song === name)
+      .sort((a,b) => (RANK[a.status] ?? 3) - (RANK[b.status] ?? 3));
+    return '<div class="song"><div class="song-h">' +
+      '<span class="nm">' + esc(name) + '</span>' +
+      '<span class="ct">' + list.length + (list.length === 1 ? ' thing' : ' things') +
+      ' it could use</span></div>' +
+      '<div class="song-body">' + list.map(ticketHTML).join('') + '</div></div>';
+  });
+  const loose = live.filter(t => !t.song);
+  if (loose.length) {
+    blocks.push('<div class="song nosong"><div class="song-h">' +
+      '<span class="nm">NO SONG YET</span>' +
+      '<span class="ct">where new ones come from</span></div>' +
+      '<div class="song-body">' + loose.map(ticketHTML).join('') + '</div></div>');
+  }
+  $('board').innerHTML = blocks.length ? blocks.join('')
+    : '<div class="empty">No tickets. Add one below.</div>';
+  const dl = $('song-list');
+  if (dl) dl.innerHTML = songs.map(n => '<option value="' + esc(n) + '">').join('');
 }
 
 function renderDone() {
