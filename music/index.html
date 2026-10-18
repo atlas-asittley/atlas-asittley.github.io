@@ -20,6 +20,10 @@
   header { display:flex; align-items:baseline; justify-content:space-between; margin-bottom:4px; }
   h1 { font-size:24px; color:var(--green); }
   .back { color:var(--dim); text-decoration:none; font-size:13px; }
+  nav { display:flex; gap:8px; margin:12px 0 14px; }
+  nav a { flex:1; text-align:center; padding:9px; border:1px solid var(--border);
+          border-radius:8px; text-decoration:none; color:var(--dim); font-size:13px; }
+  nav a.active { background:var(--card); color:var(--green); border-color:var(--green); }
   .streak { color:var(--dim); font-size:13px; margin-bottom:18px; line-height:1.5; }
   .streak b { color:var(--text); }
 
@@ -102,6 +106,10 @@
   <h1>Music</h1>
   <a class="back" href="https://atlas-asittley.github.io/">&larr; hub</a>
 </header>
+<nav>
+  <a href="index.html" class="active">Board</a>
+  <a href="history.html">History</a>
+</nav>
 <div class="streak" id="streak">&nbsp;</div>
 
 <div id="board"><div class="msg">Loading…</div></div>
