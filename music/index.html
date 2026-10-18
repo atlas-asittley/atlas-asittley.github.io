@@ -1,4 +1,29 @@
 <!DOCTYPE html>
+<!--
+  ============================================================================
+  MUSIC TRACKER  --  DESIGN INTENT.  READ BEFORE CHANGING THIS PAGE.
+
+  Drew, 2026-10-18, in his own words:
+
+    "I want this page to be sort of fun and express some excitement about the
+     fact that I'm progressing. It's like at the end of a level in a phone game
+     when you complete it -- there are things that make it seem congratulatory."
+
+  So this page is NOT a neutral record. Finishing something here should feel
+  like a small win: the meter animates, a toast fires, milestones get a bigger
+  reaction. Keep that whenever this page is extended -- a new feature that
+  merely displays data has missed the point of the page.
+
+  WHY IT MATTERS (from the Reflection Space, 2026-10-16): his gym habit survives
+  because the tracker shows accumulated progress he wants to keep going. Every
+  music practice he has ever started has died. The visible, satisfying record is
+  the mechanism being copied here, not a decoration on top of it.
+
+  The set meter measures MINUTES he can play front to back, out of 60 -- never
+  ticket counts. He writes the tickets, so their size is arbitrary and a
+  ticket-based percentage would lie.
+  ============================================================================
+-->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -24,7 +49,47 @@
   nav a { flex:1; text-align:center; padding:9px; border:1px solid var(--border);
           border-radius:8px; text-decoration:none; color:var(--dim); font-size:13px; }
   nav a.active { background:var(--card); color:var(--green); border-color:var(--green); }
-  .streak { color:var(--dim); font-size:13px; margin-bottom:18px; line-height:1.5; }
+  .streak { color:var(--dim); font-size:13px; margin-bottom:16px; line-height:1.5; }
+
+  /* ---------- the set meter ---------- */
+  .meter { background:var(--card); border:1px solid var(--border); border-radius:12px;
+           padding:14px; margin-bottom:20px; }
+  .meter .top { display:flex; align-items:baseline; justify-content:space-between; gap:10px; }
+  .meter .mins { font-size:26px; color:var(--green); line-height:1.1; }
+  .meter .of { font-size:12px; color:var(--dim); }
+  .meter .goal { font-size:11px; color:var(--dim); text-align:right; line-height:1.5; }
+  .bar { position:relative; height:16px; background:var(--bg); border:1px solid var(--border);
+         border-radius:9px; margin:12px 0 9px; overflow:hidden; }
+  .bar .fill { height:100%; width:0;
+               background:linear-gradient(90deg, rgba(22,199,154,.55), var(--green));
+               transition:width .9s cubic-bezier(.2,.8,.2,1); }
+  .bar .tick { position:absolute; top:0; bottom:0; width:1px; background:var(--border); }
+  .meter .sub { font-size:11px; color:var(--dim); line-height:1.5; }
+  .meter.full { border-color:var(--green); box-shadow:0 0 22px rgba(22,199,154,.25); }
+
+  /* ---------- per-song meta row ---------- */
+  .song-meta { display:flex; gap:7px; flex-wrap:wrap; padding:11px 13px 0; }
+  .song-meta button { background:none; border:1px solid var(--border); color:var(--dim);
+                      border-radius:20px; padding:5px 11px; font-family:inherit; font-size:11px; }
+  .song-meta button.on { border-color:var(--green); color:var(--green);
+                         background:rgba(22,199,154,.12); }
+  .song-meta button:active { background:var(--border); }
+  .song-h .rdy { color:var(--green); font-size:12px; margin-left:7px; }
+
+  /* ---------- congratulation ---------- */
+  #toast { position:fixed; left:50%; bottom:22px; transform:translate(-50%, 140%);
+           background:var(--card); border:1px solid var(--green); color:var(--text);
+           border-radius:12px; padding:13px 17px; font-size:14px; line-height:1.45;
+           max-width:90vw; text-align:center; z-index:50; pointer-events:none;
+           box-shadow:0 8px 30px rgba(0,0,0,.45); transition:transform .4s cubic-bezier(.2,1.3,.4,1); }
+  #toast.show { transform:translate(-50%, 0); }
+  #toast .big { color:var(--green); font-size:16px; display:block; margin-bottom:3px; }
+  .spark { position:fixed; width:8px; height:8px; border-radius:50%; z-index:49;
+           pointer-events:none; animation:fly .9s ease-out forwards; }
+  @keyframes fly {
+    from { transform:translate(0,0) scale(1); opacity:1; }
+    to   { transform:translate(var(--dx), var(--dy)) scale(.3); opacity:0; }
+  }
   .streak b { color:var(--text); }
 
   /* ---------- song blocks ---------- */
@@ -112,6 +177,8 @@
 </nav>
 <div class="streak" id="streak">&nbsp;</div>
 
+<div id="meter"></div>
+
 <div id="board"><div class="msg">Loading…</div></div>
 
 <div id="addsong">
@@ -151,7 +218,81 @@ async function load() {
     return;
   }
   tickets = t.data; sessions = s.data; songs = g.data;
-  renderStreak(); renderBoard();
+  renderStreak(); renderMeter(); renderBoard();
+}
+
+const SET_GOAL = 60;   // minutes. The hour-long solo set.
+
+function readyMinutes() {
+  return songs.filter(s => s.performable)
+              .reduce((n, s) => n + (Number(s.length_minutes) || 0), 0);
+}
+
+function renderMeter(animateFrom) {
+  const mins = readyMinutes();
+  const ready = songs.filter(s => s.performable).length;
+  const pct = Math.min(100, (mins / SET_GOAL) * 100);
+  const noLen = songs.filter(s => s.performable && !s.length_minutes).length;
+  const ticks = [25,50,75].map(p => '<div class="tick" style="left:' + p + '%"></div>').join('');
+  $('meter').innerHTML =
+    '<div class="meter' + (mins >= SET_GOAL ? ' full' : '') + '">' +
+      '<div class="top"><div><span class="mins">' + (Math.round(mins*10)/10) +
+        '</span> <span class="of">of ' + SET_GOAL + ' minutes ready</span></div>' +
+        '<div class="goal">' + ready + (ready === 1 ? ' song' : ' songs') +
+        '<br>you can play front to back</div></div>' +
+      '<div class="bar">' + ticks + '<div class="fill" id="fill"></div></div>' +
+      '<div class="sub">' +
+        (mins >= SET_GOAL ? 'That is the whole hour. Go book something.'
+         : noLen ? 'Add a length to ' + noLen + ' song' + (noLen === 1 ? '' : 's') +
+                   ' so they count toward the hour.'
+         : mins === 0 ? 'Mark a song "can play it" once you can get through it without stopping.'
+         : (Math.round((SET_GOAL - mins)*10)/10) + ' minutes to go.') +
+      '</div></div>';
+  // animate from the old value so growth is visible rather than just present
+  const fill = $('fill');
+  const from = animateFrom == null ? pct : Math.min(100, (animateFrom / SET_GOAL) * 100);
+  fill.style.width = from + '%';
+  requestAnimationFrame(() => requestAnimationFrame(() => { fill.style.width = pct + '%'; }));
+}
+
+/* ---------- congratulation ----------------------------------------------
+   Deliberate. See the design-intent comment at the top of this file: finishing
+   something here is supposed to feel like finishing a level, not like saving a
+   row to a database. ---------------------------------------------------- */
+const CHEERS = ['Nice.','Got one.','That is done.','Chalk it up.','Good.','Another one down.',
+                'Done and dusted.','In the bank.'];
+let toastTimer = null;
+
+function celebrate(line, big, el) {
+  const t = $('toast');
+  t.innerHTML = (big ? '<span class="big">' + big + '</span>' : '') + line;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), big ? 4200 : 2600);
+  sparks(el, big ? 22 : 10);
+}
+
+function sparks(el, n) {
+  const r = el && el.getBoundingClientRect
+    ? el.getBoundingClientRect()
+    : { left: innerWidth/2, top: innerHeight/2, width: 0, height: 0 };
+  const x = r.left + r.width/2, y = r.top + r.height/2;
+  const cols = ['#16c79a','#f0b429','#eee'];
+  for (let i = 0; i < n; i++) {
+    const d = document.createElement('div');
+    d.className = 'spark';
+    const a = Math.random() * Math.PI * 2, dist = 40 + Math.random() * 70;
+    d.style.cssText = 'left:' + x + 'px; top:' + y + 'px; background:' +
+      cols[i % cols.length] + '; --dx:' + (Math.cos(a)*dist).toFixed(0) + 'px; --dy:' +
+      (Math.sin(a)*dist - 20).toFixed(0) + 'px;';
+    document.body.appendChild(d);
+    setTimeout(() => d.remove(), 950);
+  }
+}
+
+const MILESTONES = [15, 30, 45, 60];
+function milestoneCrossed(before, after) {
+  return MILESTONES.filter(m => before < m && after >= m).pop();
 }
 
 function renderStreak() {
@@ -207,20 +348,30 @@ function ticketHTML(t) {
     '<div class="t-title">' + esc(t.title) + '</div>' + fin + btns + '</div></div>';
 }
 
-function songBlock(name, pos, note, live, done, isLoose) {
+function songBlock(name, pos, note, live, done, isLoose, meta) {
   const stored = localStorage.getItem('mt-open');
   const isOpen = stored !== null ? openSet().has(name) : true;
   const key = esc(name);
   return '<div class="song' + (isLoose ? ' nosong' : '') + (isOpen ? ' open' : '') +
     '" data-song="' + key + '">' +
     '<div class="song-h">' +
-      '<span class="nm">' + (pos ? '<span class="pos">' + pos + '</span>' : '') + key + '</span>' +
+      '<span class="nm">' + (pos ? '<span class="pos">' + pos + '</span>' : '') + key +
+        (meta && meta.performable ? '<span class="rdy">&#9654;</span>' : '') + '</span>' +
       '<span class="ct">' + (!pos && !isLoose ? 'not in the set · ' : '') +
         live.length + (live.length === 1 ? ' thing' : ' things') +
         (done.length ? ' · ' + done.length + ' done' : '') +
         ' <span class="car">&rsaquo;</span></span>' +
     '</div>' +
     '<div class="song-body">' +
+      (meta ? '<div class="song-meta">' +
+          '<button class="' + (meta.performable ? 'on' : '') + '" data-act="playable" ' +
+            'data-id="' + meta.id + '">' +
+            (meta.performable ? '&#9654; can play it front to back' : 'can&rsquo;t play it yet') +
+          '</button>' +
+          '<button data-act="setlen" data-id="' + meta.id + '">' +
+            (meta.length_minutes ? esc(String(meta.length_minutes)) + ' min' : 'set a length') +
+          '</button>' +
+        '</div>' : '') +
       (note ? '<div class="song-note">' + esc(note) + '</div>' : '') +
       (live.length ? live.map(ticketHTML).join('')
                    : '<div class="empty">Nothing listed for this one yet.</div>') +
@@ -252,16 +403,16 @@ function renderBoard() {
 
   const blocks = ordered.map(s => songBlock(s.name, s.set_position, s.notes,
     live.filter(t => t.song === s.name).sort(byRank),
-    fin.filter(t => t.song === s.name).sort(byDone), false));
+    fin.filter(t => t.song === s.name).sort(byDone), false, s));
 
   orphans.forEach(n => blocks.push(songBlock(n, null, null,
     live.filter(t => t.song === n).sort(byRank),
-    fin.filter(t => t.song === n).sort(byDone), false)));
+    fin.filter(t => t.song === n).sort(byDone), false, null)));
 
   const looseLive = live.filter(t => !t.song), looseDone = fin.filter(t => !t.song);
   if (looseLive.length || looseDone.length)
     blocks.push(songBlock('NO SONG YET', null, 'Where new ones come from.',
-      looseLive.sort(byRank), looseDone.sort(byDone), true));
+      looseLive.sort(byRank), looseDone.sort(byDone), true, null));
 
   $('board').innerHTML = blocks.join('') || '<div class="empty">No songs yet.</div>';
 }
@@ -333,6 +484,35 @@ document.addEventListener('click', async e => {
     return;
   }
 
+  // --- song meta: can-play toggle and length ---
+  if (act === 'playable' || act === 'setlen') {
+    const song = songs.find(x => x.id === id);
+    if (!song) return;
+    const before = readyMinutes();
+    if (act === 'playable') {
+      await sb.from('music_songs').update({ performable: !song.performable }).eq('id', id);
+    } else {
+      const v = prompt('About how many minutes is "' + song.name + '" when you play it?',
+                       song.length_minutes ?? '');
+      if (v === null) return;
+      const n = parseFloat(v);
+      await sb.from('music_songs')
+        .update({ length_minutes: isNaN(n) || n <= 0 ? null : n }).eq('id', id);
+    }
+    await load();
+    const after = readyMinutes();
+    if (after > before) {
+      const ms = milestoneCrossed(before, after);
+      const gained = Math.round((after - before) * 10) / 10;
+      if (ms) celebrate('Your set just passed ' + ms + ' minutes.', ms === 60 ? 'THE WHOLE HOUR.'
+                        : ms + ' MINUTES', b);
+      else celebrate('+' + gained + ' min &mdash; ' +
+                     (Math.round((60 - after) * 10) / 10) + ' to go.', 'SET GREW', b);
+    }
+    renderMeter(before);
+    return;
+  }
+
   // --- ticket actions ---
   if (!id) return;
   b.disabled = true;
@@ -346,10 +526,15 @@ document.addEventListener('click', async e => {
     await sb.from('music_tickets')
       .update({ status:'done', done_at:new Date().toISOString() }).eq('id', id);
     await logSession(t ? t.title : 'finished a ticket');
-  } else if (act === 'undone') {
-    await sb.from('music_tickets').update({ status:'later', done_at:null }).eq('id', id);
+    const todayCount = sessions.filter(r => r.session_date === todayLocal()).length + 1;
+    celebrate(todayCount === 1 ? 'First one today.'
+              : todayCount + ' done today.',
+              CHEERS[Math.floor(Math.random() * CHEERS.length)], b);
   } else if (act === 'logit') {
     await logSession(t ? t.title : 'music work');
+    celebrate('Logged. That counts.', 'NICE', b);
+  } else if (act === 'undone') {
+    await sb.from('music_tickets').update({ status:'later', done_at:null }).eq('id', id);
   } else {
     await sb.from('music_tickets').update({ status: act }).eq('id', id);
   }
@@ -358,5 +543,6 @@ document.addEventListener('click', async e => {
 
 load();
 </script>
+<div id="toast"></div>
 </body>
 </html>

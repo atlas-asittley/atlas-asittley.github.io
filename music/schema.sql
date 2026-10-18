@@ -85,3 +85,9 @@ grant select, insert, update, delete on public.music_songs to anon, authenticate
 alter table music_songs enable row level security;
 drop policy if exists music_songs_all on music_songs;
 create policy music_songs_all on music_songs for all to public using (true) with check (true);
+
+-- Added 2026-10-18: the set meter. Drew's goal is an HOUR, not a song count, so progress is
+-- measured in minutes he can actually play front to back -- not in tickets, because he writes
+-- the tickets and their size is arbitrary.
+alter table music_songs add column if not exists length_minutes numeric;
+alter table music_songs add column if not exists performable boolean not null default false;
