@@ -256,7 +256,8 @@ function songBlock(name, pos, note, list, isLoose) {
     '<div class="song-h">' +
       '<span class="nm">' + (pos ? '<span class="pos">' + pos + '</span>' : '') +
         esc(name) + '</span>' +
-      '<span class="ct">' + list.length + (list.length === 1 ? ' thing' : ' things') +
+      '<span class="ct">' + (!pos && !isLoose ? 'not in the set · ' : '') +
+        list.length + (list.length === 1 ? ' thing' : ' things') +
         ' <span class="car">&rsaquo;</span></span>' +
     '</div>' +
     '<div class="song-body">' +
