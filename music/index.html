@@ -168,12 +168,9 @@ function saveOpen(set) {
 }
 
 /* ---------------- tickets ---------------- */
-const RANK = { doing:0, next:1, later:2 };
-
 function ticketHTML(t) {
   const done = t.status === 'done';
-  const cls = 'ticket' + (t.status === 'doing' ? ' doing' : '') +
-              (t.anytime ? ' any' : '') + (done ? ' is-done' : '');
+  const cls = 'ticket' + (t.anytime ? ' any' : '') + (done ? ' is-done' : '');
 
   // anytime tickets never complete -- they log a session and stay on the board
   const chk = t.anytime
@@ -181,10 +178,9 @@ function ticketHTML(t) {
     : '<button class="box-chk' + (done ? ' on' : '') + '" data-act="' +
       (done ? 'undone' : 'done') + '" data-id="' + t.id + '">' + (done ? '&#10003;' : '') + '</button>';
 
-  const chip = done ? ''
-    : t.status === 'doing' ? '<div class="chip doing">IN PROGRESS</div>'
-    : t.status === 'next'  ? '<div class="chip next">UP NEXT</div>'
-    : t.anytime            ? '<div class="chip">ANYTIME</div>' : '';
+  // No queue, no status. The board is a menu: pick a ticket and work on it.
+  // ANYTIME is the one label left, because it explains why there's no checkbox.
+  const chip = (!done && t.anytime) ? '<div class="chip">ANYTIME</div>' : '';
 
   const fin = done ? ''
     : (t.finish_line && t.finish_line.trim()
@@ -195,16 +191,8 @@ function ticketHTML(t) {
   if (done) {
     btns = t.done_at ? '<div class="t-done-at">done ' + esc(t.done_at.slice(0,10)) + '</div>' : '';
   } else {
-    if (!t.anytime) {
-      btns += t.status === 'doing'
-        ? '<button data-act="next" data-id="' + t.id + '">Park</button>'
-        : '<button class="go" data-act="doing" data-id="' + t.id + '">Start</button>';
-      btns += t.status === 'next'
-        ? '<button data-act="later" data-id="' + t.id + '">Later</button>'
-        : '<button data-act="next" data-id="' + t.id + '">Up next</button>';
-    }
-    btns += '<button class="kill" data-act="del" data-id="' + t.id + '">delete</button>';
-    btns = '<div class="t-btns">' + btns + '</div>';
+    btns = '<div class="t-btns"><button class="kill" data-act="del" data-id="' +
+           t.id + '">delete</button></div>';
   }
 
   return '<div class="' + cls + '">' + chk + '<div class="t-main">' + chip +
@@ -213,9 +201,7 @@ function ticketHTML(t) {
 
 function songBlock(name, pos, note, live, done, isLoose) {
   const stored = localStorage.getItem('mt-open');
-  const isOpen = stored !== null
-    ? openSet().has(name)
-    : live.some(t => t.status === 'doing' || t.status === 'next');
+  const isOpen = stored !== null ? openSet().has(name) : true;
   const key = esc(name);
   return '<div class="song' + (isLoose ? ' nosong' : '') + (isOpen ? ' open' : '') +
     '" data-song="' + key + '">' +
@@ -246,7 +232,7 @@ function songBlock(name, pos, note, live, done, isLoose) {
 }
 
 function renderBoard() {
-  const byRank = (a,b) => (RANK[a.status] ?? 3) - (RANK[b.status] ?? 3);
+  const byRank = (a,b) => (a.anytime === b.anytime) ? 0 : (a.anytime ? 1 : -1);
   const byDone = (a,b) => (b.done_at || '').localeCompare(a.done_at || '');
   const live = tickets.filter(t => t.status !== 'done');
   const fin  = tickets.filter(t => t.status === 'done');
