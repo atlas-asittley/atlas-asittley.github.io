@@ -439,8 +439,18 @@
       var x1 = Math.min(xR, sx(Math.min(b.to, xmax)));
       if (x1 - x0 < 1) return;
       if (b.fill) svg += '<rect x="' + x0.toFixed(1) + '" y="' + yT + '" width="' + (x1 - x0).toFixed(1) + '" height="' + (yB - yT) + '" fill="' + b.fill + '"/>';
-      if (b.edge && x0 > xL + 0.5) svg += '<line x1="' + x0.toFixed(1) + '" y1="' + yT + '" x2="' + x0.toFixed(1) + '" y2="' + yB + '" stroke="' + AXIS + '" stroke-width="1" stroke-dasharray="3 3" opacity="0.7"/>';
-      if (b.label && x1 - x0 > 26) svg += '<text x="' + ((x0 + x1) / 2).toFixed(1) + '" y="' + (yT + 10) + '" fill="' + AXIS + '" font-size="8.5" text-anchor="middle" font-family="monospace" letter-spacing="1">' + b.label + '</text>';
+      if (b.edge && x0 > xL + 0.5) svg += '<line x1="' + x0.toFixed(1) + '" y1="' + yT + '" x2="' + x0.toFixed(1) + '" y2="' + yB + '" stroke="' + (b.edgeColor || AXIS) + '" stroke-width="1" stroke-dasharray="3 3" opacity="0.7"/>';
+      if (b.edgeEnd && x1 < xR - 0.5) svg += '<line x1="' + x1.toFixed(1) + '" y1="' + yT + '" x2="' + x1.toFixed(1) + '" y2="' + yB + '" stroke="' + (b.edgeColor || AXIS) + '" stroke-width="1" stroke-dasharray="3 3" opacity="0.7"/>';
+      // A narrow band can't hold a centred label, so it gets a leader line out to one side
+      // instead of silently losing its name — an unlabelled wash is worse than no wash.
+      var lw = (b.label || '').length * 5.2 + 4;
+      if (b.label && x1 - x0 > lw) {
+        svg += '<text x="' + ((x0 + x1) / 2).toFixed(1) + '" y="' + (yT + (b.labelY || 10)) + '" fill="' + (b.labelColor || AXIS) + '" font-size="8.5" text-anchor="middle" font-family="monospace" letter-spacing="1">' + b.label + '</text>';
+      } else if (b.label) {
+        var lx = x1 + 3, anch = 'start';
+        if (lx + lw > xR) { lx = x0 - 3; anch = 'end'; }
+        svg += '<text x="' + lx.toFixed(1) + '" y="' + (yT + (b.labelY || 10)) + '" fill="' + (b.labelColor || AXIS) + '" font-size="8.5" text-anchor="' + anch + '" font-family="monospace" letter-spacing="1">' + b.label + '</text>';
+      }
     });
 
     // Horizontal reference lines (optional) — e.g. clinical thresholds. Dashed + labelled,
@@ -518,21 +528,44 @@
     svgEl.addEventListener('touchend', leave);
   }
 
-  // Phase boundary, fetched once and shared by every chart that wants bands.
-  var CUT_START = null;
-  var cutReady = sb.from('workout_settings').select('key,value').in('key', ['cut_start_date'])
+  // Phase boundaries, fetched once and shared by every chart that wants bands.
+  var CUT_START = null, FLARE_START = null, FLARE_END = null;
+  var cutReady = sb.from('workout_settings').select('key,value')
+    .in('key', ['cut_start_date', 'flare_start_date', 'flare_end_date'])
     .then(function (r) {
-      var row = ((r && r.data) || []).find(function (x) { return x.key === 'cut_start_date'; });
-      CUT_START = row ? dstr2ms(row.value) : null;
+      var rows = (r && r.data) || [];
+      function val(k) { var x = rows.find(function (q) { return q.key === k; }); return x && x.value ? x.value : null; }
+      CUT_START = val('cut_start_date') ? dstr2ms(val('cut_start_date')) : null;
+      FLARE_START = val('flare_start_date') ? dstr2ms(val('flare_start_date')) : null;
+      // blank flare_end_date = the flare is still open, so it runs to the end of the series
+      FLARE_END = val('flare_end_date') ? dstr2ms(val('flare_end_date')) : null;
       return CUT_START;
     });
 
+  // Is this date inside the active back flare? Weights in that window were prescribed at
+  // ~65% deliberately, so they measure the prescription, not Drew's strength.
+  function inFlare(t) {
+    if (!FLARE_START || t < FLARE_START) return false;
+    return FLARE_END == null || t <= FLARE_END;
+  }
+
   // Build BULK / CUT bands spanning whatever range a given series covers.
-  function phaseBands(t0, t1) {
-    if (!CUT_START || t1 <= t0) return null;
+  // opts.flare adds the back-flare overlay — only for charts the flare actually distorts.
+  function phaseBands(t0, t1, opts) {
+    if (t1 <= t0) return null;
     var b = [];
-    if (CUT_START > t0) b.push({ from: t0, to: Math.min(CUT_START, t1), label: 'BULK' });
-    if (CUT_START < t1) b.push({ from: Math.max(CUT_START, t0), to: t1, label: 'CUT', fill: 'rgba(255,255,255,0.05)', edge: true });
+    if (CUT_START) {
+      if (CUT_START > t0) b.push({ from: t0, to: Math.min(CUT_START, t1), label: 'BULK' });
+      if (CUT_START < t1) b.push({ from: Math.max(CUT_START, t0), to: t1, label: 'CUT', fill: 'rgba(255,255,255,0.05)', edge: true });
+    }
+    if (opts && opts.flare && FLARE_START) {
+      var f0 = Math.max(FLARE_START, t0), f1 = Math.min(FLARE_END == null ? t1 : FLARE_END, t1);
+      if (f1 > f0) b.push({
+        from: f0, to: f1, label: 'FLARE', labelY: 20,
+        fill: 'rgba(255,107,107,0.16)', edge: true, edgeEnd: FLARE_END != null,
+        edgeColor: '#ff6b6b', labelColor: '#ff8f8f'
+      });
+    }
     return b.length ? b : null;
   }
 
@@ -673,7 +706,15 @@
       // exercises never creates a fake dip. Level reads as "median % gain across lifts."
       // Real broad dips (deloads) still show. Cables excluded (gym change = non-comparable).
       var EXCLUDE = { 'Straight-arm cable pulldown': 1, 'Rope triceps pushdown': 1 };
-      var core = lifts.filter(function (l) { return !EXCLUDE[l.ex]; });
+      // Flare sessions are deliberately prescribed at ~65% as a dose test, so their e1RM
+      // measures the prescription and not Drew's strength. Dropping those dates makes the
+      // line CARRY FORWARD across the flare — "no new information" — rather than inventing
+      // a 30% loss he didn't have. The per-lift charts below still show the real numbers.
+      var flareDrops = 0;
+      var core = lifts.filter(function (l) { return !EXCLUDE[l.ex]; }).map(function (l) {
+        var kept = l.pts.filter(function (p) { if (inFlare(p.t)) { flareDrops++; return false; } return true; });
+        return { ex: l.ex, n: kept.length, pts: kept };
+      }).filter(function (l) { return l.pts.length > 0; });
       function carryY(l, t) { // lift's latest e1RM at or before t (carry-forward)
         var v = null;
         for (var i = 0; i < l.pts.length; i++) { if (l.pts[i].t <= t) v = l.pts[i].y; else break; }
@@ -699,14 +740,17 @@
       });
 
       function drawOverall() {
-        renderChart(wrap, { bands: phaseBands(overallPts[0].t, overallPts[overallPts.length - 1].t), series: [{ name: 'Overall', color: '#16c79a', pts: overallPts }], yFmt: function (v) { return v.toFixed(0); } });
+        if (!overallPts.length) { wrap.innerHTML = '<div class="chart-empty">No non-flare sessions to trend yet.</div>'; return; }
+        renderChart(wrap, { bands: phaseBands(overallPts[0].t, overallPts[overallPts.length - 1].t, { flare: true }), series: [{ name: 'Overall', color: '#16c79a', pts: overallPts }], yFmt: function (v) { return v.toFixed(0); } });
         var last = overallPts[overallPts.length - 1].y, d = last - 100;
         if (window.__hist) window.__hist.setVal('str', '<b>' + (d >= 0 ? '+' : '') + d.toFixed(0) + '%</b> overall');
-        if (note) note.innerHTML = '100 = your start · now <b style="color:var(--green)">' + last.toFixed(0) + '</b> (' + (d >= 0 ? '+' : '') + d.toFixed(0) + '% overall). Median % gain across ' + core.length + ' lifts — new exercises splice in at the line, so they never fake-dip it. Cables excluded (gym change).';
+        if (note) note.innerHTML = '100 = your start · now <b style="color:var(--green)">' + last.toFixed(0) + '</b> (' + (d >= 0 ? '+' : '') + d.toFixed(0) + '% overall). Median % gain across ' + core.length + ' lifts — new exercises splice in at the line, so they never fake-dip it. Cables excluded (gym change).'
+          + (flareDrops ? ' <b style="color:#ff8f8f">Flare sessions are left out</b> of this line — those weights were prescribed light on purpose, so the line holds flat rather than showing a drop you didn\'t have. Pick a single lift below to see the real numbers.' : '');
       }
       function drawLift(l) {
-        renderChart(wrap, { bands: phaseBands(l.pts[0].t, l.pts[l.pts.length - 1].t), series: [{ name: l.ex, color: '#16c79a', pts: l.pts }], yFmt: function (v) { return v.toFixed(0); } });
-        if (note) note.innerHTML = 'Estimated 1-rep max (lbs) for <b>' + l.ex + '</b>.';
+        renderChart(wrap, { bands: phaseBands(l.pts[0].t, l.pts[l.pts.length - 1].t, { flare: true }), series: [{ name: l.ex, color: '#16c79a', pts: l.pts }], yFmt: function (v) { return v.toFixed(0); } });
+        if (note) note.innerHTML = 'Estimated 1-rep max (lbs) for <b>' + l.ex + '</b>.'
+          + (l.pts.some(function (p) { return inFlare(p.t); }) ? ' Points inside the <b style="color:#ff8f8f">FLARE</b> band were prescribed at ~65% as a dose test — a real number, but not a test of your strength.' : '');
       }
       function mkBtn(label, active, fn) {
         var b = document.createElement('button');
