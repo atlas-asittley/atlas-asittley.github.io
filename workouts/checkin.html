@@ -292,11 +292,11 @@
       '<h2>🩺 Blood pressure — day ' + dayNum + ' · ' + slot + '</h2>' +
       '<div class="sub">' + pre + '<br>Sit 5 min first · back supported · feet flat · bladder empty · <b>arm on a table at heart level</b> · do not talk during. Two readings a minute apart.</div>' +
       '<div class="metric"><div class="lbl">Reading 1</div>' +
-        '<div style="display:flex;gap:8px"><input id="bp1s" type="number" inputmode="numeric" placeholder="systolic"><input id="bp1d" type="number" inputmode="numeric" placeholder="diastolic"></div></div>' +
+        '<div style="display:flex;gap:8px"><input id="bp1s" type="number" inputmode="numeric" placeholder="systolic"><input id="bp1d" type="number" inputmode="numeric" placeholder="diastolic"><input id="bp1p" type="number" inputmode="numeric" placeholder="pulse"></div></div>' +
       '<div class="metric"><div class="lbl">Reading 2 — one minute later</div>' +
         '<button class="rest-btn" id="bp-timer" type="button">⏱ Start 1:00 — then reading 2</button>' +
-        '<div style="display:flex;gap:8px"><input id="bp2s" type="number" inputmode="numeric" placeholder="systolic"><input id="bp2d" type="number" inputmode="numeric" placeholder="diastolic"></div></div>' +
-      '<label>Pulse (optional, either reading)</label><input id="bppulse" type="number" inputmode="numeric" placeholder="bpm">' +
+        '<div style="display:flex;gap:8px"><input id="bp2s" type="number" inputmode="numeric" placeholder="systolic"><input id="bp2d" type="number" inputmode="numeric" placeholder="diastolic"><input id="bp2p" type="number" inputmode="numeric" placeholder="pulse"></div></div>' +
+      '<div class="sub">Pulse is optional \u2014 log the one each reading gives you. No need to average them yourself any more.</div>' +
       '<button class="save" id="bp-save" type="button">Log blood pressure</button><div class="saved" id="bp-saved"></div>' +
       '</div>';
     document.getElementById('bp-save').addEventListener('click', function () { saveBP(slot); });
@@ -350,10 +350,12 @@
   async function saveBP(slot) {
     var btn = document.getElementById('bp-save'), msg = document.getElementById('bp-saved');
     var n = function (id) { var v = document.getElementById(id).value; return v === '' ? null : parseInt(v, 10); };
-    var a = [n('bp1s'), n('bp1d')], b = [n('bp2s'), n('bp2d')], pulse = n('bppulse');
+    // Each reading carries its OWN pulse. Before 2026-10-19 one shared pulse box was written
+    // onto row 1 only, so a submit holding just reading 2 silently threw the pulse away.
+    var a = [n('bp1s'), n('bp1d')], b = [n('bp2s'), n('bp2d')];
     var rows = [], t = nowLocal();
-    if (a[0] && a[1]) rows.push({ log_date: t.date, slot: slot, reading_index: 1, systolic: a[0], diastolic: a[1], pulse: pulse, before_meds: slot === 'morning' });
-    if (b[0] && b[1]) rows.push({ log_date: t.date, slot: slot, reading_index: 2, systolic: b[0], diastolic: b[1], pulse: null, before_meds: slot === 'morning' });
+    if (a[0] && a[1]) rows.push({ log_date: t.date, slot: slot, reading_index: 1, systolic: a[0], diastolic: a[1], pulse: n('bp1p'), before_meds: slot === 'morning' });
+    if (b[0] && b[1]) rows.push({ log_date: t.date, slot: slot, reading_index: 2, systolic: b[0], diastolic: b[1], pulse: n('bp2p'), before_meds: slot === 'morning' });
     if (!rows.length) { msg.style.display = 'block'; msg.style.color = 'var(--amber)'; msg.textContent = 'Enter at least one full reading (both numbers).'; return; }
     btn.disabled = true; btn.textContent = 'Saving…';
     var res = await sb.from('workout_bp_log').insert(rows);
@@ -392,7 +394,10 @@
       h += '<div class="r" style="' + (excl ? 'opacity:.55' : '') + '">' +
         '<span class="t">' + d.slice(5) + ' ' + slot.slice(0, 3) + (excl ? ' (day 1)' : '') + '</span>' +
         '<span class="v">' + g.map(function (r) { return '<b>' + r.systolic + '</b>/' + r.diastolic; }).join(' · ') + '</span>' +
-        '<span class="a">' + (g[0].pulse ? g[0].pulse + ' bpm' : '') + '</span></div>';
+        '<span class="a">' + (function () {
+          var p = g.map(function (r) { return r.pulse; }).filter(function (v) { return v; });
+          return p.length ? p.join('/') + ' bpm' : '';
+        })() + '</span></div>';
     });
     h += '</div>';
 
