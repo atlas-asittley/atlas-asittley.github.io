@@ -91,3 +91,7 @@ create policy music_songs_all on music_songs for all to public using (true) with
 -- the tickets and their size is arbitrary.
 alter table music_songs add column if not exists length_minutes numeric;
 alter table music_songs add column if not exists performable boolean not null default false;
+
+-- 2026-10-20: hand-ordering. Songs already had set_position; tickets needed their own.
+-- Both are rewritten 1..n by the drag handler on the board, so gaps are harmless.
+alter table music_tickets add column if not exists sort_order int;

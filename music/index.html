@@ -110,6 +110,17 @@
   .song-note { font-size:11px; color:var(--dim); line-height:1.5; padding:11px 13px 0; }
   .song-body { padding:11px 11px 11px; }
 
+  /* ---------- drag to reorder (grip = the only drag target) ---------- */
+  .grip { touch-action:none; cursor:grab; color:var(--dim); font-size:13px;
+          -webkit-tap-highlight-color:transparent; }
+  .song-h .nm .grip { margin-right:9px; }
+  .ticket > .grip { align-self:center; margin-left:auto; padding:4px 1px 4px 6px; }
+  .song.dragging, .ticket.dragging { opacity:.6; border-color:var(--green); }
+  .song.dragging .song-h { filter:brightness(1.3); }
+  /* while dragging songs, collapse every body so the whole setlist fits on screen */
+  body.drag-song .song-body { display:none; }
+  body.drag-song, body.drag-ticket { user-select:none; -webkit-user-select:none; }
+
   /* ---------- tickets ---------- */
   .ticket { background:var(--card); border:1px solid var(--border); border-radius:10px;
             padding:11px 12px; margin-bottom:9px; display:flex; gap:11px; align-items:flex-start; }
@@ -208,7 +219,9 @@ let tickets = [], sessions = [], songs = [];
 
 async function load() {
   const [t, s, g] = await Promise.all([
-    sb.from('music_tickets').select('*').order('created_at', { ascending: true }),
+    sb.from('music_tickets').select('*')
+      .order('sort_order', { ascending: true, nullsFirst: false })
+      .order('created_at', { ascending: true }),
     sb.from('music_sessions').select('*').order('session_date', { ascending: false }).limit(300),
     sb.from('music_songs').select('*')
   ]);
@@ -344,8 +357,13 @@ function ticketHTML(t) {
            t.id + '">delete</button></div>';
   }
 
-  return '<div class="' + cls + '">' + chk + '<div class="t-main">' + chip +
-    '<div class="t-title">' + esc(t.title) + '</div>' + fin + btns + '</div></div>';
+  const grip = done ? ''
+    : '<span class="grip" data-grip="ticket" title="drag to reorder">&#9776;</span>';
+
+  return '<div class="' + cls + '" data-id="' + t.id + '">' + chk +
+    '<div class="t-main">' + chip +
+    '<div class="t-title">' + esc(t.title) + '</div>' + fin + btns + '</div>' +
+    grip + '</div>';
 }
 
 function songBlock(name, pos, note, live, done, isLoose, meta) {
@@ -353,9 +371,11 @@ function songBlock(name, pos, note, live, done, isLoose, meta) {
   const isOpen = stored !== null ? openSet().has(name) : true;
   const key = esc(name);
   return '<div class="song' + (isLoose ? ' nosong' : '') + (isOpen ? ' open' : '') +
-    '" data-song="' + key + '">' +
+    '" data-song="' + key + '"' + (meta ? ' data-id="' + meta.id + '"' : '') + '>' +
     '<div class="song-h">' +
-      '<span class="nm">' + (pos ? '<span class="pos">' + pos + '</span>' : '') + key +
+      '<span class="nm">' +
+        (meta ? '<span class="grip" data-grip="song" title="drag to reorder">&#9776;</span>' : '') +
+        (pos ? '<span class="pos">' + pos + '</span>' : '') + key +
         (meta && meta.performable ? '<span class="rdy">&#9654;</span>' : '') + '</span>' +
       '<span class="ct">' + (!pos && !isLoose ? 'not in the set · ' : '') +
         live.length + (live.length === 1 ? ' thing' : ' things') +
@@ -373,7 +393,7 @@ function songBlock(name, pos, note, live, done, isLoose, meta) {
           '</button>' +
         '</div>' : '') +
       (note ? '<div class="song-note">' + esc(note) + '</div>' : '') +
-      (live.length ? live.map(ticketHTML).join('')
+      (live.length ? '<div class="tlist">' + live.map(ticketHTML).join('') + '</div>'
                    : '<div class="empty">Nothing listed for this one yet.</div>') +
       '<button class="addline" data-act="ticketform" data-song="' + key + '">+ add a ticket</button>' +
       '<div class="addform hidden" data-form="' + key + '">' +
@@ -391,7 +411,9 @@ function songBlock(name, pos, note, live, done, isLoose, meta) {
 }
 
 function renderBoard() {
-  const byRank = (a,b) => (a.anytime === b.anytime) ? 0 : (a.anytime ? 1 : -1);
+  // live tickets sit in the order HE dragged them into; new ones fall to the bottom
+  const bySort = (a,b) => (a.sort_order ?? 9999) - (b.sort_order ?? 9999) ||
+                          (a.created_at || '').localeCompare(b.created_at || '');
   const byDone = (a,b) => (b.done_at || '').localeCompare(a.done_at || '');
   const live = tickets.filter(t => t.status !== 'done');
   const fin  = tickets.filter(t => t.status === 'done');
@@ -402,17 +424,17 @@ function renderBoard() {
   const orphans = [...new Set(tickets.map(t => t.song).filter(n => n && !known.has(n)))].sort();
 
   const blocks = ordered.map(s => songBlock(s.name, s.set_position, s.notes,
-    live.filter(t => t.song === s.name).sort(byRank),
+    live.filter(t => t.song === s.name).sort(bySort),
     fin.filter(t => t.song === s.name).sort(byDone), false, s));
 
   orphans.forEach(n => blocks.push(songBlock(n, null, null,
-    live.filter(t => t.song === n).sort(byRank),
+    live.filter(t => t.song === n).sort(bySort),
     fin.filter(t => t.song === n).sort(byDone), false, null)));
 
   const looseLive = live.filter(t => !t.song), looseDone = fin.filter(t => !t.song);
   if (looseLive.length || looseDone.length)
     blocks.push(songBlock('NO SONG YET', null, 'Where new ones come from.',
-      looseLive.sort(byRank), looseDone.sort(byDone), true, null));
+      looseLive.sort(bySort), looseDone.sort(byDone), true, null));
 
   $('board').innerHTML = blocks.join('') || '<div class="empty">No songs yet.</div>';
 }
@@ -422,7 +444,67 @@ async function logSession(what) {
   await sb.from('music_sessions').insert({ session_date: todayLocal(), what: what || 'music work' });
 }
 
+/* ---------------- drag to reorder ----------------
+   Pointer events, not HTML5 drag-and-drop: HTML5 dnd does not fire on touch,
+   and this page lives on his phone. The grip is the only drag target so that
+   tapping a song header still collapses it. */
+let dragState = null, suppressClick = false;
+
+document.addEventListener('pointerdown', e => {
+  const grip = e.target.closest('.grip');
+  if (!grip) return;
+  const isSong = grip.dataset.grip === 'song';
+  const item = grip.closest(isSong ? '.song' : '.ticket');
+  const container = isSong ? $('board') : (item && item.closest('.tlist'));
+  if (!item || !container) return;
+  e.preventDefault();
+  try { grip.setPointerCapture(e.pointerId); } catch (err) {}
+  dragState = { item, container, isSong, moved: false };
+  item.classList.add('dragging');
+  document.body.classList.add(isSong ? 'drag-song' : 'drag-ticket');
+});
+
+document.addEventListener('pointermove', e => {
+  if (!dragState) return;
+  e.preventDefault();
+  const { item, container, isSong } = dragState;
+  const sel = isSong ? '.song' : '.ticket';
+  const sibs = [...container.children].filter(el => el !== item && el.matches(sel));
+  let before = null;
+  for (const sb_ of sibs) {
+    const r = sb_.getBoundingClientRect();
+    if (e.clientY < r.top + r.height / 2) { before = sb_; break; }
+  }
+  if (before) { if (item.nextSibling !== before) { container.insertBefore(item, before); dragState.moved = true; } }
+  else {
+    const last = sibs[sibs.length - 1];
+    if (last && last.nextSibling !== item) { container.insertBefore(item, last.nextSibling); dragState.moved = true; }
+  }
+});
+
+async function endDrag() {
+  if (!dragState) return;
+  const st = dragState; dragState = null;
+  st.item.classList.remove('dragging');
+  document.body.classList.remove('drag-song', 'drag-ticket');
+  if (!st.moved) return;
+  suppressClick = true;
+  setTimeout(() => { suppressClick = false; }, 500);
+
+  const ids = [...st.container.children]
+    .filter(el => el.dataset && el.dataset.id).map(el => el.dataset.id);
+  const table = st.isSong ? 'music_songs' : 'music_tickets';
+  const col   = st.isSong ? 'set_position' : 'sort_order';
+  await Promise.all(ids.map((id, i) =>
+    sb.from(table).update({ [col]: i + 1 }).eq('id', id)));
+  await load();
+}
+document.addEventListener('pointerup', endDrag);
+document.addEventListener('pointercancel', endDrag);
+
 document.addEventListener('click', async e => {
+  if (e.target.closest('.grip')) return;
+  if (suppressClick) { suppressClick = false; return; }
   const b = e.target.closest('button[data-act]');
 
   // tapping a song header toggles it (but not when a button inside was hit)
