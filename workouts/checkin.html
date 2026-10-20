@@ -272,15 +272,25 @@
     var act = await sb.from('workout_settings').select('value').eq('key', 'bp_protocol_active').limit(1);
     var on = !act.error && act.data && act.data.length ? act.data[0].value === 'yes' : true;
     if (!on) { host.innerHTML = ''; return; }                  // stopped by hand once the GP visit is done
-    var q = await sb.from('workout_bp_log').select('log_date,slot');
+    var q = await sb.from('workout_bp_log').select('log_date,slot,reading_index,systolic,diastolic,pulse');
     if (q.error) { host.innerHTML = ''; return; }
     var rows = q.data || [];
     var days = {}; rows.forEach(function (r) { days[r.log_date] = 1; });
     var nDays = Object.keys(days).length;
     var t = nowLocal();
     var slot = t.hour < 12 ? 'morning' : 'evening';
-    var doneThisSlot = rows.filter(function (r) { return r.log_date === t.date && r.slot === slot; }).length;
+    var mine = rows.filter(function (r) { return r.log_date === t.date && r.slot === slot; });
+    var doneThisSlot = mine.length;
     if (doneThisSlot >= 2) { host.innerHTML = ''; return; }    // already done
+    // Show what is ALREADY saved for this slot. Without this the form looks identical whether
+    // reading 1 went in or not, which is how Drew lost one on 2026-10-19.
+    var already = '';
+    if (mine.length) {
+      already = '<div class="sub" style="color:var(--green)">\u2705 Already logged this ' + slot + ': ' +
+        mine.sort(function (x, y) { return x.reading_index - y.reading_index; }).map(function (r) {
+          return '#' + r.reading_index + ' <b>' + r.systolic + '</b>/' + r.diastolic + (r.pulse ? ' \u00b7 ' + r.pulse + ' bpm' : '');
+        }).join(' \u00b7 ') + '. Fill in the other one below.</div>';
+    }
 
     var dayNum = (days[t.date] ? nDays : nDays + 1);
     // Drew moved to MORNING dosing on 2026-10-08, so the morning reading is now the pre-dose trough.
@@ -290,6 +300,7 @@
     host.innerHTML =
       '<div class="card">' +
       '<h2>🩺 Blood pressure — day ' + dayNum + ' · ' + slot + '</h2>' +
+      already +
       '<div class="sub">' + pre + '<br>Sit 5 min first · back supported · feet flat · bladder empty · <b>arm on a table at heart level</b> · do not talk during. Two readings a minute apart.</div>' +
       '<div class="metric"><div class="lbl">Reading 1</div>' +
         '<div style="display:flex;gap:8px"><input id="bp1s" type="number" inputmode="numeric" placeholder="systolic"><input id="bp1d" type="number" inputmode="numeric" placeholder="diastolic"><input id="bp1p" type="number" inputmode="numeric" placeholder="pulse"></div></div>' +
@@ -303,6 +314,47 @@
     document.getElementById('bp-timer').addEventListener('click', function () {
       startRest(60, 'stay seated — then reading 2');
     });
+    bpDraftWire(t.date, slot);
+  }
+
+  // ---------- draft persistence for the BP form ----------
+  // The card is rebuilt empty on every page load, so anything typed but not yet submitted used
+  // to vanish on a tab switch. The one-minute wait between readings makes leaving this page the
+  // NORMAL case, so that is a guaranteed loss, not an edge case (Drew lost reading 1 on
+  // 2026-10-20 doing exactly this). Drafts are per date+slot and cleared once saved.
+  var BP_FIELDS = ['bp1s', 'bp1d', 'bp1p', 'bp2s', 'bp2d', 'bp2p'];
+  function bpDraftKey(date, slot) { return 'bpdraft:' + date + ':' + slot; }
+  function bpDraftWire(date, slot) {
+    var key = bpDraftKey(date, slot);
+    try {
+      // bin any draft from another day or slot, so a stale number can never resurface
+      for (var i = localStorage.length - 1; i >= 0; i--) {
+        var k = localStorage.key(i);
+        if (k && k.indexOf('bpdraft:') === 0 && k !== key) localStorage.removeItem(k);
+      }
+      var saved = JSON.parse(localStorage.getItem(key) || '{}');
+      BP_FIELDS.forEach(function (id) {
+        var el = document.getElementById(id);
+        if (el && saved[id] != null) el.value = saved[id];
+      });
+    } catch (e) {}
+    BP_FIELDS.forEach(function (id) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      el.addEventListener('input', function () {
+        try {
+          var d = {};
+          BP_FIELDS.forEach(function (f) {
+            var e2 = document.getElementById(f);
+            if (e2 && e2.value !== '') d[f] = e2.value;
+          });
+          localStorage.setItem(key, JSON.stringify(d));
+        } catch (e) {}
+      });
+    });
+  }
+  function bpDraftClear(date, slot) {
+    try { localStorage.removeItem(bpDraftKey(date, slot)); } catch (e) {}
   }
 
   // ---------- 1-minute timer for the second consecutive reading ----------
@@ -361,6 +413,7 @@
     var res = await sb.from('workout_bp_log').insert(rows);
     btn.disabled = false; btn.textContent = 'Log blood pressure';
     if (res.error) { msg.style.display = 'block'; msg.style.color = 'var(--red)'; msg.textContent = 'Failed: ' + res.error.message; return; }
+    bpDraftClear(t.date, slot);
     msg.style.display = 'block'; msg.style.color = 'var(--green)'; msg.textContent = '✅ Logged ' + rows.length + ' reading' + (rows.length > 1 ? 's' : '');
     setTimeout(function () { loadBP(); loadBPHistory(); loadRecent(); }, 700);
   }
