@@ -111,12 +111,19 @@
   .song-body { padding:11px 11px 11px; }
 
   /* ---------- drag to reorder (grip = the only drag target) ---------- */
-  .grip { touch-action:none; cursor:grab; color:var(--dim); font-size:13px;
+  /* The hit area has to be thumb-sized -- a 13px glyph is not grabbable on a phone. */
+  .grip { touch-action:none; cursor:grab; color:var(--dim); font-size:15px;
+          display:inline-flex; align-items:center; justify-content:center;
+          min-width:40px; min-height:40px; margin:-12px 0; vertical-align:middle;
           -webkit-tap-highlight-color:transparent; }
-  .song-h .nm .grip { margin-right:9px; }
-  .ticket > .grip { align-self:center; margin-left:auto; padding:4px 1px 4px 6px; }
-  .song.dragging, .ticket.dragging { opacity:.6; border-color:var(--green); }
-  .song.dragging .song-h { filter:brightness(1.3); }
+  .grip:active { color:var(--green); }
+  .song-h .nm .grip { margin-left:-12px; margin-right:1px; }
+  .ticket > .grip { align-self:center; margin-left:auto; margin-right:-6px; }
+  .song.dragging, .ticket.dragging {
+    border-color:var(--green); position:relative; z-index:6;
+    box-shadow:0 10px 26px rgba(0,0,0,.5); }
+  .song.dragging .song-h { filter:brightness(1.35); }
+  .song.dragging .grip, .ticket.dragging .grip { color:var(--green); }
   /* while dragging songs, collapse every body so the whole setlist fits on screen */
   body.drag-song .song-body { display:none; }
   body.drag-song, body.drag-ticket { user-select:none; -webkit-user-select:none; }
@@ -459,33 +466,46 @@ document.addEventListener('pointerdown', e => {
   if (!item || !container) return;
   e.preventDefault();
   try { grip.setPointerCapture(e.pointerId); } catch (err) {}
-  dragState = { item, container, isSong, moved: false };
+  dragState = { item, container, isSong, moved: false, anchorY: e.clientY };
   item.classList.add('dragging');
   document.body.classList.add(isSong ? 'drag-song' : 'drag-ticket');
-});
+  try { navigator.vibrate && navigator.vibrate(8); } catch (err) {}
+}, { passive: false });
 
 document.addEventListener('pointermove', e => {
   if (!dragState) return;
   e.preventDefault();
-  const { item, container, isSong } = dragState;
+  const st = dragState;
+  const { item, container, isSong } = st;
   const sel = isSong ? '.song' : '.ticket';
+
+  // the item tracks the finger, so holding it is visible even before anything swaps
+  item.style.transform = 'translateY(' + (e.clientY - st.anchorY) + 'px)';
+
   const sibs = [...container.children].filter(el => el !== item && el.matches(sel));
-  let before = null;
-  for (const sb_ of sibs) {
-    const r = sb_.getBoundingClientRect();
-    if (e.clientY < r.top + r.height / 2) { before = sb_; break; }
+  let swapped = false, before = null;
+  for (const other of sibs) {
+    const r = other.getBoundingClientRect();
+    if (e.clientY < r.top + r.height / 2) { before = other; break; }
   }
-  if (before) { if (item.nextSibling !== before) { container.insertBefore(item, before); dragState.moved = true; } }
-  else {
+  if (before) {
+    if (item.nextSibling !== before) { container.insertBefore(item, before); swapped = true; }
+  } else {
     const last = sibs[sibs.length - 1];
-    if (last && last.nextSibling !== item) { container.insertBefore(item, last.nextSibling); dragState.moved = true; }
+    if (last && last.nextSibling !== item) { container.insertBefore(item, last.nextSibling); swapped = true; }
   }
-});
+  if (swapped) {
+    // it just jumped to a new slot, so zero the offset out from here
+    st.moved = true; st.anchorY = e.clientY;
+    item.style.transform = '';
+  }
+}, { passive: false });
 
 async function endDrag() {
   if (!dragState) return;
   const st = dragState; dragState = null;
   st.item.classList.remove('dragging');
+  st.item.style.transform = '';
   document.body.classList.remove('drag-song', 'drag-ticket');
   if (!st.moved) return;
   suppressClick = true;
