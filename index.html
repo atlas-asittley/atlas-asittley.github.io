@@ -22,6 +22,20 @@ details.archive > summary::before { content: "\25B8  "; color: #888; }
 details.archive[open] > summary::before { content: "\25BE  "; }
 details.archive .grid { margin-top: 24px; }
 footer { margin-top: 60px; color: #555; font-size: 12px; }
+/* drag to reorder: grips only appear when Drew is signed in (same Supabase session as the Songwriting page) */
+.card { position: relative; }
+.grip { display: none; position: absolute; top: 6px; right: 6px; min-width: 40px; min-height: 40px; align-items: center; justify-content: center; color: #888; font-size: 16px; touch-action: none; cursor: grab; -webkit-tap-highlight-color: transparent; }
+body.can-arrange .grip { display: inline-flex; }
+body.can-arrange .card h2 { padding-right: 34px; }
+.card.dragging { border-color: #16c79a; z-index: 6; box-shadow: 0 10px 26px rgba(0,0,0,.5); pointer-events: none; transition: none; }
+.card.dragging .grip { color: #16c79a; }
+body.dragging-card { user-select: none; -webkit-user-select: none; }
+body.dragging-card .card:hover { transform: none; }
+#arrange-link { color: #555; cursor: pointer; text-decoration: underline; }
+#arrange-form { display: none; margin-top: 14px; gap: 8px; flex-wrap: wrap; justify-content: center; }
+#arrange-form input, #arrange-form button { font: inherit; font-size: 14px; padding: 8px; background: #16213e; color: #eee; border: 1px solid #0f3460; border-radius: 4px; }
+#arrange-form button { color: #16c79a; cursor: pointer; }
+#arrange-msg { color: #888; margin-top: 8px; min-height: 1em; }
 </style>
 </head>
 <body>
@@ -161,7 +175,108 @@ footer { margin-top: 60px; color: #555; font-size: 12px; }
   </div>
 </details>
 
-<footer>More projects coming soon. · <a href="https://ko-fi.com/atlasentre" target="_blank" rel="noopener" style="color:#16c79a;text-decoration:none;">☕ Support these projects</a></footer>
+<footer>More projects coming soon. · <a href="https://ko-fi.com/atlasentre" target="_blank" rel="noopener" style="color:#16c79a;text-decoration:none;">☕ Support these projects</a> · <span id="arrange-link">arrange</span>
+<form id="arrange-form"><input id="arrange-email" type="email" placeholder="email" autocomplete="username"><input id="arrange-pw" type="password" placeholder="password" autocomplete="current-password"><button>Sign in</button></form>
+<div id="arrange-msg"></div></footer>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script>
+/* Card order lives in hub_card_order (everyone reads, only Drew writes). Pointer events, not HTML5
+   drag-and-drop, because HTML5 dnd doesn't fire on touch -- same approach as the Music Tracker. */
+(function(){
+  const sb = window.supabase.createClient('https://igaulapupbtdcqqjobhs.supabase.co', 'sb_publishable_7yi3BNg-J-K5nralw5JSww_c71Pge6e');
+  const grids = [...document.querySelectorAll('.grid')];
+  const msg = t => { document.getElementById('arrange-msg').textContent = t; };
+
+  grids.forEach(g => g.querySelectorAll(':scope > .card').forEach(c => {
+    const s = document.createElement('span');
+    s.className = 'grip'; s.title = 'drag to reorder'; s.innerHTML = '&#9776;';
+    c.appendChild(s);
+  }));
+
+  async function applyOrder() {
+    const { data, error } = await sb.from('hub_card_order').select('href, sort_order');
+    if (error || !data || !data.length) return;
+    const pos = Object.fromEntries(data.map(r => [r.href, r.sort_order]));
+    grids.forEach(g => {
+      const cards = [...g.querySelectorAll(':scope > .card')];
+      // cards never dragged (new ones) keep their HTML order, after the arranged ones
+      cards.map((c, i) => ({ c, k: pos[c.getAttribute('href')] ?? 10000 + i }))
+           .sort((a, b) => a.k - b.k).forEach(x => g.appendChild(x.c));
+    });
+  }
+
+  async function checkSession() {
+    const { data } = await sb.auth.getSession();
+    const ok = !!(data.session && (data.session.user.email || '').toLowerCase() === 'asittley@gmail.com');
+    document.body.classList.toggle('can-arrange', ok);
+    document.getElementById('arrange-link').textContent = ok ? 'done arranging (sign out)' : 'arrange';
+    return ok;
+  }
+
+  document.getElementById('arrange-link').onclick = async () => {
+    if (document.body.classList.contains('can-arrange')) { await sb.auth.signOut(); checkSession(); msg(''); return; }
+    document.getElementById('arrange-form').style.display = 'flex';
+  };
+  document.getElementById('arrange-form').onsubmit = async e => {
+    e.preventDefault();
+    const { error } = await sb.auth.signInWithPassword({
+      email: document.getElementById('arrange-email').value.trim(),
+      password: document.getElementById('arrange-pw').value });
+    if (error) { msg('Sign-in failed: ' + error.message); return; }
+    document.getElementById('arrange-form').style.display = 'none';
+    msg((await checkSession()) ? 'Drag the \u2630 on any card to move it.' : 'That account can\'t arrange this page.');
+  };
+
+  let st = null, suppressClick = false;
+  document.addEventListener('pointerdown', e => {
+    const grip = e.target.closest('.grip');
+    if (!grip) return;
+    const item = grip.closest('.card'), grid = item.parentElement;
+    e.preventDefault();
+    try { grip.setPointerCapture(e.pointerId); } catch (err) {}
+    st = { item, grid, moved: false, ax: e.clientX, ay: e.clientY };
+    item.classList.add('dragging');
+    document.body.classList.add('dragging-card');
+    try { navigator.vibrate && navigator.vibrate(8); } catch (err) {}
+  }, { passive: false });
+
+  document.addEventListener('pointermove', e => {
+    if (!st) return;
+    e.preventDefault();
+    const { item, grid } = st;
+    item.style.transform = 'translate(' + (e.clientX - st.ax) + 'px,' + (e.clientY - st.ay) + 'px)';
+    const el = document.elementFromPoint(e.clientX, e.clientY);
+    const over = el && el.closest('.card');
+    if (!over || over === item || over.parentElement !== grid) return;
+    const sibs = [...grid.children];
+    // moving down: land after the card under the finger; moving up: land before it
+    grid.insertBefore(item, sibs.indexOf(over) > sibs.indexOf(item) ? over.nextSibling : over);
+    st.moved = true; st.ax = e.clientX; st.ay = e.clientY;
+    item.style.transform = '';
+  }, { passive: false });
+
+  async function endDrag() {
+    if (!st) return;
+    const { item, grid, moved } = st; st = null;
+    item.classList.remove('dragging'); item.style.transform = '';
+    document.body.classList.remove('dragging-card');
+    suppressClick = true; setTimeout(() => { suppressClick = false; }, 500);
+    if (!moved) return;
+    const rows = [...grid.querySelectorAll(':scope > .card')]
+      .map((c, i) => ({ href: c.getAttribute('href'), sort_order: i + 1, updated_at: new Date().toISOString() }));
+    const { error } = await sb.from('hub_card_order').upsert(rows);
+    msg(error ? 'Could not save the order: ' + error.message : 'Order saved.');
+  }
+  document.addEventListener('pointerup', endDrag);
+  document.addEventListener('pointercancel', endDrag);
+  // a tap on the grip must never follow the card's link
+  document.addEventListener('click', e => {
+    if (e.target.closest('.grip') || (suppressClick && e.target.closest('.card'))) { e.preventDefault(); e.stopPropagation(); }
+  }, true);
+
+  applyOrder(); checkSession();
+})();
+</script>
 <script>
 (function(){try{if(navigator.webdriver)return;}catch(e){}var U='https://igaulapupbtdcqqjobhs.supabase.co/rest/v1/site_events',K='sb_publishable_7yi3BNg-J-K5nralw5JSww_c71Pge6e';
 try{var s=localStorage.getItem('aa_sid');if(!s){s=Math.random().toString(36).slice(2)+Date.now().toString(36);localStorage.setItem('aa_sid',s);}
