@@ -6,9 +6,11 @@
 <title>Diet</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-  details.card summary::-webkit-details-marker { display:none }
-  details.card summary::after { content:" ▾"; color:var(--dim) }
-  details.card[open] summary::after { content:" ▴" }
+  /* direct-child selectors: a descendant selector here also matched the nested
+     per-recipe <summary>, flipping every arrow when the outer card opened. */
+  details.card > summary::-webkit-details-marker { display:none }
+  details.card > summary::after { content:" ▾"; color:var(--dim) }
+  details.card[open] > summary::after { content:" ▴" }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   :root { --bg:#1a1a2e; --card:#16213e; --border:#0f3460; --green:#16c79a; --red:#e94560; --text:#eee; --dim:#8a97b1; --amber:#e8a838; }
   body { background:var(--bg); color:var(--text); font-family:'Courier New',monospace; padding:16px 14px 60px; max-width:640px; margin:0 auto; -webkit-text-size-adjust:100%; }
@@ -39,7 +41,15 @@
   tr.target td { color:var(--dim); }
   tr.left td { font-weight:bold; color:var(--red); }
 
-  .recipe { margin-bottom:14px; }
+  /* Each recipe is its own <details> — tap the name to expand/collapse (Drew, 2026-10-24). */
+  details.recipe { margin-bottom:10px; border:1px solid var(--border); border-radius:8px; padding:10px 12px; }
+  details.recipe[open] { background:rgba(15,52,96,.25); }
+  details.recipe > summary { cursor:pointer; list-style:none; font-size:14px; font-weight:700; color:var(--green); line-height:1.5; }
+  details.recipe > summary::-webkit-details-marker { display:none }
+  details.recipe > summary::after { content:" ▾"; color:var(--dim); font-weight:normal }
+  details.recipe[open] > summary::after { content:" ▴"; color:var(--dim); font-weight:normal }
+  details.recipe > summary .tag, details.recipe > summary .cal, details.recipe > summary .dim { font-weight:normal }
+  details.recipe > p:first-of-type { margin-top:8px; }
   .recipe b { color:var(--text); }
   .tag { font-size:10px; font-weight:700; letter-spacing:.04em; padding:2px 6px; border-radius:4px; vertical-align:middle; margin-left:6px; }
   .tag-cut  { background:#14532d; color:#86efac; }
@@ -90,8 +100,8 @@
 <details class="card">
   <summary style="cursor:pointer;color:var(--green);font-weight:700;font-size:15px;list-style:none">🍳 Recipes <span class="dim" style="font-weight:normal;font-size:12px">— tagged CUT / ANY / BULK, cut recipes first (tap to open)</span></summary>
   <div style="margin-top:14px">
-  <div class="recipe">
-    <h3>Daily Shake <span class="tag tag-cut">CUT</span> <span class="cal">~280 cal / ~51g P</span> <span class="dim" style="font-size:11px">— the workhorse</span></h3>
+  <details class="recipe">
+    <summary>Daily Shake <span class="tag tag-cut">CUT</span> <span class="cal">~280 cal / ~51g P</span> <span class="dim" style="font-size:11px">— the workhorse</span></summary>
     <p class="dim">What you actually drink. Sip it DURING a lift — that is what cut the exertional light-headedness (found 9/20).</p>
     <ul>
       <li>1 scoop whey <b>ISOLATE</b> <span class="dim">(ISO100 or Isopure — 25g / ~120 cal)</span></li>
@@ -99,9 +109,9 @@
       <li class="dim"><b>Leaner:</b> scoop in water = 120 cal / 25g. <b>Middle:</b> scoop + 1 cup milk = 200 / 38g.</li>
       <li class="dim"><b>Isolate only — never concentrate.</b> The 2026-07 gas was concentrate + sweeteners; isolate re-tested clean over 3 days (9/15–9/17).</li>
     </ul>
-  </div>
-  <div class="recipe">
-    <h3>Buffalo Chicken (crockpot) <span class="tag tag-cut">CUT</span> <span class="cal">~755 cal / ~114g P whole batch &nbsp;·&nbsp; ~190 cal / ~28g P per serving (4)</span></h3>
+  </details>
+  <details class="recipe">
+    <summary>Buffalo Chicken (crockpot) <span class="tag tag-cut">CUT</span> <span class="cal">~755 cal / ~114g P whole batch &nbsp;·&nbsp; ~190 cal / ~28g P per serving (4)</span></summary>
     <p class="dim">Meal prep, made 9/27. <b>~6.6 cal per gram of protein — denser than the shake.</b> Shreds, reheats, keeps ~4 days.</p>
     <ul>
       <li>1 lb chicken breast <span class="dim">(545 cal / 102g)</span></li>
@@ -112,9 +122,44 @@
       <li><b>Serve as lettuce wraps</b> — butter lettuce or romaine hearts, with diced celery, carrot and red onion. Celery is the classic buffalo pairing and adds crunch for almost no calories. <span class="dim">Veg + lettuce adds ~25 cal per serving, so still ~215 cal / 28g.</span></li>
       <li class="dim"><b>⚠ Sodium:</b> &frac12; cup of buffalo sauce is ~3,500mg — about a day's worth in one batch, and you are on blood-pressure medication. <b>Leaner:</b> &frac14; cup sauce stretched with water/vinegar + cayenne. Same heat, half the salt.</li>
     </ul>
-  </div>
-  <div class="recipe">
-    <h3>Protein Pancakes <span class="tag tag-any">ANY</span> <span class="cal">~480 cal / ~58g P (whole batch, 3–4 cakes)</span></h3>
+  </details>
+  <details class="recipe">
+    <summary>Thai-Style Cold Shirataki Salad <span class="tag tag-cut">CUT</span> <span class="cal">~220 cal / ~12g P per serving (makes 2)</span> <span class="dim" style="font-size:11px">&mdash; near-zero-calorie noodle, eaten cold</span></summary>
+    <p class="dim">Built 10/17 for the low-sodium problem: normal Asian noodle flavour comes from soy / miso / fish sauce, which are all salt bombs &mdash; so this gets its flavour from <b>acid + aromatics + a little fat</b> instead. Under 100&nbsp;mg sodium per serving as written. <b>Price your own tofu off the package</b> &mdash; brands run 70&ndash;130 cal per 3&nbsp;oz.</p>
+    <ul>
+      <li><b>Noodles:</b> 2 packs shirataki, ~14 oz drained <span class="dim">(your Liviana: 16 cal/pack)</span></li>
+      <li><b>Protein:</b> 6 oz extra-firm tofu &mdash; pressed, cubed, seared</li>
+      <li><b>Veg:</b> 1 large cucumber julienned &middot; 1 medium carrot shredded &middot; 2 scallions sliced &middot; optional 1 cup cherry tomatoes, halved</li>
+      <li><b>Herbs:</b> 1 cup cilantro &middot; &frac12; cup mint &middot; &frac12; cup Thai basil</li>
+      <li><b>Dressing:</b> 3 tbsp lime juice (~2 limes) &middot; 2 cloves garlic minced &middot; 1&ndash;2 Thai chilies minced &middot; 1 tsp toasted sesame oil &middot; 1 tsp rice vinegar &middot; 2 drops liquid stevia <span class="dim">(stands in for the palm sugar a real Thai dressing uses)</span></li>
+      <li><b>Method:</b> press + cube + sear the tofu &middot; rinse&ndash;boil&ndash;dry-fry the noodles, then <b>chill</b> &middot; whisk the dressing &middot; toss everything cold &middot; 2 tbsp crushed <b>unsalted</b> peanuts on top at the very end so they stay crunchy.</li>
+      <li><b>&#9733; The squeak test &mdash; this is the whole technique.</b> Rinse the noodles 1 min under cold water (the fishy smell is the packing liquid, not the noodle), boil 2&ndash;3 min, then <b>dry-fry in a DRY pan</b>, medium-high, until they look dry and <b>squeak</b>. Go by the squeak, not the clock. That step is what kills the rubbery texture and lets them take up the dressing.</li>
+      <li class="dim"><b>&#127836; Fish sauce &mdash; a number, not a ban.</b> Authentic Thai dressing runs 1&ndash;2 tbsp fish sauce per 3 tbsp lime, and this already has 3 tbsp lime, so the ratio compares directly. Per serving: 1 tsp &asymp; 250mg &middot; <b>2 tsp &asymp; 500mg (what this card assumes)</b> &middot; 1 tbsp &asymp; 700mg &middot; 2 tbsp &asymp; 1,400mg. With the 2 tsp the dish lands ~600&nbsp;mg sodium/serving; leave it out and it is under 100. You are on blood-pressure medication, so it is a real cost &mdash; but it transforms the dish, and the call is yours.</li>
+    </ul>
+  </details>
+  <details class="recipe">
+    <summary>Shiitake &ldquo;Salt-Free Dashi&rdquo; Bowl <span class="tag tag-cut">CUT</span> <span class="cal">~180 cal / ~11g P / ~70mg sodium per serving (makes 2)</span> <span class="dim" style="font-size:11px">&mdash; the hot one</span></summary>
+    <p class="dim">The mushroom one. The <b>mushroom soaking liquid becomes the broth</b> &mdash; that is the entire idea. ~70&nbsp;mg of sodium a serving is about a quarter of what one teaspoon of soy sauce would add.</p>
+    <ul>
+      <li>2 packs shirataki noodles</li>
+      <li><b>6 DRIED shiitake mushrooms (~15 g) &mdash; dried, not fresh. Non-negotiable.</b></li>
+      <li>3 cups water, hot but not boiling <span class="dim">(this becomes the broth)</span></li>
+      <li>6 oz extra-firm tofu, cubed &middot; 2 baby bok choy, halved lengthwise</li>
+      <li>3 cloves garlic sliced &middot; 1 tbsp fresh ginger minced &middot; &frac14; tsp white pepper</li>
+      <li>1 tbsp <b>UNSEASONED</b> rice vinegar <span class="dim">(seasoned has added salt AND sugar)</span> &middot; 2 scallions sliced &middot; 2 tsp toasted sesame oil</li>
+      <li><b>1.</b> Soak the dried shiitake in the 3 cups hot water &mdash; 30 min minimum, 1 hr better, overnight cold is best.</li>
+      <li><b>2.</b> <b>Lift the mushrooms out with your hand &mdash; don&rsquo;t pour.</b> Grit settles on the bottom. Then pour the liquid off carefully and leave the last tablespoon behind.</li>
+      <li><b>3.</b> Squeeze the mushrooms out over the bowl (that squeeze is concentrated flavour), slice them, bin any woody stems.</li>
+      <li><b>4.</b> Noodles: rinse, boil, <b>dry-fry until they squeak</b> &mdash; same test as the Thai salad.</li>
+      <li><b>5.</b> Broth: soaking liquid + garlic + ginger + white pepper, simmer 10 min. Return the mushrooms.</li>
+      <li><b>6.</b> Add tofu and bok choy, simmer 3&ndash;4 min until the bok choy stems are just tender.</li>
+      <li><b>7.</b> <b>Off the heat:</b> rice vinegar, scallions, sesame oil. Acid goes in off-heat or it flattens. Noodles into the bowls, broth over.</li>
+      <li class="dim"><b>Why it works with no salt:</b> dried shiitake is rich in guanylate, and guanylate plus glutamate together taste far more savoury than either alone &mdash; which is how a salt-free broth can still read as ramen-ish. <b>The drying is what concentrates it</b>, so fresh shiitake will not do this.</li>
+      <li class="dim"><b>Per serving:</b> noodles 16 &middot; shiitake 22 &middot; tofu 80 &middot; bok choy 10 &middot; aromatics 14 &middot; sesame oil 40 = <b>~182 cal</b>. The tofu figure is an estimate &mdash; read your package.</li>
+    </ul>
+  </details>
+  <details class="recipe">
+    <summary>Protein Pancakes <span class="tag tag-any">ANY</span> <span class="cal">~480 cal / ~58g P (whole batch, 3–4 cakes)</span></summary>
     <p class="dim">Blend everything, cook on medium-LOW like normal pancakes. The cottage cheese is the trick — powder alone makes them rubbery; the cheese keeps them soft.</p>
     <ul>
       <li>1 scoop protein isolate <span class="dim">(chocolate works; add 1 tbsp cocoa powder to make it taste like chocolate rather than like protein)</span></li>
@@ -127,9 +172,9 @@
       <li class="dim"><b>Same batter</b> works in a waffle iron. For French toast instead: 2 eggs + ¼ cup Fairlife + vanilla + cinnamon, 2 thick slices ≈ 400 cal / 25g P.</li>
       <li class="dim">Measure the syrup once so you know what 1 tbsp looks like — the free pour is where 200 calories go.</li>
     </ul>
-  </div>
-  <div class="recipe">
-    <h3>Mass Gainer Shake <span class="tag tag-bulk">BULK</span> <span class="cal">~700 cal / ~44g P</span> <span class="dim" style="font-size:11px">— BULK-ERA, too big for the cut</span></h3>
+  </details>
+  <details class="recipe">
+    <summary>Mass Gainer Shake <span class="tag tag-bulk">BULK</span> <span class="cal">~700 cal / ~44g P</span> <span class="dim" style="font-size:11px">— BULK-ERA, too big for the cut</span></summary>
     <p class="dim">Blend the liquids briefly, let it sit so foam collapses. (Protein comes from the milk + PB — no powder.)</p>
     <ul>
       <li>2 cups Fairlife <b>FAT-FREE</b> lactose-free milk <span class="dim">(160 cal / 26g — same protein as whole, 140 fewer cal)</span></li>
@@ -137,9 +182,9 @@
       <li>3 tbsp peanut butter</li>
       <li>1 banana</li>
     </ul>
-  </div>
-  <div class="recipe">
-    <h3>Mocha Almond Mass Shake <span class="tag tag-bulk">BULK</span> <span class="cal">~720 cal / ~44g P</span> <span class="dim" style="font-size:11px">— BULK-ERA</span></h3>
+  </details>
+  <details class="recipe">
+    <summary>Mocha Almond Mass Shake <span class="tag tag-bulk">BULK</span> <span class="cal">~720 cal / ~44g P</span> <span class="dim" style="font-size:11px">— BULK-ERA</span></summary>
     <p class="dim">Blend the liquids &amp; cocoa, let it settle. (No powder — protein from the milk + almond butter.)</p>
     <ul>
       <li>2 cups Fairlife <b>FAT-FREE</b> lactose-free milk <span class="dim">(160 cal / 26g — same protein as whole, 140 fewer cal)</span></li>
@@ -148,9 +193,9 @@
       <li>½ cup <b>decaf</b> cold brew or 1 shot decaf espresso <span class="dim">(you already get caffeine from morning coffee)</span></li>
       <li>½ cup dry oats + 2 dates (or 1 tbsp honey)</li>
     </ul>
-  </div>
-  <div class="recipe">
-    <h3>Greek Yogurt Power Bowl <span class="tag tag-any">ANY</span> <span class="cal">~575 cal / ~37g P</span> <span class="dim" style="font-size:11px">— cut version: ½ the granola + nuts, plain nonfat yogurt ≈ 300 / 30g</span></h3>
+  </details>
+  <details class="recipe">
+    <summary>Greek Yogurt Power Bowl <span class="tag tag-any">ANY</span> <span class="cal">~575 cal / ~37g P</span> <span class="dim" style="font-size:11px">— cut version: ½ the granola + nuts, plain nonfat yogurt ≈ 300 / 30g</span></summary>
     <p class="dim">A big Greek-yogurt base carries the protein (no powder). Great for closing a protein gap late in the day.</p>
     <ul>
       <li>1½ cups plain Greek yogurt</li>
@@ -161,7 +206,7 @@
       <li>optional: berries</li>
       <li><b>bigger version (~750 cal):</b> double the granola + nuts to close calories too</li>
     </ul>
-  </div>
+  </details>
   </div>
 </details>
 
