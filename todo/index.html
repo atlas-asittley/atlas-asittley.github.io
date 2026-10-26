@@ -28,6 +28,13 @@ li.done .chk { background: #16c79a; }
 li .txt { flex: 1; font-size: 16px; line-height: 1.4; word-break: break-word; }
 li.done .txt { color: #777; text-decoration: line-through; }
 li .who { display: block; font-size: 11px; color: #666; margin-top: 3px; text-decoration: none; }
+li .sub { flex: none; background: none; border: 0; color: #555; font-size: 20px; cursor: pointer; padding: 4px 6px; }
+li .sub:hover, li .sub:focus-visible { color: #16c79a; }
+ul.kids { margin-left: 38px; }
+ul.kids li { padding: 9px 4px; border-bottom: 1px dashed #0f3460; }
+ul.kids li .txt { font-size: 15px; }
+li.parent { flex-wrap: wrap; }
+li.parent > ul.kids { flex-basis: 100%; }
 li .del { flex: none; background: none; border: 0; color: #555; font-size: 20px; cursor: pointer; padding: 4px 8px; }
 li .del:hover, li .del:focus-visible { color: #e94560; }
 button:focus-visible { outline: 2px solid #16c79a; outline-offset: 2px; }
@@ -96,18 +103,33 @@ function row(it) {
   const del = document.createElement('button');
   del.className = 'del'; del.textContent = '×'; del.setAttribute('aria-label', 'Delete');
   del.onclick = () => remove(it);
-  li.append(chk, txt, del);
+  li.append(chk, txt);
+  if (!it.parent_id && !it.done) {
+    const sub = document.createElement('button');
+    sub.className = 'sub'; sub.textContent = '+'; sub.setAttribute('aria-label', 'Add a sub-item');
+    sub.onclick = () => addSub(it);
+    li.append(sub);
+  }
+  li.append(del);
+  const kids = items.filter(k => k.parent_id === it.id);
+  if (kids.length) {
+    li.classList.add('parent');
+    const ul = document.createElement('ul'); ul.className = 'kids';
+    ul.replaceChildren(...kids.map(row));
+    li.append(ul);
+  }
   return li;
 }
 
 function render() {
-  const open = items.filter(i => !i.done), done = items.filter(i => i.done);
+  const top = items.filter(i => !i.parent_id);
+  const open = top.filter(i => !i.done), done = top.filter(i => i.done);
   $('open').replaceChildren(...open.map(row));
   if (!open.length) $('open').innerHTML = '<li class="empty">Nothing on the list.</li>';
   $('done').replaceChildren(...done.map(row));
   $('donebox').classList.toggle('hidden', !done.length);
   $('donesum').textContent = 'Done (' + done.length + ')';
-  $('sub').textContent = open.length + ' to do';
+  $('sub').textContent = items.filter(i => !i.done).length + ' to do';
 }
 
 async function load() {
@@ -128,8 +150,17 @@ async function toggle(it) {
 }
 
 async function remove(it) {
-  if (!confirm('Delete "' + it.text + '"?')) return;
+  const n = items.filter(k => k.parent_id === it.id).length;
+  if (!confirm('Delete "' + it.text + '"' + (n ? ' and its ' + n + ' sub-item' + (n > 1 ? 's' : '') : '') + '?')) return;
   const { error } = await sb.from('todo_items').delete().eq('id', it.id);
+  if (error) { $('err').textContent = error.message; return; }
+  load();
+}
+
+async function addSub(it) {
+  const text = (prompt('Sub-item under "' + it.text + '":') || '').trim();
+  if (!text) return;
+  const { error } = await sb.from('todo_items').insert({ text, parent_id: it.id });
   if (error) { $('err').textContent = error.message; return; }
   load();
 }
