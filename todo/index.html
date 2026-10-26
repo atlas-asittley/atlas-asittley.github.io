@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>To-Do</title>
+<meta name="robots" content="noindex">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #1a1a2e; color: #eee; font-family: 'Courier New', monospace; min-height: 100vh; padding: 24px 16px 60px; }
+.wrap { max-width: 640px; margin: 0 auto; }
+h1.site { font-size: 28px; color: #16c79a; margin-bottom: 6px; }
+.subtitle { color: #888; font-size: 13px; margin-bottom: 22px; }
+#gate { max-width: 340px; margin: 40px auto 0; }
+#gate label { display: block; font-size: 12px; color: #888; margin: 14px 0 5px; }
+input[type=email], input[type=password], input[type=text] { width: 100%; background: #16213e; border: 1px solid #0f3460; color: #eee; font-family: inherit; font-size: 16px; padding: 11px 12px; border-radius: 6px; }
+input:focus { outline: none; border-color: #16c79a; }
+.btn { background: #16c79a; border: 0; color: #10131a; font-family: inherit; font-size: 16px; font-weight: bold; padding: 12px 16px; border-radius: 6px; cursor: pointer; }
+.btn:disabled { opacity: .55; }
+#gate .btn { width: 100%; margin-top: 20px; }
+.msg { margin-top: 12px; font-size: 13px; color: #e94560; min-height: 18px; }
+#add { display: flex; gap: 8px; margin-bottom: 18px; }
+#add input { flex: 1; min-width: 0; }
+ul { list-style: none; }
+li { display: flex; align-items: center; gap: 12px; padding: 12px 4px; border-bottom: 1px solid #0f3460; }
+li .chk { flex: none; width: 26px; height: 26px; border: 2px solid #16c79a; border-radius: 5px; background: none; cursor: pointer; color: #10131a; font-size: 16px; font-weight: bold; line-height: 1; }
+li.done .chk { background: #16c79a; }
+li .txt { flex: 1; font-size: 16px; line-height: 1.4; word-break: break-word; }
+li.done .txt { color: #777; text-decoration: line-through; }
+li .who { display: block; font-size: 11px; color: #666; margin-top: 3px; text-decoration: none; }
+li .del { flex: none; background: none; border: 0; color: #555; font-size: 20px; cursor: pointer; padding: 4px 8px; }
+li .del:hover, li .del:focus-visible { color: #e94560; }
+button:focus-visible { outline: 2px solid #16c79a; outline-offset: 2px; }
+.empty { color: #777; font-size: 14px; padding: 14px 4px; }
+details { margin-top: 26px; }
+summary { color: #888; font-size: 13px; cursor: pointer; padding: 6px 0; }
+footer { margin-top: 46px; padding-top: 16px; border-top: 1px solid #0f3460; color: #555; font-size: 12px; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+footer a, footer button.link { color: #16c79a; background: none; border: 0; font-family: inherit; font-size: 12px; cursor: pointer; padding: 0; }
+.hidden { display: none !important; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1 class="site">To-Do</h1>
+  <p class="subtitle" id="sub">Private. Sign in to see your list.</p>
+
+  <div id="gate">
+    <label for="em">Email</label>
+    <input id="em" type="email" autocomplete="username" inputmode="email">
+    <label for="pw">Password</label>
+    <input id="pw" type="password" autocomplete="current-password">
+    <button class="btn" id="go">Sign in</button>
+    <div class="msg" id="msg"></div>
+  </div>
+
+  <div id="app" class="hidden">
+    <form id="add">
+      <input id="newtxt" type="text" placeholder="Add a to-do" autocomplete="off" aria-label="New to-do">
+      <button class="btn" type="submit">Add</button>
+    </form>
+    <div class="msg" id="err"></div>
+    <ul id="open"></ul>
+    <details id="donebox">
+      <summary id="donesum">Done</summary>
+      <ul id="done"></ul>
+    </details>
+    <footer>
+      <span id="stamp"></span>
+      <span><a href="https://atlas-asittley.github.io/">Atlas</a> &nbsp;·&nbsp; <button class="link" id="out">Sign out</button></span>
+    </footer>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script>
+const sb = window.supabase.createClient('https://igaulapupbtdcqqjobhs.supabase.co', 'sb_publishable_7yi3BNg-J-K5nralw5JSww_c71Pge6e');
+const $ = id => document.getElementById(id);
+let items = [];
+
+function fmt(ts) { return new Date(ts).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }); }
+
+function row(it) {
+  const li = document.createElement('li');
+  if (it.done) li.className = 'done';
+  const chk = document.createElement('button');
+  chk.className = 'chk'; chk.textContent = it.done ? '✓' : '';
+  chk.setAttribute('aria-label', it.done ? 'Mark not done' : 'Mark done');
+  chk.onclick = () => toggle(it);
+  const txt = document.createElement('span');
+  txt.className = 'txt'; txt.textContent = it.text;
+  const who = document.createElement('span');
+  who.className = 'who';
+  who.textContent = (it.added_by === 'drew' ? 'added ' : 'added by ' + it.added_by + ' ') + fmt(it.created_at)
+    + (it.done && it.done_at ? ' · done ' + fmt(it.done_at) : '');
+  txt.appendChild(who);
+  const del = document.createElement('button');
+  del.className = 'del'; del.textContent = '×'; del.setAttribute('aria-label', 'Delete');
+  del.onclick = () => remove(it);
+  li.append(chk, txt, del);
+  return li;
+}
+
+function render() {
+  const open = items.filter(i => !i.done), done = items.filter(i => i.done);
+  $('open').replaceChildren(...open.map(row));
+  if (!open.length) $('open').innerHTML = '<li class="empty">Nothing on the list.</li>';
+  $('done').replaceChildren(...done.map(row));
+  $('donebox').classList.toggle('hidden', !done.length);
+  $('donesum').textContent = 'Done (' + done.length + ')';
+  $('sub').textContent = open.length + ' to do';
+}
+
+async function load() {
+  $('gate').classList.add('hidden'); $('app').classList.remove('hidden');
+  const { data, error } = await sb.from('todo_items').select('*')
+    .order('done').order('done_at', { ascending: false }).order('created_at');
+  if (error) { $('err').textContent = error.message; return; }
+  $('err').textContent = '';
+  items = data; render();
+  $('stamp').textContent = 'Updated ' + new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+}
+
+async function toggle(it) {
+  const done = !it.done;
+  const { error } = await sb.from('todo_items').update({ done, done_at: done ? new Date().toISOString() : null }).eq('id', it.id);
+  if (error) { $('err').textContent = error.message; return; }
+  load();
+}
+
+async function remove(it) {
+  if (!confirm('Delete "' + it.text + '"?')) return;
+  const { error } = await sb.from('todo_items').delete().eq('id', it.id);
+  if (error) { $('err').textContent = error.message; return; }
+  load();
+}
+
+$('add').onsubmit = async e => {
+  e.preventDefault();
+  const text = $('newtxt').value.trim();
+  if (!text) return;
+  const { error } = await sb.from('todo_items').insert({ text });
+  if (error) { $('err').textContent = error.message; return; }
+  $('newtxt').value = '';
+  load();
+};
+
+$('go').onclick = async () => {
+  const btn = $('go'), m = $('msg');
+  m.textContent = '';
+  const email = $('em').value.trim().toLowerCase(), password = $('pw').value;
+  if (!email || !password) { m.textContent = 'Email and password, please.'; return; }
+  btn.disabled = true; btn.textContent = 'Signing in…';
+  const { error } = await sb.auth.signInWithPassword({ email, password });
+  btn.disabled = false; btn.textContent = 'Sign in';
+  if (error) { m.textContent = error.message; return; }
+  try { localStorage.setItem('songbook:email', email); } catch (_) {}
+  load();
+};
+$('pw').addEventListener('keydown', e => { if (e.key === 'Enter') $('go').click(); });
+$('out').onclick = async () => { await sb.auth.signOut(); location.reload(); };
+document.addEventListener('visibilitychange', async () => {
+  if (document.visibilityState !== 'visible') return;
+  const { data } = await sb.auth.getSession();
+  if (data && data.session) load();
+});
+
+(async () => {
+  try { $('em').value = localStorage.getItem('songbook:email') || ''; } catch (_) {}
+  const { data } = await sb.auth.getSession();
+  if (data && data.session) load();
+})();
+</script>
+</body>
+</html>
