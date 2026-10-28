@@ -566,6 +566,25 @@
 
   // ---------- submit ----------
   window.submitSession = async function () {
+    // Mid-workout accident guard (2026-10-28). Drew hit Save with 14 sets still unlogged; the
+    // page flipped to "✅ Logged", the session went status=completed and the rest of the
+    // workout was unreachable from the phone. Saving is one-way for him, so name what is still
+    // blank and make him confirm it. Only fires when something IS blank — a confirm on every
+    // submit is noise he would learn to click through.
+    var blankCount = 0, blankEx = [], nameById = {};
+    (sets || []).forEach(function (s) { nameById[s.id] = s.exercise; });
+    document.querySelectorAll('input[data-k="reps"]').forEach(function (el) {
+      if (el.value.trim() !== '') return;
+      blankCount++;
+      var n = nameById[el.getAttribute('data-id')] || 'a set';
+      if (blankEx.indexOf(n) === -1) blankEx.push(n);
+    });
+    if (blankCount) {
+      var shown = blankEx.slice(0, 4).join(', ') + (blankEx.length > 4 ? ' and ' + (blankEx.length - 4) + ' more' : '');
+      var msg = blankCount + (blankCount === 1 ? ' set is' : ' sets are') + ' still blank — ' + shown + '.'
+        + '\n\nSaving finishes the workout and closes this page. Save anyway?';
+      if (!confirm(msg)) return;
+    }
     var btn = document.getElementById('submit');
     btn.disabled = true; btn.textContent = 'Saving…';
     try {
