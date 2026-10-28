@@ -521,6 +521,22 @@ async function endDrag() {
 
   const ids = [...st.container.children]
     .filter(el => el.dataset && el.dataset.id).map(el => el.dataset.id);
+
+  // Confirm before saving -- Drew asked for this: a drag is easy to trigger by
+  // accident on a phone, and silently reordering his setlist is not recoverable
+  // by eye. Cancelling just reloads, which restores the stored order.
+  let ask;
+  if (st.isSong) {
+    const pos = ids.indexOf(st.item.dataset.id) + 1;
+    ask = 'Move \u201c' + st.item.dataset.song + '\u201d to position ' + pos + ' in the set?';
+  } else {
+    const songEl = st.container.closest('.song');
+    const titleEl = st.item.querySelector('.t-title');
+    ask = 'Move \u201c' + (titleEl ? titleEl.textContent.trim() : 'this ticket') +
+          '\u201d' + (songEl ? ' under \u201c' + songEl.dataset.song + '\u201d' : '') + '?';
+  }
+  if (!confirm(ask + '\n\nCancel puts it back where it was.')) { await load(); return; }
+
   const table = st.isSong ? 'music_songs' : 'music_tickets';
   const col   = st.isSong ? 'set_position' : 'sort_order';
   await Promise.all(ids.map((id, i) =>
