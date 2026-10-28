@@ -134,6 +134,7 @@
   .ticket.doing { border-color:var(--green); background:rgba(22,199,154,.09); }
   .ticket.any   { border-style:dashed; }
   .ticket.is-done { opacity:.5; }
+  .t-fin .tlink { color:var(--green); word-break:break-all; }
   .ticket.is-done .t-title { text-decoration:line-through; }
 
   .box-chk { flex:0 0 auto; width:26px; height:26px; border:1px solid var(--dim);
@@ -337,6 +338,13 @@ function saveOpen(set) {
 }
 
 /* ---------------- tickets ---------------- */
+// finish lines can carry a link (this week's episode, say) -- make it tappable.
+// esc() runs FIRST, so this only ever sees already-escaped text.
+function linkify(escaped) {
+  return escaped.replace(/https?:\/\/[^\s<&]+/g, u =>
+    '<a class="tlink" href="' + u + '" target="_blank" rel="noopener">' + u + '</a>');
+}
+
 function ticketHTML(t) {
   const done = t.status === 'done';
   const cls = 'ticket' + (t.anytime ? ' any' : '') + (done ? ' is-done' : '');
@@ -353,7 +361,7 @@ function ticketHTML(t) {
 
   const fin = done ? ''
     : (t.finish_line && t.finish_line.trim()
-        ? '<div class="t-fin"><b>done when</b> ' + esc(t.finish_line) + '</div>'
+        ? '<div class="t-fin"><b>done when</b> ' + linkify(esc(t.finish_line)) + '</div>'
         : '<div class="t-fin none">no finish line — what would make this done?</div>');
 
   let btns = '';
