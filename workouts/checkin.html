@@ -82,11 +82,14 @@
   <a class="active" href="./checkin.html">Check-in</a>
 </nav>
 
-<!-- momentary pain logger (always available) -->
+<!-- EVENT logger. Was the daily 0-10 sheet; RETIRED as a daily routine 2026-10-29 because Drew
+     was (reasonably) rating toward what he thought the coach would conclude. It opens only when he
+     taps it. Do NOT nudge for this and do NOT put it back on a schedule — see hip-findings.md. -->
 <div class="card">
-  <h2>🩹 How does it feel right now?</h2>
-  <div class="sub">Log this a few times a day — and whenever it flares. Takes ~10 seconds. The timing is the point.</div>
-  <div id="momentary"></div>
+  <h2>🩹 Something happened?</h2>
+  <div class="sub">Only when there's an actual event — a flare, a movement that bit, something worth a note. Not a daily task any more.</div>
+  <button type="button" class="save" id="open-momentary">Log an event</button>
+  <div id="momentary" hidden></div>
 </div>
 
 <!-- blood pressure, 722 protocol — self-hides when the slot is done or the 7 days are complete -->
@@ -466,7 +469,13 @@
     el.innerHTML = h;
   }
 
-  renderMomentary();
+  // The event logger renders lazily — tapping the button is the only way in (2026-10-29).
+  document.getElementById('open-momentary').addEventListener('click', function () {
+    this.hidden = true;
+    var host = document.getElementById('momentary');
+    host.hidden = false;
+    renderMomentary();
+  });
   loadBP();
   loadBPHistory();
   loadDue();
