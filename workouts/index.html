@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Workout Tracker</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="symptom-fields.js"></script>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   :root {
@@ -36,17 +35,7 @@
   .tb-hip  { font-size: 11px; color: var(--dim); margin-top: 9px; border-top: 1px solid var(--border); padding-top: 8px; }
   .tb-link { color: var(--green); text-decoration: none; }
 
-  .sympt { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; margin-bottom: 14px; }
-  .sympt-h { font-size: 13px; color: var(--green); margin-bottom: 8px; line-height: 1.4; }
   /* 4 fields since 2026-10-03 — wrap to 2x2 on a phone rather than squeezing into one row */
-  .sympt-row { display: flex; gap: 8px; align-items: stretch; flex-wrap: wrap; }
-  .sympt-row > div { flex: 1 1 calc(50% - 4px); min-width: 120px; display: flex; flex-direction: column; }
-  .sympt-row label { font-size: 11px; color: var(--dim); margin-bottom: 4px; flex: 1; line-height: 1.3; }
-  .sympt-row input { background: var(--bg); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 8px; font-family: inherit; font-size: 16px; width: 100%; }
-  .sympt-row input:focus { outline: none; border-color: var(--green); }
-  .sympt-save { width: 100%; margin-top: 10px; background: none; border: 1px solid var(--green); color: var(--green); border-radius: 8px; padding: 10px; font-family: inherit; font-size: 13px; }
-  .sympt-save:active { background: var(--green); color: var(--bg); }
-  .sympt-msg { text-align: center; font-size: 12px; margin-top: 8px; }
   #session-head b { color: var(--text); }
 
   .msg { padding: 40px 12px; text-align: center; color: var(--dim); line-height: 1.6; }
@@ -143,7 +132,6 @@
 </nav>
 <div id="today-banner"></div>
 
-<div id="symptom-slot"></div>
 
 <div id="session-head"></div>
 
@@ -322,7 +310,7 @@
         .eq('status', 'prescribed').lte('session_date', todayISO())
         .order('session_date', { ascending: false }).order('created_at', { ascending: false }).limit(1);
       if (sess.error) throw sess.error;
-      if (!sess.data.length) { session = null; renderEmpty(); document.getElementById('symptom-slot').innerHTML = ''; return; }
+      if (!sess.data.length) { session = null; renderEmpty(); return; }
       session = sess.data[0];
 
       var st = await sb.from('workout_sets').select('*')
@@ -333,7 +321,6 @@
       var names = sets.map(function (s) { return s.exercise; }).filter(function (v, i, a) { return a.indexOf(v) === i; });
       var lastByExercise = await loadLast(names);
       render(lastByExercise);
-      renderSymptomCheckin('pre');
     } catch (e) {
       document.getElementById('content').innerHTML = '<div class="msg err">Error loading workout:<br>' + (e.message || e) + '</div>';
     }
@@ -366,48 +353,11 @@
       '<div class="msg">✅ Nothing to do right now.<br><br>When you’re ready for your next session, tell your coach and it’ll show up here — lifts and hip work together.</div>';
   }
 
-  // ---------- pre-session symptom check-in ----------
-  // 2026-10-03: now FOUR fields (belt line / right-side band / L hip / R hip) and writes to
-  // workout_symptom_log — the same table as the check-in page. It used to have three fields and
-  // write to workout_hip_log, which meant pre-workout readings and daily readings lived in two
-  // different tables and could not be compared.
-  // Two moments, one component. PRE establishes the baseline; POST measures what the session did
-  // to him. Added 2026-10-15: there were 6 pre-workout readings and 1 post, so every pre-reading was
-  // half an experiment. Fields themselves live in symptom-fields.js — do not inline them here.
-  var SYMPT_MODES = {
-    pre: {
-      head: '\u{1FA79} Quick check-in \u2014 how do the hips/back feel <b>right now</b>, before you start?',
-      activity: 'Pre-workout', btn: 'Log symptoms'
-    },
-    post: {
-      head: '\u{1FA79} One more \u2014 how does it feel <b>now that you\u2019re done</b>? Without an \u201cafter\u201d, the \u201cbefore\u201d can\u2019t tell us what the session did to you.',
-      activity: 'After workout', btn: 'Log how it feels now'
-    }
-  };
-  function renderSymptomCheckin(mode) {
-    var m = SYMPT_MODES[mode || 'pre'];
-    var host = document.getElementById('symptom-slot');
-    host.innerHTML = '<div class="sympt">'
-      + '<div class="sympt-h">' + m.head + '</div>'
-      + '<div id="sympt-fields"></div>'
-      + '<button class="sympt-save" id="s-save" type="button">' + m.btn + '</button>'
-      + '<div class="sympt-msg" id="s-msg" style="display:none"></div>'
-      + '</div>';
-    window.SymptomFields.render(document.getElementById('sympt-fields'), { activity: m.activity });
-    document.getElementById('s-save').addEventListener('click', function () { saveSymptoms(m); });
-  }
-  async function saveSymptoms(m) {
-    var btn = document.getElementById('s-save'), msg = document.getElementById('s-msg');
-    var row = window.SymptomFields.read(m.activity);
-    if (!row) { msg.style.display = 'block'; msg.style.color = 'var(--dim)'; msg.textContent = 'Tap at least one number.'; return; }
-    // NOT stamping a new source: the pre-workout rows before 2026-10-15 are source='checkin' with
-    // activity doing the distinguishing. Keep the series comparable.
-    btn.disabled = true; btn.textContent = 'Saving\u2026';
-    var r = await sb.from('workout_symptom_log').insert(row);
-    if (r.error) { btn.disabled = false; btn.textContent = m.btn; msg.style.display = 'block'; msg.style.color = 'var(--red)'; msg.textContent = 'Save failed: ' + r.error.message; return; }
-    msg.style.display = 'block'; msg.style.color = 'var(--green)'; msg.textContent = '\u2705 Logged for ' + row.log_date;
-    btn.textContent = 'Logged \u2713';
-  }
+  // The pre/post 0-10 symptom check-in lived here. REMOVED 2026-10-29, the same day the daily
+  // sheet was retired on the check-in page. Drew: "The check-in is on the workout page still. We
+  // removed that, right?" Same instrument, same problem - he had been rating toward what he
+  // thought the coach would conclude, so the numbers measured the relationship. How a session
+  // felt now goes in the session's coach note and he answers in chat. DO NOT re-add a 0-10 here.
 
   // ---------- draft autosave (survives an accidental refresh mid-workout) ----------
   function draftKey() { return 'workout_draft_' + (session && session.id); }
@@ -622,7 +572,6 @@
       document.getElementById('extras-slot').innerHTML = '';
       document.getElementById('session-head').innerHTML = '';
       var cnDone = document.getElementById('coach-note'); if (cnDone) cnDone.style.display = 'none';
-      renderSymptomCheckin('post');   // the missing half: measure what the session did
       btn.style.display = 'none';
       window.scrollTo(0, 0);
     } catch (e) {
