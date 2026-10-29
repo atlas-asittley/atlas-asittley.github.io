@@ -42,13 +42,6 @@
   .saved { text-align:center; font-size:13px; margin-top:10px; min-height:16px; }
   .due-tag { display:inline-block; font-size:10px; text-transform:uppercase; letter-spacing:.5px; color:var(--amber); border:1px solid var(--amber); border-radius:4px; padding:1px 5px; margin-left:6px; }
 
-  .recent { font-size:12px; }
-  .recent .r { display:flex; justify-content:space-between; gap:8px; border-bottom:1px solid var(--border); padding:6px 0; }
-  .recent .r:last-child { border-bottom:none; }
-  .recent .t { color:var(--dim); white-space:nowrap; }
-  .recent .v b { color:var(--red); } .recent .v i { color:var(--amber); font-style:normal; } .recent .v s { color:var(--green); text-decoration:none; }
-  .recent .v em { color:#d98cff; font-style:normal; } .recent .v u { text-decoration:none; }
-  .recent .a { color:var(--dim); font-size:11px; }
 
   /* Same rest-timer bar as the workout page (index.html), for the 1-min gap between
      the two consecutive BP readings. */
@@ -106,11 +99,10 @@
   <div id="bp-hist"></div>
 </div>
 
-<!-- recent logs -->
-<div class="card">
-  <h2>Recent logs</h2>
-  <div id="recent"><span class="dim">loading…</span></div>
-</div>
+<!-- The "Recent logs" card lived here. REMOVED 2026-10-29 at Drew's request, the same day the
+     daily 0-10 sheet was retired: it existed to show the running series of daily taps, and there
+     is no longer a daily series to show. It is NOT a rendering bug if nothing lists past events —
+     the event logger writes to workout_symptom_log and the coach reads it with psql. -->
 
 <script>
 (function () {
@@ -167,7 +159,6 @@
     renderMomentary();
     var s2 = document.getElementById('m-saved');
     if (s2) { s2.style.color = 'var(--green)'; s2.textContent = '✅ Logged at ' + t; }
-    loadRecent();
   }
 
   // ---- daily (weight) + coach-queued ----
@@ -241,27 +232,6 @@
     saved.style.color = 'var(--green)'; saved.textContent = '✅ Saved.';
     setTimeout(loadDue, 700);
   }
-
-  // ---- recent momentary logs ----
-  async function loadRecent() {
-    var el = document.getElementById('recent');
-    if (!sb) { el.innerHTML = '<span class="dim">\u2014</span>'; return; }
-    var q = await sb.from('workout_symptom_log').select('log_date,local_time,back,paraspinal,paraspinal_side,r_band,l_hip,r_hip,activity').order('logged_at', { ascending: false }).limit(12);
-    var rows = q.data || [];
-    if (!rows.length) { el.innerHTML = '<span class="dim">No logs yet \u2014 tap out your first one above.</span>'; return; }
-    var today = todayISO(), todayCount = rows.filter(function (r) { return r.log_date === today; }).length;
-    var n = function (x) { return x == null ? '\u2013' : x; };
-    var h = '<div class="sub">' + todayCount + ' log(s) today \u00b7 showing last ' + rows.length + '</div><div class="recent">';
-    rows.forEach(function (r) {
-      var para = n(r.paraspinal) + (r.paraspinal != null && r.paraspinal_side ? r.paraspinal_side.charAt(0).toLowerCase() : '');
-      h += '<div class="r"><span class="t">' + (r.log_date === today ? 'today ' : r.log_date.slice(5) + ' ') + (r.local_time || '') + '</span>' +
-        '<span class="v"><b>' + n(r.back) + '</b>/<em>' + para + '</em>/<u>' + n(r.r_band) + '</u>/<i>' + n(r.l_hip) + '</i>/<s>' + n(r.r_hip) + '</s></span>' +
-        '<span class="a">' + (r.activity ? esc(r.activity) : '') + '</span></div>';
-    });
-    h += '</div><div class="sub" style="margin-top:6px">belt line / beside spine / band / <span style="color:var(--amber)">Lhip</span> / <span style="color:var(--green)">Rhip</span></div>';
-    el.innerHTML = h;
-  }
-
 
   // ---- blood pressure (2 morning + 2 evening readings) ----
   // Hides itself when this slot is already logged, or when the bp_protocol_active setting is off.
@@ -418,7 +388,7 @@
     if (res.error) { msg.style.display = 'block'; msg.style.color = 'var(--red)'; msg.textContent = 'Failed: ' + res.error.message; return; }
     bpDraftClear(t.date, slot);
     msg.style.display = 'block'; msg.style.color = 'var(--green)'; msg.textContent = '✅ Logged ' + rows.length + ' reading' + (rows.length > 1 ? 's' : '');
-    setTimeout(function () { loadBP(); loadBPHistory(); loadRecent(); }, 700);
+    setTimeout(function () { loadBP(); loadBPHistory(); }, 700);
   }
 
   // ---- blood pressure history: every reading, plus the running days 2-7 average ----
@@ -479,7 +449,6 @@
   loadBP();
   loadBPHistory();
   loadDue();
-  loadRecent();
 })();
 </script>
 </body>
