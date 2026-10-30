@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Docket</title>
+<meta name="robots" content="noindex">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #1b1a17; color: #ece7dc; font-family: 'Courier New', monospace; min-height: 100vh; padding: 24px 16px 60px; }
+.wrap { max-width: 640px; margin: 0 auto; }
+h1.site { font-size: 28px; color: #e8a33d; margin-bottom: 6px; }
+.subtitle { color: #8f8878; font-size: 13px; margin-bottom: 22px; }
+#gate { max-width: 340px; margin: 40px auto 0; }
+#gate label { display: block; font-size: 12px; color: #8f8878; margin: 14px 0 5px; }
+input[type=email], input[type=password], input[type=text], select { width: 100%; background: #26241f; border: 1px solid #3d392f; color: #ece7dc; font-family: inherit; font-size: 16px; padding: 11px 12px; border-radius: 6px; }
+input:focus, select:focus { outline: none; border-color: #e8a33d; }
+.btn { background: #e8a33d; border: 0; color: #1b1a17; font-family: inherit; font-size: 16px; font-weight: bold; padding: 12px 16px; border-radius: 6px; cursor: pointer; }
+.btn:disabled { opacity: .55; }
+#gate .btn { width: 100%; margin-top: 20px; }
+.msg { margin-top: 12px; font-size: 13px; color: #e06c5b; min-height: 18px; }
+#add { display: flex; gap: 8px; margin-bottom: 18px; flex-wrap: wrap; }
+#add input { flex: 1 1 200px; min-width: 0; }
+#add select { flex: 0 1 130px; width: auto; }
+h2 { font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: #e8a33d; margin: 26px 0 4px; padding-bottom: 6px; border-bottom: 1px solid #3d392f; display: flex; justify-content: space-between; }
+h2 span { color: #8f8878; font-weight: normal; letter-spacing: 0; text-transform: none; }
+ul { list-style: none; }
+li { display: flex; align-items: flex-start; gap: 12px; padding: 12px 4px; border-bottom: 1px solid #2c2a24; }
+li .chk { flex: none; width: 26px; height: 26px; margin-top: 1px; border: 2px solid #e8a33d; border-radius: 5px; background: none; cursor: pointer; color: #1b1a17; font-size: 16px; font-weight: bold; line-height: 1; }
+li.done .chk { background: #e8a33d; }
+li .txt { flex: 1; font-size: 16px; line-height: 1.4; word-break: break-word; }
+li.done .txt { color: #7a7466; text-decoration: line-through; }
+li .det { display: block; font-size: 14px; color: #b3ab99; margin-top: 4px; line-height: 1.4; text-decoration: none; }
+li .who { display: block; font-size: 11px; color: #6f6959; margin-top: 4px; text-decoration: none; }
+li .del { flex: none; background: none; border: 0; color: #5a5548; font-size: 20px; cursor: pointer; padding: 2px 8px; }
+li .del:hover, li .del:focus-visible { color: #e06c5b; }
+button:focus-visible { outline: 2px solid #e8a33d; outline-offset: 2px; }
+.empty { color: #7a7466; font-size: 14px; padding: 12px 4px; }
+details { margin-top: 26px; }
+summary { color: #8f8878; font-size: 13px; cursor: pointer; padding: 6px 0; }
+footer { margin-top: 46px; padding-top: 16px; border-top: 1px solid #3d392f; color: #6f6959; font-size: 12px; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+footer a, footer button.link { color: #e8a33d; background: none; border: 0; font-family: inherit; font-size: 12px; cursor: pointer; padding: 0; }
+.hidden { display: none !important; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1 class="site">Docket</h1>
+  <p class="subtitle" id="sub">Private. Sign in to see the docket.</p>
+
+  <div id="gate">
+    <label for="em">Email</label>
+    <input id="em" type="email" autocomplete="username" inputmode="email">
+    <label for="pw">Password</label>
+    <input id="pw" type="password" autocomplete="current-password">
+    <button class="btn" id="go">Sign in</button>
+    <div class="msg" id="msg"></div>
+  </div>
+
+  <div id="app" class="hidden">
+    <form id="add">
+      <input id="newtxt" type="text" placeholder="Add an item" autocomplete="off" aria-label="New item">
+      <select id="newsec" aria-label="Section">
+        <option value="today">Today</option>
+        <option value="next">Next</option>
+        <option value="waiting">Waiting on</option>
+        <option value="revisit">Revisit</option>
+      </select>
+      <button class="btn" type="submit">Add</button>
+    </form>
+    <div class="msg" id="err"></div>
+    <div id="sections"></div>
+    <details id="donebox">
+      <summary id="donesum">Done</summary>
+      <ul id="done"></ul>
+    </details>
+    <footer>
+      <span id="stamp"></span>
+      <span><a href="https://atlas-asittley.github.io/">Atlas</a> &nbsp;·&nbsp; <button class="link" id="out">Sign out</button></span>
+    </footer>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script>
+const sb = window.supabase.createClient('https://igaulapupbtdcqqjobhs.supabase.co', 'sb_publishable_7yi3BNg-J-K5nralw5JSww_c71Pge6e');
+const $ = id => document.getElementById(id);
+const SECTIONS = [['today', 'Today'], ['next', 'Next'], ['waiting', 'Waiting on'], ['revisit', 'Revisit']];
+let items = [];
+
+function fmt(ts) { return new Date(ts).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }); }
+
+function row(it) {
+  const li = document.createElement('li');
+  if (it.done) li.className = 'done';
+  const chk = document.createElement('button');
+  chk.className = 'chk'; chk.textContent = it.done ? '✓' : '';
+  chk.setAttribute('aria-label', it.done ? 'Mark not done' : 'Mark done');
+  chk.onclick = () => toggle(it);
+  const txt = document.createElement('span');
+  txt.className = 'txt'; txt.textContent = it.text;
+  if (it.detail) {
+    const det = document.createElement('span');
+    det.className = 'det'; det.textContent = it.detail;
+    txt.appendChild(det);
+  }
+  const who = document.createElement('span');
+  who.className = 'who';
+  who.textContent = (it.added_by === 'drew' ? 'added ' : 'added by ' + it.added_by + ' ') + fmt(it.created_at)
+    + (it.updated_at && it.updated_at.slice(0, 10) !== it.created_at.slice(0, 10) ? ' · updated ' + fmt(it.updated_at) : '')
+    + (it.done && it.done_at ? ' · done ' + fmt(it.done_at) : '');
+  txt.appendChild(who);
+  const del = document.createElement('button');
+  del.className = 'del'; del.textContent = '×'; del.setAttribute('aria-label', 'Delete');
+  del.onclick = () => remove(it);
+  li.append(chk, txt, del);
+  return li;
+}
+
+function render() {
+  const open = items.filter(i => !i.done), done = items.filter(i => i.done);
+  const frag = document.createDocumentFragment();
+  for (const [key, label] of SECTIONS) {
+    const list = open.filter(i => i.section === key);
+    if (!list.length && key !== 'today') continue;
+    const h = document.createElement('h2');
+    h.textContent = label;
+    const n = document.createElement('span'); n.textContent = list.length ? list.length : '';
+    h.appendChild(n);
+    const ul = document.createElement('ul');
+    if (list.length) ul.replaceChildren(...list.map(row));
+    else ul.innerHTML = '<li class="empty">Nothing here.</li>';
+    frag.append(h, ul);
+  }
+  $('sections').replaceChildren(frag);
+  $('done').replaceChildren(...done.map(row));
+  $('donebox').classList.toggle('hidden', !done.length);
+  $('donesum').textContent = 'Done (' + done.length + ')';
+  const today = open.filter(i => i.section === 'today').length;
+  $('sub').textContent = open.length + ' open · ' + today + ' for today';
+}
+
+async function load() {
+  $('gate').classList.add('hidden'); $('app').classList.remove('hidden');
+  const { data, error } = await sb.from('docket_items').select('*')
+    .order('done').order('sort_order').order('created_at');
+  if (error) { $('err').textContent = error.message; return; }
+  $('err').textContent = '';
+  items = data; render();
+  $('stamp').textContent = 'Loaded ' + new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+}
+
+async function toggle(it) {
+  const done = !it.done;
+  const { error } = await sb.from('docket_items').update({ done, done_at: done ? new Date().toISOString() : null }).eq('id', it.id);
+  if (error) { $('err').textContent = error.message; return; }
+  load();
+}
+
+async function remove(it) {
+  if (!confirm('Delete "' + it.text + '"?')) return;
+  const { error } = await sb.from('docket_items').delete().eq('id', it.id);
+  if (error) { $('err').textContent = error.message; return; }
+  load();
+}
+
+$('add').onsubmit = async e => {
+  e.preventDefault();
+  const text = $('newtxt').value.trim();
+  if (!text) return;
+  const { error } = await sb.from('docket_items').insert({ text, section: $('newsec').value });
+  if (error) { $('err').textContent = error.message; return; }
+  $('newtxt').value = '';
+  load();
+};
+
+$('go').onclick = async () => {
+  const btn = $('go'), m = $('msg');
+  m.textContent = '';
+  const email = $('em').value.trim().toLowerCase(), password = $('pw').value;
+  if (!email || !password) { m.textContent = 'Email and password, please.'; return; }
+  btn.disabled = true; btn.textContent = 'Signing in…';
+  const { error } = await sb.auth.signInWithPassword({ email, password });
+  btn.disabled = false; btn.textContent = 'Sign in';
+  if (error) { m.textContent = error.message; return; }
+  try { localStorage.setItem('songbook:email', email); } catch (_) {}
+  load();
+};
+$('pw').addEventListener('keydown', e => { if (e.key === 'Enter') $('go').click(); });
+$('out').onclick = async () => { await sb.auth.signOut(); location.reload(); };
+document.addEventListener('visibilitychange', async () => {
+  if (document.visibilityState !== 'visible') return;
+  const { data } = await sb.auth.getSession();
+  if (data && data.session) load();
+});
+
+(async () => {
+  try { $('em').value = localStorage.getItem('songbook:email') || ''; } catch (_) {}
+  const { data } = await sb.auth.getSession();
+  if (data && data.session) load();
+})();
+</script>
+</body>
+</html>
