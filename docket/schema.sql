@@ -28,3 +28,7 @@ grant select, insert, update, delete on public.docket_items to service_role;
 -- 2026-10-30, Drew: "organize this in a somewhat hierarchical fashion" — projects on top, to-dos under each.
 -- A project is a row with parent_id null; its to-dos point at it. Sections apply to the to-dos.
 alter table public.docket_items add column if not exists parent_id bigint references public.docket_items(id) on delete cascade;
+
+-- 2026-10-30: explicit project flag (was inferred from sort_order > 0; drag-to-reorder now writes sort_order on everything).
+alter table public.docket_items add column if not exists is_project boolean not null default false;
+update public.docket_items set is_project = true where parent_id is null and sort_order > 0;

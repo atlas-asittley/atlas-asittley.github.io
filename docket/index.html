@@ -24,12 +24,17 @@ input:focus, select:focus { outline: none; border-color: #e8a33d; }
 #add select { flex: 1 1 140px; width: auto; }
 #add .btn { flex: 0 0 auto; }
 .proj { margin-top: 28px; }
-.proj > h2 { font-size: 17px; color: #e8a33d; line-height: 1.35; display: flex; align-items: flex-start; gap: 10px; padding-bottom: 8px; border-bottom: 1px solid #3d392f; }
+.proj > h2 { font-size: 17px; color: #e8a33d; line-height: 1.35; display: flex; align-items: flex-start; gap: 8px; padding-bottom: 8px; border-bottom: 1px solid #3d392f; }
 .proj > h2 .ptxt { flex: 1; }
 .proj > h2 .pdet { display: block; font-size: 13px; color: #b3ab99; font-weight: normal; margin-top: 4px; line-height: 1.4; }
 .proj > h2 .del { margin-top: -2px; }
 ul { list-style: none; }
-li { display: flex; align-items: flex-start; gap: 12px; padding: 12px 4px 12px 10px; border-bottom: 1px solid #2c2a24; }
+li { display: flex; align-items: flex-start; gap: 8px; padding: 12px 4px 12px 0; border-bottom: 1px solid #2c2a24; }
+.grip { flex: none; width: 30px; min-height: 30px; margin-left: -6px; display: inline-flex; align-items: center; justify-content: center; color: #5a5548; font-size: 17px; touch-action: none; cursor: grab; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; }
+.grip:hover { color: #e8a33d; }
+.dragging { background: #26241f; outline: 1px solid #e8a33d; border-radius: 6px; position: relative; z-index: 6; box-shadow: 0 10px 26px rgba(0,0,0,.5); }
+.dragging .grip { color: #e8a33d; cursor: grabbing; }
+body.dragging-item { user-select: none; -webkit-user-select: none; }
 li .chk { flex: none; width: 26px; height: 26px; margin-top: 1px; border: 2px solid #e8a33d; border-radius: 5px; background: none; cursor: pointer; color: #1b1a17; font-size: 16px; font-weight: bold; line-height: 1; }
 li.done .chk { background: #e8a33d; }
 li .txt { flex: 1; font-size: 16px; line-height: 1.4; word-break: break-word; }
@@ -47,6 +52,7 @@ button:focus-visible { outline: 2px solid #e8a33d; outline-offset: 2px; }
 details { margin-top: 26px; }
 summary { color: #8f8878; font-size: 13px; cursor: pointer; padding: 6px 0; }
 #done li .tag { display: none; }
+#done li { padding-left: 10px; }
 footer { margin-top: 46px; padding-top: 16px; border-top: 1px solid #3d392f; color: #6f6959; font-size: 12px; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 footer a, footer button.link { color: #e8a33d; background: none; border: 0; font-family: inherit; font-size: 12px; cursor: pointer; padding: 0; }
 .hidden { display: none !important; }
@@ -101,7 +107,9 @@ let items = [];
 
 function fmt(ts) { return new Date(ts).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }); }
 const kidsOf = id => items.filter(k => k.parent_id === id);
-const bySection = (a, b) => ORDER.indexOf(a.section) - ORDER.indexOf(b.section) || a.sort_order - b.sort_order || a.created_at.localeCompare(b.created_at);
+// Hand-set order wins (sort_order, written by dragging); untouched items fall back to when-tag, then age.
+const byOrder = (a, b) => (a.sort_order || 0) - (b.sort_order || 0) || ORDER.indexOf(a.section) - ORDER.indexOf(b.section) || a.created_at.localeCompare(b.created_at);
+const short = p => p.text.split(':')[0];
 
 function delBtn(it) {
   const del = document.createElement('button');
@@ -109,9 +117,15 @@ function delBtn(it) {
   del.onclick = () => remove(it);
   return del;
 }
+function grip() {
+  const g = document.createElement('span');
+  g.className = 'grip'; g.title = 'drag to move'; g.innerHTML = '&#9776;'; g.setAttribute('aria-hidden', 'true');
+  return g;
+}
 
 function row(it) {
   const li = document.createElement('li');
+  li.dataset.id = it.id;
   if (it.done) li.className = 'done';
   const chk = document.createElement('button');
   chk.className = 'chk'; chk.textContent = it.done ? '✓' : '';
@@ -133,36 +147,34 @@ function row(it) {
   who.textContent = (it.added_by === 'drew' ? 'added ' : 'added by ' + it.added_by + ' ') + fmt(it.created_at)
     + (it.updated_at && it.updated_at.slice(0, 10) !== it.created_at.slice(0, 10) ? ' · updated ' + fmt(it.updated_at) : '')
     + (it.done && it.done_at ? ' · done ' + fmt(it.done_at) : '')
-    + (proj ? ' · ' + proj.text.split(':')[0] : '');
+    + (proj ? ' · ' + short(proj) : '');
   txt.appendChild(who);
+  if (!it.done) li.append(grip());
   li.append(chk, txt, delBtn(it));
   return li;
 }
 
 function projectBlock(p, kids) {
   const sec = document.createElement('section'); sec.className = 'proj';
+  if (p) sec.dataset.id = p.id;
   const h = document.createElement('h2');
   const t = document.createElement('span'); t.className = 'ptxt'; t.textContent = p ? p.text : 'Other';
   if (p && p.detail) { const d = document.createElement('span'); d.className = 'pdet'; d.textContent = p.detail; t.appendChild(d); }
+  if (p) h.append(grip());
   h.append(t);
   if (p) h.append(delBtn(p));
   const ul = document.createElement('ul');
-  if (kids.length) ul.replaceChildren(...kids.sort(bySection).map(row));
+  if (kids.length) ul.replaceChildren(...kids.sort(byOrder).map(row));
   else ul.innerHTML = '<li class="empty">Nothing under this yet.</li>';
   sec.append(h, ul);
   return sec;
 }
 
 function render() {
-  const projects = items.filter(i => !i.parent_id && !i.done && !isLeaf(i)).sort((a, b) => a.sort_order - b.sort_order || a.created_at.localeCompare(b.created_at));
+  const projects = items.filter(i => i.is_project && !i.done).sort(byOrder);
   const frag = document.createDocumentFragment();
-  const placed = new Set();
-  for (const p of projects) {
-    const kids = kidsOf(p.id).filter(k => !k.done);
-    kids.forEach(k => placed.add(k.id)); placed.add(p.id);
-    frag.append(projectBlock(p, kids));
-  }
-  const loose = items.filter(i => !i.done && !placed.has(i.id) && !i.parent_id);
+  for (const p of projects) frag.append(projectBlock(p, kidsOf(p.id).filter(k => !k.done)));
+  const loose = items.filter(i => !i.done && !i.is_project && !i.parent_id);
   if (loose.length) frag.append(projectBlock(null, loose));
   $('projects').replaceChildren(frag);
 
@@ -171,19 +183,15 @@ function render() {
   $('donebox').classList.toggle('hidden', !done.length);
   $('donesum').textContent = 'Done (' + done.length + ')';
 
-  const open = items.filter(i => !i.done && (i.parent_id || !projects.includes(i)));
+  const open = items.filter(i => !i.done && !i.is_project);
   $('sub').textContent = projects.length + ' projects · ' + open.length + ' open · ' + open.filter(i => i.section === 'today').length + ' for today';
 
   const sel = $('newproj'), cur = sel.value;
-  sel.replaceChildren(...projects.map(p => { const o = document.createElement('option'); o.value = p.id; o.textContent = p.text.split(':')[0]; return o; }));
+  sel.replaceChildren(...projects.map(p => { const o = document.createElement('option'); o.value = p.id; o.textContent = short(p); return o; }));
   const none = document.createElement('option'); none.value = ''; none.textContent = 'No project'; sel.append(none);
   const np = document.createElement('option'); np.value = 'new'; np.textContent = '+ New project'; sel.append(np);
   if ([...sel.options].some(o => o.value === cur)) sel.value = cur;
 }
-
-// A top-level row is a PROJECT unless it is a loose to-do: a project is any top-level row that has children,
-// or was created as a project (added via "+ New project" or by the Work instance with a project flag → sort_order > 0).
-function isLeaf(i) { return !i.parent_id && kidsOf(i.id).length === 0 && i.sort_order === 0; }
 
 async function load() {
   $('gate').classList.add('hidden'); $('app').classList.remove('hidden');
@@ -215,7 +223,7 @@ $('add').onsubmit = async e => {
   if (!text) return;
   const pv = $('newproj').value;
   const rec = pv === 'new'
-    ? { text, sort_order: 1 + Math.max(0, ...items.filter(i => !i.parent_id).map(i => i.sort_order)) }
+    ? { text, is_project: true, sort_order: 1 + Math.max(0, ...items.filter(i => i.is_project).map(i => i.sort_order || 0)) }
     : { text, section: $('newsec').value, parent_id: pv ? Number(pv) : null };
   const { error } = await sb.from('docket_items').insert(rec);
   if (error) { $('err').textContent = error.message; return; }
@@ -223,6 +231,57 @@ $('add').onsubmit = async e => {
   load();
 };
 $('newproj').onchange = () => { $('newsec').classList.toggle('hidden', $('newproj').value === 'new'); };
+
+/* Drag the ☰ to reorder: to-dos within their project, projects among projects. Pointer events, not HTML5
+   drag-and-drop (which doesn't fire on touch) -- same approach as the hub page. On drop, the page asks
+   before saving (Drew, 10-30: "double checks with me that I wanted to move those"); cancel puts it back. */
+let st = null;
+const dragUnit = el => el.closest('li:not(.done)') || el.closest('.proj');
+document.addEventListener('pointerdown', e => {
+  const g = e.target.closest('.grip'); if (!g) return;
+  const item = dragUnit(g); if (!item || !item.dataset.id) return;
+  e.preventDefault();
+  try { g.setPointerCapture(e.pointerId); } catch (_) {}
+  const parent = item.parentElement;
+  st = { item, parent, from: [...parent.children].indexOf(item), ax: e.clientX, ay: e.clientY, moved: false };
+  item.classList.add('dragging');
+  document.body.classList.add('dragging-item');
+  try { navigator.vibrate && navigator.vibrate(8); } catch (_) {}
+}, { passive: false });
+
+document.addEventListener('pointermove', e => {
+  if (!st) return;
+  e.preventDefault();
+  const { item, parent } = st;
+  item.style.transform = 'translateY(' + (e.clientY - st.ay) + 'px)';
+  const el = document.elementFromPoint(e.clientX, e.clientY);
+  const over = el && (item.tagName === 'LI' ? el.closest('li') : el.closest('.proj'));
+  if (!over || over === item || over.parentElement !== parent || !over.dataset.id) return;
+  const sibs = [...parent.children];
+  parent.insertBefore(item, sibs.indexOf(over) > sibs.indexOf(item) ? over.nextSibling : over);
+  st.moved = true; st.ay = e.clientY;
+  item.style.transform = '';
+}, { passive: false });
+
+async function endDrag() {
+  if (!st) return;
+  const { item, parent, from, moved } = st; st = null;
+  item.classList.remove('dragging'); item.style.transform = '';
+  document.body.classList.remove('dragging-item');
+  if (!moved) return;
+  const sibs = [...parent.children].filter(c => c.dataset.id);
+  const to = sibs.indexOf(item);
+  if (to === from) return;
+  const it = items.find(i => i.id === Number(item.dataset.id));
+  const what = it.is_project ? 'the project "' + short(it) + '"' : '"' + it.text + '"';
+  if (!confirm('Move ' + what + ' ' + (to < from ? 'up' : 'down') + ' to spot ' + (to + 1) + ' of ' + sibs.length + '?')) { render(); return; }
+  const results = await Promise.all(sibs.map((c, i) => sb.from('docket_items').update({ sort_order: i + 1 }).eq('id', Number(c.dataset.id))));
+  const bad = results.find(r => r.error);
+  if (bad) { $('err').textContent = 'Could not save the order: ' + bad.error.message; }
+  load();
+}
+document.addEventListener('pointerup', endDrag);
+document.addEventListener('pointercancel', endDrag);
 
 $('go').onclick = async () => {
   const btn = $('go'), m = $('msg');
