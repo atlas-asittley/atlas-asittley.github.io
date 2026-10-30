@@ -24,3 +24,7 @@ create policy "owner manages docket" on public.docket_items for all
 revoke all on public.docket_items from anon;
 grant select, insert, update, delete on public.docket_items to authenticated;
 grant select, insert, update, delete on public.docket_items to service_role;
+
+-- 2026-10-30, Drew: "organize this in a somewhat hierarchical fashion" — projects on top, to-dos under each.
+-- A project is a row with parent_id null; its to-dos point at it. Sections apply to the to-dos.
+alter table public.docket_items add column if not exists parent_id bigint references public.docket_items(id) on delete cascade;

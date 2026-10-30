@@ -20,24 +20,33 @@ input:focus, select:focus { outline: none; border-color: #e8a33d; }
 #gate .btn { width: 100%; margin-top: 20px; }
 .msg { margin-top: 12px; font-size: 13px; color: #e06c5b; min-height: 18px; }
 #add { display: flex; gap: 8px; margin-bottom: 18px; flex-wrap: wrap; }
-#add input { flex: 1 1 200px; min-width: 0; }
-#add select { flex: 0 1 130px; width: auto; }
-h2 { font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: #e8a33d; margin: 26px 0 4px; padding-bottom: 6px; border-bottom: 1px solid #3d392f; display: flex; justify-content: space-between; }
-h2 span { color: #8f8878; font-weight: normal; letter-spacing: 0; text-transform: none; }
+#add input { flex: 1 1 100%; min-width: 0; }
+#add select { flex: 1 1 140px; width: auto; }
+#add .btn { flex: 0 0 auto; }
+.proj { margin-top: 28px; }
+.proj > h2 { font-size: 17px; color: #e8a33d; line-height: 1.35; display: flex; align-items: flex-start; gap: 10px; padding-bottom: 8px; border-bottom: 1px solid #3d392f; }
+.proj > h2 .ptxt { flex: 1; }
+.proj > h2 .pdet { display: block; font-size: 13px; color: #b3ab99; font-weight: normal; margin-top: 4px; line-height: 1.4; }
+.proj > h2 .del { margin-top: -2px; }
 ul { list-style: none; }
-li { display: flex; align-items: flex-start; gap: 12px; padding: 12px 4px; border-bottom: 1px solid #2c2a24; }
+li { display: flex; align-items: flex-start; gap: 12px; padding: 12px 4px 12px 10px; border-bottom: 1px solid #2c2a24; }
 li .chk { flex: none; width: 26px; height: 26px; margin-top: 1px; border: 2px solid #e8a33d; border-radius: 5px; background: none; cursor: pointer; color: #1b1a17; font-size: 16px; font-weight: bold; line-height: 1; }
 li.done .chk { background: #e8a33d; }
 li .txt { flex: 1; font-size: 16px; line-height: 1.4; word-break: break-word; }
 li.done .txt { color: #7a7466; text-decoration: line-through; }
+li .tag { display: inline-block; font-size: 10px; letter-spacing: .08em; text-transform: uppercase; padding: 2px 6px; border-radius: 3px; margin-right: 8px; vertical-align: 2px; background: #3d392f; color: #c9c1ae; }
+li .tag.today { background: #e8a33d; color: #1b1a17; }
+li .tag.waiting { background: #5b6b8a; color: #ece7dc; }
+li .tag.revisit { background: #5f7a5a; color: #ece7dc; }
 li .det { display: block; font-size: 14px; color: #b3ab99; margin-top: 4px; line-height: 1.4; text-decoration: none; }
 li .who { display: block; font-size: 11px; color: #6f6959; margin-top: 4px; text-decoration: none; }
-li .del { flex: none; background: none; border: 0; color: #5a5548; font-size: 20px; cursor: pointer; padding: 2px 8px; }
-li .del:hover, li .del:focus-visible { color: #e06c5b; }
+.del { flex: none; background: none; border: 0; color: #5a5548; font-size: 20px; cursor: pointer; padding: 2px 8px; }
+.del:hover, .del:focus-visible { color: #e06c5b; }
 button:focus-visible { outline: 2px solid #e8a33d; outline-offset: 2px; }
-.empty { color: #7a7466; font-size: 14px; padding: 12px 4px; }
+.empty { color: #7a7466; font-size: 14px; padding: 12px 4px 12px 10px; }
 details { margin-top: 26px; }
 summary { color: #8f8878; font-size: 13px; cursor: pointer; padding: 6px 0; }
+#done li .tag { display: none; }
 footer { margin-top: 46px; padding-top: 16px; border-top: 1px solid #3d392f; color: #6f6959; font-size: 12px; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 footer a, footer button.link { color: #e8a33d; background: none; border: 0; font-family: inherit; font-size: 12px; cursor: pointer; padding: 0; }
 .hidden { display: none !important; }
@@ -60,7 +69,8 @@ footer a, footer button.link { color: #e8a33d; background: none; border: 0; font
   <div id="app" class="hidden">
     <form id="add">
       <input id="newtxt" type="text" placeholder="Add an item" autocomplete="off" aria-label="New item">
-      <select id="newsec" aria-label="Section">
+      <select id="newproj" aria-label="Project"></select>
+      <select id="newsec" aria-label="When">
         <option value="today">Today</option>
         <option value="next">Next</option>
         <option value="waiting">Waiting on</option>
@@ -69,7 +79,7 @@ footer a, footer button.link { color: #e8a33d; background: none; border: 0; font
       <button class="btn" type="submit">Add</button>
     </form>
     <div class="msg" id="err"></div>
-    <div id="sections"></div>
+    <div id="projects"></div>
     <details id="donebox">
       <summary id="donesum">Done</summary>
       <ul id="done"></ul>
@@ -85,10 +95,20 @@ footer a, footer button.link { color: #e8a33d; background: none; border: 0; font
 <script>
 const sb = window.supabase.createClient('https://igaulapupbtdcqqjobhs.supabase.co', 'sb_publishable_7yi3BNg-J-K5nralw5JSww_c71Pge6e');
 const $ = id => document.getElementById(id);
-const SECTIONS = [['today', 'Today'], ['next', 'Next'], ['waiting', 'Waiting on'], ['revisit', 'Revisit']];
+const ORDER = ['today', 'next', 'waiting', 'revisit'];
+const LABEL = { today: 'Today', next: 'Next', waiting: 'Waiting on', revisit: 'Revisit' };
 let items = [];
 
 function fmt(ts) { return new Date(ts).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }); }
+const kidsOf = id => items.filter(k => k.parent_id === id);
+const bySection = (a, b) => ORDER.indexOf(a.section) - ORDER.indexOf(b.section) || a.sort_order - b.sort_order || a.created_at.localeCompare(b.created_at);
+
+function delBtn(it) {
+  const del = document.createElement('button');
+  del.className = 'del'; del.textContent = '×'; del.setAttribute('aria-label', 'Delete');
+  del.onclick = () => remove(it);
+  return del;
+}
 
 function row(it) {
   const li = document.createElement('li');
@@ -98,7 +118,10 @@ function row(it) {
   chk.setAttribute('aria-label', it.done ? 'Mark not done' : 'Mark done');
   chk.onclick = () => toggle(it);
   const txt = document.createElement('span');
-  txt.className = 'txt'; txt.textContent = it.text;
+  txt.className = 'txt';
+  const tag = document.createElement('span');
+  tag.className = 'tag ' + it.section; tag.textContent = LABEL[it.section] || it.section;
+  txt.append(tag, document.createTextNode(it.text));
   if (it.detail) {
     const det = document.createElement('span');
     det.className = 'det'; det.textContent = it.detail;
@@ -106,44 +129,65 @@ function row(it) {
   }
   const who = document.createElement('span');
   who.className = 'who';
+  const proj = it.done && it.parent_id ? items.find(p => p.id === it.parent_id) : null;
   who.textContent = (it.added_by === 'drew' ? 'added ' : 'added by ' + it.added_by + ' ') + fmt(it.created_at)
     + (it.updated_at && it.updated_at.slice(0, 10) !== it.created_at.slice(0, 10) ? ' · updated ' + fmt(it.updated_at) : '')
-    + (it.done && it.done_at ? ' · done ' + fmt(it.done_at) : '');
+    + (it.done && it.done_at ? ' · done ' + fmt(it.done_at) : '')
+    + (proj ? ' · ' + proj.text.split(':')[0] : '');
   txt.appendChild(who);
-  const del = document.createElement('button');
-  del.className = 'del'; del.textContent = '×'; del.setAttribute('aria-label', 'Delete');
-  del.onclick = () => remove(it);
-  li.append(chk, txt, del);
+  li.append(chk, txt, delBtn(it));
   return li;
 }
 
+function projectBlock(p, kids) {
+  const sec = document.createElement('section'); sec.className = 'proj';
+  const h = document.createElement('h2');
+  const t = document.createElement('span'); t.className = 'ptxt'; t.textContent = p ? p.text : 'Other';
+  if (p && p.detail) { const d = document.createElement('span'); d.className = 'pdet'; d.textContent = p.detail; t.appendChild(d); }
+  h.append(t);
+  if (p) h.append(delBtn(p));
+  const ul = document.createElement('ul');
+  if (kids.length) ul.replaceChildren(...kids.sort(bySection).map(row));
+  else ul.innerHTML = '<li class="empty">Nothing under this yet.</li>';
+  sec.append(h, ul);
+  return sec;
+}
+
 function render() {
-  const open = items.filter(i => !i.done), done = items.filter(i => i.done);
+  const projects = items.filter(i => !i.parent_id && !i.done && !isLeaf(i)).sort((a, b) => a.sort_order - b.sort_order || a.created_at.localeCompare(b.created_at));
   const frag = document.createDocumentFragment();
-  for (const [key, label] of SECTIONS) {
-    const list = open.filter(i => i.section === key);
-    if (!list.length && key !== 'today') continue;
-    const h = document.createElement('h2');
-    h.textContent = label;
-    const n = document.createElement('span'); n.textContent = list.length ? list.length : '';
-    h.appendChild(n);
-    const ul = document.createElement('ul');
-    if (list.length) ul.replaceChildren(...list.map(row));
-    else ul.innerHTML = '<li class="empty">Nothing here.</li>';
-    frag.append(h, ul);
+  const placed = new Set();
+  for (const p of projects) {
+    const kids = kidsOf(p.id).filter(k => !k.done);
+    kids.forEach(k => placed.add(k.id)); placed.add(p.id);
+    frag.append(projectBlock(p, kids));
   }
-  $('sections').replaceChildren(frag);
+  const loose = items.filter(i => !i.done && !placed.has(i.id) && !i.parent_id);
+  if (loose.length) frag.append(projectBlock(null, loose));
+  $('projects').replaceChildren(frag);
+
+  const done = items.filter(i => i.done);
   $('done').replaceChildren(...done.map(row));
   $('donebox').classList.toggle('hidden', !done.length);
   $('donesum').textContent = 'Done (' + done.length + ')';
-  const today = open.filter(i => i.section === 'today').length;
-  $('sub').textContent = open.length + ' open · ' + today + ' for today';
+
+  const open = items.filter(i => !i.done && (i.parent_id || !projects.includes(i)));
+  $('sub').textContent = projects.length + ' projects · ' + open.length + ' open · ' + open.filter(i => i.section === 'today').length + ' for today';
+
+  const sel = $('newproj'), cur = sel.value;
+  sel.replaceChildren(...projects.map(p => { const o = document.createElement('option'); o.value = p.id; o.textContent = p.text.split(':')[0]; return o; }));
+  const none = document.createElement('option'); none.value = ''; none.textContent = 'No project'; sel.append(none);
+  const np = document.createElement('option'); np.value = 'new'; np.textContent = '+ New project'; sel.append(np);
+  if ([...sel.options].some(o => o.value === cur)) sel.value = cur;
 }
+
+// A top-level row is a PROJECT unless it is a loose to-do: a project is any top-level row that has children,
+// or was created as a project (added via "+ New project" or by the Work instance with a project flag → sort_order > 0).
+function isLeaf(i) { return !i.parent_id && kidsOf(i.id).length === 0 && i.sort_order === 0; }
 
 async function load() {
   $('gate').classList.add('hidden'); $('app').classList.remove('hidden');
-  const { data, error } = await sb.from('docket_items').select('*')
-    .order('done').order('sort_order').order('created_at');
+  const { data, error } = await sb.from('docket_items').select('*').order('created_at');
   if (error) { $('err').textContent = error.message; return; }
   $('err').textContent = '';
   items = data; render();
@@ -158,7 +202,8 @@ async function toggle(it) {
 }
 
 async function remove(it) {
-  if (!confirm('Delete "' + it.text + '"?')) return;
+  const n = kidsOf(it.id).length;
+  if (!confirm('Delete "' + it.text + '"' + (n ? ' and the ' + n + ' item' + (n > 1 ? 's' : '') + ' under it' : '') + '?')) return;
   const { error } = await sb.from('docket_items').delete().eq('id', it.id);
   if (error) { $('err').textContent = error.message; return; }
   load();
@@ -168,11 +213,16 @@ $('add').onsubmit = async e => {
   e.preventDefault();
   const text = $('newtxt').value.trim();
   if (!text) return;
-  const { error } = await sb.from('docket_items').insert({ text, section: $('newsec').value });
+  const pv = $('newproj').value;
+  const rec = pv === 'new'
+    ? { text, sort_order: 1 + Math.max(0, ...items.filter(i => !i.parent_id).map(i => i.sort_order)) }
+    : { text, section: $('newsec').value, parent_id: pv ? Number(pv) : null };
+  const { error } = await sb.from('docket_items').insert(rec);
   if (error) { $('err').textContent = error.message; return; }
   $('newtxt').value = '';
   load();
 };
+$('newproj').onchange = () => { $('newsec').classList.toggle('hidden', $('newproj').value === 'new'); };
 
 $('go').onclick = async () => {
   const btn = $('go'), m = $('msg');
