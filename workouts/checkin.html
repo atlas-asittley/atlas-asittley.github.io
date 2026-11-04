@@ -167,9 +167,16 @@
     var host = document.getElementById('due-host');
     if (!sb) { host.innerHTML = '<p class="dim">No connection.</p>'; return; }
     var today = todayISO();
+    // Whether to ask for a weight at all is a SETTING, not a code decision — the old scale was
+    // retired 2026-11-03 and the Hume number arrives by itself on the next morning's import, so
+    // there is nothing for Drew to type. Flip workout_settings.checkin_weight_prompt back to
+    // 'yes' to bring the field back. Anything other than 'yes' (including a failed read) hides
+    // it, so a dead connection can never resurrect a prompt he has switched off.
+    var wp = await sb.from('workout_settings').select('value').eq('key', 'checkin_weight_prompt').limit(1);
+    var askWeight = !!(wp.data && wp.data.length && String(wp.data[0].value).toLowerCase() === 'yes');
     var bw = await sb.from('workout_bodyweight').select('id').eq('log_date', today).limit(1);
     var cq = await sb.from('workout_checkins').select('*').eq('status', 'pending').order('sort', { ascending: true }).order('created_at', { ascending: true });
-    var weightDue = !(bw.data && bw.data.length);
+    var weightDue = askWeight && !(bw.data && bw.data.length);
     pending = (cq.data || []).filter(function (r) { return !r.due_date || r.due_date <= today; });
 
     var parts = [];
@@ -180,7 +187,7 @@
     }
     pending.forEach(function (r) { parts.push(renderCheckin(r)); });
 
-    if (!parts.length) { host.innerHTML = '<h2>✅ Nothing else due</h2><div class="sub">Morning check done and no coach questions waiting. Keep logging how it feels above.</div>'; return; }
+    if (!parts.length) { host.innerHTML = '<h2>✅ Nothing else due</h2><div class="sub">' + (askWeight ? 'Morning check done and no coach questions waiting.' : 'No coach questions waiting. Your weight comes off the Hume by itself.') + ' Keep logging how it feels above.</div>'; return; }
     host.innerHTML = parts.join('<div style="height:8px"></div>') + '<button class="save sec" id="save-due" type="button">Submit</button><div class="saved" id="d-saved"></div>';
     document.getElementById('save-due').addEventListener('click', submitDue);
   }
