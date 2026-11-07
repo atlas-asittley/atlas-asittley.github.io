@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pending</title>
+<meta name="robots" content="noindex">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #1a1a2e; color: #eee; font-family: 'Courier New', monospace; min-height: 100vh; padding: 24px 16px 60px; }
+.wrap { max-width: 640px; margin: 0 auto; }
+h1.site { font-size: 28px; color: #16c79a; margin-bottom: 6px; }
+.subtitle { color: #888; font-size: 13px; margin-bottom: 22px; }
+#gate { max-width: 340px; margin: 40px auto 0; }
+#gate label { display: block; font-size: 12px; color: #888; margin: 14px 0 5px; }
+input[type=email], input[type=password], input[type=text] { width: 100%; background: #16213e; border: 1px solid #0f3460; color: #eee; font-family: inherit; font-size: 16px; padding: 11px 12px; border-radius: 6px; }
+input:focus { outline: none; border-color: #16c79a; }
+.btn { background: #16c79a; border: 0; color: #10131a; font-family: inherit; font-size: 16px; font-weight: bold; padding: 12px 16px; border-radius: 6px; cursor: pointer; }
+.btn:disabled { opacity: .55; }
+#gate .btn { width: 100%; margin-top: 20px; }
+.msg { margin-top: 12px; font-size: 13px; color: #e94560; min-height: 18px; }
+h2.inst { font-size: 13px; color: #16c79a; letter-spacing: .06em; text-transform: uppercase; margin: 22px 0 2px; }
+.note { color: #888; font-size: 13px; line-height: 1.5; margin-bottom: 6px; }
+ul { list-style: none; }
+li { display: flex; align-items: center; gap: 12px; padding: 12px 4px; border-bottom: 1px solid #0f3460; }
+li .chk { flex: none; width: 26px; height: 26px; border: 2px solid #16c79a; border-radius: 5px; background: none; cursor: pointer; color: #10131a; font-size: 16px; font-weight: bold; line-height: 1; }
+li.done .chk { background: #16c79a; }
+li .txt { flex: 1; font-size: 16px; line-height: 1.4; word-break: break-word; }
+li.done .txt { color: #777; text-decoration: line-through; }
+li .who { display: block; font-size: 11px; color: #666; margin-top: 3px; text-decoration: none; }
+li .sub { flex: none; background: none; border: 0; color: #555; font-size: 20px; cursor: pointer; padding: 4px 6px; }
+li .sub:hover, li .sub:focus-visible { color: #16c79a; }
+ul.kids { margin-left: 38px; }
+ul.kids li { padding: 9px 4px; border-bottom: 1px dashed #0f3460; }
+ul.kids li .txt { font-size: 15px; }
+li.parent { flex-wrap: wrap; }
+li.parent > ul.kids { flex-basis: 100%; }
+li .del { flex: none; background: none; border: 0; color: #555; font-size: 20px; cursor: pointer; padding: 4px 8px; }
+li .del:hover, li .del:focus-visible { color: #e94560; }
+button:focus-visible { outline: 2px solid #16c79a; outline-offset: 2px; }
+.empty { color: #777; font-size: 14px; padding: 14px 4px; }
+details { margin-top: 26px; }
+summary { color: #888; font-size: 13px; cursor: pointer; padding: 6px 0; }
+footer { margin-top: 46px; padding-top: 16px; border-top: 1px solid #0f3460; color: #555; font-size: 12px; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+footer a, footer button.link { color: #16c79a; background: none; border: 0; font-family: inherit; font-size: 12px; cursor: pointer; padding: 0; }
+.hidden { display: none !important; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1 class="site">Pending</h1>
+  <p class="subtitle" id="sub">Private. Sign in to see what's waiting on you.</p>
+
+  <div id="gate">
+    <label for="em">Email</label>
+    <input id="em" type="email" autocomplete="username" inputmode="email">
+    <label for="pw">Password</label>
+    <input id="pw" type="password" autocomplete="current-password">
+    <button class="btn" id="go">Sign in</button>
+    <div class="msg" id="msg"></div>
+  </div>
+
+  <div id="app" class="hidden">
+    <p class="note">Things a ping asked you to do or go over, that haven't been dealt with yet. Each one clears itself
+      when the instance goes over it with you, or tick it here when it's handled.</p>
+    <div class="msg" id="err"></div>
+    <div id="open"></div>
+    <details id="donebox">
+      <summary id="donesum">Handled</summary>
+      <ul id="done"></ul>
+    </details>
+    <footer>
+      <span id="stamp"></span>
+      <span><a href="https://atlas-asittley.github.io/">Atlas</a> &nbsp;·&nbsp; <button class="link" id="out">Sign out</button></span>
+    </footer>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script>
+const sb = window.supabase.createClient('https://igaulapupbtdcqqjobhs.supabase.co', 'sb_publishable_7yi3BNg-J-K5nralw5JSww_c71Pge6e');
+const $ = id => document.getElementById(id);
+
+function fmt(ts) { return new Date(ts).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }); }
+function ago(ts) {
+  const d = Math.floor((Date.now() - new Date(ts)) / 864e5);
+  return d <= 0 ? 'today' : d === 1 ? 'yesterday' : d + ' days ago';
+}
+
+function row(it) {
+  const li = document.createElement('li');
+  if (it.cleared) li.className = 'done';
+  const chk = document.createElement('button');
+  chk.className = 'chk'; chk.textContent = it.cleared ? '✓' : '';
+  chk.setAttribute('aria-label', it.cleared ? 'Put back on the list' : 'Mark handled');
+  chk.onclick = () => toggle(it);
+  const txt = document.createElement('span');
+  txt.className = 'txt'; txt.textContent = it.text;
+  const who = document.createElement('span');
+  who.className = 'who';
+  who.textContent = it.cleared
+    ? it.owner + ' · handled ' + fmt(it.cleared_at) + (it.cleared_by === 'drew' ? ' (you ticked it)' : '')
+    : 'since ' + fmt(it.since) + ' (' + ago(it.since) + ')';
+  txt.appendChild(who);
+  li.append(chk, txt);
+  return li;
+}
+
+function render(items) {
+  const open = items.filter(i => !i.cleared),
+    done = items.filter(i => i.cleared).sort((a, b) => new Date(b.cleared_at) - new Date(a.cleared_at));
+  const groups = {};
+  open.forEach(i => (groups[i.owner] = groups[i.owner] || []).push(i));
+  const blocks = Object.keys(groups).sort().map(owner => {
+    const h = document.createElement('h2'); h.className = 'inst'; h.textContent = owner;
+    const ul = document.createElement('ul'); ul.replaceChildren(...groups[owner].map(row));
+    const div = document.createElement('div'); div.append(h, ul); return div;
+  });
+  $('open').replaceChildren(...blocks);
+  if (!open.length) $('open').innerHTML = '<ul><li class="empty">Nothing waiting on you.</li></ul>';
+  $('done').replaceChildren(...done.map(row));
+  $('donebox').classList.toggle('hidden', !done.length);
+  $('donesum').textContent = 'Handled in the last two weeks (' + done.length + ')';
+  $('sub').textContent = open.length ? open.length + ' waiting on you' : 'All caught up';
+}
+
+async function load() {
+  $('gate').classList.add('hidden'); $('app').classList.remove('hidden');
+  const since = new Date(Date.now() - 14 * 864e5).toISOString();
+  const { data, error } = await sb.from('pending_followups').select('*')
+    .or('cleared.eq.false,cleared_at.gte.' + since).order('since');
+  if (error) { $('err').textContent = error.message; return; }
+  $('err').textContent = '';
+  render(data);
+  $('stamp').textContent = 'Updated ' + new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+}
+
+async function toggle(it) {
+  const cleared = !it.cleared;
+  const { error } = await sb.from('pending_followups').update({
+    cleared, cleared_at: cleared ? new Date().toISOString() : null, cleared_by: cleared ? 'drew' : null,
+    updated_at: new Date().toISOString() }).eq('key', it.key);
+  if (error) { $('err').textContent = error.message; return; }
+  load();
+}
+
+$('go').onclick = async () => {
+  const btn = $('go'), m = $('msg');
+  m.textContent = '';
+  const email = $('em').value.trim().toLowerCase(), password = $('pw').value;
+  if (!email || !password) { m.textContent = 'Email and password, please.'; return; }
+  btn.disabled = true; btn.textContent = 'Signing in…';
+  const { error } = await sb.auth.signInWithPassword({ email, password });
+  btn.disabled = false; btn.textContent = 'Sign in';
+  if (error) { m.textContent = error.message; return; }
+  try { localStorage.setItem('songbook:email', email); } catch (_) {}
+  load();
+};
+$('pw').addEventListener('keydown', e => { if (e.key === 'Enter') $('go').click(); });
+$('out').onclick = async () => { await sb.auth.signOut(); location.reload(); };
+document.addEventListener('visibilitychange', async () => {
+  if (document.visibilityState !== 'visible') return;
+  const { data } = await sb.auth.getSession();
+  if (data && data.session) load();
+});
+
+(async () => {
+  try { $('em').value = localStorage.getItem('songbook:email') || ''; } catch (_) {}
+  const { data } = await sb.auth.getSession();
+  if (data && data.session) load();
+})();
+</script>
+</body>
+</html>
