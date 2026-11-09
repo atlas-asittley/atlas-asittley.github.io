@@ -118,6 +118,8 @@
   .tp .ripple { position: absolute; width: 60px; height: 60px; margin: -30px; border-radius: 50%; border: 2px solid var(--blue);
                 animation: rip .4s ease-out forwards; pointer-events: none; }
   @keyframes rip { from { transform: scale(.3); opacity: 1; } to { transform: scale(1.4); opacity: 0; } }
+  .tvp .games { height: 52px; border-radius: 16px; display: flex; align-items: center; justify-content: center; gap: 8px;
+                text-decoration: none; color: #05060c; font-weight: 800; background: linear-gradient(90deg, #ffd166, #5ce1ff); }
   .tvp .roku { height: var(--k); border-radius: 18px; font-weight: 700; background: linear-gradient(180deg, #4a76ff, var(--blue-b)); box-shadow: 0 6px 20px var(--glow); }
   #status { position: fixed; left: 50%; bottom: max(18px, env(safe-area-inset-bottom)); transform: translate(-50%, 20px); z-index: 6;
             max-width: calc(100% - 32px); padding: 10px 16px; border-radius: 14px; background: #2a1518; color: #ffb3b6; font-size: .88rem;
@@ -221,6 +223,7 @@
     <button class="key" data-lg="button:VOLUMEDOWN" aria-label="Volume down"><svg viewBox="0 0 24 24"><path d="M4 9.5h3.5L12 6v12l-4.5-3.5H4z"/><path d="M16 12h5"/></svg></button>
     <button class="key" data-lg="button:VOLUMEUP" aria-label="Volume up"><svg viewBox="0 0 24 24"><path d="M4 9.5h3.5L12 6v12l-4.5-3.5H4z"/><path d="M16 12h5M18.5 9.5v5"/></svg></button>
   </div>
+  <a class="games" id="games" href="http://192.168.1.23:5302/play" target="_blank" rel="noopener">✦ TV games: use your phone as the controller</a>
   <button class="roku" id="toroku">Back to the Roku</button>
 </section>
 <div id="status" role="status"></div>
@@ -284,6 +287,10 @@
   const panel = on => $('tvp').classList.toggle('hidden', !on);
   $('screen').onclick = () => { send('lg', 'browser'); panel(true); };
   // Drew 11-08: closing the panel always means going back to the Roku (the Roku keys can't drive the browser)
+  // TV Play portal (laptop :5302). Home Wi-Fi address by default; Drew's phone runs Tailscale, which blocks home
+  // addresses, so he gets the Tailscale one (picked by his member label, not his email).
+  const playAt = host => { $('games').href = `http://${host}:5302/play`; };
+  if (!WEB) playAt(location.hostname);
   $('tvx').onclick = $('toroku').onclick = () => { send('lg', 'roku'); panel(false); };
   document.querySelectorAll('[data-lg]').forEach(b => b.onclick = () => send('lg', b.dataset.lg));
 
@@ -324,7 +331,10 @@
     if (v) { send('type', v); $('txt').value = ''; }
   };
 
-  const show = on => { $('gate').classList.toggle('hidden', on); $('app').classList.toggle('hidden', !on); };
+  const show = on => { $('gate').classList.toggle('hidden', on); $('app').classList.toggle('hidden', !on);
+    if (on) sb.auth.getUser().then(({ data }) => data.user &&
+      sb.from('shared_members').select('label').eq('email', data.user.email.toLowerCase()).then(({ data: rows }) => {
+        if (rows && rows[0] && rows[0].label === 'Drew') playAt('100.76.198.47'); })); };
   if (!WEB) { show(true); $('out').parentElement.classList.add('hidden'); }
   else {
     $('gate').onsubmit = async e => {
