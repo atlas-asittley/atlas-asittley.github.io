@@ -213,7 +213,7 @@
   </form>
 </div>
 <section class="tvp hidden" id="tvp" aria-label="TV browser controls">
-  <header><h2>TV browser</h2><button class="x" id="tvx" aria-label="Hide trackpad"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></header>
+  <header><h2>TV browser</h2><button class="x" id="tvx" aria-label="Back to the Roku"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></header>
   <div class="tp" id="tp">Drag to move the TV's pointer<br>Tap to click · two fingers to scroll</div>
   <div class="row c4">
     <button class="key" data-lg="button:BACK" aria-label="Back"><svg viewBox="0 0 24 24"><path d="M19 12H5"/><path d="M11 6l-6 6 6 6"/></svg></button>
@@ -283,8 +283,8 @@
   // Globe: put the LG's browser up (if it isn't already) and turn the phone into its trackpad.
   const panel = on => $('tvp').classList.toggle('hidden', !on);
   $('screen').onclick = () => { send('lg', 'browser'); panel(true); };
-  $('tvx').onclick = () => panel(false);
-  $('toroku').onclick = () => { send('lg', 'roku'); panel(false); };
+  // Drew 11-08: closing the panel always means going back to the Roku (the Roku keys can't drive the browser)
+  $('tvx').onclick = $('toroku').onclick = () => { send('lg', 'roku'); panel(false); };
   document.querySelectorAll('[data-lg]').forEach(b => b.onclick = () => send('lg', b.dataset.lg));
 
   const tp = $('tp'), pts = new Map(), SPEED = 2.2, EVERY = WEB ? 60 : 30;
