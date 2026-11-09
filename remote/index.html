@@ -106,6 +106,19 @@
   .sheet .key { width: 52px; height: 52px; border-radius: 14px; }
   .sheet .send { width: auto; padding: 0 18px; background: linear-gradient(180deg, #4a76ff, var(--blue-b)); font-weight: 700; }
 
+  /* TV browser panel: the phone becomes a trackpad for the LG's own pointer */
+  .tvp { position: fixed; inset: 0; z-index: 7; display: flex; flex-direction: column; gap: 12px; background: var(--ground);
+         padding: max(12px, env(safe-area-inset-top)) 16px max(14px, env(safe-area-inset-bottom)); max-width: 420px; margin: 0 auto; }
+  .tvp header { display: flex; align-items: center; justify-content: space-between; }
+  .tvp h2 { margin: 0; font-size: .8rem; letter-spacing: .14em; text-transform: uppercase; color: var(--dim); font-weight: 600; }
+  .tvp .x { width: 40px; height: 40px; border-radius: 50%; background: #1b1d24; color: var(--dim); }
+  .tp { flex: 1; min-height: 0; border-radius: 26px; touch-action: none; position: relative; overflow: hidden;
+        background: radial-gradient(120% 80% at 50% 0%, #1b2246, #10121a 70%); box-shadow: inset 0 0 0 1px #262c48, inset 0 1px 0 rgba(255,255,255,.05);
+        display: grid; place-items: center; color: #4f5a85; font-size: .9rem; text-align: center; line-height: 1.6; }
+  .tp .ripple { position: absolute; width: 60px; height: 60px; margin: -30px; border-radius: 50%; border: 2px solid var(--blue);
+                animation: rip .4s ease-out forwards; pointer-events: none; }
+  @keyframes rip { from { transform: scale(.3); opacity: 1; } to { transform: scale(1.4); opacity: 0; } }
+  .tvp .roku { height: var(--k); border-radius: 18px; font-weight: 700; background: linear-gradient(180deg, #4a76ff, var(--blue-b)); box-shadow: 0 6px 20px var(--glow); }
   #status { position: fixed; left: 50%; bottom: max(18px, env(safe-area-inset-bottom)); transform: translate(-50%, 20px); z-index: 6;
             max-width: calc(100% - 32px); padding: 10px 16px; border-radius: 14px; background: #2a1518; color: #ffb3b6; font-size: .88rem;
             box-shadow: 0 8px 24px rgba(0,0,0,.5); opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; }
@@ -199,6 +212,17 @@
     <button type="submit" class="key send">Send</button>
   </form>
 </div>
+<section class="tvp hidden" id="tvp" aria-label="TV browser controls">
+  <header><h2>TV browser</h2><button class="x" id="tvx" aria-label="Hide trackpad"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></header>
+  <div class="tp" id="tp">Drag to move the TV's pointer<br>Tap to click · two fingers to scroll</div>
+  <div class="row c4">
+    <button class="key" data-lg="button:BACK" aria-label="Back"><svg viewBox="0 0 24 24"><path d="M19 12H5"/><path d="M11 6l-6 6 6 6"/></svg></button>
+    <button class="key" data-lg="playpause" aria-label="Play or pause"><svg viewBox="0 0 24 24"><path d="M5 6l7 6-7 6z"/><path d="M16 6v12M20 6v12"/></svg></button>
+    <button class="key" data-lg="button:VOLUMEDOWN" aria-label="Volume down"><svg viewBox="0 0 24 24"><path d="M4 9.5h3.5L12 6v12l-4.5-3.5H4z"/><path d="M16 12h5"/></svg></button>
+    <button class="key" data-lg="button:VOLUMEUP" aria-label="Volume up"><svg viewBox="0 0 24 24"><path d="M4 9.5h3.5L12 6v12l-4.5-3.5H4z"/><path d="M16 12h5M18.5 9.5v5"/></svg></button>
+  </div>
+  <button class="roku" id="toroku">Back to the Roku</button>
+</section>
 <div id="status" role="status"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
@@ -225,6 +249,10 @@
   document.querySelectorAll('[data-dev]').forEach(b => b.onclick = () => pick(b.dataset.dev));
   pick(dev);
 
+  function quiet(kind, arg) {
+    if (WEB) sb.rpc('remote_press', { dev, kind, arg }).then(() => {});
+    else fetch(`/${kind}/${dev}/${encodeURIComponent(arg)}`, { method: 'POST' }).catch(() => {});
+  }
   async function send(kind, arg) {
     if (navigator.vibrate) navigator.vibrate(10);
     if (WEB) {
@@ -252,7 +280,39 @@
     b.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') send('key', key); });
   });
   document.querySelectorAll('[data-app]').forEach(b => b.onclick = () => send('launch', b.dataset.app));
-  $('screen').onclick = () => { send('lg', 'browser'); say(''); };
+  // Globe: put the LG's browser up (if it isn't already) and turn the phone into its trackpad.
+  const panel = on => $('tvp').classList.toggle('hidden', !on);
+  $('screen').onclick = () => { send('lg', 'browser'); panel(true); };
+  $('tvx').onclick = () => panel(false);
+  $('toroku').onclick = () => { send('lg', 'roku'); panel(false); };
+  document.querySelectorAll('[data-lg]').forEach(b => b.onclick = () => send('lg', b.dataset.lg));
+
+  const tp = $('tp'), pts = new Map(), SPEED = 2.2, EVERY = WEB ? 60 : 30;
+  let acc = { x: 0, y: 0, s: 0 }, start = null, travel = 0;
+  tp.addEventListener('pointerdown', e => {
+    tp.setPointerCapture(e.pointerId); pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pts.size === 1) { start = { t: Date.now(), x: e.clientX, y: e.clientY }; travel = 0; } else start = null;
+  });
+  tp.addEventListener('pointermove', e => {
+    const p = pts.get(e.pointerId); if (!p) return;
+    const dx = e.clientX - p.x, dy = e.clientY - p.y; p.x = e.clientX; p.y = e.clientY; travel += Math.abs(dx) + Math.abs(dy);
+    if (pts.size >= 2) acc.s += dy / pts.size; else { acc.x += dx * SPEED; acc.y += dy * SPEED; }
+  });
+  const lift = e => {
+    if (!pts.delete(e.pointerId)) return;
+    if (start && pts.size === 0 && travel < 10 && Date.now() - start.t < 300) {
+      send('lg', 'click');
+      const r = document.createElement('span'), b = tp.getBoundingClientRect();
+      r.className = 'ripple'; r.style.left = (e.clientX - b.left) + 'px'; r.style.top = (e.clientY - b.top) + 'px';
+      tp.append(r); setTimeout(() => r.remove(), 450);
+    }
+  };
+  ['pointerup', 'pointercancel'].forEach(ev => tp.addEventListener(ev, lift));
+  setInterval(() => {
+    const x = Math.round(acc.x), y = Math.round(acc.y), sc = Math.round(acc.s * 3);
+    if (x || y) { quiet('lg', `move:${x}:${y}`); acc.x -= x; acc.y -= y; }
+    if (sc) { quiet('lg', `scroll:0:${-sc}`); acc.s = 0; }
+  }, EVERY);
 
   const sheet = $('sheet');
   const openSheet = on => { sheet.classList.toggle('open', on); sheet.setAttribute('aria-hidden', !on); if (on) $('txt').focus(); };
