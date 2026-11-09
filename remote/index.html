@@ -2,58 +2,125 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>Remote</title>
-<link rel="manifest" href="/remote/manifest.webmanifest">
-<link rel="icon" sizes="192x192" href="/remote/icon-192.png">
-<meta name="theme-color" content="#0d0d10">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>TV Remote</title>
 <meta name="robots" content="noindex">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" sizes="192x192" href="icon-192.png">
+<meta name="theme-color" content="#0b0c10">
 <style>
-  :root { --ground: #0d0d10; --body: #17171b; --key: #26262c; --key-hi: #34343c; --ink: #f2f2f5; --dim: #8a8a96;
-          --pad: #2f5fe3; --pad-hi: #4a78ff; --power: #e0353b; }
+  /* One deliberate dark world: a remote is a black object in a dim room. */
+  :root {
+    --ground: #0b0c10; --shell-a: #1c1e26; --shell-b: #111217; --key: #23262f; --key-b: #1a1c23;
+    --ink: #eef0f6; --dim: #8b90a0; --line: #2d303a;
+    --blue: #3d6bff; --blue-b: #2447c9; --glow: rgba(61,107,255,.45); --red: #ff4d55;
+    --k: clamp(44px, 6.4dvh, 60px);       /* key height scales with the screen so everything fits */
+  }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  html, body { margin: 0; background: var(--ground); color: var(--ink);
-               font-family: system-ui, -apple-system, "Segoe UI", sans-serif; user-select: none; }
-  .remote { max-width: 380px; margin: 0 auto; padding: 14px 16px 28px; display: flex; flex-direction: column; gap: 16px; }
-  button { font: inherit; color: var(--ink); background: var(--key); border: 0; border-radius: 16px; cursor: pointer;
-           min-height: 56px; touch-action: manipulation; transition: transform .06s, background .06s; }
-  button:active, button.on { transform: scale(.94); background: var(--key-hi); }
-  button:focus-visible { outline: 2px solid var(--pad-hi); outline-offset: 2px; }
-  svg { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; vertical-align: middle; }
-  .row { display: grid; gap: 12px; }
-  .r2 { grid-template-columns: 1fr 1fr; } .r3 { grid-template-columns: 1fr 1.4fr 1fr; } .r3e { grid-template-columns: 1fr 1fr 1fr; }
-  .top { display: flex; gap: 12px; align-items: center; }
-  .seg { flex: 1; display: grid; grid-template-columns: 1fr 1fr; background: var(--body); border-radius: 14px; padding: 4px; }
-  .seg button { min-height: 44px; background: none; border-radius: 10px; font-size: .9rem; color: var(--dim); }
-  .seg button[aria-pressed="true"] { background: var(--key-hi); color: var(--ink); font-weight: 600; }
-  .power { width: 56px; flex: none; border-radius: 50%; color: var(--power); }
-  .pad { position: relative; width: 100%; aspect-ratio: 1; max-width: 300px; margin: 6px auto; }
-  .pad button { position: absolute; background: var(--pad); color: #fff; }
-  .pad button:active, .pad button.on { background: var(--pad-hi); }
-  .pad .u, .pad .d { left: 33%; width: 34%; height: 36%; } .pad .u { top: 0; border-radius: 22px 22px 8px 8px; }
-  .pad .d { bottom: 0; border-radius: 8px 8px 22px 22px; }
-  .pad .l, .pad .r { top: 33%; height: 34%; width: 36%; } .pad .l { left: 0; border-radius: 22px 8px 8px 22px; }
-  .pad .r { right: 0; border-radius: 8px 22px 22px 8px; }
-  .pad .ok { left: 33%; top: 33%; width: 34%; height: 34%; border-radius: 50%; background: #2550c8; font-weight: 700; letter-spacing: .06em; }
-  .apps button { font-weight: 800; font-size: 1rem; letter-spacing: .02em; min-height: 52px; }
-  .netflix { background: #f3f3f3 !important; color: #e50914 !important; }
-  .disney { background: #143b8f !important; } .appletv { background: #1f1f23 !important; border: 1px solid #3a3a42 !important; }
-  .paramount { background: #0a64e8 !important; font-style: italic; } .youtube { background: #ff0000 !important; }
-  .label { font-size: .72rem; color: var(--dim); text-align: center; margin-top: -8px; letter-spacing: .08em; text-transform: uppercase; }
-  .type { display: flex; gap: 10px; }
-  .type input { flex: 1; min-width: 0; font: inherit; font-size: 16px; color: var(--ink); background: var(--body); border: 1px solid var(--key-hi);
-                border-radius: 14px; padding: 0 14px; min-height: 52px; }
-  .type button { padding: 0 16px; min-height: 52px; }
-  #status { min-height: 1.3em; text-align: center; font-size: .85rem; color: var(--dim); }
-  #status.bad { color: #ff8a80; }
-  #gate { max-width: 340px; margin: 48px auto 0; padding: 0 16px; display: flex; flex-direction: column; gap: 10px; }
-  #gate h1 { margin: 0 0 6px; font-size: 1.5rem; } #gate p { margin: 0 0 8px; color: var(--dim); font-size: .9rem; }
-  #gate input { font: inherit; font-size: 16px; color: var(--ink); background: var(--body); border: 1px solid var(--key-hi);
-                border-radius: 12px; padding: 12px 14px; }
-  #gate button { background: var(--pad); font-weight: 700; margin-top: 6px; }
+  html, body { margin: 0; height: 100%; background: var(--ground); color: var(--ink);
+               font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; user-select: none; overflow: hidden; }
+  body { background: radial-gradient(120% 60% at 50% 0%, #161a2a 0%, var(--ground) 60%); }
+  button { font: inherit; color: var(--ink); border: 0; cursor: pointer; touch-action: manipulation; padding: 0; }
+  button:focus-visible { outline: 2px solid var(--blue); outline-offset: 3px; }
+  svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
   .hidden { display: none !important; }
-  .foot { text-align: center; font-size: .8rem; } .foot button { background: none; min-height: 0; color: var(--dim); text-decoration: underline; }
-  @media (prefers-reduced-motion: reduce) { button { transition: none; } button:active { transform: none; } }
+
+  .remote { height: 100dvh; max-width: 420px; margin: 0 auto; display: flex; flex-direction: column;
+            justify-content: space-between; gap: clamp(8px, 1.6dvh, 16px);
+            padding: max(12px, env(safe-area-inset-top)) 16px max(14px, env(safe-area-inset-bottom)); }
+
+  /* keys: soft raised plastic */
+  .key { height: var(--k); border-radius: 18px; background: linear-gradient(180deg, var(--key), var(--key-b));
+         box-shadow: inset 0 1px 0 rgba(255,255,255,.07), 0 2px 0 #08090c, 0 6px 14px rgba(0,0,0,.35);
+         display: grid; place-items: center; transition: transform .07s, box-shadow .07s, filter .07s; }
+  .key:active, .key.on { transform: translateY(2px) scale(.97); box-shadow: inset 0 1px 0 rgba(255,255,255,.04), 0 0 0 #000; filter: brightness(1.25); }
+  .row { display: grid; gap: 12px; }
+  .c2 { grid-template-columns: 1fr 1fr; } .c3 { grid-template-columns: 1fr 1.35fr 1fr; } .c4 { grid-template-columns: repeat(4, 1fr); }
+
+  /* top bar */
+  .top { display: flex; align-items: center; gap: 12px; }
+  .seg { flex: 1; position: relative; display: grid; grid-template-columns: 1fr 1fr; padding: 4px; border-radius: 16px;
+         background: #15171d; box-shadow: inset 0 1px 3px rgba(0,0,0,.6); }
+  .seg .thumb { position: absolute; top: 4px; bottom: 4px; left: 4px; width: calc(50% - 4px); border-radius: 12px;
+                background: linear-gradient(180deg, #2c3040, #22252f); box-shadow: 0 2px 8px rgba(0,0,0,.4); transition: transform .22s cubic-bezier(.3,.7,.2,1); }
+  .seg[data-on="tcl"] .thumb { transform: translateX(100%); }
+  .seg button { position: relative; height: 40px; background: none; color: var(--dim); font-size: .88rem; font-weight: 600; letter-spacing: .02em; }
+  .seg button[aria-pressed="true"] { color: var(--ink); }
+  .power { width: 48px; height: 48px; flex: none; border-radius: 50%; color: var(--red);
+           background: radial-gradient(circle at 50% 35%, #2a2d36, #16181e); box-shadow: 0 0 0 1px #2a1416, 0 0 18px rgba(255,77,85,.18); }
+  .power:active { filter: brightness(1.4); }
+
+  /* ring d-pad: four wedge buttons clipped from one circle */
+  .padwrap { flex: 1; min-height: 0; display: grid; place-items: center; }
+  .pad { position: relative; width: min(76vw, 32dvh, 300px); aspect-ratio: 1; border-radius: 50%;
+         background: radial-gradient(circle at 50% 30%, #2a2e3b, #15171e 70%);
+         box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 10px 30px rgba(0,0,0,.55), 0 0 0 1px #262a35; }
+  .pad .w { position: absolute; inset: 0; border-radius: 50%; background: none; color: #c9cede; transition: background .08s; }
+  .pad .w svg { position: absolute; width: 26px; height: 26px; }
+  .pad .u { clip-path: polygon(0 0, 100% 0, 50% 50%); } .pad .u svg { top: 9%; left: calc(50% - 13px); }
+  .pad .d { clip-path: polygon(0 100%, 100% 100%, 50% 50%); } .pad .d svg { bottom: 9%; left: calc(50% - 13px); }
+  .pad .l { clip-path: polygon(0 0, 0 100%, 50% 50%); } .pad .l svg { left: 9%; top: calc(50% - 13px); }
+  .pad .r { clip-path: polygon(100% 0, 100% 100%, 50% 50%); } .pad .r svg { right: 9%; top: calc(50% - 13px); }
+  .pad .w:active, .pad .w.on { background: radial-gradient(circle at 50% 50%, transparent 30%, rgba(61,107,255,.35) 75%); color: #fff; }
+  .pad .ok { position: absolute; inset: 31%; border-radius: 50%; font-weight: 800; letter-spacing: .12em; font-size: .95rem;
+             background: radial-gradient(circle at 50% 30%, #5a83ff, var(--blue) 45%, var(--blue-b));
+             box-shadow: 0 0 0 6px #101218, 0 0 28px var(--glow), inset 0 1px 0 rgba(255,255,255,.35); transition: transform .07s, filter .07s; }
+  .pad .ok:active { transform: scale(.95); filter: brightness(1.2); }
+  .pad::after { content: ""; position: absolute; inset: 0; border-radius: 50%; pointer-events: none;
+                background: conic-gradient(from 45deg, transparent 0 24.6%, #0b0c10 24.6% 25.4%, transparent 25.4% 49.6%, #0b0c10 49.6% 50.4%, transparent 50.4% 74.6%, #0b0c10 74.6% 75.4%, transparent 75.4% 99.6%, #0b0c10 99.6%);
+                -webkit-mask: radial-gradient(circle, transparent 37%, #000 37.5%); mask: radial-gradient(circle, transparent 37%, #000 37.5%); opacity: .7; }
+
+  .play { background: linear-gradient(180deg, #2b2f3b, #1e2129); }
+  .vol { display: grid; grid-template-columns: 1fr auto 1fr; height: var(--k); border-radius: 999px; overflow: hidden;
+         background: linear-gradient(180deg, var(--key), var(--key-b)); box-shadow: inset 0 1px 0 rgba(255,255,255,.07), 0 2px 0 #08090c, 0 6px 14px rgba(0,0,0,.35); }
+  .vol button { background: none; display: grid; place-items: center; color: var(--ink); }
+  .vol button:active, .vol button.on { background: rgba(255,255,255,.07); }
+  .vol .mute { width: var(--k); border-left: 1px solid var(--line); border-right: 1px solid var(--line); color: var(--dim); }
+  .vol .lbl { font-size: .62rem; letter-spacing: .14em; color: var(--dim); margin-left: 8px; }
+
+  /* streaming tiles */
+  .apps { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+  .app { height: calc(var(--k) * .92); border-radius: 14px; display: grid; place-items: center; font-weight: 900;
+         box-shadow: 0 2px 0 #08090c, 0 6px 12px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.12); transition: transform .07s, filter .07s; }
+  .app:active { transform: translateY(2px) scale(.96); filter: brightness(1.2); }
+  .netflix { background: #111; color: #e50914; font-size: 1.45rem; font-family: "Arial Black", Impact, sans-serif; }
+  .disney { background: linear-gradient(160deg, #1d3c9e, #0d1e5c); color: #fff; font-size: 1rem; font-family: Georgia, serif; font-style: italic; }
+  .appletv { background: #050505; color: #fff; font-size: .95rem; font-weight: 700; box-shadow: 0 0 0 1px #2c2c2c, 0 6px 12px rgba(0,0,0,.35); }
+  .paramount { background: linear-gradient(160deg, #1a7cff, #0450c2); color: #fff; font-size: 1rem; }
+  .youtube { background: #fff; }
+  .youtube i { width: 30px; height: 21px; border-radius: 6px; background: #ff0000; display: grid; place-items: center; }
+  .youtube i::after { content: ""; border-left: 8px solid #fff; border-top: 5px solid transparent; border-bottom: 5px solid transparent; margin-left: 2px; }
+
+  /* typing sheet */
+  .sheet { position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; padding: 16px 16px max(16px, env(safe-area-inset-bottom));
+           background: #171920; border-radius: 22px 22px 0 0; box-shadow: 0 -10px 40px rgba(0,0,0,.6);
+           transform: translateY(105%); transition: transform .25s cubic-bezier(.3,.7,.2,1); }
+  .sheet.open { transform: none; }
+  .sheet h2 { margin: 0 0 10px; font-size: .78rem; letter-spacing: .14em; text-transform: uppercase; color: var(--dim); font-weight: 600; }
+  .sheet form { display: flex; gap: 10px; }
+  .sheet input { flex: 1; min-width: 0; font: inherit; font-size: 16px; color: var(--ink); background: #0f1015; border: 1px solid var(--line);
+                 border-radius: 14px; padding: 0 14px; height: 52px; }
+  .sheet input:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 3px rgba(61,107,255,.25); }
+  .sheet .key { width: 52px; height: 52px; border-radius: 14px; }
+  .sheet .send { width: auto; padding: 0 18px; background: linear-gradient(180deg, #4a76ff, var(--blue-b)); font-weight: 700; }
+
+  #status { position: fixed; left: 50%; bottom: max(18px, env(safe-area-inset-bottom)); transform: translate(-50%, 20px); z-index: 6;
+            max-width: calc(100% - 32px); padding: 10px 16px; border-radius: 14px; background: #2a1518; color: #ffb3b6; font-size: .88rem;
+            box-shadow: 0 8px 24px rgba(0,0,0,.5); opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; }
+  #status.show { opacity: 1; transform: translate(-50%, 0); }
+  .foot { display: flex; justify-content: center; }
+  .foot button { background: none; color: #555a68; font-size: .75rem; letter-spacing: .04em; }
+
+  /* sign-in */
+  #gate { height: 100dvh; max-width: 360px; margin: 0 auto; padding: 0 20px; display: flex; flex-direction: column; justify-content: center; gap: 12px; }
+  #gate h1 { margin: 0; font-size: 1.7rem; letter-spacing: -.01em; }
+  #gate p { margin: 0 0 6px; color: var(--dim); font-size: .92rem; line-height: 1.45; }
+  #gate input { font: inherit; font-size: 16px; color: var(--ink); background: #14161c; border: 1px solid var(--line); border-radius: 14px; padding: 14px; }
+  #gate input:focus { outline: none; border-color: var(--blue); }
+  #gate .go { height: 52px; border-radius: 14px; font-weight: 700; background: linear-gradient(180deg, #4a76ff, var(--blue-b)); box-shadow: 0 6px 20px var(--glow); }
+  #msg { color: #ff8a80; font-size: .9rem; min-height: 1.2em; }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 </head>
 <body>
@@ -62,128 +129,157 @@
   <p>Sign in with the same email and password as your shared shopping list.</p>
   <input id="em" type="email" autocomplete="username" placeholder="Email" aria-label="Email">
   <input id="pw" type="password" autocomplete="current-password" placeholder="Password" aria-label="Password">
-  <button type="submit" id="go">Sign in</button>
-  <div id="msg" style="color:#ff8a80;font-size:.9rem;min-height:1.2em"></div>
+  <button type="submit" class="go" id="go">Sign in</button>
+  <div id="msg"></div>
 </form>
+
 <main class="remote hidden" id="app">
   <div class="top">
-    <div class="seg" role="group" aria-label="Which TV">
+    <div class="seg" role="group" aria-label="Which TV" data-on="ultra">
+      <span class="thumb"></span>
       <button data-dev="ultra" aria-pressed="true">LG TV</button>
       <button data-dev="tcl" aria-pressed="false">TCL TV</button>
     </div>
     <button class="power" data-key="Power" aria-label="Power"><svg viewBox="0 0 24 24"><path d="M12 3v8"/><path d="M6.3 7.3a8 8 0 1 0 11.4 0"/></svg></button>
   </div>
 
-  <div class="row r2">
-    <button data-key="Back" aria-label="Back"><svg viewBox="0 0 24 24"><path d="M19 12H5"/><path d="M11 6l-6 6 6 6"/></svg></button>
-    <button data-key="Home" aria-label="Home"><svg viewBox="0 0 24 24"><path d="M4 11l8-7 8 7"/><path d="M6 10v10h12V10"/></svg></button>
+  <div class="row c2">
+    <button class="key" data-key="Back" aria-label="Back"><svg viewBox="0 0 24 24"><path d="M19 12H5"/><path d="M11 6l-6 6 6 6"/></svg></button>
+    <button class="key" data-key="Home" aria-label="Home"><svg viewBox="0 0 24 24"><path d="M4 11l8-7 8 7"/><path d="M6.5 9.5V20h11V9.5"/></svg></button>
   </div>
 
-  <div class="pad">
-    <button class="u" data-key="Up" data-repeat aria-label="Up"><svg viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></svg></button>
-    <button class="l" data-key="Left" data-repeat aria-label="Left"><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
-    <button class="ok" data-key="Select">OK</button>
-    <button class="r" data-key="Right" data-repeat aria-label="Right"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
-    <button class="d" data-key="Down" data-repeat aria-label="Down"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button>
+  <div class="padwrap">
+    <div class="pad">
+      <button class="w u" data-key="Up" data-repeat aria-label="Up"><svg viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></svg></button>
+      <button class="w r" data-key="Right" data-repeat aria-label="Right"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
+      <button class="w d" data-key="Down" data-repeat aria-label="Down"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button>
+      <button class="w l" data-key="Left" data-repeat aria-label="Left"><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
+      <button class="ok" data-key="Select">OK</button>
+    </div>
   </div>
 
-  <div class="row r3e">
-    <button data-key="InstantReplay" aria-label="Replay"><svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.3-5.7"/><path d="M4 4v4h4"/></svg></button>
-    <button data-key="Search" aria-label="Search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg></button>
-    <button data-key="Info" aria-label="Options" style="font-size:1.7rem;font-weight:700">✱</button>
+  <div class="row c4">
+    <button class="key" data-key="InstantReplay" aria-label="Replay"><svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.3-5.7"/><path d="M4 4v4h4"/></svg></button>
+    <button class="key" data-key="Search" aria-label="Search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg></button>
+    <button class="key" id="kbd" aria-label="Type on the TV"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2.5"/><path d="M7 10h.01M11 10h.01M15 10h.01M17 10h.01M7 14h10"/></svg></button>
+    <button class="key" data-key="Info" aria-label="Options"><svg viewBox="0 0 24 24"><path d="M12 5v14M5.9 8.5l12.2 7M5.9 15.5l12.2-7"/></svg></button>
   </div>
 
-  <div class="row r3">
-    <button data-key="Rev" aria-label="Rewind"><svg viewBox="0 0 24 24"><path d="M11 6l-7 6 7 6z"/><path d="M20 6l-7 6 7 6z"/></svg></button>
-    <button data-key="Play" aria-label="Play or pause"><svg viewBox="0 0 24 24"><path d="M5 5l8 7-8 7z"/><path d="M16 5v14M20 5v14"/></svg></button>
-    <button data-key="Fwd" aria-label="Fast forward"><svg viewBox="0 0 24 24"><path d="M4 6l7 6-7 6z"/><path d="M13 6l7 6-7 6z"/></svg></button>
+  <div class="row c3">
+    <button class="key" data-key="Rev" data-repeat aria-label="Rewind"><svg viewBox="0 0 24 24"><path d="M11 7l-6 5 6 5z"/><path d="M19 7l-6 5 6 5z"/></svg></button>
+    <button class="key play" data-key="Play" aria-label="Play or pause"><svg viewBox="0 0 24 24"><path d="M5 6l7 6-7 6z"/><path d="M16 6v12M20 6v12"/></svg></button>
+    <button class="key" data-key="Fwd" data-repeat aria-label="Fast forward"><svg viewBox="0 0 24 24"><path d="M5 7l6 5-6 5z"/><path d="M13 7l6 5-6 5z"/></svg></button>
   </div>
 
-  <div class="row r3e">
-    <button data-key="VolumeDown" data-repeat aria-label="Volume down"><svg viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M17 12h4"/></svg></button>
-    <button data-key="VolumeMute" aria-label="Mute"><svg viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M17 9l4 6M21 9l-4 6"/></svg></button>
-    <button data-key="VolumeUp" data-repeat aria-label="Volume up"><svg viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M17 12h4M19 10v4"/></svg></button>
+  <div class="vol" role="group" aria-label="Volume">
+    <button data-key="VolumeDown" data-repeat aria-label="Volume down"><svg viewBox="0 0 24 24"><path d="M6 12h12"/></svg></button>
+    <button class="mute" data-key="VolumeMute" aria-label="Mute"><svg viewBox="0 0 24 24"><path d="M4 9.5h3.5L12 6v12l-4.5-3.5H4z"/><path d="M16 10l4 4M20 10l-4 4"/></svg></button>
+    <button data-key="VolumeUp" data-repeat aria-label="Volume up"><svg viewBox="0 0 24 24"><path d="M6 12h12M12 6v12"/></svg></button>
   </div>
-  <div class="label">Volume</div>
 
-  <div class="row r2 apps">
-    <button class="netflix" data-app="netflix">NETFLIX</button>
-    <button class="disney" data-app="disney">Disney+</button>
-    <button class="appletv" data-app="appletv">Apple TV</button>
-    <button class="paramount" data-app="paramount">Paramount+</button>
+  <div class="apps">
+    <button class="app netflix" data-app="netflix" aria-label="Netflix">N</button>
+    <button class="app youtube" data-app="youtube" aria-label="YouTube"><i></i></button>
+    <button class="app disney" data-app="disney" aria-label="Disney+">D+</button>
+    <button class="app appletv" data-app="appletv" aria-label="Apple TV">tv</button>
+    <button class="app paramount" data-app="paramount" aria-label="Paramount+">P+</button>
   </div>
-  <div class="row apps"><button class="youtube" data-app="youtube">YouTube</button></div>
 
-  <form class="type" id="typer">
-    <input id="txt" type="text" placeholder="Type into a search box" autocomplete="off" enterkeyhint="send" aria-label="Text to type on the TV">
-    <button type="submit">Send</button>
-    <button type="button" data-key="Backspace" aria-label="Delete a letter"><svg viewBox="0 0 24 24"><path d="M9 5h11v14H9l-6-7z"/><path d="M12 9l5 6M17 9l-5 6"/></svg></button>
-  </form>
-  <div id="status" role="status"></div>
   <div class="foot"><button type="button" id="out">Sign out</button></div>
 </main>
+
+<div class="sheet" id="sheet" aria-hidden="true">
+  <h2>Type on the TV</h2>
+  <form id="typer">
+    <input id="txt" type="text" placeholder="Open a search box first" autocomplete="off" enterkeyhint="send" aria-label="Text to type on the TV">
+    <button type="button" class="key" data-key="Backspace" aria-label="Delete a letter"><svg viewBox="0 0 24 24"><path d="M9 5h11v14H9l-6-7z"/><path d="M12 9l5 6M17 9l-5 6"/></svg></button>
+    <button type="submit" class="key send">Send</button>
+  </form>
+</div>
+<div id="status" role="status"></div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script>
-  let dev = 'ultra';
+  // On GitHub Pages: sign in, and each press goes to the database function remote_press, which checks it's Drew or
+  // Jill and hands it to Drew's laptop at home. Anywhere else (the laptop's own :5301 page): straight to the laptop.
+  const WEB = location.hostname.endsWith('github.io');
+  const $ = id => document.getElementById(id);
+  const sb = WEB ? window.supabase.createClient('https://igaulapupbtdcqqjobhs.supabase.co', 'sb_publishable_7yi3BNg-J-K5nralw5JSww_c71Pge6e') : null;
+  let dev = 'ultra', toastT;
   try { dev = localStorage.getItem('roku-dev') || 'ultra'; } catch (_) {}
-  const status = document.getElementById('status');
-  const say = (t, bad) => { status.textContent = t; status.classList.toggle('bad', !!bad); };
 
+  function say(t) {
+    clearTimeout(toastT);
+    $('status').textContent = t; $('status').classList.toggle('show', !!t);
+    if (t) toastT = setTimeout(() => $('status').classList.remove('show'), 4000);
+  }
   function pick(d) {
     dev = d;
     try { localStorage.setItem('roku-dev', d); } catch (_) {}
+    document.querySelector('.seg').dataset.on = d;
     document.querySelectorAll('[data-dev]').forEach(b => b.setAttribute('aria-pressed', b.dataset.dev === d));
   }
   document.querySelectorAll('[data-dev]').forEach(b => b.onclick = () => pick(b.dataset.dev));
   pick(dev);
 
-  // Each press goes to the database function remote_press, which checks you're Drew or Jill and hands it to
-  // Drew's laptop at home, which passes it to the Roku. Works from any network.
-  const sb = window.supabase.createClient('https://igaulapupbtdcqqjobhs.supabase.co', 'sb_publishable_7yi3BNg-J-K5nralw5JSww_c71Pge6e');
-  async function send(path) {
-    if (navigator.vibrate) navigator.vibrate(12);
-    const [, kind, , arg] = path.split('/');
-    const { data, error } = await sb.rpc('remote_press', { dev, kind, arg: decodeURIComponent(arg) });
-    if (error) say(/not allowed|JWT|permission/i.test(error.message) ? 'Please sign in again.' : "Couldn't send that: " + error.message, true);
-    else if (data === false) say("Drew's laptop is offline, so the TV can't hear the remote right now.", true);
-    else say('');
+  async function send(kind, arg) {
+    if (navigator.vibrate) navigator.vibrate(10);
+    if (WEB) {
+      const { data, error } = await sb.rpc('remote_press', { dev, kind, arg });
+      if (error) say(/not allowed|JWT|permission/i.test(error.message) ? 'Please sign in again.' : "Couldn't send that: " + error.message);
+      else if (data === false) say("Drew's laptop is offline, so the TV can't hear the remote right now.");
+      return;
+    }
+    try {
+      const r = await fetch(`/${kind}/${dev}/${encodeURIComponent(arg)}`, { method: 'POST' });
+      if (!r.ok) say(r.status === 502 ? "The TV didn't answer. Is it on, and on Wi-Fi?" : 'That button failed.');
+    } catch (_) { say("Can't reach the laptop. Is Tailscale on?"); }
   }
-  const show = on => { document.getElementById('gate').classList.toggle('hidden', on); document.getElementById('app').classList.toggle('hidden', !on); };
-  document.getElementById('gate').onsubmit = async e => {
-    e.preventDefault();
-    const email = document.getElementById('em').value.trim().toLowerCase(), password = document.getElementById('pw').value;
-    const btn = document.getElementById('go'); btn.disabled = true; btn.textContent = 'Signing in…';
-    const { error } = await sb.auth.signInWithPassword({ email, password });
-    btn.disabled = false; btn.textContent = 'Sign in';
-    if (error) { document.getElementById('msg').textContent = error.message; return; }
-    try { localStorage.setItem('songbook:email', email); } catch (_) {}
-    show(true);
-  };
-  document.getElementById('out').onclick = async () => { await sb.auth.signOut(); show(false); };
-  (async () => {
-    try { document.getElementById('em').value = localStorage.getItem('songbook:email') || ''; } catch (_) {}
-    const { data } = await sb.auth.getSession();
-    show(!!(data && data.session));
-  })();
 
   document.querySelectorAll('[data-key]').forEach(b => {
     const key = b.dataset.key;
-    if (!('repeat' in b.dataset)) { b.onclick = () => send(`/key/${dev}/${key}`); return; }
+    if (!('repeat' in b.dataset)) { b.addEventListener('click', () => send('key', key)); return; }
     let t1, t2;
     const stop = () => { clearTimeout(t1); clearInterval(t2); b.classList.remove('on'); };
     b.addEventListener('pointerdown', e => {
-      e.preventDefault(); b.classList.add('on'); send(`/key/${dev}/${key}`);
-      t1 = setTimeout(() => t2 = setInterval(() => send(`/key/${dev}/${key}`), 160), 450);
+      e.preventDefault(); b.classList.add('on'); send('key', key);
+      t1 = setTimeout(() => t2 = setInterval(() => send('key', key), 170), 450);
     });
     ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => b.addEventListener(ev, stop));
-    b.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') send(`/key/${dev}/${key}`); });
+    b.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') send('key', key); });
   });
-  document.querySelectorAll('[data-app]').forEach(b => b.onclick = () => send(`/launch/${dev}/${b.dataset.app}`));
-  document.getElementById('typer').onsubmit = e => {
+  document.querySelectorAll('[data-app]').forEach(b => b.onclick = () => send('launch', b.dataset.app));
+
+  const sheet = $('sheet');
+  const openSheet = on => { sheet.classList.toggle('open', on); sheet.setAttribute('aria-hidden', !on); if (on) $('txt').focus(); };
+  $('kbd').onclick = () => openSheet(!sheet.classList.contains('open'));
+  document.querySelector('.remote').addEventListener('pointerdown', e => { if (!e.target.closest('#kbd')) openSheet(false); });
+  $('typer').onsubmit = e => {
     e.preventDefault();
-    const t = document.getElementById('txt');
-    if (t.value) { send(`/type/${dev}/${encodeURIComponent(t.value)}`); t.value = ''; }
+    const v = $('txt').value;
+    if (v) { send('type', v); $('txt').value = ''; }
   };
+
+  const show = on => { $('gate').classList.toggle('hidden', on); $('app').classList.toggle('hidden', !on); };
+  if (!WEB) { show(true); $('out').parentElement.classList.add('hidden'); }
+  else {
+    $('gate').onsubmit = async e => {
+      e.preventDefault();
+      const email = $('em').value.trim().toLowerCase(), password = $('pw').value;
+      $('go').disabled = true; $('go').textContent = 'Signing in…';
+      const { error } = await sb.auth.signInWithPassword({ email, password });
+      $('go').disabled = false; $('go').textContent = 'Sign in';
+      if (error) { $('msg').textContent = error.message; return; }
+      try { localStorage.setItem('songbook:email', email); } catch (_) {}
+      show(true);
+    };
+    $('out').onclick = async () => { await sb.auth.signOut(); show(false); };
+    (async () => {
+      try { $('em').value = localStorage.getItem('songbook:email') || ''; } catch (_) {}
+      const { data } = await sb.auth.getSession();
+      show(!!(data && data.session));
+    })();
+  }
 </script>
 </body>
 </html>
