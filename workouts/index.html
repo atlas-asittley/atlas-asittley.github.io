@@ -248,9 +248,27 @@
     });
   }
 
-  // ---------- rest timer ----------
+  // ---------- rest / hold timer — WALL-CLOCK BACKED ----------
+  // Drew, 2026-11-09: "if it looked at what time it currently was, and then anytime I went back to the
+  // page, it could calculate if that timer was up or not." That is exactly the fix. We persist the START
+  // INSTANT (Date.now()) in localStorage and recompute the remaining time from it on every repaint and on
+  // every page load. The interval is now only a repaint — never the source of truth — so closing the
+  // browser, locking the phone, or a backgrounded tab throttling setInterval can no longer lose the timer
+  // or let it drift slow. Nothing is sent to the server: the phone's own clock is the shared reference.
+  var TIMER_KEY = 'workout.timer.v1';
   var restInt = null;
-  window.stopRest = function () { if (restInt) clearInterval(restInt); restInt = null; document.getElementById('rest-bar').style.display = 'none'; };
+
+  function saveTimer(st) { try { localStorage.setItem(TIMER_KEY, JSON.stringify(st)); } catch (e) {} }
+  function loadTimer() { try { return JSON.parse(localStorage.getItem(TIMER_KEY) || 'null'); } catch (e) { return null; } }
+  function clearTimer() { try { localStorage.removeItem(TIMER_KEY); } catch (e) {} }
+
+  window.stopRest = function () {
+    if (restInt) clearInterval(restInt);
+    restInt = null;
+    clearTimer();
+    document.getElementById('rest-bar').style.display = 'none';
+  };
+
   function beep() {
     try {
       var ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -261,39 +279,80 @@
     } catch (e) {}
     if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
   }
+
+  // One repaint computed from the stored start instant. `live` = this tick is happening while he is
+  // actually looking at the page, so crossing the threshold should sound. On a RESTORE after the page was
+  // closed or backgrounded we must not beep retroactively — but we do mark it as beeped, so the next live
+  // tick does not fire a stale alarm either. Returns true when a REST timer has finished.
+  function paintTimer(st, live) {
+    var bar = document.getElementById('rest-bar'),
+        txt = document.getElementById('rest-txt'),
+        lbl = document.getElementById('rest-lbl');
+    if (!bar || !txt) return false;
+    bar.style.display = 'block';
+    var el = Math.floor((Date.now() - st.start) / 1000);
+    if (el < 0) el = 0;
+    if (st.kind === 'hold') {
+      if (lbl) lbl.textContent = 'hold — aim ' + st.dur + 's+';
+      txt.textContent = el + 's';
+      var hit = el >= st.dur;
+      bar.className = hit ? 'done' : '';
+      if (hit && !st.beeped) { st.beeped = true; saveTimer(st); if (live) beep(); }
+      return false;             // a hold counts up forever; he decides when to stop
+    }
+    if (lbl) lbl.textContent = 'rest timer';
+    var left = st.dur - el;
+    if (left <= 0) {
+      txt.textContent = 'Go! 💪';
+      bar.className = 'done';
+      if (!st.beeped) { st.beeped = true; saveTimer(st); if (live) beep(); }
+      return true;
+    }
+    bar.className = '';
+    var m = Math.floor(left / 60), s = left % 60;
+    txt.textContent = m + ':' + String(s).padStart(2, '0');
+    return false;
+  }
+
+  function runTimer(st, live) {
+    if (restInt) clearInterval(restInt);
+    restInt = null;
+    if (paintTimer(st, live) && st.kind === 'rest') return;
+    // 250 ms, so a late or throttled tick still lands on the right second — the number comes from the
+    // clock difference, not from counting ticks.
+    restInt = setInterval(function () {
+      var cur = loadTimer();
+      if (!cur) { clearInterval(restInt); restInt = null; return; }
+      if (paintTimer(cur, true) && cur.kind === 'rest') { clearInterval(restInt); restInt = null; }
+    }, 250);
+  }
+
   function startRest(seconds) {
     if (!seconds || seconds < 1) seconds = 90;
-    if (restInt) clearInterval(restInt);
-    var bar = document.getElementById('rest-bar'), txt = document.getElementById('rest-txt'), lbl = document.getElementById('rest-lbl');
-    bar.className = ''; bar.style.display = 'block';
-    if (lbl) lbl.textContent = 'rest timer';
-    var left = seconds;
-    function paint() {
-      var m = Math.floor(left / 60), s = left % 60;
-      txt.textContent = m + ':' + String(s).padStart(2, '0');
-    }
-    paint();
-    restInt = setInterval(function () {
-      left--;
-      if (left <= 0) { clearInterval(restInt); restInt = null; txt.textContent = 'Go! 💪'; bar.className = 'done'; beep(); return; }
-      paint();
-    }, 1000);
+    var st = { kind: 'rest', start: Date.now(), dur: seconds, beeped: false };
+    saveTimer(st);
+    runTimer(st, true);
   }
+
   // hold timer for stretches — counts UP, goes green + beeps at the target, keep holding as long as you like
   function startHold(targetSec) {
     if (!targetSec || targetSec < 1) targetSec = 30;
-    if (restInt) clearInterval(restInt);
-    var bar = document.getElementById('rest-bar'), txt = document.getElementById('rest-txt'), lbl = document.getElementById('rest-lbl');
-    bar.className = ''; bar.style.display = 'block';
-    if (lbl) lbl.textContent = 'hold — aim ' + targetSec + 's+';
-    var el = 0, beeped = false;
-    txt.textContent = '0s';
-    restInt = setInterval(function () {
-      el++;
-      txt.textContent = el + 's';
-      if (el >= targetSec && !beeped) { beeped = true; bar.className = 'done'; beep(); }
-    }, 1000);
+    var st = { kind: 'hold', start: Date.now(), dur: targetSec, beeped: false };
+    saveTimer(st);
+    runTimer(st, true);
   }
+
+  // Re-attach to a timer that was already running when the page was closed, reloaded or backgrounded.
+  // STALE GUARD: anything older than 2 hours is a timer he walked away from, not one he wants back — drop
+  // it rather than greet him next session with a stranded "Go! 💪".
+  function restoreTimer() {
+    var st = loadTimer();
+    if (!st || !st.start || !st.dur) return;
+    if (Date.now() - st.start > 2 * 60 * 60 * 1000) { clearTimer(); return; }
+    runTimer(st, false);
+  }
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) restoreTimer(); });
+  restoreTimer();
 
   // ---------- load ----------
   async function load() {
