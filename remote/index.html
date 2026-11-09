@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Remote</title>
+<link rel="manifest" href="/remote/manifest.webmanifest">
+<link rel="icon" sizes="192x192" href="/remote/icon-192.png">
+<meta name="theme-color" content="#0d0d10">
+<meta name="robots" content="noindex">
+<style>
+  :root { --ground: #0d0d10; --body: #17171b; --key: #26262c; --key-hi: #34343c; --ink: #f2f2f5; --dim: #8a8a96;
+          --pad: #2f5fe3; --pad-hi: #4a78ff; --power: #e0353b; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; background: var(--ground); color: var(--ink);
+               font-family: system-ui, -apple-system, "Segoe UI", sans-serif; user-select: none; }
+  .remote { max-width: 380px; margin: 0 auto; padding: 14px 16px 28px; display: flex; flex-direction: column; gap: 16px; }
+  button { font: inherit; color: var(--ink); background: var(--key); border: 0; border-radius: 16px; cursor: pointer;
+           min-height: 56px; touch-action: manipulation; transition: transform .06s, background .06s; }
+  button:active, button.on { transform: scale(.94); background: var(--key-hi); }
+  button:focus-visible { outline: 2px solid var(--pad-hi); outline-offset: 2px; }
+  svg { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; vertical-align: middle; }
+  .row { display: grid; gap: 12px; }
+  .r2 { grid-template-columns: 1fr 1fr; } .r3 { grid-template-columns: 1fr 1.4fr 1fr; } .r3e { grid-template-columns: 1fr 1fr 1fr; }
+  .top { display: flex; gap: 12px; align-items: center; }
+  .seg { flex: 1; display: grid; grid-template-columns: 1fr 1fr; background: var(--body); border-radius: 14px; padding: 4px; }
+  .seg button { min-height: 44px; background: none; border-radius: 10px; font-size: .9rem; color: var(--dim); }
+  .seg button[aria-pressed="true"] { background: var(--key-hi); color: var(--ink); font-weight: 600; }
+  .power { width: 56px; flex: none; border-radius: 50%; color: var(--power); }
+  .pad { position: relative; width: 100%; aspect-ratio: 1; max-width: 300px; margin: 6px auto; }
+  .pad button { position: absolute; background: var(--pad); color: #fff; }
+  .pad button:active, .pad button.on { background: var(--pad-hi); }
+  .pad .u, .pad .d { left: 33%; width: 34%; height: 36%; } .pad .u { top: 0; border-radius: 22px 22px 8px 8px; }
+  .pad .d { bottom: 0; border-radius: 8px 8px 22px 22px; }
+  .pad .l, .pad .r { top: 33%; height: 34%; width: 36%; } .pad .l { left: 0; border-radius: 22px 8px 8px 22px; }
+  .pad .r { right: 0; border-radius: 8px 22px 22px 8px; }
+  .pad .ok { left: 33%; top: 33%; width: 34%; height: 34%; border-radius: 50%; background: #2550c8; font-weight: 700; letter-spacing: .06em; }
+  .apps button { font-weight: 800; font-size: 1rem; letter-spacing: .02em; min-height: 52px; }
+  .netflix { background: #f3f3f3 !important; color: #e50914 !important; }
+  .disney { background: #143b8f !important; } .appletv { background: #1f1f23 !important; border: 1px solid #3a3a42 !important; }
+  .paramount { background: #0a64e8 !important; font-style: italic; } .youtube { background: #ff0000 !important; }
+  .label { font-size: .72rem; color: var(--dim); text-align: center; margin-top: -8px; letter-spacing: .08em; text-transform: uppercase; }
+  .type { display: flex; gap: 10px; }
+  .type input { flex: 1; min-width: 0; font: inherit; font-size: 16px; color: var(--ink); background: var(--body); border: 1px solid var(--key-hi);
+                border-radius: 14px; padding: 0 14px; min-height: 52px; }
+  .type button { padding: 0 16px; min-height: 52px; }
+  #status { min-height: 1.3em; text-align: center; font-size: .85rem; color: var(--dim); }
+  #status.bad { color: #ff8a80; }
+  #gate { max-width: 340px; margin: 48px auto 0; padding: 0 16px; display: flex; flex-direction: column; gap: 10px; }
+  #gate h1 { margin: 0 0 6px; font-size: 1.5rem; } #gate p { margin: 0 0 8px; color: var(--dim); font-size: .9rem; }
+  #gate input { font: inherit; font-size: 16px; color: var(--ink); background: var(--body); border: 1px solid var(--key-hi);
+                border-radius: 12px; padding: 12px 14px; }
+  #gate button { background: var(--pad); font-weight: 700; margin-top: 6px; }
+  .hidden { display: none !important; }
+  .foot { text-align: center; font-size: .8rem; } .foot button { background: none; min-height: 0; color: var(--dim); text-decoration: underline; }
+  @media (prefers-reduced-motion: reduce) { button { transition: none; } button:active { transform: none; } }
+</style>
+</head>
+<body>
+<form id="gate" class="hidden">
+  <h1>TV Remote</h1>
+  <p>Sign in with the same email and password as your shared shopping list.</p>
+  <input id="em" type="email" autocomplete="username" placeholder="Email" aria-label="Email">
+  <input id="pw" type="password" autocomplete="current-password" placeholder="Password" aria-label="Password">
+  <button type="submit" id="go">Sign in</button>
+  <div id="msg" style="color:#ff8a80;font-size:.9rem;min-height:1.2em"></div>
+</form>
+<main class="remote hidden" id="app">
+  <div class="top">
+    <div class="seg" role="group" aria-label="Which TV">
+      <button data-dev="ultra" aria-pressed="true">LG TV</button>
+      <button data-dev="tcl" aria-pressed="false">TCL TV</button>
+    </div>
+    <button class="power" data-key="Power" aria-label="Power"><svg viewBox="0 0 24 24"><path d="M12 3v8"/><path d="M6.3 7.3a8 8 0 1 0 11.4 0"/></svg></button>
+  </div>
+
+  <div class="row r2">
+    <button data-key="Back" aria-label="Back"><svg viewBox="0 0 24 24"><path d="M19 12H5"/><path d="M11 6l-6 6 6 6"/></svg></button>
+    <button data-key="Home" aria-label="Home"><svg viewBox="0 0 24 24"><path d="M4 11l8-7 8 7"/><path d="M6 10v10h12V10"/></svg></button>
+  </div>
+
+  <div class="pad">
+    <button class="u" data-key="Up" data-repeat aria-label="Up"><svg viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></svg></button>
+    <button class="l" data-key="Left" data-repeat aria-label="Left"><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
+    <button class="ok" data-key="Select">OK</button>
+    <button class="r" data-key="Right" data-repeat aria-label="Right"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
+    <button class="d" data-key="Down" data-repeat aria-label="Down"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button>
+  </div>
+
+  <div class="row r3e">
+    <button data-key="InstantReplay" aria-label="Replay"><svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.3-5.7"/><path d="M4 4v4h4"/></svg></button>
+    <button data-key="Search" aria-label="Search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg></button>
+    <button data-key="Info" aria-label="Options" style="font-size:1.7rem;font-weight:700">✱</button>
+  </div>
+
+  <div class="row r3">
+    <button data-key="Rev" aria-label="Rewind"><svg viewBox="0 0 24 24"><path d="M11 6l-7 6 7 6z"/><path d="M20 6l-7 6 7 6z"/></svg></button>
+    <button data-key="Play" aria-label="Play or pause"><svg viewBox="0 0 24 24"><path d="M5 5l8 7-8 7z"/><path d="M16 5v14M20 5v14"/></svg></button>
+    <button data-key="Fwd" aria-label="Fast forward"><svg viewBox="0 0 24 24"><path d="M4 6l7 6-7 6z"/><path d="M13 6l7 6-7 6z"/></svg></button>
+  </div>
+
+  <div class="row r3e">
+    <button data-key="VolumeDown" data-repeat aria-label="Volume down"><svg viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M17 12h4"/></svg></button>
+    <button data-key="VolumeMute" aria-label="Mute"><svg viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M17 9l4 6M21 9l-4 6"/></svg></button>
+    <button data-key="VolumeUp" data-repeat aria-label="Volume up"><svg viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M17 12h4M19 10v4"/></svg></button>
+  </div>
+  <div class="label">Volume</div>
+
+  <div class="row r2 apps">
+    <button class="netflix" data-app="netflix">NETFLIX</button>
+    <button class="disney" data-app="disney">Disney+</button>
+    <button class="appletv" data-app="appletv">Apple TV</button>
+    <button class="paramount" data-app="paramount">Paramount+</button>
+  </div>
+  <div class="row apps"><button class="youtube" data-app="youtube">YouTube</button></div>
+
+  <form class="type" id="typer">
+    <input id="txt" type="text" placeholder="Type into a search box" autocomplete="off" enterkeyhint="send" aria-label="Text to type on the TV">
+    <button type="submit">Send</button>
+    <button type="button" data-key="Backspace" aria-label="Delete a letter"><svg viewBox="0 0 24 24"><path d="M9 5h11v14H9l-6-7z"/><path d="M12 9l5 6M17 9l-5 6"/></svg></button>
+  </form>
+  <div id="status" role="status"></div>
+  <div class="foot"><button type="button" id="out">Sign out</button></div>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script>
+  let dev = 'ultra';
+  try { dev = localStorage.getItem('roku-dev') || 'ultra'; } catch (_) {}
+  const status = document.getElementById('status');
+  const say = (t, bad) => { status.textContent = t; status.classList.toggle('bad', !!bad); };
+
+  function pick(d) {
+    dev = d;
+    try { localStorage.setItem('roku-dev', d); } catch (_) {}
+    document.querySelectorAll('[data-dev]').forEach(b => b.setAttribute('aria-pressed', b.dataset.dev === d));
+  }
+  document.querySelectorAll('[data-dev]').forEach(b => b.onclick = () => pick(b.dataset.dev));
+  pick(dev);
+
+  // Each press goes to the database function remote_press, which checks you're Drew or Jill and hands it to
+  // Drew's laptop at home, which passes it to the Roku. Works from any network.
+  const sb = window.supabase.createClient('https://igaulapupbtdcqqjobhs.supabase.co', 'sb_publishable_7yi3BNg-J-K5nralw5JSww_c71Pge6e');
+  async function send(path) {
+    if (navigator.vibrate) navigator.vibrate(12);
+    const [, kind, , arg] = path.split('/');
+    const { data, error } = await sb.rpc('remote_press', { dev, kind, arg: decodeURIComponent(arg) });
+    if (error) say(/not allowed|JWT|permission/i.test(error.message) ? 'Please sign in again.' : "Couldn't send that: " + error.message, true);
+    else if (data === false) say("Drew's laptop is offline, so the TV can't hear the remote right now.", true);
+    else say('');
+  }
+  const show = on => { document.getElementById('gate').classList.toggle('hidden', on); document.getElementById('app').classList.toggle('hidden', !on); };
+  document.getElementById('gate').onsubmit = async e => {
+    e.preventDefault();
+    const email = document.getElementById('em').value.trim().toLowerCase(), password = document.getElementById('pw').value;
+    const btn = document.getElementById('go'); btn.disabled = true; btn.textContent = 'Signing in…';
+    const { error } = await sb.auth.signInWithPassword({ email, password });
+    btn.disabled = false; btn.textContent = 'Sign in';
+    if (error) { document.getElementById('msg').textContent = error.message; return; }
+    try { localStorage.setItem('songbook:email', email); } catch (_) {}
+    show(true);
+  };
+  document.getElementById('out').onclick = async () => { await sb.auth.signOut(); show(false); };
+  (async () => {
+    try { document.getElementById('em').value = localStorage.getItem('songbook:email') || ''; } catch (_) {}
+    const { data } = await sb.auth.getSession();
+    show(!!(data && data.session));
+  })();
+
+  document.querySelectorAll('[data-key]').forEach(b => {
+    const key = b.dataset.key;
+    if (!('repeat' in b.dataset)) { b.onclick = () => send(`/key/${dev}/${key}`); return; }
+    let t1, t2;
+    const stop = () => { clearTimeout(t1); clearInterval(t2); b.classList.remove('on'); };
+    b.addEventListener('pointerdown', e => {
+      e.preventDefault(); b.classList.add('on'); send(`/key/${dev}/${key}`);
+      t1 = setTimeout(() => t2 = setInterval(() => send(`/key/${dev}/${key}`), 160), 450);
+    });
+    ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => b.addEventListener(ev, stop));
+    b.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') send(`/key/${dev}/${key}`); });
+  });
+  document.querySelectorAll('[data-app]').forEach(b => b.onclick = () => send(`/launch/${dev}/${b.dataset.app}`));
+  document.getElementById('typer').onsubmit = e => {
+    e.preventDefault();
+    const t = document.getElementById('txt');
+    if (t.value) { send(`/type/${dev}/${encodeURIComponent(t.value)}`); t.value = ''; }
+  };
+</script>
+</body>
+</html>
