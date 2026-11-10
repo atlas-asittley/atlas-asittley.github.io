@@ -294,7 +294,11 @@
   $('tvx').onclick = $('toroku').onclick = () => { send('lg', 'roku'); panel(false); };
   document.querySelectorAll('[data-lg]').forEach(b => b.onclick = () => send('lg', b.dataset.lg));
 
-  const tp = $('tp'), pts = new Map(), SPEED = 2.2, EVERY = WEB ? 60 : 30;
+  // ?speed=N and ?every=MS override the trackpad's pointer scale and send interval (11-09: after the LG's firmware update the
+  // pointer only covered a patch of the screen; these let Drew try other values on the TV without a redeploy).
+  const qs = new URLSearchParams(location.search);
+  // Drew 11-10 (playing on the TV): "too sensitive, hard to select anything": lower gain, and slow finger = precise, fast flick = far.
+  const tp = $('tp'), pts = new Map(), SPEED = +qs.get('speed') || 1.3, EVERY = +qs.get('every') || (WEB ? 60 : 30);
   let acc = { x: 0, y: 0, s: 0 }, start = null, travel = 0;
   tp.addEventListener('pointerdown', e => {
     tp.setPointerCapture(e.pointerId); pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
@@ -303,7 +307,8 @@
   tp.addEventListener('pointermove', e => {
     const p = pts.get(e.pointerId); if (!p) return;
     const dx = e.clientX - p.x, dy = e.clientY - p.y; p.x = e.clientX; p.y = e.clientY; travel += Math.abs(dx) + Math.abs(dy);
-    if (pts.size >= 2) acc.s += dy / pts.size; else { acc.x += dx * SPEED; acc.y += dy * SPEED; }
+    const gain = SPEED * Math.min(1.8, .45 + Math.hypot(dx, dy) / 22);                    // acceleration: creeping = fine control, flicking = across the screen
+    if (pts.size >= 2) acc.s += dy / pts.size; else { acc.x += dx * gain; acc.y += dy * gain; }
   });
   const lift = e => {
     if (!pts.delete(e.pointerId)) return;
