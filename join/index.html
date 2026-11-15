@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bo's Backyard: ask to join</title>
+<meta name="robots" content="noindex">
+<style>
+  :root { --bg:#16301a; --card:#fbf3df; --ink:#3a2a1a; --soft:#7a6248; --red:#c0392b; --gold:#f2c14e; --green:#2f7d3a; }
+  * { box-sizing: border-box; }
+  html, body { margin:0; min-height:100%; background: radial-gradient(circle at 50% 30%, #24502a, var(--bg)); color: var(--ink);
+    font-family: "Trebuchet MS", system-ui, sans-serif; }
+  body { display:flex; align-items:center; justify-content:center; padding:24px 16px; min-height:100vh; }
+  .card { width:100%; max-width:420px; background:var(--card); border-radius:22px; padding:26px 22px 22px;
+    box-shadow: 0 10px 0 #0b1a0c, 0 18px 40px rgba(0,0,0,.4); border:4px solid #8a5a2b; }
+  .flag { display:inline-block; background:var(--red); color:#fff; font-weight:700; letter-spacing:.12em; font-size:12px;
+    padding:5px 12px; border-radius:999px; transform:rotate(-2deg); }
+  h1 { margin:12px 0 4px; font-size:30px; color:#fff7e6; text-shadow: 0 2px 0 #8a5a2b, 0 4px 0 var(--red);
+    -webkit-text-stroke: 1px #8a5a2b; transform:rotate(-1.5deg); }
+  p { line-height:1.45; margin:10px 0; }
+  .steps { background:#fff; border-radius:14px; padding:12px 14px; margin:14px 0; font-size:15px; }
+  .steps ol { margin:0; padding-left:20px; } .steps li { margin:4px 0; }
+  label { display:block; font-weight:700; margin:14px 0 6px; }
+  label small { font-weight:400; color:var(--soft); }
+  input { width:100%; font-size:17px; padding:12px 14px; border-radius:12px; border:2px solid #c9b38f; background:#fff; color:var(--ink); }
+  input:focus { outline:none; border-color:var(--green); }
+  button { width:100%; margin-top:18px; font-size:18px; font-weight:700; padding:14px; border:none; border-radius:14px;
+    background:var(--gold); color:#3a2a1a; box-shadow:0 5px 0 #b0852a; cursor:pointer; }
+  button:active { transform:translateY(3px); box-shadow:0 2px 0 #b0852a; }
+  button:disabled { opacity:.6; }
+  .msg { margin-top:14px; font-weight:700; min-height:1.4em; }
+  .ok { color:var(--green); } .bad { color:var(--red); }
+  .done { display:none; text-align:center; } .done .big { font-size:46px; }
+  .foot { margin-top:16px; font-size:13px; color:var(--soft); text-align:center; }
+</style>
+</head>
+<body>
+<main class="card">
+  <div id="ask">
+    <span class="flag">BO'S FARM FAIR</span>
+    <h1>Bo's Backyard</h1>
+    <p>The fair is invite-only. Leave your email and Drew gets a ping to let you in.</p>
+    <div class="steps"><ol>
+      <li>Ask here.</li>
+      <li>When Drew lets you in, you get an email.</li>
+      <li>Go to <b>drewplays.com</b>, type the same email, and enter the 6-digit code it sends you.</li>
+    </ol></div>
+    <form id="f" novalidate>
+      <label for="email">Your email</label>
+      <input id="email" type="email" autocomplete="email" inputmode="email" required maxlength="120" placeholder="you@example.com">
+      <label for="name">Your name <small>(so Drew knows who it is)</small></label>
+      <input id="name" type="text" autocomplete="name" maxlength="60" placeholder="optional">
+      <button id="go" type="submit">Ask to join</button>
+      <div id="msg" class="msg" role="status"></div>
+    </form>
+  </div>
+  <div id="done" class="done">
+    <div class="big">🎟️</div>
+    <h1>You're in line!</h1>
+    <p>Drew has been pinged. Watch your inbox (and spam) for the "you're on the guest list" email, then head to <b>drewplays.com</b>.</p>
+  </div>
+  <div class="foot">Your email is only used to let you into the game.</div>
+</main>
+<script>
+const URL_ = 'https://igaulapupbtdcqqjobhs.supabase.co/rest/v1/drewplays_join_requests';
+const KEY = 'sb_publishable_7yi3BNg-J-K5nralw5JSww_c71Pge6e';   // public by design (see Supabase notes); the table only accepts new requests
+const $ = id => document.getElementById(id);
+$('f').addEventListener('submit', async e => {
+  e.preventDefault();
+  const email = $('email').value.trim().toLowerCase(), name = $('name').value.trim();
+  const msg = $('msg'); msg.className = 'msg';
+  if (!/^[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,}$/i.test(email)) { msg.textContent = 'That email doesn\'t look right.'; msg.classList.add('bad'); return; }
+  $('go').disabled = true; msg.textContent = 'Sending…';
+  try {
+    const r = await fetch(URL_, { method: 'POST', headers: { apikey: KEY, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+      body: JSON.stringify(name ? { email, name } : { email }) });
+    if (r.ok) { $('ask').style.display = 'none'; $('done').style.display = 'block'; return; }
+    const t = await r.text();
+    msg.textContent = /already asked/.test(t) ? 'You already asked today; Drew has your request.' :
+                      /busy|too many/.test(t) ? 'Lots of requests right now; please try again later.' : 'Something went wrong; please try again.';
+    msg.classList.add('bad');
+  } catch (_) { msg.textContent = 'No connection; please try again.'; msg.classList.add('bad'); }
+  $('go').disabled = false;
+});
+</script>
+</body>
+</html>
