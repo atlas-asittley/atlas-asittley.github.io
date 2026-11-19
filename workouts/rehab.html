@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Rehab</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #1a1a2e; --card: #16213e; --border: #0f3460;
+    --green: #16c79a; --red: #e94560; --text: #eee; --dim: #8a97b1;
+  }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: 'Courier New', monospace;
+    padding: 16px 14px 120px; max-width: 640px; margin: 0 auto;
+    -webkit-text-size-adjust: 100%;
+  }
+  header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 6px; }
+  h1 { font-size: 24px; color: var(--green); }
+  .back { color: var(--dim); text-decoration: none; font-size: 13px; }
+  nav { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+  nav a { flex: 1; min-width: 72px; text-align: center; padding: 9px; border: 1px solid var(--border); border-radius: 8px; text-decoration: none; color: var(--dim); font-size: 13px; }
+  nav a.active { background: var(--card); color: var(--green); border-color: var(--green); }
+
+  .rules { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 13px 14px; margin-bottom: 18px; }
+  .rules h2 { font-size: 13px; color: var(--green); margin-bottom: 9px; letter-spacing: .5px; }
+  .rules ul { list-style: none; }
+  .rules li { font-size: 13px; color: var(--dim); line-height: 1.6; padding-left: 15px; position: relative; }
+  .rules li:before { content: "›"; position: absolute; left: 0; color: var(--green); }
+  .rules li b { color: var(--text); }
+
+  #progress { font-size: 13px; color: var(--dim); margin-bottom: 12px; }
+  #progress b { color: var(--green); }
+
+  .item { background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+          padding: 13px 14px; margin-bottom: 10px; display: flex; gap: 12px; align-items: flex-start;
+          cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  .item.done { border-color: var(--green); background: rgba(22,199,154,.09); }
+  .box { flex: 0 0 24px; height: 24px; border: 2px solid var(--border); border-radius: 6px;
+         display: flex; align-items: center; justify-content: center; font-size: 15px; color: var(--green); margin-top: 1px; }
+  .item.done .box { border-color: var(--green); }
+  .body { flex: 1; min-width: 0; }
+  .name { font-size: 15px; color: var(--text); line-height: 1.35; }
+  .item.done .name { color: var(--green); }
+  .cue { font-size: 12px; color: var(--dim); margin-top: 5px; line-height: 1.5; }
+  .reps { font-size: 11px; color: var(--dim); margin-top: 4px; }
+
+  .note { font-size: 12px; color: var(--dim); line-height: 1.6; margin-top: 20px;
+          border-top: 1px solid var(--border); padding-top: 14px; }
+  .note b { color: var(--text); }
+  #msg { font-size: 13px; color: var(--red); margin-bottom: 12px; min-height: 16px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🧭 Rehab</h1>
+  <a class="back" href="https://atlas-asittley.github.io/">← Atlas</a>
+</header>
+<nav>
+  <a href="./">Workout</a>
+  <a href="./diet.html">Diet</a>
+  <a href="./history.html">History</a>
+  <a href="./checkin.html">Check-in</a>
+  <a class="active" href="./rehab.html">Rehab</a>
+</nav>
+
+<div class="rules">
+  <h2>HOW, NOT HOW MANY</h2>
+  <ul>
+    <li><b>Slowest speed you can.</b> This is not a set.</li>
+    <li><b>Smallest range that does NOT provoke.</b> Back off before it bites.</li>
+    <li><b>Breathe out through it.</b></li>
+    <li><b>Do not brace.</b> That is the whole point — go in relaxed.</li>
+    <li><b>Add range weekly</b> — never load, never speed.</li>
+  </ul>
+</div>
+
+<div id="msg"></div>
+<div id="progress"></div>
+<div id="list"></div>
+
+<div class="note">
+  <b>Why these six:</b> they are the movements you actually avoid or brace through, taken from
+  your own function check-ins plus the lower-back bend you reported on 2026-11-19. The idea is
+  to practise the real movements relaxed, rather than do a separate exercise list.
+  <br><br>
+  <b>Not approved yet</b> — this is the draft for you to call item by item, and it has not replaced
+  anything in the daily block.
+</div>
+
+<script>
+(function () {
+  var SUPABASE_URL = 'https://igaulapupbtdcqqjobhs.supabase.co';
+  var SUPABASE_ANON_KEY = 'sb_publishable_7yi3BNg-J-K5nralw5JSww_c71Pge6e';
+  var msg = document.getElementById('msg');
+  var listEl = document.getElementById('list');
+  var progEl = document.getElementById('progress');
+
+  if (!window.supabase || typeof window.supabase.createClient !== 'function') {
+    msg.textContent = 'Could not load Supabase.';
+    return;
+  }
+  var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY,
+    { auth: { persistSession: false, autoRefreshToken: false } });
+
+  function today() {
+    var d = new Date();
+    return d.getFullYear() + '-' +
+      String(d.getMonth() + 1).padStart(2, '0') + '-' +
+      String(d.getDate()).padStart(2, '0');
+  }
+  var TODAY = today();
+  var items = [];
+  var doneSet = {};
+  var busy = {};
+
+  function render() {
+    listEl.innerHTML = '';
+    var n = 0;
+    items.forEach(function (it) {
+      var isDone = !!doneSet[it.exercise];
+      if (isDone) n++;
+      var div = document.createElement('div');
+      div.className = 'item' + (isDone ? ' done' : '');
+      var box = document.createElement('div');
+      box.className = 'box';
+      box.textContent = isDone ? '✓' : '';
+      var body = document.createElement('div');
+      body.className = 'body';
+      var name = document.createElement('div');
+      name.className = 'name';
+      name.textContent = it.exercise;
+      body.appendChild(name);
+      if (it.cue) {
+        var cue = document.createElement('div');
+        cue.className = 'cue';
+        cue.textContent = it.cue;
+        body.appendChild(cue);
+      }
+      if (it.target_reps) {
+        var reps = document.createElement('div');
+        reps.className = 'reps';
+        reps.textContent = it.target_reps;
+        body.appendChild(reps);
+      }
+      div.appendChild(box);
+      div.appendChild(body);
+      div.addEventListener('click', function () { toggle(it.exercise); });
+      listEl.appendChild(div);
+    });
+    progEl.innerHTML = '<b>' + n + '</b> of ' + items.length + ' done today';
+  }
+
+  function toggle(exercise) {
+    if (busy[exercise]) return;
+    busy[exercise] = true;
+    var wasDone = !!doneSet[exercise];
+    doneSet[exercise] = !wasDone;
+    render();
+    msg.textContent = '';
+    var p = wasDone
+      ? sb.from('workout_hip_routine_log').delete()
+          .eq('log_date', TODAY).eq('exercise', exercise).eq('unit', 'exposure')
+      : sb.from('workout_hip_routine_log')
+          .insert({ log_date: TODAY, exercise: exercise, sets: 1, unit: 'exposure' });
+    p.then(function (res) {
+      busy[exercise] = false;
+      if (res && res.error) {
+        doneSet[exercise] = wasDone;
+        msg.textContent = 'Did not save: ' + res.error.message;
+        render();
+      }
+    });
+  }
+
+  Promise.all([
+    sb.from('workout_program').select('exercise,sort,cue,target_reps')
+      .eq('block', 'exposure').order('sort'),
+    sb.from('workout_hip_routine_log').select('exercise')
+      .eq('log_date', TODAY).eq('unit', 'exposure')
+  ]).then(function (r) {
+    if (r[0].error) { msg.textContent = 'Could not load the routine: ' + r[0].error.message; return; }
+    items = r[0].data || [];
+    if (!r[1].error) (r[1].data || []).forEach(function (row) { doneSet[row.exercise] = true; });
+    if (!items.length) { msg.textContent = 'No exposure items are set up yet.'; return; }
+    render();
+  });
+})();
+</script>
+</body>
+</html>

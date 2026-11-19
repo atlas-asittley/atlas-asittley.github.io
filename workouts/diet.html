@@ -18,8 +18,8 @@
   h1 { font-size:24px; color:var(--green); }
   .back { color:var(--dim); text-decoration:none; font-size:13px; }
   .back:hover { color:var(--green); }
-  nav { display:flex; gap:8px; margin-bottom:18px; }
-  nav a { flex:1; text-align:center; padding:9px; border:1px solid var(--border); border-radius:8px; text-decoration:none; color:var(--dim); font-size:13px; }
+  nav { display:flex; gap:8px; margin-bottom:18px; flex-wrap: wrap; }
+  nav a { min-width: 72px; flex:1; text-align:center; padding:9px; border:1px solid var(--border); border-radius:8px; text-decoration:none; color:var(--dim); font-size:13px; }
   nav a.active { background:var(--card); color:var(--green); border-color:var(--green); }
 
   .card { background:var(--card); border:1px solid var(--border); border-radius:10px; padding:14px; margin-bottom:14px; }
@@ -70,6 +70,7 @@
   <a class="active" href="./diet.html">Diet</a>
   <a href="./history.html">History</a>
   <a href="./checkin.html">Check-in</a>
+  <a href="./rehab.html">Rehab</a>
 </nav>
 
 <div class="card">
