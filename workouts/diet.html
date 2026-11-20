@@ -81,7 +81,7 @@
 <div class="card">
   <h2>Daily Targets — <span style="color:var(--red)">CUT</span> (started 2026-09-14)</h2>
   <p><b><span id="pro-target" class="dim">…</span> protein</b> · <b><span id="cal-target" class="dim">…</span> calories</b> <span class="dim">(live from <code>workout_settings</code>)</span></p>
-  <p class="dim" style="margin-top:6px"><b>The cut:</b> ~500 under, <b>protein UP to 200g</b> to hold the muscle, <b>lifting unchanged</b>. Target <b>−0.5 to −1.0 lb/week</b> on the weekly average — the scale steers, the calorie number gets adjusted weekly. 8–10 weeks → ~Nov 15. Started on the visual trigger (abs faded relaxed) with the waist at 38.5″.</p>
+  <p class="dim" style="margin-top:6px"><b>The cut:</b> ~300 under measured maintenance, <b>protein 200g</b> to hold the muscle, <b>lifting unchanged</b>. Target <b>−0.4 to −0.7 lb/week</b> on the weekly average — the scale steers, the calorie number gets adjusted. Runs to <b>2027-01-10</b>, then maintenance to the trip. Started on the visual trigger (abs faded relaxed) with the waist at 38.5″. <b>Target lowered 2026-11-19</b> — a 4-week regression showed only 0.14 lb/wk of loss, so measured maintenance is well below what the old number assumed.</p>
   <p class="dim" style="margin-top:6px">The lever is <span class="green">calorie-dense food</span>, not volume. Let the scale creep up slowly — a little fat is fine. <b>Don't judge by the daily scale</b> (it can't tell muscle-gain-with-fat-loss from a stall): judge by <span class="green">strength + monthly photos + tape</span> (waist / shoulders / arms) on the History page. Weigh as a weekly average for the trend only.</p>
 </div>
 
@@ -231,10 +231,10 @@
   var CAL_T, PRO_T, CAL_MIN, CAL_MAX, PRO_MIN, PRO_MAX;
   var SETTINGS_OK = false;
   var SETTINGS_KEYS = ['cal_target', 'protein_target', 'cal_min', 'cal_max', 'protein_min', 'protein_max'];
-  function setTarget(id, text, ok) {
+  function setTarget(id, html, ok) {
     var n = document.getElementById(id);
     if (!n) return;
-    n.textContent = text;
+    n.innerHTML = html;
     n.className = ok ? '' : 'dim';
   }
   async function loadSettings() {
@@ -258,8 +258,9 @@
       CAL_MIN = got.cal_min;    CAL_MAX = got.cal_max;
       PRO_MIN = got.protein_min; PRO_MAX = got.protein_max;
       SETTINGS_OK = true;
-      setTarget('cal-target', CAL_MIN.toLocaleString() + '–' + CAL_MAX.toLocaleString(), true);
-      setTarget('pro-target', PRO_MIN + '–' + PRO_MAX + 'g', true);
+      setTarget('cal-target', CAL_T.toLocaleString()
+        + ' <span class="dim">(ok ' + CAL_MIN.toLocaleString() + '–' + CAL_MAX.toLocaleString() + ')</span>', true);
+      setTarget('pro-target', PRO_T + 'g <span class="dim">(ok ' + PRO_MIN + '–' + PRO_MAX + 'g)</span>', true);
     } catch (e) {
       SETTINGS_OK = false;
       setTarget('cal-target', 'settings unavailable', false);
@@ -345,8 +346,9 @@
       // still worth showing, so print those and say plainly why the comparison is missing
       // rather than rendering a zone bar against numbers we do not have.
       if (SETTINGS_OK) {
-        h += '<tr class="target"><td>Target</td><td class="n">' + CAL_MIN + '–' + CAL_MAX + '</td><td class="n">' + PRO_MIN + '–' + PRO_MAX + 'g</td></tr>';
-        h += '<tr class="left"><td>To target</td><td class="n">' + (tc >= CAL_MIN ? '—' : Math.round(CAL_MIN - tc)) + '</td><td class="n">' + (tp >= PRO_MIN ? '—' : Math.round(PRO_MIN - tp) + 'g') + '</td></tr>';
+        h += '<tr class="target"><td>Target</td><td class="n">' + CAL_T.toLocaleString() + '</td><td class="n">' + PRO_T + 'g</td></tr>';
+        h += '<tr class="target"><td>OK range</td><td class="n">' + CAL_MIN.toLocaleString() + '–' + CAL_MAX.toLocaleString() + '</td><td class="n">' + PRO_MIN + '–' + PRO_MAX + 'g</td></tr>';
+        h += '<tr class="left"><td>To target</td><td class="n">' + (tc >= CAL_T ? '—' : Math.round(CAL_T - tc)) + '</td><td class="n">' + (tp >= PRO_T ? '—' : Math.round(PRO_T - tp) + 'g') + '</td></tr>';
       }
       h += '</table>';
       if (SETTINGS_OK) {
