@@ -69,6 +69,11 @@
   <div class="foot">Your email is only used to let you into the game.</div>
 </main>
 <script>
+/* 11-21: the TV's QR lands here with ?go=<game link + TV pass>; the 'Already invited' buttons carry it (drewplays.com only). */
+try { const g = new URLSearchParams(location.search).get('go');
+  if (g && /^https:\/\/(test\.)?drewplays\.com\//.test(g)) addEventListener('DOMContentLoaded', () => document.querySelectorAll('a.invited').forEach(a => a.href = g)); } catch (_) {}
+</script>
+<script>
 const URL_ = 'https://igaulapupbtdcqqjobhs.supabase.co/rest/v1/drewplays_join_requests';
 const KEY = 'sb_publishable_7yi3BNg-J-K5nralw5JSww_c71Pge6e';   // public by design (see Supabase notes); the table only accepts new requests
 const $ = id => document.getElementById(id);
