@@ -52,11 +52,11 @@
       <p>Start here on your phone: typing is easier.</p>
       <h2>First time?</h2>
       <ol class="steps"><li class="now">On your phone: ask to join</li><li>Wait for Drew to let you in (you'll get an email)</li>
-        <li><span>On the screen's web browser, go to <b>drewplays.com</b> and sign in with the same email</span></li><li>Scan the code on the screen with your phone's camera. You're in!</li></ol>
+        <li><span>On the screen's web browser, go to <b>drewplays.com</b>, tap <b>This is the screen</b> and sign in with the same email</span></li><li>Scan the code on the screen with your phone's camera. You're in!</li></ol>
       <button class="ask" type="button">Ask to join</button>
       <h2>Already let in?</h2>
-      <p><b>On the screen:</b> open its web browser and go to <b>drewplays.com</b>. Sign in, and the game comes up with a code in the corner.</p>
-      <a class="big screen" href="https://drewplays.com/">This is the screen: open the game</a>
+      <p><b>On the screen:</b> open its web browser, go to <b>drewplays.com</b> and tap the button below. Sign in, and the game comes up with a code in the corner.</p>
+      <a class="big screen" data-screen href="https://drewplays.com/screen">This is the screen: open the game</a>
       <p><b>On your phone:</b> point your camera at the code on the screen and tap the link. That makes this phone your controller.</p>
     </div>
     <div id="scanned" hidden>
@@ -85,7 +85,7 @@
   <section id="wait" hidden>
     <h1>Step 2: wait for Drew</h1>
     <ol class="steps"><li class="done">You asked</li><li class="now">Drew lets you in (you get an email)</li><li>Sign in on the screen</li><li>Scan the screen's code with this phone</li></ol>
-    <p>When the "you're in" email arrives, go to your <b>screen</b> (a TV, projector or laptop), open its web browser, go to <b class="host">drewplays.com</b> and sign in with <b id="mine">the same email</b>.</p>
+    <p>When the "you're in" email arrives, go to your <b>screen</b> (a TV, projector or laptop), open its web browser, go to <b class="host">drewplays.com</b>, tap <b>This is the screen</b> and sign in with <b id="mine">the same email</b>.</p>
     <p>The game comes up with a code in the corner. Scan it with this phone's camera and sign in once more on the phone. This phone is then your controller.</p>
     <a class="big go" id="waitgo" data-game href="https://drewplays.com/" hidden>I got the email: play</a>
     <div class="tip"><b>Signing in:</b> Gmail address? Tap <b>Google</b>. Otherwise type your email and enter the code it sends you.
@@ -105,19 +105,21 @@ const load = () => { try { const d = JSON.parse(localStorage.getItem('bo.join') 
 let mem = load();
 const save = o => { mem = Object.assign({}, mem, o); try { localStorage.setItem('bo.join', JSON.stringify(mem)); } catch (_) {} };
 function show(id) { for (const s of ['start', 'ask', 'wait']) $(s).hidden = s !== id; scrollTo(0, 0); }
-function links() {                                             // the scanned screen's own link (with its pass) if we have one from today
-  const g = mem.go && Date.now() - (mem.goAt || 0) < DAY ? mem.go : '';
-  document.querySelectorAll('[data-game]').forEach(a => a.href = g || GAME + '/');
-  $('waitgo').hidden = !g;            // no screen scanned yet: drewplays.com would make this phone a screen
+function links() {
+  const t = mem.tag && Date.now() - (mem.tagAt || 0) < DAY ? mem.tag : '';
+  document.querySelectorAll('[data-game]').forEach(a => a.href = t ? GAME + '/realm-pad?s=' + encodeURIComponent(t) : GAME + '/me');
+  $('waitgo').hidden = !t;
 }
-function readGo() {                                             // ?go=<drewplays.com link + this screen's pass>, from the code on the screen
-  let g = ''; try { g = new URLSearchParams(location.search).get('go') || ''; } catch (_) {}
-  if (!/^https:\/\/(test\.)?drewplays\.com\//.test(g)) g = '';
-  if (g) save({ go: g, goAt: Date.now() });
-  $('scanned').hidden = !g; $('portal').hidden = !!g;            // came from a screen's code = this is a phone; typed the address = the welcome page
+function readTag() {                                            // #s=<which screen>, from the code on the screen
+  const t = new URLSearchParams(location.hash.slice(1)).get('s') || '';
+  if (/^[A-Za-z0-9_-]{6,64}$/.test(t)) save({ tag: t, tagAt: Date.now() });
+  $('scanned').hidden = !t; $('portal').hidden = !!t;            // came from a screen's code = this is a phone; typed the address = the portal
   links();
 }
-readGo();
+addEventListener('hashchange', readTag); readTag();
+document.querySelectorAll('.scr').forEach(b => b.textContent = GAME.split('://')[1] + '/screen');
+document.querySelectorAll('.host').forEach(b => b.textContent = GAME.split('://')[1]);
+document.querySelectorAll('[data-screen]').forEach(a => a.href = GAME + '/screen');
 function waiting(email) { $('mine').textContent = email || 'the same email'; show('wait'); }
 if (mem.askedAt && Date.now() - mem.askedAt < DAY) waiting(mem.email);          // came back (or scanned again) while waiting
 document.querySelectorAll('button.ask').forEach(b => b.onclick = () => { show('ask'); $('email').focus(); });
