@@ -18,6 +18,8 @@
   .flag { display:inline-block; background:var(--red); color:#fff; font-weight:700; letter-spacing:.1em; font-size:13px; padding:5px 12px; border-radius:999px; }
   h1 { margin:12px 0 4px; font-size:27px; line-height:1.15; }
   p { line-height:1.45; margin:10px 0; font-size:17px; }
+  h2 { margin:20px 0 2px; font-size:20px; }
+  a.big.screen { background:#2c5a8a; color:#fff; box-shadow:0 5px 0 #173452; }
   .steps { list-style:none; margin:14px 0; padding:0; counter-reset:s; }
   .steps li { counter-increment:s; display:flex; gap:12px; align-items:center; padding:7px 0; font-size:17px; color:var(--soft); }
   .steps li::before { content:counter(s); flex:none; width:32px; height:32px; line-height:32px; text-align:center; border-radius:50%; background:#e6d7b5; color:var(--ink); font-weight:700; }
@@ -42,16 +44,28 @@
   <span class="flag">BO'S BACKYARD</span>
 
   <section id="start">
-    <h1>Make this phone your controller</h1>
-    <ol class="steps"><li class="now">Enter your email</li><li>Wait for Drew to let you in</li><li>Sign in with a code or Google</li><li>Your phone is the controller</li></ol>
-    <button id="new" type="button">New here: ask to join</button>
-    <a class="big go" data-game href="https://drewplays.com/">Already invited: continue</a>
-    <div class="foot">Setting up the shared screen instead? Type <b id="scr">drewplays.com/screen</b> in its browser.</div>
+    <div id="portal">
+      <h1>Welcome! Let's get you playing</h1>
+      <p>You need your <b>phone</b> (it's your controller) and a <b>screen</b> (a TV, projector or laptop). Start on your phone: typing is easier there.</p>
+      <h2>First time?</h2>
+      <ol class="steps"><li class="now">On your phone: ask to join</li><li>Wait for Drew to let you in (you'll get an email)</li>
+        <li><span>On the screen's web browser, go to <b class="scr">drewplays.com/screen</b> and sign in with the same email</span></li><li>Scan the code on the screen with your phone. You're in!</li></ol>
+      <button class="ask" type="button">Ask to join</button>
+      <h2>Already let in?</h2>
+      <a class="big go" data-game href="https://drewplays.com/">This is my phone: play</a>
+      <a class="big screen" data-screen href="https://drewplays.com/screen">This is the screen: set it up</a>
+    </div>
+    <div id="scanned" hidden>
+      <h1>Make this phone your controller</h1>
+      <ol class="steps"><li class="now">Enter your email</li><li>Wait for Drew to let you in</li><li>Sign in with a code or Google</li><li>Your phone is the controller</li></ol>
+      <button class="ask" type="button">New here: ask to join</button>
+      <a class="big go" data-game href="https://drewplays.com/">Already let in: play</a>
+    </div>
   </section>
 
   <section id="ask" hidden>
     <h1>Step 1: your email</h1>
-    <p>Drew gets a message and lets you in.</p>
+    <p>Drew gets a message and lets you in. Use the email you'll sign in with (a Gmail address lets you sign in with Google).</p>
     <form id="f" novalidate>
       <label for="email">Your email</label>
       <input id="email" type="email" autocomplete="email" inputmode="email" autocapitalize="off" required maxlength="120" placeholder="you@example.com">
@@ -67,7 +81,7 @@
   <section id="wait" hidden>
     <h1>Step 2: wait for Drew</h1>
     <ol class="steps"><li class="done">You asked</li><li class="now">Drew lets you in</li><li>Sign in with a code or Google</li><li>Your phone is the controller</li></ol>
-    <p>Keep this page open. When Drew says you're in, or the email arrives, tap:</p>
+    <p>Keep this page open. When Drew says you're in, or the email arrives, tap below. Then set up the screen: on its web browser go to <b class="scr">drewplays.com/screen</b>.</p>
     <a class="big go" data-game href="https://drewplays.com/">Drew let me in</a>
     <div class="tip"><b>Next, sign in with the same email:</b> <span id="mine"></span><br>
       Gmail address? Tap <b>Google</b>. Otherwise type it and enter the code it sends you.<br>
@@ -94,13 +108,15 @@ function links() {
 function readTag() {                                            // #s=<which screen>, from the code on the screen
   const t = new URLSearchParams(location.hash.slice(1)).get('s') || '';
   if (/^[A-Za-z0-9_-]{6,64}$/.test(t)) save({ tag: t, tagAt: Date.now() });
+  $('scanned').hidden = !t; $('portal').hidden = !!t;            // came from a screen's code = this is a phone; typed the address = the portal
   links();
 }
 addEventListener('hashchange', readTag); readTag();
-$('scr').textContent = GAME.split('://')[1] + '/screen';
+document.querySelectorAll('.scr').forEach(b => b.textContent = GAME.split('://')[1] + '/screen');
+document.querySelectorAll('[data-screen]').forEach(a => a.href = GAME + '/screen');
 function waiting(email) { $('mine').textContent = email || ''; show('wait'); }
 if (mem.askedAt && Date.now() - mem.askedAt < DAY) waiting(mem.email);          // came back (or scanned again) while waiting
-$('new').onclick = () => { show('ask'); $('email').focus(); };
+document.querySelectorAll('button.ask').forEach(b => b.onclick = () => { show('ask'); $('email').focus(); });
 document.querySelectorAll('[data-back]').forEach(b => b.onclick = () => { save({ askedAt: 0 }); show('start'); });
 document.querySelectorAll('[data-game]').forEach(a => a.addEventListener('click', links));
 $('f').addEventListener('submit', async e => {
