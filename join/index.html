@@ -84,12 +84,11 @@
 
   <section id="wait" hidden>
     <h1>Step 2: wait for Drew</h1>
-    <ol class="steps"><li class="done">You asked</li><li class="now">Drew lets you in</li><li>Sign in with a code or Google</li><li>Your phone is the controller</li></ol>
-    <p>Drew will let you in soon, and you'll get an email. Meanwhile, set up the screen: open <b>drewplays.com</b> in its web browser and sign in with the same email.</p>
-    <a class="big go" id="waitgo" data-game href="https://drewplays.com/">I got the email: sign in</a>
-    <p id="waitscan"><b>Once you're in:</b> scan the code on the screen with your phone's camera and sign in.</p>
-    <div class="tip"><b>Next, sign in with the same email:</b> <span id="mine"></span><br>
-      Gmail address? Tap <b>Google</b>. Otherwise type it and enter the code it sends you.<br>
+    <ol class="steps"><li class="done">You asked</li><li class="now">Drew lets you in (you get an email)</li><li>Sign in on the screen</li><li>Scan the screen's code with this phone</li></ol>
+    <p>When the "you're in" email arrives, go to your <b>screen</b> (a TV, projector or laptop), open its web browser, go to <b class="host">drewplays.com</b> and sign in with <b id="mine">the same email</b>.</p>
+    <p>The game comes up with a code in the corner. Scan it with this phone's camera and sign in once more on the phone. This phone is then your controller.</p>
+    <a class="big go" id="waitgo" data-game href="https://drewplays.com/" hidden>I got the email: play</a>
+    <div class="tip"><b>Signing in:</b> Gmail address? Tap <b>Google</b>. Otherwise type your email and enter the code it sends you.
       Codes only go to emails Drew has let in. No code? Check spam, and that it's the same email.</div>
     <button class="link" type="button" data-back>Use a different email</button>
   </section>
@@ -109,7 +108,7 @@ function show(id) { for (const s of ['start', 'ask', 'wait']) $(s).hidden = s !=
 function links() {                                             // the scanned screen's own link (with its pass) if we have one from today
   const g = mem.go && Date.now() - (mem.goAt || 0) < DAY ? mem.go : '';
   document.querySelectorAll('[data-game]').forEach(a => a.href = g || GAME + '/');
-  $('waitgo').hidden = !g; $('waitscan').hidden = !!g;            // no screen scanned yet: drewplays.com would make this phone a screen
+  $('waitgo').hidden = !g;            // no screen scanned yet: drewplays.com would make this phone a screen
 }
 function readGo() {                                             // ?go=<drewplays.com link + this screen's pass>, from the code on the screen
   let g = ''; try { g = new URLSearchParams(location.search).get('go') || ''; } catch (_) {}
@@ -119,7 +118,7 @@ function readGo() {                                             // ?go=<drewplay
   links();
 }
 readGo();
-function waiting(email) { $('mine').textContent = email || ''; show('wait'); }
+function waiting(email) { $('mine').textContent = email || 'the same email'; show('wait'); }
 if (mem.askedAt && Date.now() - mem.askedAt < DAY) waiting(mem.email);          // came back (or scanned again) while waiting
 document.querySelectorAll('button.ask').forEach(b => b.onclick = () => { show('ask'); $('email').focus(); });
 document.querySelectorAll('[data-back]').forEach(b => b.onclick = () => { save({ askedAt: 0 }); show('start'); });

@@ -80,11 +80,11 @@
 
   <section id="wait" hidden>
     <h1>Step 2: wait for Drew</h1>
-    <ol class="steps"><li class="done">You asked</li><li class="now">Drew lets you in</li><li>Sign in with a code or Google</li><li>Your phone is the controller</li></ol>
-    <p>Keep this page open. When the "you're in" email arrives, tap the button below. Then set up the screen: on its web browser go to <b class="scr">drewplays.com/screen</b>.</p>
-    <a class="big go" data-game href="https://drewplays.com/">I got the email: sign in</a>
-    <div class="tip"><b>Next, sign in with the same email:</b> <span id="mine"></span><br>
-      Gmail address? Tap <b>Google</b>. Otherwise type it and enter the code it sends you.<br>
+    <ol class="steps"><li class="done">You asked</li><li class="now">Drew lets you in (you get an email)</li><li>Sign in on the screen</li><li>Scan the screen's code with this phone</li></ol>
+    <p>When the "you're in" email arrives, go to your <b>screen</b> (a TV, projector or laptop), open its web browser, go to <b class="host">drewplays.com</b> and sign in with <b id="mine">the same email</b>.</p>
+    <p>The game comes up with a code in the corner. Scan it with this phone's camera and sign in once more on the phone. This phone is then your controller.</p>
+    <a class="big go" id="waitgo" data-game href="https://drewplays.com/" hidden>I got the email: play</a>
+    <div class="tip"><b>Signing in:</b> Gmail address? Tap <b>Google</b>. Otherwise type your email and enter the code it sends you.
       Codes only go to emails Drew has let in. No code? Check spam, and that it's the same email.</div>
     <button class="link" type="button" data-back>Use a different email</button>
   </section>
@@ -104,6 +104,7 @@ function show(id) { for (const s of ['start', 'ask', 'wait']) $(s).hidden = s !=
 function links() {
   const t = mem.tag && Date.now() - (mem.tagAt || 0) < DAY ? mem.tag : '';
   document.querySelectorAll('[data-game]').forEach(a => a.href = t ? GAME + '/realm-pad?s=' + encodeURIComponent(t) : GAME + '/');
+  $('waitgo').hidden = !t;
 }
 function readTag() {                                            // #s=<which screen>, from the code on the screen
   const t = new URLSearchParams(location.hash.slice(1)).get('s') || '';
@@ -113,8 +114,9 @@ function readTag() {                                            // #s=<which scr
 }
 addEventListener('hashchange', readTag); readTag();
 document.querySelectorAll('.scr').forEach(b => b.textContent = GAME.split('://')[1] + '/screen');
+document.querySelectorAll('.host').forEach(b => b.textContent = GAME.split('://')[1]);
 document.querySelectorAll('[data-screen]').forEach(a => a.href = GAME + '/screen');
-function waiting(email) { $('mine').textContent = email || ''; show('wait'); }
+function waiting(email) { $('mine').textContent = email || 'the same email'; show('wait'); }
 if (mem.askedAt && Date.now() - mem.askedAt < DAY) waiting(mem.email);          // came back (or scanned again) while waiting
 document.querySelectorAll('button.ask').forEach(b => b.onclick = () => { show('ask'); $('email').focus(); });
 document.querySelectorAll('[data-back]').forEach(b => b.onclick = () => { save({ askedAt: 0 }); show('start'); });
