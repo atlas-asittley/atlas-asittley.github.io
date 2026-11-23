@@ -3,95 +3,139 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Bo's Backyard: ask to join</title>
+<title>Bo's Backyard: join with your phone</title>
 <meta name="robots" content="noindex">
+<meta name="referrer" content="no-referrer">
+<!-- The ask page (atlas-asittley.github.io/join, what join.drewplays.com opens). 11-22 rewrite (Drew): the code on a screen lands
+     here and ONLY ever leads to connecting a phone, four steps in order. The screen's tag arrives after the '#', so it is never
+     sent to this page's server; it is not a secret and does nothing without a signed-in, invited email. -->
 <style>
-  :root { --bg:#16301a; --card:#fbf3df; --ink:#3a2a1a; --soft:#7a6248; --red:#c0392b; --gold:#f2c14e; --green:#2f7d3a; }
+  :root { --bg:#16301a; --card:#fbf3df; --ink:#3a2a1a; --soft:#6d5740; --red:#c0392b; --gold:#f2c14e; --green:#2f7d3a; }
   * { box-sizing: border-box; }
-  html, body { margin:0; min-height:100%; background: radial-gradient(circle at 50% 30%, #24502a, var(--bg)); color: var(--ink);
-    font-family: "Trebuchet MS", system-ui, sans-serif; }
-  body { display:flex; align-items:center; justify-content:center; padding:24px 16px; min-height:100vh; }
-  .card { width:100%; max-width:420px; background:var(--card); border-radius:22px; padding:26px 22px 22px;
-    box-shadow: 0 10px 0 #0b1a0c, 0 18px 40px rgba(0,0,0,.4); border:4px solid #8a5a2b; }
-  .flag { display:inline-block; background:var(--red); color:#fff; font-weight:700; letter-spacing:.12em; font-size:12px;
-    padding:5px 12px; border-radius:999px; transform:rotate(-2deg); }
-  h1 { margin:12px 0 4px; font-size:30px; color:#fff7e6; text-shadow: 0 2px 0 #8a5a2b, 0 4px 0 var(--red);
-    -webkit-text-stroke: 1px #8a5a2b; transform:rotate(-1.5deg); }
-  p { line-height:1.45; margin:10px 0; }
-  .steps { background:#fff; border-radius:14px; padding:12px 14px; margin:14px 0; font-size:15px; }
-  .steps ol { margin:0; padding-left:20px; } .steps li { margin:4px 0; }
-  label { display:block; font-weight:700; margin:14px 0 6px; }
-  label small { font-weight:400; color:var(--soft); }
-  input { width:100%; font-size:17px; padding:12px 14px; border-radius:12px; border:2px solid #c9b38f; background:#fff; color:var(--ink); }
-  input:focus { outline:none; border-color:var(--green); }
-  button { width:100%; margin-top:18px; font-size:18px; font-weight:700; padding:14px; border:none; border-radius:14px;
-    background:var(--gold); color:#3a2a1a; box-shadow:0 5px 0 #b0852a; cursor:pointer; }
-  button:active { transform:translateY(3px); box-shadow:0 2px 0 #b0852a; }
-  button:disabled { opacity:.6; }
-  .msg { margin-top:14px; font-weight:700; min-height:1.4em; }
-  .ok { color:var(--green); } .bad { color:var(--red); }
-  .done { display:none; text-align:center; } .done .big { font-size:46px; }
-  .invited { display:block; text-align:center; text-decoration:none; font-size:18px; font-weight:700; padding:14px; border-radius:14px;
-    background:var(--green); color:#fff; box-shadow:0 5px 0 rgba(0,0,0,.25); margin:6px 0 18px; }
-  .invited:active { transform:translateY(3px); box-shadow:0 2px 0 rgba(0,0,0,.25); }
-  .or { text-align:center; color:var(--soft); font-size:14px; margin:4px 0 0; }
-  .foot { margin-top:16px; font-size:13px; color:var(--soft); text-align:center; }
+  html, body { margin:0; min-height:100%; background:var(--bg); color:var(--ink); font-family:"Trebuchet MS", system-ui, sans-serif; }
+  body { display:flex; align-items:center; justify-content:center; padding:20px 16px; min-height:100vh; min-height:100dvh; }
+  .card { width:100%; max-width:420px; background:var(--card); border-radius:22px; padding:22px 20px; box-shadow:0 10px 0 #0b1a0c; border:4px solid #8a5a2b; }
+  .flag { display:inline-block; background:var(--red); color:#fff; font-weight:700; letter-spacing:.1em; font-size:13px; padding:5px 12px; border-radius:999px; }
+  h1 { margin:12px 0 4px; font-size:27px; line-height:1.15; }
+  p { line-height:1.45; margin:10px 0; font-size:17px; }
+  h2 { margin:20px 0 2px; font-size:20px; }
+  a.big.screen { background:#2c5a8a; color:#fff; box-shadow:0 5px 0 #173452; }
+  .steps { list-style:none; margin:14px 0; padding:0; counter-reset:s; }
+  .steps li { counter-increment:s; display:flex; gap:12px; align-items:center; padding:7px 0; font-size:17px; color:var(--soft); }
+  .steps li::before { content:counter(s); flex:none; width:32px; height:32px; line-height:32px; text-align:center; border-radius:50%; background:#e6d7b5; color:var(--ink); font-weight:700; }
+  .steps li.now { color:var(--ink); font-weight:700; } .steps li.now::before { background:var(--gold); }
+  .steps li.done::before { content:"✓"; background:var(--green); color:#fff; }
+  label { display:block; font-weight:700; margin:14px 0 6px; font-size:17px; } label small { font-weight:400; color:var(--soft); }
+  input { width:100%; font:inherit; font-size:18px; padding:13px 14px; border-radius:12px; border:2px solid #b79d74; background:#fff; color:var(--ink); }
+  input:focus { outline:3px solid var(--gold); border-color:var(--green); }
+  button, a.big { display:block; width:100%; margin-top:14px; font:inherit; font-size:19px; font-weight:700; text-align:center; text-decoration:none; padding:16px 12px;
+    border:none; border-radius:14px; background:var(--gold); color:#3a2a1a; box-shadow:0 5px 0 #b0852a; cursor:pointer; }
+  a.big.go { background:var(--green); color:#fff; box-shadow:0 5px 0 #1b4d24; }
+  button:active, a.big:active { transform:translateY(3px); box-shadow:none; } button:disabled { opacity:.6; }
+  button.link { background:none; box-shadow:none; color:var(--soft); text-decoration:underline; font-size:16px; font-weight:400; padding:10px; margin-top:8px; }
+  .tip { background:#fff; border-radius:14px; padding:12px 14px; margin:16px 0 0; font-size:16px; line-height:1.45; } .tip b { color:var(--ink); }
+  .msg { margin-top:12px; font-weight:700; min-height:1.4em; color:var(--red); font-size:16px; }
+  .foot { margin-top:16px; font-size:14px; color:var(--soft); text-align:center; }
+  [hidden] { display:none !important; }
 </style>
 </head>
 <body>
 <main class="card">
-  <div id="ask">
-    <span class="flag">BO'S FARM FAIR</span>
-    <h1>Bo's Backyard</h1>
-    <a class="invited" href="https://drewplays.com/">Already invited? Go to the game →</a>
-    <p class="or">New here? Ask to join below.</p>
-    <p>The fair is invite-only. Leave your email and Drew gets a ping to let you in.</p>
-    <div class="steps"><ol>
-      <li>Ask here.</li>
-      <li>When Drew lets you in, you get an email.</li>
-      <li>Go to <b>drewplays.com</b>, type the same email, and enter the 6-digit code it sends you.</li>
-    </ol></div>
+  <span class="flag">BO'S BACKYARD</span>
+
+  <section id="start">
+    <div id="portal">
+      <h1>Welcome! Let's get you playing</h1>
+      <p>You play with two things:</p>
+      <div class="tip"><b>A screen</b> to watch: a TV, a projector or a laptop, anything with a web browser. Everyone shares it.<br>
+      <b>Your phone</b> is your controller. Each player uses their own.</div>
+      <p>Start here on your phone: typing is easier.</p>
+      <h2>First time?</h2>
+      <ol class="steps"><li class="now">On your phone: ask to join</li><li>Wait for Drew to let you in (you'll get an email)</li>
+        <li><span>On the screen's web browser, go to <b>drewplays.com</b> and sign in with the same email</span></li><li>Scan the code on the screen with your phone's camera. You're in!</li></ol>
+      <button class="ask" type="button">Ask to join</button>
+      <h2>Already let in?</h2>
+      <p><b>On the screen:</b> open its web browser and go to <b>drewplays.com</b>. Sign in, and the game comes up with a code in the corner.</p>
+      <a class="big screen" href="https://drewplays.com/">This is the screen: open the game</a>
+      <p><b>On your phone:</b> point your camera at the code on the screen and tap the link. That makes this phone your controller.</p>
+    </div>
+    <div id="scanned" hidden>
+      <h1>Make this phone your controller</h1>
+      <ol class="steps"><li class="now">Enter your email</li><li>Wait for Drew to let you in</li><li>Sign in with a code or Google</li><li>Your phone is the controller</li></ol>
+      <button class="ask" type="button">New here: ask to join</button>
+      <a class="big go" data-game href="https://drewplays.com/">Already let in: play</a>
+    </div>
+  </section>
+
+  <section id="ask" hidden>
+    <h1>Step 1: your email</h1>
+    <p>Drew gets a message and lets you in. Use the email you'll sign in with (a Gmail address lets you sign in with Google).</p>
     <form id="f" novalidate>
       <label for="email">Your email</label>
-      <input id="email" type="email" autocomplete="email" inputmode="email" required maxlength="120" placeholder="you@example.com">
+      <input id="email" type="email" autocomplete="email" inputmode="email" autocapitalize="off" required maxlength="120" placeholder="you@example.com">
       <label for="name">Your name <small>(so Drew knows who it is)</small></label>
-      <input id="name" type="text" autocomplete="name" maxlength="60" placeholder="optional">
+      <input id="name" type="text" autocomplete="name" maxlength="60">
       <button id="go" type="submit">Ask to join</button>
       <div id="msg" class="msg" role="status"></div>
     </form>
-  </div>
-  <div id="done" class="done">
-    <div class="big">🎟️</div>
-    <h1>You're in line!</h1>
-    <p>Drew has been pinged. Watch your inbox (and spam) for the "you're on the guest list" email, then head to <b>drewplays.com</b>.</p>
-    <a class="invited" href="https://drewplays.com/">Go to the game →</a>
-  </div>
-  <div class="foot">Your email is only used to let you into the game.</div>
+    <div class="foot">Your email is only used to let you into the game.</div>
+    <button class="link" type="button" data-back>Back</button>
+  </section>
+
+  <section id="wait" hidden>
+    <h1>Step 2: wait for Drew</h1>
+    <ol class="steps"><li class="done">You asked</li><li class="now">Drew lets you in</li><li>Sign in with a code or Google</li><li>Your phone is the controller</li></ol>
+    <p>Drew will let you in soon, and you'll get an email. Meanwhile, set up the screen: open <b>drewplays.com</b> in its web browser and sign in with the same email.</p>
+    <a class="big go" id="waitgo" data-game href="https://drewplays.com/">Drew let me in</a>
+    <p id="waitscan"><b>Once you're in:</b> scan the code on the screen with your phone's camera and sign in.</p>
+    <div class="tip"><b>Next, sign in with the same email:</b> <span id="mine"></span><br>
+      Gmail address? Tap <b>Google</b>. Otherwise type it and enter the code it sends you.<br>
+      Codes only go to emails Drew has let in. No code? Check spam, and that it's the same email.</div>
+    <button class="link" type="button" data-back>Use a different email</button>
+  </section>
 </main>
-<script>
-/* 11-21: the TV's QR lands here with ?go=<game link + TV pass>; the 'Already invited' buttons carry it (drewplays.com only). */
-try { const g = new URLSearchParams(location.search).get('go');
-  if (g && /^https:\/\/(test\.)?drewplays\.com\//.test(g)) addEventListener('DOMContentLoaded', () => document.querySelectorAll('a.invited').forEach(a => a.href = g)); } catch (_) {}
-</script>
 <script>
 const URL_ = 'https://igaulapupbtdcqqjobhs.supabase.co/rest/v1/drewplays_join_requests';
 const KEY = 'sb_publishable_7yi3BNg-J-K5nralw5JSww_c71Pge6e';   // public by design (see Supabase notes); the table only accepts new requests
-const $ = id => document.getElementById(id);
+const TEST = location.hostname === 'test.drewplays.com' || location.pathname.startsWith('/join-test');   // 11-22: the test copy's public ask page
+const GAME = TEST ? 'https://test.drewplays.com' : 'https://drewplays.com';
+if (TEST) document.querySelector('.flag').textContent = "BO'S BACKYARD — TEST";
+const $ = id => document.getElementById(id), DAY = 86400000;
+/* What this phone remembers between visits: which screen it scanned and which email asked. Never needed to work. */
+const load = () => { try { const d = JSON.parse(localStorage.getItem('bo.join') || '{}'); return d && typeof d === 'object' ? d : {}; } catch (_) { return {}; } };
+let mem = load();
+const save = o => { mem = Object.assign({}, mem, o); try { localStorage.setItem('bo.join', JSON.stringify(mem)); } catch (_) {} };
+function show(id) { for (const s of ['start', 'ask', 'wait']) $(s).hidden = s !== id; scrollTo(0, 0); }
+function links() {                                             // the scanned screen's own link (with its pass) if we have one from today
+  const g = mem.go && Date.now() - (mem.goAt || 0) < DAY ? mem.go : '';
+  document.querySelectorAll('[data-game]').forEach(a => a.href = g || GAME + '/');
+  $('waitgo').hidden = !g; $('waitscan').hidden = !!g;            // no screen scanned yet: drewplays.com would make this phone a screen
+}
+function readGo() {                                             // ?go=<drewplays.com link + this screen's pass>, from the code on the screen
+  let g = ''; try { g = new URLSearchParams(location.search).get('go') || ''; } catch (_) {}
+  if (!/^https:\/\/(test\.)?drewplays\.com\//.test(g)) g = '';
+  if (g) save({ go: g, goAt: Date.now() });
+  $('scanned').hidden = !g; $('portal').hidden = !!g;            // came from a screen's code = this is a phone; typed the address = the welcome page
+  links();
+}
+readGo();
+function waiting(email) { $('mine').textContent = email || ''; show('wait'); }
+if (mem.askedAt && Date.now() - mem.askedAt < DAY) waiting(mem.email);          // came back (or scanned again) while waiting
+document.querySelectorAll('button.ask').forEach(b => b.onclick = () => { show('ask'); $('email').focus(); });
+document.querySelectorAll('[data-back]').forEach(b => b.onclick = () => { save({ askedAt: 0 }); show('start'); });
+document.querySelectorAll('[data-game]').forEach(a => a.addEventListener('click', links));
 $('f').addEventListener('submit', async e => {
   e.preventDefault();
-  const email = $('email').value.trim().toLowerCase(), name = $('name').value.trim();
-  const msg = $('msg'); msg.className = 'msg';
-  if (!/^[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,}$/i.test(email)) { msg.textContent = 'That email doesn\'t look right.'; msg.classList.add('bad'); return; }
+  const email = $('email').value.trim().toLowerCase(), name = $('name').value.trim(), msg = $('msg');
+  if (!/^[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,}$/i.test(email)) { msg.textContent = 'That email doesn\'t look right.'; return; }
   $('go').disabled = true; msg.textContent = 'Sending…';
   try {
     const r = await fetch(URL_, { method: 'POST', headers: { apikey: KEY, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
       body: JSON.stringify(name ? { email, name } : { email }) });
-    if (r.ok) { $('ask').style.display = 'none'; $('done').style.display = 'block'; return; }
-    const t = await r.text();
-    msg.textContent = /already asked/.test(t) ? 'You already asked today; Drew has your request.' :
-                      /busy|too many/.test(t) ? 'Lots of requests right now; please try again later.' : 'Something went wrong; please try again.';
-    msg.classList.add('bad');
-  } catch (_) { msg.textContent = 'No connection; please try again.'; msg.classList.add('bad'); }
+    const t = r.ok ? '' : await r.text();
+    if (r.ok || /already asked/.test(t)) { save({ email, askedAt: Date.now() }); msg.textContent = ''; $('go').disabled = false; waiting(email); return; }
+    msg.textContent = /busy|too many/.test(t) ? 'Lots of requests right now. Please try again later.' : 'Something went wrong. Please try again.';
+  } catch (_) { msg.textContent = 'No connection. Please try again.'; }
   $('go').disabled = false;
 });
 </script>
