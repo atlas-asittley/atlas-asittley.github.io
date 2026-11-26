@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mankowski Construction | Kitchen &amp; Bathroom Remodeling in South Bend, IN</title>
+<meta name="description" content="Mankowski Construction: kitchen, bathroom and custom remodeling in South Bend, Indiana and the surrounding area. Get in touch for a free estimate.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%231f3a34'/%3E%3Cpath d='M14 46V22l18 14 18-14v24' fill='none' stroke='%23e0a458' stroke-width='6' stroke-linejoin='round'/%3E%3C/svg%3E">
+<style>
+:root{
+  --ink:#1d2421; --muted:#5b6661; --bg:#faf7f2; --card:#ffffff; --line:#e6e0d6;
+  --brand:#1f3a34; --brand-2:#2c5148; --accent:#c9852f; --accent-soft:#f4e6d2;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;font:17px/1.6 Inter,system-ui,sans-serif;color:var(--ink);background:var(--bg)}
+a{color:inherit}
+.wrap{max-width:1100px;margin:0 auto;padding:0 20px}
+h1,h2,h3{font-family:Fraunces,Georgia,serif;line-height:1.15;margin:0 0 .5em}
+h2{font-size:clamp(28px,4vw,40px);color:var(--brand)}
+h3{font-size:22px}
+.btn{display:inline-block;padding:14px 26px;border-radius:10px;font-weight:600;text-decoration:none;transition:transform .15s,background .15s}
+.btn:hover{transform:translateY(-1px)}
+.btn-accent{background:var(--accent);color:#1b1208}
+.btn-accent:hover{background:#d89640}
+.btn-ghost{border:2px solid #ffffff66;color:#fff}
+.btn-ghost:hover{background:#ffffff14}
+
+/* header */
+header{position:sticky;top:0;z-index:10;background:#faf7f2ee;backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.nav{display:flex;align-items:center;justify-content:space-between;height:66px}
+.logo{display:flex;align-items:center;gap:10px;text-decoration:none;font-family:Fraunces,serif;font-weight:700;font-size:20px;color:var(--brand)}
+.logo svg{width:34px;height:34px}
+.nav ul{display:flex;gap:26px;list-style:none;margin:0;padding:0;font-weight:500;font-size:15px}
+.nav ul a{text-decoration:none;color:var(--muted)}
+.nav ul a:hover{color:var(--brand)}
+.nav .btn{padding:10px 18px;font-size:15px}
+@media(max-width:760px){.nav ul{display:none}}
+.nav .btn{white-space:nowrap}
+@media(max-width:420px){.logo{font-size:17px;gap:8px}.logo svg{width:28px;height:28px}.nav .btn{padding:9px 13px;font-size:14px}}
+
+/* hero */
+.hero{background:linear-gradient(135deg,var(--brand) 0%,var(--brand-2) 100%);color:#fff;overflow:hidden;position:relative}
+.hero .wrap{display:grid;grid-template-columns:1.1fr .9fr;gap:40px;align-items:center;padding-top:80px;padding-bottom:90px}
+.eyebrow{text-transform:uppercase;letter-spacing:.14em;font-size:13px;font-weight:600;color:var(--accent)}
+.hero h1{font-size:clamp(36px,5.4vw,60px);margin:.3em 0 .4em}
+.hero p{font-size:19px;color:#d9e4df;max-width:34em;margin:0 0 30px}
+.hero .ctas{display:flex;gap:14px;flex-wrap:wrap}
+.hero-art{width:100%;max-width:440px;justify-self:center}
+@media(max-width:860px){.hero .wrap{grid-template-columns:1fr;padding-top:56px;padding-bottom:64px}.hero-art{max-width:320px}}
+
+/* sections */
+section{padding:84px 0}
+.lead{color:var(--muted);max-width:40em;margin:0 0 40px;font-size:18px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
+@media(max-width:860px){.grid3{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:30px;box-shadow:0 1px 2px #0000000a}
+.card .ico{width:54px;height:54px;border-radius:12px;background:var(--accent-soft);display:grid;place-items:center;margin-bottom:18px}
+.card .ico svg{width:30px;height:30px;stroke:var(--brand)}
+.card p{color:var(--muted);margin:0 0 14px}
+.card ul{margin:0;padding-left:18px;color:var(--ink)}
+.card li{margin:4px 0}
+
+.steps{counter-reset:s;display:grid;grid-template-columns:repeat(4,1fr);gap:22px}
+@media(max-width:860px){.steps{grid-template-columns:1fr 1fr}}
+@media(max-width:520px){.steps{grid-template-columns:1fr}}
+.step{counter-increment:s;padding-top:14px;border-top:3px solid var(--accent)}
+.step::before{content:counter(s,decimal-leading-zero);font-family:Fraunces,serif;font-size:30px;color:var(--accent);display:block;margin-bottom:6px}
+.step h3{font-size:19px}
+.step p{color:var(--muted);margin:0;font-size:16px}
+.alt{background:#f1ece3}
+
+.area{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center}
+@media(max-width:860px){.area{grid-template-columns:1fr}}
+.area p{color:var(--muted)}
+.pin-map{background:var(--brand);border-radius:18px;padding:30px;color:#fff}
+.pin-map svg{width:100%;height:auto;display:block}
+
+/* contact */
+.contact{background:var(--brand);color:#fff}
+.contact h2{color:#fff}
+.contact .lead{color:#cfdcd6}
+.contact-grid{display:grid;grid-template-columns:1fr 1.2fr;gap:40px}
+@media(max-width:860px){.contact-grid{grid-template-columns:1fr}}
+.contact-info a{color:var(--accent);font-weight:600;font-size:20px;text-decoration:none;word-break:break-all}
+.contact-info p{color:#cfdcd6}
+form{background:#ffffff0f;border:1px solid #ffffff22;border-radius:16px;padding:26px;display:grid;gap:14px}
+label{font-size:14px;font-weight:600;color:#dfe9e4;display:grid;gap:6px}
+input,select,textarea{font:inherit;font-size:16px;padding:12px 14px;border-radius:9px;border:1px solid #ffffff33;background:#0f221e;color:#fff;width:100%}
+textarea{min-height:110px;resize:vertical}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:520px){.row2{grid-template-columns:1fr}}
+form .btn{border:0;cursor:pointer;font-size:17px;justify-self:start}
+.note{font-size:13px;color:#a9bcb4;margin:0}
+
+footer{background:#142824;color:#9fb3ab;font-size:14px;padding:26px 0}
+footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap nav">
+    <a class="logo" href="#top" aria-label="Mankowski Construction home">
+      <svg viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="12" fill="#1f3a34"/><path d="M14 46V22l18 14 18-14v24" fill="none" stroke="#e0a458" stroke-width="6" stroke-linejoin="round"/></svg>
+      Mankowski Construction
+    </a>
+    <ul>
+      <li><a href="#services">Services</a></li>
+      <li><a href="#process">How it works</a></li>
+      <li><a href="#area">Service area</a></li>
+    </ul>
+    <a class="btn btn-accent" href="#contact">Free estimate</a>
+  </div>
+</header>
+
+<div class="hero" id="top">
+  <div class="wrap">
+    <div>
+      <div class="eyebrow">South Bend, Indiana</div>
+      <h1>Kitchens and bathrooms, remodeled the right way.</h1>
+      <p>Mankowski Construction handles kitchen, bathroom and custom remodeling projects for homeowners in South Bend and the surrounding area, from the first sketch to the final walkthrough.</p>
+      <div class="ctas">
+        <a class="btn btn-accent" href="#contact">Get a free estimate</a>
+        <a class="btn btn-ghost" href="#services">See what we do</a>
+      </div>
+    </div>
+    <!-- simple illustration: a kitchen elevation -->
+    <svg class="hero-art" viewBox="0 0 400 320" role="img" aria-label="Illustration of a remodeled kitchen">
+      <rect x="0" y="0" width="400" height="320" rx="22" fill="#ffffff10"/>
+      <rect x="40" y="40" width="130" height="70" rx="6" fill="#f3ece0"/>
+      <line x1="105" y1="40" x2="105" y2="110" stroke="#c9b9a0" stroke-width="2"/>
+      <circle cx="98" cy="96" r="3" fill="#8a7a60"/><circle cx="112" cy="96" r="3" fill="#8a7a60"/>
+      <rect x="230" y="40" width="130" height="70" rx="6" fill="#f3ece0"/>
+      <line x1="295" y1="40" x2="295" y2="110" stroke="#c9b9a0" stroke-width="2"/>
+      <circle cx="288" cy="96" r="3" fill="#8a7a60"/><circle cx="302" cy="96" r="3" fill="#8a7a60"/>
+      <rect x="180" y="34" width="40" height="84" rx="4" fill="#cfe3dc"/>
+      <path d="M186 40h28v72h-28z" fill="none" stroke="#9fc3b7" stroke-width="2"/>
+      <rect x="40" y="168" width="320" height="14" rx="3" fill="#e0a458"/>
+      <rect x="44" y="182" width="312" height="96" rx="4" fill="#f3ece0"/>
+      <line x1="122" y1="182" x2="122" y2="278" stroke="#c9b9a0" stroke-width="2"/>
+      <line x1="200" y1="182" x2="200" y2="278" stroke="#c9b9a0" stroke-width="2"/>
+      <line x1="278" y1="182" x2="278" y2="278" stroke="#c9b9a0" stroke-width="2"/>
+      <rect x="70" y="196" width="26" height="4" rx="2" fill="#8a7a60"/><rect x="148" y="196" width="26" height="4" rx="2" fill="#8a7a60"/>
+      <rect x="226" y="196" width="26" height="4" rx="2" fill="#8a7a60"/><rect x="304" y="196" width="26" height="4" rx="2" fill="#8a7a60"/>
+      <path d="M176 168v-30a12 12 0 0 1 24 0" fill="none" stroke="#cfd6d3" stroke-width="5" stroke-linecap="round"/>
+      <rect x="258" y="146" width="12" height="22" rx="2" fill="#7fb09f"/><circle cx="264" cy="140" r="12" fill="#5f9a85"/>
+      <rect x="0" y="278" width="400" height="42" fill="#ffffff14"/>
+    </svg>
+  </div>
+</div>
+
+<section id="services">
+  <div class="wrap">
+    <h2>What we do</h2>
+    <p class="lead">Whether it's a full gut-and-rebuild or a focused update, every project gets the same care, clear communication, and a clean job site.</p>
+    <div class="grid3">
+      <div class="card">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 10h18M8 6h2M14 6h2M8 14h2"/></svg></div>
+        <h3>Kitchen remodeling</h3>
+        <p>Make the room you use most work the way you actually cook and live.</p>
+        <ul><li>Cabinets and countertops</li><li>Layout changes and islands</li><li>Backsplash, flooring and lighting</li></ul>
+      </div>
+      <div class="card">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16v3a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5z"/><path d="M6 12V5a2 2 0 0 1 4 0"/><path d="M7 20l-1 2M17 20l1 2"/></svg></div>
+        <h3>Bathroom remodeling</h3>
+        <p>From a quick refresh to a complete renovation, done with lasting materials.</p>
+        <ul><li>Showers, tubs and tile</li><li>Vanities and fixtures</li><li>Accessibility updates</li></ul>
+      </div>
+      <div class="card">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/></svg></div>
+        <h3>Custom remodeling</h3>
+        <p>Have something else in mind? Let's talk it through and find the right plan.</p>
+        <ul><li>Basements and living spaces</li><li>Built-ins and trim work</li><li>One-of-a-kind projects</li></ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="process" class="alt">
+  <div class="wrap">
+    <h2>How it works</h2>
+    <p class="lead">A straightforward process, so you always know what's happening and what comes next.</p>
+    <div class="steps">
+      <div class="step"><h3>Reach out</h3><p>Tell us about your project by email or the form below.</p></div>
+      <div class="step"><h3>Visit &amp; estimate</h3><p>We look at the space, talk through ideas and budget, and give you a clear estimate.</p></div>
+      <div class="step"><h3>Build</h3><p>The work gets done with regular updates and a tidy job site.</p></div>
+      <div class="step"><h3>Walkthrough</h3><p>We go over everything together to make sure you love the result.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="area">
+  <div class="wrap area">
+    <div>
+      <h2>Based in South Bend</h2>
+      <p>Mankowski Construction serves South Bend and the surrounding communities in northern Indiana, and can travel for the right project.</p>
+      <p>Not sure if you're in range? Just ask.</p>
+      <a class="btn btn-accent" href="#contact">Ask about your project</a>
+    </div>
+    <div class="pin-map">
+      <svg viewBox="0 0 300 200" role="img" aria-label="South Bend with a surrounding service radius">
+        <circle cx="150" cy="100" r="88" fill="#ffffff0c" stroke="#ffffff30" stroke-dasharray="5 6"/>
+        <circle cx="150" cy="100" r="52" fill="#ffffff10" stroke="#ffffff40" stroke-dasharray="5 6"/>
+        <path d="M150 58c-15 0-26 11-26 25 0 19 26 45 26 45s26-26 26-45c0-14-11-25-26-25z" fill="#e0a458"/>
+        <circle cx="150" cy="83" r="9" fill="#1f3a34"/>
+        <text x="150" y="150" fill="#fff" font-family="Inter,sans-serif" font-size="14" font-weight="600" text-anchor="middle">South Bend, IN</text>
+        <text x="150" y="168" fill="#cfdcd6" font-family="Inter,sans-serif" font-size="11" text-anchor="middle">and surrounding area</text>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<section id="contact" class="contact">
+  <div class="wrap contact-grid">
+    <div class="contact-info">
+      <h2>Get a free estimate</h2>
+      <p class="lead">Tell us a little about your project and we'll get back to you.</p>
+      <p>Email</p>
+      <a href="mailto:Kevin@mankowskiconstruction.com">Kevin@mankowskiconstruction.com</a>
+      <p style="margin-top:22px">South Bend, Indiana</p>
+    </div>
+    <form id="quote" novalidate>
+      <div class="row2">
+        <label>Name<input name="name" autocomplete="name" required></label>
+        <label>Phone (optional)<input name="phone" type="tel" autocomplete="tel"></label>
+      </div>
+      <div class="row2">
+        <label>Project type
+          <select name="type"><option>Kitchen</option><option>Bathroom</option><option>Custom remodel</option><option>Not sure yet</option></select>
+        </label>
+        <label>Town / city<input name="town" placeholder="e.g. South Bend"></label>
+      </div>
+      <label>About your project<textarea name="msg" placeholder="What would you like to change? Any timeline in mind?"></textarea></label>
+      <button class="btn btn-accent" type="submit">Send request</button>
+      <p class="note">This opens your email app with your details filled in, ready to send.</p>
+    </form>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <span>© <span id="yr"></span> Mankowski Construction · South Bend, Indiana</span>
+    <a href="mailto:Kevin@mankowskiconstruction.com">Kevin@mankowskiconstruction.com</a>
+  </div>
+</footer>
+
+<script>
+document.getElementById('yr').textContent = new Date().getFullYear();
+document.getElementById('quote').addEventListener('submit', function (e) {
+  e.preventDefault();
+  var f = e.target, v = function (n) { return (f.elements[n].value || '').trim(); };
+  var subject = 'Estimate request: ' + v('type') + (v('town') ? ' (' + v('town') + ')' : '');
+  var body = 'Name: ' + v('name') + '\nPhone: ' + (v('phone') || '-') + '\nProject: ' + v('type') +
+             '\nTown: ' + (v('town') || '-') + '\n\n' + v('msg');
+  location.href = 'mailto:Kevin@mankowskiconstruction.com?subject=' + encodeURIComponent(subject) +
+                  '&body=' + encodeURIComponent(body);
+});
+</script>
+</body>
+</html>
